@@ -32,7 +32,7 @@ export type BrandingConfig = z.infer<typeof brandingSchema>
 export type ReportConfig = z.infer<typeof reportConfigSchema>
 
 export const reportTypeEnum = z.enum([
-  'attendance', 'payroll', 'employees', 'work_certificate', 'severance'
+  'attendance', 'payroll', 'employees', 'work_certificate', 'severance', 'voucher'
 ])
 export type ReportType = z.infer<typeof reportTypeEnum>
 
@@ -42,5 +42,6 @@ export const REPORT_TYPE_OPTIONS: { value: ReportType; label: string }[] = [
   { value: 'payroll', label: 'Nómina' },
   { value: 'employees', label: 'Empleados' },
   { value: 'work_certificate', label: 'Constancias' },
-  { value: 'severance', label: 'Liquidación' }
+  { value: 'severance', label: 'Liquidación' },
+  { value: 'voucher', label: 'Recibo de pago' }
 ]

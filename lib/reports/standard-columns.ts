@@ -41,12 +41,35 @@ const EMPLOYEES_COLUMNS: StandardColumnDef[] = [
   { id: 'hire_date', label: 'Fecha Ingreso', order: 6, sourceField: 'hire_date', source: 'standard' }
 ]
 
+/** Secciones/campos del recibo de pago (denarius) — visibilidad y etiquetas en PDF. */
+const VOUCHER_COLUMNS: StandardColumnDef[] = [
+  { id: 'emp_code', label: 'Código', order: 1, sourceField: 'employee_code', source: 'standard' },
+  { id: 'emp_name', label: 'Nombre', order: 2, sourceField: 'employee_name', source: 'standard' },
+  { id: 'department', label: 'Departamento', order: 3, sourceField: 'department', source: 'standard' },
+  { id: 'position', label: 'Posición', order: 4, sourceField: 'position', source: 'standard' },
+  { id: 'period', label: 'Período', order: 5, sourceField: 'period', source: 'standard' },
+  { id: 'days_worked', label: 'Días trabajados', order: 6, sourceField: 'days_worked', source: 'standard' },
+  { id: 'base_salary', label: 'Salario base', order: 7, sourceField: 'base_salary', source: 'standard' },
+  { id: 'septimo_dia', label: 'Séptimo día', order: 8, sourceField: 'septimo_dia', source: 'standard' },
+  { id: 'ihss', label: 'IHSS', order: 9, sourceField: 'social_security', source: 'standard' },
+  { id: 'rap', label: 'RAP', order: 10, sourceField: 'professional_tax', source: 'standard' },
+  { id: 'isr', label: 'ISR', order: 11, sourceField: 'income_tax', source: 'standard' },
+  { id: 'custom_deductions', label: 'Deducciones adicionales', order: 12, sourceField: 'custom_deductions', source: 'standard' },
+  { id: 'total_deductions', label: 'Total deducciones', order: 13, sourceField: 'total_deductions', source: 'standard' },
+  { id: 'net_salary', label: 'Total a recibir', order: 14, sourceField: 'net_salary', source: 'standard' },
+  { id: 'bank_name', label: 'Banco', order: 15, sourceField: 'bank_name', source: 'standard' },
+  { id: 'bank_account', label: 'Cuenta bancaria', order: 16, sourceField: 'bank_account', source: 'standard' },
+  { id: 'legal_notes', label: 'Notas legales', order: 17, sourceField: 'legal_notes', source: 'standard' },
+  { id: 'signatures', label: 'Firmas', order: 18, sourceField: 'signatures', source: 'standard' }
+]
+
 const STANDARD_COLUMNS: Record<ReportType, StandardColumnDef[]> = {
   attendance: ATTENDANCE_COLUMNS,
   payroll: PAYROLL_COLUMNS,
   employees: EMPLOYEES_COLUMNS,
   work_certificate: [],
-  severance: []
+  severance: [],
+  voucher: VOUCHER_COLUMNS
 }
 
 export function getStandardColumns(reportType: ReportType): StandardColumnDef[] {

@@ -18,6 +18,10 @@ import {
   buildPayrollReceiptEmailSubject,
   buildPayrollReceiptEmailText,
 } from '../../../lib/emails/payroll-receipt-email'
+import { generateEmployeeReceiptPDF } from '../../../lib/payroll/receipt'
+import { buildVoucherFromRunLine } from '../../../lib/payroll/voucher-from-run-line'
+import { buildVoucherPdfOptions } from '../../../lib/payroll/voucher-pdf-options'
+import { resolveReportConfig } from '../../../lib/reports/column-resolver'
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -142,19 +146,31 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
     console.log(`Enviando ${lines.length} vouchers por email`)
 
-    // Enviar vouchers por email
+    const voucherReportConfig = await resolveReportConfig(userProfile.company_id, 'voucher', supabase)
+    const voucherPdfOptions = buildVoucherPdfOptions(voucherReportConfig)
+
     const results = []
-    
+
     for (const line of lines) {
       try {
-        // Fix the data structure - employees is an object, not an array
         const employee = (line as any).employees
         if (!employee || !employee.email) {
           console.warn(`Empleado sin email: ${line.employee_id}`)
           continue
         }
-        
+
         const periodo = `${run.year}-${run.month.toString().padStart(2, '0')} Q${run.quincena}`
+        const voucherData = await buildVoucherFromRunLine(supabase, userProfile.company_id, line.id)
+        const pdfBuffer = await generateEmployeeReceiptPDF(
+          voucherData.record,
+          voucherData.periodo,
+          voucherData.quincena,
+          userProfile.company_id,
+          voucherData.companyName,
+          voucherData.periodLabel,
+          voucherPdfOptions
+        )
+
         const receiptData = {
           employeeName: employee.name,
           periodLabel: periodo,
@@ -169,8 +185,14 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         const emailResult = await emailService.sendEmail(notificationConfig, {
           to: employee.email,
           subject: buildPayrollReceiptEmailSubject(periodo),
-          text: buildPayrollReceiptEmailText(receiptData),
+          text: `${buildPayrollReceiptEmailText(receiptData)}\n\nAdjunto: recibo de pago en PDF.`,
           html: buildPayrollReceiptEmailHtml(receiptData),
+          attachments: [
+            {
+              filename: voucherData.filename,
+              content: pdfBuffer,
+            },
+          ],
         })
 
         if (emailResult.success) {

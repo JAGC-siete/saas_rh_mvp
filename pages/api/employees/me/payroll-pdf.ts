@@ -1,6 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { requireUser } from '../../../../lib/auth/requireUser'
 import { generateEmployeeReceiptPDF } from '../../../../lib/payroll/receipt'
+import { buildVoucherPdfOptions } from '../../../../lib/payroll/voucher-pdf-options'
+import { resolveReportConfig } from '../../../../lib/reports/column-resolver'
 import { calculatePeriodBaseSalary, normalizeFrequency } from '../../../../lib/payroll/calculate-period-base-salary'
 import { assertEmployeePortalEnabled } from '../../../../lib/employee-portal/company-settings'
 
@@ -98,7 +100,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const grossTotal = Number(record.gross_salary) || 0
     const baseForReceipt = septimoDia > 0 ? grossTotal - septimoDia : (periodBaseSalary || grossTotal)
 
-    // Generar PDF del recibo individual
+    const resolvedConfig = await resolveReportConfig(userProfile.company_id, 'voucher', supabase)
+    const pdfOptions = buildVoucherPdfOptions(resolvedConfig)
+    const { data: company } = await supabase
+      .from('companies')
+      .select('name')
+      .eq('id', userProfile.company_id)
+      .single()
+
     const pdf = await generateEmployeeReceiptPDF({
       employee_code: record.employees?.employee_code,
       employee_name: record.employees?.name,
@@ -116,7 +125,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       net_salary: Number(record.net_salary) || 0,
       bank_name: record.employees?.bank_name,
       bank_account: record.employees?.bank_account
-    }, periodo, Number(quincena))
+    }, periodo, Number(quincena), userProfile.company_id, company?.name, `Quincena ${quincena}`, pdfOptions)
 
     res.setHeader('Content-Type', 'application/pdf')
     res.setHeader('Content-Disposition', `attachment; filename=recibo_nomina_${record.employees?.employee_code || 'empleado'}_${periodo}_q${quincena}.pdf`)

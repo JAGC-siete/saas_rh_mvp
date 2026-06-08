@@ -9,6 +9,11 @@ export interface EmailResult {
   provider?: string
 }
 
+export interface EmailAttachment {
+  filename: string
+  content: Buffer | string
+}
+
 export interface EmailContent {
   to: string
   subject: string
@@ -16,6 +21,7 @@ export interface EmailContent {
   html?: string
   from?: string
   fromName?: string
+  attachments?: EmailAttachment[]
 }
 
 export class EmailService {
@@ -138,7 +144,13 @@ export class EmailService {
         to: content.to,
         subject: content.subject,
         text: content.text,
-        html: content.html
+        html: content.html,
+        attachments: content.attachments?.map((attachment) => ({
+          filename: attachment.filename,
+          content: Buffer.isBuffer(attachment.content)
+            ? attachment.content.toString('base64')
+            : attachment.content,
+        })),
       })
 
       if ((result as any)?.error) {

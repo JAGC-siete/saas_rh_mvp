@@ -102,7 +102,9 @@ export default function ReportParamsEditor({ companyId, onSave }: ReportParamsEd
       const payload = {
         ...config,
         columns: columnsToSave,
-        ...(reportType === 'payroll' && { includeCustomPayrollFields: config.includeCustomPayrollFields ?? false })
+        ...((reportType === 'payroll' || reportType === 'voucher') && {
+          includeCustomPayrollFields: config.includeCustomPayrollFields ?? false
+        })
       }
       const res = await fetch(`/api/companies/${companyId}/report-configs`, {
         method: 'PUT',
@@ -240,7 +242,7 @@ export default function ReportParamsEditor({ companyId, onSave }: ReportParamsEd
 
           <div>
             <h4 className="text-sm font-medium text-white mb-3">Columnas</h4>
-            {reportType === 'payroll' && availableCustomFields.length > 0 && (
+            {(reportType === 'payroll' || reportType === 'voucher') && availableCustomFields.length > 0 && (
               <div className="mb-4 flex items-center gap-2">
                 <input
                   type="checkbox"

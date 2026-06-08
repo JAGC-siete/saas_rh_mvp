@@ -66,7 +66,7 @@ export async function resolveReportConfig(
     })
   }
 
-  if (reportType === 'payroll' && includeCustomPayrollFields) {
+  if ((reportType === 'payroll' || reportType === 'voucher') && includeCustomPayrollFields) {
     const { data: payrollConfig } = await supabase
       .from('company_payroll_configs')
       .select('custom_fields')

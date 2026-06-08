@@ -62,7 +62,7 @@ async function getReportConfigs(
   if (reportType) {
     const parsed = reportTypeEnum.safeParse(reportType)
     if (!parsed.success) {
-      return res.status(400).json({ error: 'Invalid report_type', allowed: ['attendance', 'payroll', 'employees', 'work_certificate', 'severance'] })
+      return res.status(400).json({ error: 'Invalid report_type', allowed: ['attendance', 'payroll', 'employees', 'work_certificate', 'severance', 'voucher'] })
     }
 
     const { data: config, error } = await supabase
@@ -98,7 +98,7 @@ async function getReportConfigs(
     return res.status(200).json({
       config: config ?? null,
       standardColumns,
-      availableCustomFields: reportType === 'payroll' ? availableCustomFields : []
+      availableCustomFields: reportType === 'payroll' || reportType === 'voucher' ? availableCustomFields : []
     })
   }
 

@@ -15,7 +15,8 @@ import {
   Users,
   DollarSign,
   ClipboardList,
-  TrendingUp
+  TrendingUp,
+  Receipt
 } from 'lucide-react'
 import { REPORT_TYPE_OPTIONS, type ReportType } from '../../lib/reports/report-config-schema'
 import {
@@ -57,7 +58,8 @@ const TAB_ICONS: Record<ReportType, typeof Clock> = {
   payroll: DollarSign,
   employees: Users,
   work_certificate: FileText,
-  severance: ClipboardList
+  severance: ClipboardList,
+  voucher: Receipt
 }
 
 const TAB_COLORS: Record<ReportType, string> = {
@@ -65,7 +67,8 @@ const TAB_COLORS: Record<ReportType, string> = {
   payroll: 'text-green-400',
   employees: 'text-purple-400',
   work_certificate: 'text-yellow-400',
-  severance: 'text-orange-400'
+  severance: 'text-orange-400',
+  voucher: 'text-cyan-400'
 }
 
 const TAB_CONFIG = REPORT_TYPE_OPTIONS.map(({ value: id, label }) => ({
@@ -361,6 +364,22 @@ export default function ReportBuilder() {
           break
         }
 
+        case 'voucher': {
+          setPreviewData({
+            headers: ['Información'],
+            rows: [
+              ['Tipo', 'Recibo de pago (denarius)'],
+              ['Generación', 'Desde el módulo de nómina al descargar o enviar recibos'],
+              ['Configuración', 'Parámetros → Recibo de pago (branding y campos visibles)']
+            ],
+            summary: {
+              nota: 'La vista previa detallada se genera por empleado desde Nómina'
+            },
+            totalCount: 1
+          })
+          break
+        }
+
         case 'severance': {
           const empId = filters.employeeIds?.[0]
           const term = filters.terminationDate
@@ -562,6 +581,11 @@ export default function ReportBuilder() {
         return {
           title: 'Empleado y fecha de terminación',
           body: 'Selecciona empleado e indica la fecha de terminación para calcular y exportar la liquidación (CSV).'
+        }
+      case 'voucher':
+        return {
+          title: 'Recibo de pago',
+          body: 'Configura color, logo y campos en Parámetros de Reportes. Los PDF se generan desde Nómina al descargar o enviar por correo.'
         }
       default:
         return {

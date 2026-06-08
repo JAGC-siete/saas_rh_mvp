@@ -1,4 +1,11 @@
-# Diagnóstico Completo: Error 400 en Payroll Preview
+# ARCHIVED: Diagnóstico Completo: Error 400 en Payroll Preview
+
+**STATUS: OBSOLETE / ARCHIVED**
+**Reason:** The logic in `pages/api/payroll/preview.ts` has been refactored and moved to `lib/payroll/payroll-attendance-inclusion.ts`. This report no longer reflects the current architecture.
+
+--- (Original Content Below) ---
+
+
 
 ## Flujo Completo Verificado
 
