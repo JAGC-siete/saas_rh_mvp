@@ -9,6 +9,10 @@ import { RATE_LIMITS } from '../../../lib/rate-limit'
 import { logger } from '../../../lib/logger'
 import { createAdminClient } from '../../../lib/supabase/server'
 import { maskEmail, normalizeSoftPhone } from '../../../lib/privacy'
+import {
+  enrollPublicToolLeadNonBlocking,
+  marketingSourceForDeductionCalculator,
+} from '../../../lib/marketing/enroll-public-tool-lead'
 
 interface SendDeductionReportRequest {
   email: string
@@ -33,6 +37,7 @@ interface SendDeductionReportRequest {
     minimumWage: number
     ihssCeiling: number
   }
+  country_code?: string
 }
 
 /**
@@ -98,7 +103,8 @@ async function sendReportHandler(
       isrPercentage,
       totalDeductions,
       netSalary,
-      constants
+      constants,
+      country_code: countryCode,
     }: SendDeductionReportRequest = req.body
 
     // Validación robusta de email
@@ -237,13 +243,17 @@ async function sendReportHandler(
       })
     }
 
-    // Log de éxito
     const duration = Date.now() - startTime
     logger.info('Reporte enviado exitosamente', {
       email: maskEmail(sanitizedEmail),
       messageId: (result as any)?.id,
       duration,
     })
+
+    enrollPublicToolLeadNonBlocking(
+      sanitizedEmail,
+      marketingSourceForDeductionCalculator(countryCode)
+    )
 
     return res.status(200).json({ 
       success: true,

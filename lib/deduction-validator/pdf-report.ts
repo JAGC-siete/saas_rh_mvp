@@ -141,27 +141,37 @@ export async function generateDeductionReportPDF(
       doc.fontSize(11).fillColor('#c62828').text('TOTAL DE DEDUCCIONES', 40, yPos + 6)
       doc.fontSize(14).fillColor('#b71c1c').text(formatHNL(data.totalDeductions), 450, yPos + 6, { align: 'right', width: 80 })
 
-      // Footer con CTA
-      const footerY = pageHeight - 60
-      doc.rect(0, footerY, pageWidth, 60).fill('#f5f5f5')
-      doc.fontSize(9).fillColor('#666666').text(
-        'Este reporte fue generado por la Calculadora de Deducciones de Humano SISU.',
-        30,
-        footerY + 10,
-        { align: 'center', width: 535 }
-      )
-      doc.fontSize(10).fillColor('#1976d2').text(
-        '¿Automatizamos esto para tu empresa?',
-        30,
-        footerY + 25,
-        { align: 'center', width: 535 }
-      )
-      
       const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://humanosisu.net'
-      doc.fontSize(9).fillColor('#1976d2').text(
-        `${siteUrl}/activar`,
+      const activarUrl = `${siteUrl}/activar?country=HND&utm_source=calculadora-deducciones-hnd&utm_medium=pdf&utm_campaign=deduction-report`
+      const demoWhatsApp = 'https://wa.me/50432226773?text=' + encodeURIComponent(
+        'Hola, calculé deducciones en Humano SISU (Honduras) y me gustaría una demo personalizada.'
+      )
+
+      const footerHeight = 88
+      const footerY = pageHeight - footerHeight
+      doc.rect(0, footerY, pageWidth, footerHeight).fill('#f5f5f5')
+      doc.fontSize(8).fillColor('#666666').text(
+        'Generado por la Calculadora de Deducciones de Humano SISU — mismo motor que la nómina profesional.',
         30,
-        footerY + 40,
+        footerY + 8,
+        { align: 'center', width: 535 }
+      )
+      doc.fontSize(10).fillColor('#0b4fa1').text(
+        'Deja de calcular en Excel. Automatiza IHSS, RAP e ISR sin errores.',
+        30,
+        footerY + 24,
+        { align: 'center', width: 535 }
+      )
+      doc.fontSize(9).fillColor('#1976d2').text(
+        `Activar gratis: ${activarUrl}`,
+        30,
+        footerY + 42,
+        { align: 'center', width: 535 }
+      )
+      doc.fontSize(9).fillColor('#128c7e').text(
+        `Agendar demo por WhatsApp: ${demoWhatsApp}`,
+        30,
+        footerY + 58,
         { align: 'center', width: 535 }
       )
 

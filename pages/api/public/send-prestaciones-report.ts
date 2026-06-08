@@ -9,6 +9,10 @@ import { generatePrestacionesReportPDF } from '../../../lib/prestaciones-public/
 import { createAdminClient } from '../../../lib/supabase/server'
 import { maskEmail, normalizeSoftPhone } from '../../../lib/privacy'
 import {
+  enrollPublicToolLeadNonBlocking,
+  marketingSourceForPrestacionesCalculator,
+} from '../../../lib/marketing/enroll-public-tool-lead'
+import {
   generatePrestacionesEmailHTML,
   generatePrestacionesEmailSubject,
 } from '../../../lib/prestaciones-public/email-template'
@@ -200,6 +204,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       messageId: (result as any)?.id,
       duration,
     })
+
+    enrollPublicToolLeadNonBlocking(
+      sanitizedEmail,
+      marketingSourceForPrestacionesCalculator()
+    )
 
     return res.status(200).json({
       success: true,

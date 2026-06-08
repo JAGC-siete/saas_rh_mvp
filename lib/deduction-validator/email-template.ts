@@ -21,6 +21,10 @@ export interface DeductionEmailData {
  */
 export function generateDeductionEmailHTML(data: DeductionEmailData): string {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://humanosisu.net'
+  const activarUrl = `${siteUrl}/activar?country=HND&utm_source=calculadora-deducciones-hnd&utm_medium=email&utm_campaign=deduction-report`
+  const demoWhatsAppUrl = `https://wa.me/50432226773?text=${encodeURIComponent(
+    'Hola, calculé deducciones en Humano SISU (Honduras) y me gustaría una demo personalizada.'
+  )}`
   const supportWhatsAppUrl = `https://api.whatsapp.com/send/?phone=50432226773&text=${encodeURIComponent(
     'Hola Jorge, tengo una consulta sobre la validación de deducciones de mi nómina.'
   )}`
@@ -76,12 +80,19 @@ export function generateDeductionEmailHTML(data: DeductionEmailData): string {
         </div>
         
         <div style="text-align: center; margin: 30px 0;">
-          <p style="color: #666; font-size: 16px; margin-bottom: 15px;">
-            <strong>¿Automatizamos esto para tu empresa?</strong>
+          <p style="color: #666; font-size: 16px; margin-bottom: 8px;">
+            <strong>Deja de calcular en Excel.</strong> Humano SISU automatiza IHSS, RAP e ISR con el mismo motor que usaste aquí.
           </p>
-          <a href="${siteUrl}/activar" 
-             style="background: #0b4fa1; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;">
-            Prueba Gratis 30 Días
+          <p style="color: #888; font-size: 14px; margin-bottom: 15px;">
+            Sin errores manuales — del reloj biométrico al comprobante de pago.
+          </p>
+          <a href="${activarUrl}"
+             style="background: #0b4fa1; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold; margin: 4px;">
+            Activar gratis 30 días
+          </a>
+          <a href="${demoWhatsAppUrl}"
+             style="background: #25D366; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold; margin: 4px;">
+            Agendar demo
           </a>
         </div>
         

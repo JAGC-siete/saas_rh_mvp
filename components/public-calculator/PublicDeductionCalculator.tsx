@@ -4,6 +4,8 @@ import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import MainHeader from '../MainHeader'
 import DemoFooter from '../DemoFooter'
+import TrackedWhatsAppLink from '../TrackedWhatsAppLink'
+import { appendUtmParams, buildDemoWhatsAppUrl } from '../../lib/public-calculator/utm'
 import SchemaMarkup from '../SEO/SchemaMarkup'
 import { validateFormInputs } from '../../lib/deduction-validator/client-validation'
 import type { PublicCalculatorConfig, PublicCalculatorDeductionKey } from '../../lib/public-calculator/config'
@@ -140,6 +142,42 @@ export default function PublicDeductionCalculator({ config }: { config: PublicCa
   const canSendPdf = consentNewsletter && fullName.trim().length > 0 && emailRegex.test(email)
   const selectorOptions = config.deductionOptions.filter((item) => item.showInSelector)
 
+  const activarUrl = (campaign: 'post-calc' | 'footer' | 'bridge' | 'sticky') =>
+    appendUtmParams(config.conversion.inlineHref, config.countryCode, campaign)
+  const demoUrl = (label: string) => buildDemoWhatsAppUrl(config.countryCode, label)
+
+  const ConversionButtons = ({
+    campaign,
+    size = 'md',
+    activarLabel,
+  }: {
+    campaign: 'post-calc' | 'footer' | 'sticky'
+    size?: 'md' | 'sm'
+    activarLabel?: string
+  }) => {
+    const pad = size === 'sm' ? 'py-2.5 px-5 text-sm' : 'py-3 px-8'
+    const label = activarLabel ?? config.conversion.inlineButton
+    return (
+      <div className="flex flex-col sm:flex-row flex-wrap justify-center gap-3">
+        <Link
+          href={activarUrl(campaign)}
+          className={`inline-block ${pad} bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl transition-all text-center`}
+        >
+          {label}
+        </Link>
+        <TrackedWhatsAppLink
+          href={demoUrl(campaign)}
+          target="_blank"
+          rel="noopener noreferrer"
+          trackingContext={`calc_deducciones_demo_${config.countryCode}_${campaign}`}
+          className={`inline-block ${pad} bg-green-600 hover:bg-green-700 text-white font-semibold rounded-xl transition-all text-center`}
+        >
+          {config.conversion.demoButton}
+        </TrackedWhatsAppLink>
+      </div>
+    )
+  }
+
   const handleCalculate = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
@@ -211,6 +249,7 @@ export default function PublicDeductionCalculator({ config }: { config: PublicCa
           company,
           phone,
           consentNewsletter,
+          country_code: config.countryCode,
           ...result,
           salary: parseFloat(salary.replace(/[^\d.]/g, ''))
         })
@@ -283,7 +322,7 @@ export default function PublicDeductionCalculator({ config }: { config: PublicCa
 
       <MainHeader enableScrollEffect fixed />
 
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 relative z-10">
+      <main className={`max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 relative z-10 ${result ? 'pb-28 sm:pb-24' : ''}`}>
         <div className="text-center mb-8 sm:mb-12">
           <div className="flex flex-wrap justify-center gap-2 sm:gap-3 md:gap-4 mb-6 animate-fade-up-subtle">
             {config.hero.badges.map((badge) => (
@@ -474,7 +513,7 @@ export default function PublicDeductionCalculator({ config }: { config: PublicCa
               {!result && (
                 <div className="text-sm text-brand-200/80">
                   Completa el formulario para ver el desglose. Si eres empresa,{' '}
-                  <Link href={config.conversion.inlineHref} className="text-brand-300 hover:text-white underline">
+                  <Link href={activarUrl('post-calc')} className="text-brand-300 hover:text-white underline">
                     activa Humano SISU
                   </Link>{' '}
                   y automatiza tu planilla.
@@ -581,12 +620,7 @@ export default function PublicDeductionCalculator({ config }: { config: PublicCa
                   <div className="glass-strong rounded-xl p-6 border border-cyan-500/30 text-center mb-6">
                     <h3 className="text-xl font-bold text-white mb-2">{config.conversion.inlineTitle}</h3>
                     <p className="text-brand-200/90 mb-4">{config.conversion.inlineBody}</p>
-                    <Link
-                      href={config.conversion.inlineHref}
-                      className="inline-block py-3 px-8 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl transition-all"
-                    >
-                      {config.conversion.inlineButton}
-                    </Link>
+                    <ConversionButtons campaign="post-calc" />
                   </div>
                 </>
               )}
@@ -598,7 +632,7 @@ export default function PublicDeductionCalculator({ config }: { config: PublicCa
           <h3 className="text-lg font-bold text-white mb-2">{config.landingBridge.title}</h3>
           <p className="text-brand-200/90 mb-4 max-w-2xl mx-auto">{config.landingBridge.body}</p>
           <Link
-            href={config.landingBridge.href}
+            href={appendUtmParams(config.landingBridge.href, config.countryCode, 'bridge')}
             className="inline-block py-2.5 px-6 bg-white/10 hover:bg-white/15 text-white font-semibold rounded-xl border border-white/20 transition-all"
           >
             {config.landingBridge.cta}
@@ -629,12 +663,7 @@ export default function PublicDeductionCalculator({ config }: { config: PublicCa
         <div className="mt-6 glass-strong rounded-2xl shadow-2xl p-6 sm:p-8 text-center">
           <h3 className="text-xl font-bold text-white mb-4">{config.conversion.footerTitle}</h3>
           <p className="text-brand-200/90 mb-6">{config.conversion.footerBody}</p>
-          <Link
-            href={config.conversion.footerHref}
-            className="inline-block py-2.5 px-6 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl transition-all"
-          >
-            {config.conversion.footerButton}
-          </Link>
+          <ConversionButtons campaign="footer" size="sm" activarLabel={config.conversion.footerButton} />
           {config.relatedCalculators.length > 0 && (
             <div className="mt-6 flex flex-wrap justify-center gap-3 text-sm">
               {config.relatedCalculators.map((item) => (
@@ -646,6 +675,18 @@ export default function PublicDeductionCalculator({ config }: { config: PublicCa
           )}
         </div>
       </main>
+
+      {result && (
+        <div className="fixed bottom-0 inset-x-0 z-40 p-3 sm:p-4 bg-slate-900/95 border-t border-white/10 backdrop-blur-md shadow-2xl">
+          <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
+            <p className="text-sm text-brand-100 text-center sm:text-left">
+              <span className="font-semibold text-white">¿Gestionas planilla?</span>{' '}
+              Automatiza con el mismo motor que acabas de usar.
+            </p>
+            <ConversionButtons campaign="sticky" size="sm" />
+          </div>
+        </div>
+      )}
 
       <CloudBackground />
       <DemoFooter />

@@ -61,6 +61,7 @@ export type PublicCalculatorConfig = {
     inlineBody: string
     inlineButton: string
     inlineHref: string
+    demoButton: string
     footerTitle: string
     footerBody: string
     footerButton: string
@@ -140,15 +141,16 @@ export const PUBLIC_CALCULATOR_CONFIGS: Record<CountryCode, PublicCalculatorConf
       ceilingLabel: 'Tope IHSS'
     },
     conversion: {
-      inlineTitle: 'Control de asistencia y nómina en un solo lugar: Sin cálculos manuales, sin errores.',
+      inlineTitle: 'Deja de calcular en Excel. Automatiza toda tu nómina.',
       inlineBody:
-        'Integra tus biométricos con Humano SISU en Honduras. Del cálculo al comprobante en segundos. Automatiza IHSS, RAP e ISR.',
-      inlineButton: 'Activar gratis hoy — Sin tarjeta de crédito',
+        'Acabas de usar el mismo motor legal que Humano SISU. Del biométrico al comprobante en segundos — IHSS, RAP e ISR sin errores manuales.',
+      inlineButton: 'Activar gratis — Sin tarjeta',
       inlineHref: '/activar?country=HND',
-      footerTitle: '¿Automatizamos tu nómina en Honduras?',
+      demoButton: 'Agendar demo',
+      footerTitle: '¿Tu empresa aún calcula planilla a mano?',
       footerBody:
-        'Software de RH regional que integra biométrico, nómina y deducciones de ley. Activación inmediata, soporte local.',
-      footerButton: 'Activar gratis hoy — Sin tarjeta',
+        'Humano SISU integra asistencia biométrica y nómina en Honduras. Mismo motor que esta calculadora — activación inmediata.',
+      footerButton: 'Activar gratis',
       footerHref: '/activar?country=HND'
     },
     faqs: [
@@ -260,15 +262,16 @@ export const PUBLIC_CALCULATOR_CONFIGS: Record<CountryCode, PublicCalculatorConf
       ceilingLabel: 'Tope ISSS'
     },
     conversion: {
-      inlineTitle: 'Automatiza planilla en El Salvador con Humano SISU',
+      inlineTitle: 'Deja de calcular en Excel. Automatiza toda tu nómina.',
       inlineBody:
-        'Del reloj biométrico al comprobante en USD. ISSS, AFP e ISR sin Excel. Prueba gratis y activa tu empresa en minutos.',
-      inlineButton: 'Probar SISU en El Salvador — Gratis',
+        'Del reloj biométrico al comprobante en USD. ISSS, AFP e ISR con el mismo motor que acabas de usar — sin errores manuales.',
+      inlineButton: 'Activar gratis — El Salvador',
       inlineHref: '/activar?country=SLV',
+      demoButton: 'Agendar demo',
       footerTitle: '¿Tu empresa aún calcula planilla a mano?',
       footerBody:
         'Humano SISU automatiza asistencia, ISSS, AFP e ISR para equipos en El Salvador. Soporte regional en español.',
-      footerButton: 'Activar cuenta gratis — El Salvador',
+      footerButton: 'Activar gratis',
       footerHref: '/activar?country=SLV'
     },
     faqs: [
@@ -332,15 +335,16 @@ export const PUBLIC_CALCULATOR_CONFIGS: Record<CountryCode, PublicCalculatorConf
       ceilingLabel: 'Referencia IGSS'
     },
     conversion: {
-      inlineTitle: 'Automatiza nómina en Guatemala con Humano SISU',
+      inlineTitle: 'Deja de calcular en Excel. Automatiza toda tu nómina.',
       inlineBody:
-        'Integra asistencia biométrica y planilla en quetzales. IGSS e ISR sin hojas de cálculo. Activa tu prueba gratis hoy.',
-      inlineButton: 'Probar SISU en Guatemala — Gratis',
+        'Integra asistencia biométrica y planilla en quetzales. IGSS e ISR con el mismo motor que acabas de usar — sin errores manuales.',
+      inlineButton: 'Activar gratis — Guatemala',
       inlineHref: '/activar?country=GTM',
+      demoButton: 'Agendar demo',
       footerTitle: '¿Listo para dejar Excel en Guatemala?',
       footerBody:
         'Humano SISU centraliza asistencia, IGSS, ISR y comprobantes para empresas guatemaltecas. Implementación express.',
-      footerButton: 'Activar cuenta gratis — Guatemala',
+      footerButton: 'Activar gratis',
       footerHref: '/activar?country=GTM'
     },
     faqs: [
