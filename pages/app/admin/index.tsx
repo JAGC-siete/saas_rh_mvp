@@ -18,14 +18,18 @@ import {
   RefreshCw,
   Server,
   Shield,
+  TrendingUp,
   Users,
 } from 'lucide-react'
 import {
   serviceStatusColorClass,
   serviceStatusLabel,
+  type CommercialStats,
   type PlatformServiceStatus,
   type ServiceStatus,
   type SystemHealthStatus,
+  type TenantStats,
+  type VentasBankConfigStatus,
 } from '../../../lib/admin/system-stats'
 
 interface SystemStats {
@@ -41,6 +45,9 @@ interface SystemStats {
   serverUptime: string
   services?: PlatformServiceStatus
   revenueSource?: string
+  commercial?: CommercialStats
+  ventasBank?: VentasBankConfigStatus
+  tenants?: TenantStats
 }
 
 interface RecentActivity {
@@ -67,6 +74,33 @@ const EMPTY_STATS: SystemStats = {
     apis: 'unknown',
     authentication: 'unknown',
     reports: 'unknown',
+  },
+  commercial: {
+    available: false,
+    quotesSent30d: 0,
+    quotesPendingPayment: 0,
+    quotesDepositReceived30d: 0,
+    pipelineQuotedTotalHnl: 0,
+    depositsMonthCount: 0,
+    depositsMonthTotalHnl: 0,
+    quotesWithoutCompany: 0,
+    paymentsWithoutQuote: 0,
+    conversionRate30d: null,
+  },
+  ventasBank: {
+    configured: false,
+    hasClientName: false,
+    hasClientDni: false,
+    hasBacAccount: false,
+    hasBanpaisAccount: false,
+    hasAtlantidaAccount: false,
+  },
+  tenants: {
+    paidActiveCompanies: 0,
+    trialCompanies: 0,
+    inactiveCompanies: 0,
+    paidActiveEmployees: 0,
+    trialEmployees: 0,
   },
 }
 
@@ -247,12 +281,30 @@ export default function AdminDashboard() {
                   </Card>
                 )}
 
+                {systemStats.ventasBank && !systemStats.ventasBank.configured && (
+                  <Card className="border-amber-400/30 bg-amber-500/10 text-amber-50">
+                    <CardContent className="flex flex-wrap items-center justify-between gap-3 pt-4">
+                      <div className="flex items-start gap-2 text-sm">
+                        <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                        <span>
+                          <strong>VENTAS_BANK_* no configurado en este entorno.</strong> Los correos de
+                          cotización salen sin datos bancarios ni instrucciones del 50%. Configure al menos{' '}
+                          <code className="text-xs">VENTAS_BANK_BAC_ACCOUNT</code> en Railway.
+                        </span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                <p className="text-xs uppercase tracking-[0.25em] text-white/50">
+                  Clientes de paga
+                </p>
                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
                   {[
                     {
-                      label: 'Empresas totales',
-                      value: systemStats.totalCompanies,
-                      sublabel: `${systemStats.activeCompanies} activas`,
+                      label: 'Empresas activas (de paga)',
+                      value: systemStats.tenants?.paidActiveCompanies ?? systemStats.activeCompanies,
+                      sublabel: `${systemStats.totalCompanies} totales · ${systemStats.tenants?.inactiveCompanies ?? systemStats.inactiveCompanies} inactivas`,
                       icon: Building2
                     },
                     {
@@ -262,9 +314,9 @@ export default function AdminDashboard() {
                       icon: Users
                     },
                     {
-                      label: 'Empleados registrados',
-                      value: systemStats.totalEmployees.toLocaleString(),
-                      sublabel: 'Across all tenants',
+                      label: 'Empleados (de paga)',
+                      value: (systemStats.tenants?.paidActiveEmployees ?? systemStats.totalEmployees).toLocaleString(),
+                      sublabel: 'Solo empresas con plan basic/premium/enterprise',
                       icon: Activity
                     },
                     {
@@ -287,6 +339,114 @@ export default function AdminDashboard() {
                       </CardContent>
                     </Card>
                   ))}
+                </div>
+
+                <div>
+                  <p className="text-xs uppercase tracking-[0.25em] text-white/50 mb-3">
+                    Entornos trial (sandbox)
+                  </p>
+                  <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-2 max-w-2xl">
+                    {[
+                      {
+                        label: 'Empresas en trial',
+                        value: systemStats.tenants?.trialCompanies ?? 0,
+                        sublabel: 'plan_type=trial, is_active=true',
+                        icon: Building2,
+                      },
+                      {
+                        label: 'Empleados en trial',
+                        value: (systemStats.tenants?.trialEmployees ?? 0).toLocaleString(),
+                        sublabel: 'No incluidos en métricas de paga',
+                        icon: Users,
+                      },
+                    ].map((card) => (
+                      <Card key={card.label} variant="glass" className="border-white/10 border-dashed">
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                          <CardTitle className="text-sm font-medium text-white/80">{card.label}</CardTitle>
+                          <card.icon className="h-4 w-4 text-white/50" />
+                        </CardHeader>
+                        <CardContent>
+                          <div className="text-2xl font-bold text-white/90">
+                            {loadingStats ? '…' : card.value}
+                          </div>
+                          <p className="text-xs text-white/50">{card.sublabel}</p>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-xs uppercase tracking-[0.25em] text-white/50 mb-3">
+                    Pipeline comercial (cotizaciones)
+                  </p>
+                  <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+                    {[
+                      {
+                        label: 'Cotizaciones enviadas (30d)',
+                        value: systemStats.commercial?.available
+                          ? systemStats.commercial.quotesSent30d
+                          : '—',
+                        sublabel: systemStats.commercial?.available
+                          ? `${systemStats.commercial.quotesPendingPayment} pendientes de pago`
+                          : 'Requiere migración unify_quote_billing',
+                        icon: FileText,
+                      },
+                      {
+                        label: 'Pipeline cotizado',
+                        value: systemStats.commercial?.available
+                          ? `L. ${systemStats.commercial.pipelineQuotedTotalHnl.toLocaleString()}`
+                          : '—',
+                        sublabel: 'Suma expected_total_hnl (pendientes)',
+                        icon: TrendingUp,
+                      },
+                      {
+                        label: 'Depósitos del mes',
+                        value: systemStats.commercial?.available
+                          ? `L. ${systemStats.commercial.depositsMonthTotalHnl.toLocaleString()}`
+                          : '—',
+                        sublabel: systemStats.commercial?.available
+                          ? `${systemStats.commercial.depositsMonthCount} pagos (kind=deposit)`
+                          : '—',
+                        icon: CreditCard,
+                      },
+                      {
+                        label: 'Conversión (30d)',
+                        value:
+                          systemStats.commercial?.available &&
+                          systemStats.commercial.conversionRate30d != null
+                            ? `${systemStats.commercial.conversionRate30d}%`
+                            : systemStats.commercial?.available
+                              ? '0%'
+                              : '—',
+                        sublabel: systemStats.commercial?.available
+                          ? `${systemStats.commercial.quotesDepositReceived30d} con depósito / ${systemStats.commercial.quotesSent30d} enviadas`
+                          : '—',
+                        icon: Activity,
+                      },
+                    ].map((card) => (
+                      <Card key={card.label} variant="glass" className="border-white/10">
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                          <CardTitle className="text-sm font-medium">{card.label}</CardTitle>
+                          <card.icon className="h-4 w-4 text-white/70" />
+                        </CardHeader>
+                        <CardContent>
+                          <div className="text-2xl font-bold">
+                            {loadingStats ? '…' : card.value}
+                          </div>
+                          <p className="text-xs text-white/70">{card.sublabel}</p>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                  {systemStats.commercial?.available &&
+                    (systemStats.commercial.quotesWithoutCompany > 0 ||
+                      systemStats.commercial.paymentsWithoutQuote > 0) && (
+                      <p className="mt-3 text-xs text-amber-200/90">
+                        Deuda de datos: {systemStats.commercial.quotesWithoutCompany} cotización(es) sin
+                        empresa · {systemStats.commercial.paymentsWithoutQuote} pago(s) sin quote_id
+                      </p>
+                    )}
                 </div>
 
                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">

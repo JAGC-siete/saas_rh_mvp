@@ -13,12 +13,21 @@ import {
   XCircle
 } from 'lucide-react'
 
+interface TenantStats {
+  paidActiveCompanies: number
+  trialCompanies: number
+  inactiveCompanies: number
+  paidActiveEmployees: number
+  trialEmployees: number
+}
+
 interface SystemStats {
   totalCompanies: number
   totalUsers: number
   totalEmployees: number
   activeCompanies: number
   inactiveCompanies: number
+  tenants?: TenantStats
   totalRevenue: number
   monthlyRevenue: number
   systemHealth: 'healthy' | 'warning' | 'critical'
@@ -100,16 +109,17 @@ export default function SuperAdminStats() {
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-      {/* Total Companies */}
+      {/* Paid active companies */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Total Empresas</CardTitle>
+          <CardTitle className="text-sm font-medium">Empresas de paga</CardTitle>
           <Building2 className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{stats.totalCompanies}</div>
+          <div className="text-2xl font-bold">{stats.tenants?.paidActiveCompanies ?? stats.activeCompanies}</div>
           <p className="text-xs text-muted-foreground">
-            {stats.activeCompanies} activas, {stats.inactiveCompanies} inactivas
+            {stats.totalCompanies} totales · {stats.tenants?.trialCompanies ?? 0} trial ·{' '}
+            {stats.tenants?.inactiveCompanies ?? stats.inactiveCompanies} inactivas
           </p>
         </CardContent>
       </Card>
@@ -128,16 +138,18 @@ export default function SuperAdminStats() {
         </CardContent>
       </Card>
 
-      {/* Total Employees */}
+      {/* Paid employees */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Total Empleados</CardTitle>
+          <CardTitle className="text-sm font-medium">Empleados de paga</CardTitle>
           <Users className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{stats.totalEmployees.toLocaleString()}</div>
+          <div className="text-2xl font-bold">
+            {(stats.tenants?.paidActiveEmployees ?? stats.totalEmployees).toLocaleString()}
+          </div>
           <p className="text-xs text-muted-foreground">
-            Empleados registrados
+            {stats.tenants?.trialEmployees ?? 0} en empresas trial (excluidos)
           </p>
         </CardContent>
       </Card>
@@ -186,16 +198,16 @@ export default function SuperAdminStats() {
         </CardContent>
       </Card>
 
-      {/* Active Companies */}
+      {/* Trial sandbox */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Empresas Activas</CardTitle>
+          <CardTitle className="text-sm font-medium">Empresas trial</CardTitle>
           <Shield className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold text-green-600">{stats.activeCompanies}</div>
+          <div className="text-2xl font-bold text-amber-600">{stats.tenants?.trialCompanies ?? 0}</div>
           <p className="text-xs text-muted-foreground">
-            {((stats.activeCompanies / stats.totalCompanies) * 100).toFixed(1)}% del total
+            Sandbox separado de clientes de paga
           </p>
         </CardContent>
       </Card>
