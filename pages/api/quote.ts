@@ -31,6 +31,7 @@ import {
   sendMetaWebsiteConversionFireAndForget,
 } from '../../lib/analytics/metaCapiServer'
 import { enrollMarketingLead } from '../../lib/marketing/enroll-lead'
+import { sendLeadRegistroNotification } from '../../lib/leads/registro-notification'
 import { computeFrozenQuoteAmounts } from '../../lib/billing/quote-amounts'
 import { getHondurasTimestamp } from '../../lib/timezone'
 import { addDays } from 'date-fns'
@@ -437,11 +438,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
       return res.status(500).json({ error: 'Error de configuración del servicio de email' })
     }
 
-    const internal = process.env.VENTAS_NOTIFICATION_EMAIL
-    const toList = internal ? [contactEmail, internal] : [contactEmail]
-
     const result = await sendEmailWithResend({
-      to: toList,
+      to: contactEmail,
       subject,
       html,
       text,
@@ -474,6 +472,20 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
         },
       })
       .eq('id', quoteId)
+
+    void sendLeadRegistroNotification({
+      source: 'ventas',
+      nombre: contactName || 'Contacto no especificado',
+      empresa: companyName || null,
+      email: contactEmail,
+      whatsapp: phoneNorm || null,
+      country_code: countryCode,
+      empleados: employeesCount,
+      quote_id: quoteId,
+      billing_modality: billingModality,
+      monthly_total: quote.monthly_total,
+      currency: quote.currency,
+    })
 
     // Activar entorno automáticamente (no romper cotización si falla).
     try {

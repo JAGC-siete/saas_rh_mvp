@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next'
 import { createSuccessResponse, createErrorResponse } from '../../../lib/security/api-responses'
 import { logger } from '../../../lib/logger'
 import { enrollMarketingLead } from '../../../lib/marketing/enroll-lead'
+import { sendLeadRegistroNotification } from '../../../lib/leads/registro-notification'
 import {
   parseMetaTrackingPayload,
   sendMetaWebsiteConversionFireAndForget,
@@ -23,6 +24,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       email: trimmedEmail,
       source: leadSource,
     })
+
+    if (skippedReason !== 'excluded') {
+      void sendLeadRegistroNotification({
+        source: 'suscripcion',
+        nombre: trimmedEmail.split('@')[0] || 'Suscriptor',
+        email: trimmedEmail,
+      })
+    }
 
     if (skippedReason === 'excluded') {
       return res.status(200).json(
