@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { requireUser } from '../../../lib/auth/requireUser'
-import { audit } from '../../../lib/audit'
+import { createAdminClient } from '../../../lib/supabase/server'
+import { activateFromQuote } from '../../../lib/billing/activate-from-quote'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -8,8 +9,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const { supabase, user, userProfile } = await requireUser(req, res)
-    const { company_id, amount_hnl, plan = 'basic', reference } = req.body
+    const { user, userProfile } = await requireUser(req, res)
+    const { company_id, amount_hnl, plan = 'basic', reference, quote_id, payment_kind } = req.body
 
     // Validate required fields
     if (!company_id || !amount_hnl) {
@@ -27,73 +28,50 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'Invalid amount' })
     }
 
-    // Record manual payment
-    const { data: payment, error: paymentError } = await supabase
-      .from('manual_payments')
-      .insert({
-        company_id,
-        amount_hnl: amount,
-        reference: reference || `Manual payment by ${user.email}`,
-        created_by: user.id
-      })
-      .select()
-      .single()
+    const adminClient = createAdminClient()
+    const defaultReference =
+      reference ||
+      (quote_id
+        ? `Cotización ${String(quote_id).slice(0, 8)} — 50% anticipo`
+        : `Manual payment by ${user.email}`)
 
-    if (paymentError) {
-      console.error('Error recording manual payment:', paymentError)
+    let activation
+    try {
+      activation = await activateFromQuote(adminClient, {
+        companyId: company_id,
+        amountHnl: amount,
+        reference: defaultReference,
+        createdBy: user.id,
+        quoteId: quote_id || null,
+        paymentKind: payment_kind || 'deposit',
+        planType: plan,
+      })
+    } catch (activationError: any) {
+      const msg = activationError?.message || 'ACTIVATION_FAILED'
+      if (msg === 'QUOTE_NOT_FOUND') {
+        return res.status(404).json({ error: 'No hay cotización enviada vinculada a esta empresa' })
+      }
+      console.error('Manual payment activation error:', activationError)
       return res.status(500).json({ error: 'Failed to record payment' })
     }
 
-    // Update subscription status to active
-    const { error: subError } = await supabase
-      .from('company_subscriptions')
-      .upsert({
-        company_id,
-        status: 'active',
-        plan,
-        trial_start: new Date().toISOString(),
-        trial_end: new Date().toISOString() // End trial when payment is made
-      }, { 
-        onConflict: 'company_id',
-        ignoreDuplicates: false
-      })
-
-    if (subError) {
-      console.error('Error updating subscription:', subError)
-      return res.status(500).json({ error: 'Failed to update subscription' })
-    }
-
-    // Log audit event
-    try {
-      await audit(supabase, {
-        user_id: user.id,
-        company_id,
-        event: 'manual_payment_recorded',
-        meta: { 
-          amount_hnl: amount, 
-          plan, 
-          payment_id: payment.id,
-          reference: payment.reference
-        }
-      })
-    } catch (auditError) {
-      console.warn('Failed to log audit event:', auditError)
-      // Don't fail the request if audit fails
-    }
-
-    return res.status(200).json({ 
-      success: true, 
-      payment_id: payment.id,
-      message: 'Payment recorded and subscription activated successfully'
+    return res.status(200).json({
+      success: true,
+      payment_id: activation.payment_id,
+      quote_id: activation.quote_id,
+      activated: activation.activated,
+      plan_type: activation.plan_type,
+      message: activation.activated
+        ? 'Payment recorded and subscription activated successfully'
+        : 'Payment recorded (deposit below activation threshold)',
     })
-
   } catch (error: any) {
     console.error('Manual payment error:', error)
-    
+
     if (error.message === 'UNAUTHORIZED') {
       return res.status(401).json({ error: 'Unauthorized' })
     }
-    
+
     if (error.message === 'PROFILE_REQUIRED') {
       return res.status(403).json({ error: 'User profile required' })
     }

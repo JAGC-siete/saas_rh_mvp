@@ -572,6 +572,102 @@ export type Database = {
           },
         ]
       }
+      cotizaciones: {
+        Row: {
+          company_id: string | null
+          contact_email: string
+          contact_name: string | null
+          company_name: string | null
+          coupon_applied: boolean
+          coupon_code_submitted: string | null
+          created_at: string
+          currency: string
+          discount_amount: number
+          discount_pct_applied: number
+          email_message_id: string | null
+          employees_count: number
+          expected_deposit_hnl: number | null
+          expected_total_hnl: number | null
+          id: string
+          meta: Json
+          payment_status: string
+          phone: string | null
+          pricing_tier_id: string | null
+          pricing_tier_snapshot: Json | null
+          status: string
+          subtotal: number
+          terminals_count: number | null
+          total: number
+        }
+        Insert: {
+          company_id?: string | null
+          contact_email: string
+          contact_name?: string | null
+          company_name?: string | null
+          coupon_applied?: boolean
+          coupon_code_submitted?: string | null
+          created_at?: string
+          currency?: string
+          discount_amount?: number
+          discount_pct_applied?: number
+          email_message_id?: string | null
+          employees_count: number
+          expected_deposit_hnl?: number | null
+          expected_total_hnl?: number | null
+          id?: string
+          meta?: Json
+          payment_status?: string
+          phone?: string | null
+          pricing_tier_id?: string | null
+          pricing_tier_snapshot?: Json | null
+          status?: string
+          subtotal: number
+          terminals_count?: number | null
+          total: number
+        }
+        Update: {
+          company_id?: string | null
+          contact_email?: string
+          contact_name?: string | null
+          company_name?: string | null
+          coupon_applied?: boolean
+          coupon_code_submitted?: string | null
+          created_at?: string
+          currency?: string
+          discount_amount?: number
+          discount_pct_applied?: number
+          email_message_id?: string | null
+          employees_count?: number
+          expected_deposit_hnl?: number | null
+          expected_total_hnl?: number | null
+          id?: string
+          meta?: Json
+          payment_status?: string
+          phone?: string | null
+          pricing_tier_id?: string | null
+          pricing_tier_snapshot?: Json | null
+          status?: string
+          subtotal?: number
+          terminals_count?: number | null
+          total?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cotizaciones_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cotizaciones_pricing_tier_id_fkey"
+            columns: ["pricing_tier_id"]
+            isOneToOne: false
+            referencedRelation: "config_ventas_pricing_tiers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       company_meters: {
         Row: {
           attendances_recorded: number
@@ -1675,6 +1771,8 @@ export type Database = {
           created_by: string | null
           id: string
           paid_at: string
+          payment_kind: string
+          quote_id: string | null
           reference: string | null
         }
         Insert: {
@@ -1683,6 +1781,8 @@ export type Database = {
           created_by?: string | null
           id?: string
           paid_at?: string
+          payment_kind?: string
+          quote_id?: string | null
           reference?: string | null
         }
         Update: {
@@ -1691,6 +1791,8 @@ export type Database = {
           created_by?: string | null
           id?: string
           paid_at?: string
+          payment_kind?: string
+          quote_id?: string | null
           reference?: string | null
         }
         Relationships: [
@@ -1699,6 +1801,13 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "manual_payments_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "cotizaciones"
             referencedColumns: ["id"]
           },
         ]
@@ -3090,6 +3199,19 @@ export type Database = {
       }
     }
     Functions: {
+      activate_from_quote: {
+        Args: {
+          p_amount_hnl: number
+          p_company_id: string
+          p_created_by?: string
+          p_paid_at?: string
+          p_payment_kind?: string
+          p_plan_type?: string
+          p_quote_id?: string
+          p_reference: string
+        }
+        Returns: Json
+      }
       apply_payroll_adjustment: {
         Args: {
           p_company_id: string

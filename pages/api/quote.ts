@@ -31,6 +31,9 @@ import {
   sendMetaWebsiteConversionFireAndForget,
 } from '../../lib/analytics/metaCapiServer'
 import { enrollMarketingLead } from '../../lib/marketing/enroll-lead'
+import { computeFrozenQuoteAmounts } from '../../lib/billing/quote-amounts'
+import { getHondurasTimestamp } from '../../lib/timezone'
+import { addDays } from 'date-fns'
 
 const FALLBACK_CURRENCY: CurrencyCode = 'HNL'
 const FALLBACK_COUPON_CODE = 'gastro2026'
@@ -109,6 +112,8 @@ async function createTrialEnvironmentFromQuote(supabase: any, params: {
   const subdomain = `ventas-${Date.now().toString(36)}`
   const tz = ianaTimezoneForCountryCode(countryCode)
   const currency = currencyForCountryCode(countryCode)
+  const trialActivatedAt = getHondurasTimestamp()
+  const trialEnd = addDays(new Date(trialActivatedAt), 30).toISOString()
 
   const { error: companyError } = await supabase
     .from('companies')
@@ -121,6 +126,7 @@ async function createTrialEnvironmentFromQuote(supabase: any, params: {
       timezone: tz,
       settings: {
         trial_employee_limit: params.employeesCount,
+        trial_activated_at: trialActivatedAt,
         currency,
         language: 'es',
         ventas_quote: params.quoteMeta,
@@ -171,6 +177,23 @@ async function createTrialEnvironmentFromQuote(supabase: any, params: {
 
   if (profileError) {
     throw new Error(`Error creando perfil: ${profileError.message}`)
+  }
+
+  const { error: subError } = await supabase
+    .from('company_subscriptions')
+    .upsert({
+      company_id: companyId,
+      status: 'trial',
+      plan: 'basic',
+      trial_start: trialActivatedAt,
+      trial_end: trialEnd,
+    }, {
+      onConflict: 'company_id',
+      ignoreDuplicates: false,
+    })
+
+  if (subError) {
+    throw new Error(`Error creando suscripción trial: ${subError.message}`)
   }
 
   return { companyId, userId: authUser.user.id, tempPassword }
@@ -473,6 +496,24 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
         quoteMeta: quoteMetaForCompany,
         countryCode,
       })
+
+      const frozenAmounts = computeFrozenQuoteAmounts({
+        billingModality,
+        monthlySoftwareTotal: quote.monthly_software_total,
+        monthlyHardwareFee: quote.monthly_hardware_fee,
+        annualTotal: quote.annual_total,
+        sentAt,
+      })
+
+      await (supabase as any)
+        .from('cotizaciones')
+        .update({
+          company_id: env.companyId,
+          expected_total_hnl: frozenAmounts.expectedTotalHnl,
+          expected_deposit_hnl: frozenAmounts.expectedDepositHnl,
+          payment_status: 'pending',
+        })
+        .eq('id', quoteId)
 
       const loginUrl = `${(process.env.NEXT_PUBLIC_SITE_URL || 'https://humanosisu.net').replace(/\/$/, '')}/app/login`
       const activationHtml = generateVentasActivationEmailHTML({

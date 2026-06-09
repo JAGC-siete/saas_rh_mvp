@@ -37,6 +37,20 @@ interface Company {
   name: string
 }
 
+interface PendingQuote {
+  id: string
+  company_id: string | null
+  company_name: string | null
+  payment_status: string
+  meta: { billing_modality?: string } | null
+  terminals_count: number | null
+  employees_count: number
+  expected_deposit_hnl: number | null
+  expected_total_hnl: number | null
+  total: number
+  currency: string
+}
+
 export default function BillingPage() {
   const { addNotification } = useNotificationContext()
   const [activeTab, setActiveTab] = useState<'meters' | 'payments'>('meters')
@@ -72,10 +86,14 @@ export default function BillingPage() {
   const [showPaymentForm, setShowPaymentForm] = useState(false)
   const [paymentForm, setPaymentForm] = useState({
     company_id: '',
+    quote_id: '',
     amount_hnl: '',
     reference: '',
     paid_at: new Date().toISOString().split('T')[0]
   })
+  const [pendingQuotes, setPendingQuotes] = useState<PendingQuote[]>([])
+  const [loadingPendingQuotes, setLoadingPendingQuotes] = useState(false)
+  const [selectedQuote, setSelectedQuote] = useState<PendingQuote | null>(null)
   const [submittingPayment, setSubmittingPayment] = useState(false)
 
   const tabs = [
@@ -158,6 +176,49 @@ export default function BillingPage() {
     loadPayments()
   }, [activeTab, paymentFilters, paymentsPage])
 
+  useEffect(() => {
+    if (!showPaymentForm || !paymentForm.company_id) {
+      setPendingQuotes([])
+      setSelectedQuote(null)
+      return
+    }
+
+    const loadPendingQuotes = async () => {
+      try {
+        setLoadingPendingQuotes(true)
+        const params = new URLSearchParams({ company_id: paymentForm.company_id })
+        const res = await fetch(`/api/admin/billing/pending-quotes?${params.toString()}`, {
+          credentials: 'include',
+        })
+        if (!res.ok) throw new Error('Error cargando cotizaciones')
+        const data = await res.json()
+        const quotes: PendingQuote[] = data.data || []
+        setPendingQuotes(quotes)
+        if (quotes.length === 1) {
+          applyQuoteToForm(quotes[0])
+        }
+      } catch (err) {
+        console.error('Error loading pending quotes:', err)
+        setPendingQuotes([])
+      } finally {
+        setLoadingPendingQuotes(false)
+      }
+    }
+
+    loadPendingQuotes()
+  }, [showPaymentForm, paymentForm.company_id])
+
+  const applyQuoteToForm = (quote: PendingQuote) => {
+    setSelectedQuote(quote)
+    const deposit = quote.expected_deposit_hnl
+    setPaymentForm((prev) => ({
+      ...prev,
+      quote_id: quote.id,
+      amount_hnl: deposit != null ? String(deposit) : prev.amount_hnl,
+      reference: `Cotización ${quote.id.slice(0, 8)} — 50% anticipo`,
+    }))
+  }
+
   const handleCreatePayment = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!paymentForm.company_id || !paymentForm.amount_hnl) {
@@ -180,10 +241,13 @@ export default function BillingPage() {
       setShowPaymentForm(false)
       setPaymentForm({
         company_id: '',
+        quote_id: '',
         amount_hnl: '',
         reference: '',
         paid_at: new Date().toISOString().split('T')[0]
       })
+      setSelectedQuote(null)
+      setPendingQuotes([])
       // Reload payments
       setPaymentsPage(1)
       setPaymentFilters({ ...paymentFilters })
@@ -462,7 +526,13 @@ export default function BillingPage() {
                             <label className="block text-sm text-white/70 mb-1">Empresa *</label>
                             <select
                               value={paymentForm.company_id}
-                              onChange={(e) => setPaymentForm({ ...paymentForm, company_id: e.target.value })}
+                              onChange={(e) => setPaymentForm({
+                                ...paymentForm,
+                                company_id: e.target.value,
+                                quote_id: '',
+                                amount_hnl: '',
+                                reference: '',
+                              })}
                               className="w-full px-3 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-md text-white"
                               required
                             >
@@ -472,6 +542,54 @@ export default function BillingPage() {
                               ))}
                             </select>
                           </div>
+                          <div>
+                            <label className="block text-sm text-white/70 mb-1">Cotización pendiente</label>
+                            <select
+                              value={paymentForm.quote_id}
+                              onChange={(e) => {
+                                const quote = pendingQuotes.find((q) => q.id === e.target.value)
+                                if (quote) applyQuoteToForm(quote)
+                                else setPaymentForm((prev) => ({ ...prev, quote_id: '', reference: '' }))
+                              }}
+                              className="w-full px-3 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-md text-white"
+                              disabled={!paymentForm.company_id || loadingPendingQuotes}
+                            >
+                              <option value="">
+                                {loadingPendingQuotes
+                                  ? 'Cargando...'
+                                  : pendingQuotes.length === 0
+                                    ? 'Sin cotización pendiente'
+                                    : 'Seleccionar cotización...'}
+                              </option>
+                              {pendingQuotes.map((q) => (
+                                <option key={q.id} value={q.id}>
+                                  {q.company_name || 'Sin nombre'} — {q.meta?.billing_modality || 'anual'} — L. {q.expected_total_hnl ?? q.total}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          {selectedQuote && (
+                            <div className="md:col-span-2 rounded-md border border-white/15 bg-white/5 p-3 text-sm text-white/80">
+                              <p>
+                                <span className="text-white/60">Modalidad:</span>{' '}
+                                {selectedQuote.meta?.billing_modality === 'monthly' ? 'Mensual' : 'Anual'}
+                              </p>
+                              <p>
+                                <span className="text-white/60">Terminales:</span>{' '}
+                                {selectedQuote.terminals_count ?? 1} · {selectedQuote.employees_count} empleados
+                              </p>
+                              <p>
+                                <span className="text-white/60">Total cotizado:</span>{' '}
+                                {formatCurrency(Number(selectedQuote.expected_total_hnl ?? selectedQuote.total))}
+                              </p>
+                              <p>
+                                <span className="text-white/60">Depósito esperado (50%):</span>{' '}
+                                {selectedQuote.expected_deposit_hnl != null
+                                  ? formatCurrency(Number(selectedQuote.expected_deposit_hnl))
+                                  : '—'}
+                              </p>
+                            </div>
+                          )}
                           <div>
                             <label className="block text-sm text-white/70 mb-1">Monto (HNL) *</label>
                             <input
