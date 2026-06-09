@@ -30,10 +30,10 @@ export interface SystemStatsPayload {
 async function countRows(
   supabase: SupabaseClient,
   table: string,
-  filter?: (query: ReturnType<SupabaseClient['from']>) => ReturnType<SupabaseClient['from']>
+  filter?: (query: any) => any
 ): Promise<number> {
-  let query = supabase.from(table).select('*', { count: 'exact', head: true })
-  if (filter) query = filter(query) as typeof query
+  let query: any = supabase.from(table).select('*', { count: 'exact', head: true })
+  if (filter) query = filter(query)
   const { count, error } = await query
   if (error) throw new Error(`${table}: ${error.message}`)
   return count ?? 0
