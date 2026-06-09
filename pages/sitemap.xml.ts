@@ -1,4 +1,5 @@
 import { GetServerSideProps } from 'next'
+import { recursosAdapter } from '../lib/recursos'
 
 interface SitemapUrl {
   loc: string
@@ -46,6 +47,11 @@ const publicPages: SitemapUrl[] = [
     loc: '/afiliados',
     changefreq: 'monthly',
     priority: 0.7
+  },
+  {
+    loc: '/recursos',
+    changefreq: 'weekly',
+    priority: 0.8
   },
   {
     loc: '/calculadora-deducciones',
@@ -107,7 +113,15 @@ export default function Sitemap() {
 }
 
 export const getServerSideProps: GetServerSideProps = async ({ res }) => {
-  const sitemap = generateSitemap(publicPages)
+  const recursos = await recursosAdapter.getRecursosList()
+  const recursoPages: SitemapUrl[] = recursos.map((recurso) => ({
+    loc: `/recursos/${recurso.slug}`,
+    changefreq: 'monthly',
+    priority: 0.7,
+    lastmod: recurso.dateModified ?? recurso.datePublished
+  }))
+
+  const sitemap = generateSitemap([...publicPages, ...recursoPages])
 
   res.setHeader('Content-Type', 'text/xml')
   res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400')
