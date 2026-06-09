@@ -13,8 +13,9 @@ import {
 import { Card, CardContent, CardTitle } from '../components/ui/card'
 import MainHeader from '../components/MainHeader'
 import type { QuotationQuote, QuotationRequest, QuotationResponse, QuotationUrgencyOffer } from '../lib/ventas/types'
-import { formatMoney } from '../lib/ventas/pricing'
+import { buildQuotationPlanSummary } from '../lib/ventas/quote-display'
 import { formatUrgencyOfferExpiry, urgencyOfferCtaText } from '../lib/ventas/urgency-offer'
+import { VENTAS_MAX_AUTO_QUOTE_TERMINALS } from '../lib/ventas/modality-includes'
 import {
   buildQuotationAcquisitionWhatsAppText,
   buildVentasSupportWhatsAppUrl,
@@ -64,9 +65,8 @@ function computeVentasErrors(fd: QuotationRequest): ValidationErrors {
 
   const t = Number(fd.terminals_count)
   if (!Number.isFinite(t) || t < 1) e.terminals_count = 'Indique cuántos terminales necesita.'
-  else if (t > 3) {
-    e.terminals_count =
-      'Más de tres terminales va cotización aparte (tarifa de hardware). Escríbanos o elija hasta 3.'
+  else if (t > VENTAS_MAX_AUTO_QUOTE_TERMINALS) {
+    e.terminals_count = `Indique entre 1 y ${VENTAS_MAX_AUTO_QUOTE_TERMINALS} terminales.`
   }
 
   return e
@@ -97,6 +97,11 @@ export default function VentasPage() {
     coupon_code: '',
     consent_newsletter: true,
   })
+
+  const planSummary = useMemo(() => {
+    if (!quote) return null
+    return buildQuotationPlanSummary({ quote })
+  }, [quote])
 
   const whatsappUrl = useMemo(() => {
     if (!isSuccess) return ''
@@ -242,63 +247,35 @@ export default function VentasPage() {
                   <h2 className="text-2xl font-bold text-white mb-4">Resumen de Inversión</h2>
                   <div className="space-y-2 text-brand-200 text-left">
                     <p>
+                      <strong>Modalidad:</strong>{' '}
+                      {getVentasModalityDefinition(quote.billing_modality).label}
+                    </p>
+                    <p>
                       <strong>Rango tarifario:</strong> {quote.tier.min_employees}–{quote.tier.max_employees} empleados
                     </p>
-                    {quote.billing_modality === 'monthly' ? (
-                      <>
-                        <p>
-                          <strong>Total mensual estimado:</strong>{' '}
-                          {urgencyOffer?.is_active ? (
-                            <>
-                              <span className="line-through text-brand-400/70">
-                                {formatMoney(quote.currency, urgencyOffer.quoted_total)}
-                              </span>{' '}
-                              <span className="text-emerald-300 font-semibold">
-                                {formatMoney(quote.currency, urgencyOffer.discounted_total)}
-                              </span>
-                            </>
-                          ) : (
-                            formatMoney(quote.currency, quote.monthly_total)
-                          )}
+                    {planSummary && (
+                      <div className="mt-4 rounded-xl border border-white/10 bg-black/20 p-4 space-y-2">
+                        <p className="text-sm font-semibold text-white">
+                          El resumen de tu plan ({planSummary.tierLabel}):
                         </p>
-                        {urgencyOffer?.is_active && (
-                          <p className="text-sm text-emerald-300">
-                            Ahorro inmediato: {formatMoney(quote.currency, urgencyOffer.discount_amount)} / mes al contratar en las próximas 72 horas.
+                        {planSummary.lines.map((line) => (
+                          <p key={line.label} className="text-sm">
+                            <strong>{line.label}:</strong> {line.value}
                           </p>
+                        ))}
+                        <p className="text-base font-semibold text-emerald-300 pt-1">
+                          {planSummary.totalLabel}: {planSummary.totalValue}
+                        </p>
+                        {planSummary.expiryText && (
+                          <p className="text-xs text-amber-200/90 pt-1">{planSummary.expiryText}</p>
                         )}
-                        <p className="text-sm text-cyan-100/70">
-                          {getVentasModalityDefinition('monthly').successSummaryLine}
-                        </p>
-                      </>
-                    ) : (
-                      <>
-                        <p>
-                          <strong>Total anual (software):</strong>{' '}
-                          {urgencyOffer?.is_active ? (
-                            <>
-                              <span className="line-through text-brand-400/70">
-                                {formatMoney(quote.currency, urgencyOffer.quoted_total)}
-                              </span>{' '}
-                              <span className="text-emerald-300 font-semibold">
-                                {formatMoney(quote.currency, urgencyOffer.discounted_total)}
-                              </span>
-                            </>
-                          ) : (
-                            formatMoney(quote.currency, quote.annual_total)
-                          )}
-                        </p>
-                        {urgencyOffer?.is_active && (
-                          <p className="text-sm text-emerald-300">
-                            Ahorro inmediato: {formatMoney(quote.currency, urgencyOffer.discount_amount)} / año al contratar en las próximas 72 horas.
-                          </p>
-                        )}
-                        <p className="text-sm text-cyan-100/70">
-                          {getVentasModalityDefinition('annual').successSummaryLine} Declaradas:{' '}
-                          <strong>{quote.terminals_count}</strong>{' '}
-                          {quote.terminals_count === 1 ? 'terminal' : 'terminales'}.
-                        </p>
-                      </>
+                      </div>
                     )}
+                    <p className="text-sm text-cyan-100/70 pt-2">
+                      {getVentasModalityDefinition(quote.billing_modality).successSummaryLine}{' '}
+                      Declaradas: <strong>{quote.terminals_count}</strong>{' '}
+                      {quote.terminals_count === 1 ? 'terminal' : 'terminales'}.
+                    </p>
                   </div>
                 </CardContent>
               </Card>
@@ -464,10 +441,11 @@ export default function VentasPage() {
                           errors.terminals_count ? 'border-red-500/50 bg-red-500/5' : 'border-white/20'
                         }`}
                       >
-                        <option value={1} className="bg-slate-800">1 terminal</option>
-                        <option value={2} className="bg-slate-800">2 terminales</option>
-                        <option value={3} className="bg-slate-800">3 terminales</option>
-                        <option value={4} className="bg-slate-800">Más de 3 (cotización especial)</option>
+                        {Array.from({ length: VENTAS_MAX_AUTO_QUOTE_TERMINALS }, (_, i) => i + 1).map((n) => (
+                          <option key={n} value={n} className="bg-slate-800">
+                            {n === 1 ? '1 terminal' : `${n} terminales`}
+                          </option>
+                        ))}
                       </select>
                     </div>
                   </div>

@@ -60,9 +60,13 @@ export interface QuotationQuote {
 export interface QuotationUrgencyOffer {
   is_active: boolean
   quoted_total: number
+  /** 20% sobre software (no aplica a hardware mensual). */
   discount_amount: number
   discounted_total: number
   expires_at: string
+  software_list_total?: number
+  hardware_total?: number
+  software_discount_amount?: number
 }
 
 export interface QuotationResponse {

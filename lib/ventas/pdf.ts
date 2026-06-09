@@ -1,14 +1,11 @@
 import { Buffer } from 'buffer'
 import type { QuotationQuote } from './types'
-import { formatMoney } from './pricing'
-import type { UrgencyOffer } from './urgency-offer'
-import { formatUrgencyOfferExpiryFriendly } from './urgency-offer'
+import { buildQuotationPlanSummary } from './quote-display'
 import type { VentasBankDetails } from './bank-details'
 import { buildBankDetailsPlainText } from './bank-details'
 import {
   buildModalityIncludesPlainLines,
   buildTerminalsPricingNote,
-  VENTAS_MAX_AUTO_QUOTE_TERMINALS,
 } from './modality-includes'
 
 export async function generateVentasQuotationPDF(params: {
@@ -22,7 +19,7 @@ export async function generateVentasQuotationPDF(params: {
   couponCodeSubmitted?: string
   /** Ej. Honduras */
   countryLabel: string
-  urgencyOffer?: UrgencyOffer
+  sentAt?: Date
   bankDetails?: VentasBankDetails | null
 }): Promise<Buffer> {
   const {
@@ -35,9 +32,11 @@ export async function generateVentasQuotationPDF(params: {
     terminalsCount,
     couponCodeSubmitted,
     countryLabel,
-    urgencyOffer,
+    sentAt = new Date(),
     bankDetails,
   } = params
+
+  const planSummary = buildQuotationPlanSummary({ quote, sentAt })
 
   return new Promise<Buffer>((resolve, reject) => {
     try {
@@ -104,106 +103,40 @@ export async function generateVentasQuotationPDF(params: {
       doc.fillColor('#0f172a')
       cursorY += 10
 
-      const isMonthly = quote.billing_modality === 'monthly'
-      const boxHeight = isMonthly ? 132 : 132
+      const summaryLines = planSummary.lines.length + 2
+      const boxHeight = 36 + summaryLines * 22 + (planSummary.expiryText ? 28 : 0)
       doc.roundedRect(40, cursorY, doc.page.width - 80, boxHeight, 12).stroke('#cbd5e1')
-      doc.fontSize(12).text('RESUMEN DE COTIZACIÓN', 56, cursorY + 18)
+      doc.fontSize(12).text(`RESUMEN DE COTIZACIÓN (${planSummary.tierLabel})`, 56, cursorY + 18)
 
       const lineY = (i: number) => cursorY + 44 + i * 22
       doc.fontSize(10)
-      if (isMonthly) {
-        doc.text('Software (mensual)', 56, lineY(0))
-        doc.text(formatMoney(quote.currency, quote.monthly_software_total) + ' / mes', 0, lineY(0), {
+      planSummary.lines.forEach((line, index) => {
+        doc.fillColor(line.variant === 'discount' ? '#b45309' : '#0f172a')
+        doc.text(line.label, 56, lineY(index))
+        doc.text(line.value, 0, lineY(index), {
           align: 'right',
           width: doc.page.width - 56,
         })
+      })
 
-        doc.text('Continuidad hardware', 56, lineY(1))
-        doc.text(formatMoney(quote.currency, quote.monthly_hardware_fee) + ' / mes', 0, lineY(1), {
-          align: 'right',
-          width: doc.page.width - 56,
-        })
+      const totalIndex = planSummary.lines.length
+      doc.fontSize(12).fillColor('#166534')
+      doc.text(planSummary.totalLabel, 56, lineY(totalIndex) + 2)
+      doc.text(planSummary.totalValue, 0, lineY(totalIndex) + 2, {
+        align: 'right',
+        width: doc.page.width - 56,
+      })
+      doc.fillColor('#0f172a')
 
-        doc.fontSize(12)
-        doc.text('Total mensual cotizado', 56, lineY(2) + 2)
-        doc.fillColor('#166534')
-        doc.text(formatMoney(quote.currency, quote.monthly_total) + ' / mes', 0, lineY(2) + 2, {
-          align: 'right',
-          width: doc.page.width - 56,
-        })
-        doc.fillColor('#0f172a')
-
+      if (planSummary.expiryText) {
         doc.fontSize(9).fillColor('#475569')
-        doc.text('Terminal biométrica: venta por separado', 56, lineY(3), {
+        doc.text(planSummary.expiryText, 56, lineY(totalIndex + 1) + 6, {
           width: doc.page.width - 120,
         })
-        doc.fillColor('#0f172a')
-      } else {
-        doc.text('Subtotal (anual)', 56, lineY(0))
-        doc.text(formatMoney(quote.currency, quote.annual_subtotal) + ' / año', 0, lineY(0), {
-          align: 'right',
-          width: doc.page.width - 56,
-        })
-
-        doc.text('Descuento por cupón', 56, lineY(1))
-        const discountLabel = quote.coupon_applied
-          ? `-${formatMoney(quote.currency, quote.annual_discount_amount)}`
-          : formatMoney(quote.currency, 0)
-        doc.text(discountLabel + ' / año', 0, lineY(1), { align: 'right', width: doc.page.width - 56 })
-
-        doc.fontSize(12)
-        doc.text('Total anual cotizado', 56, lineY(2) + 2)
-        doc.fillColor('#166534')
-        doc.text(formatMoney(quote.currency, quote.annual_total) + ' / año', 0, lineY(2) + 2, {
-          align: 'right',
-          width: doc.page.width - 56,
-        })
-        doc.fillColor('#0f172a')
-
-        doc.fontSize(9).fillColor('#475569')
-        doc.text(
-          `Terminal biométrica incluida · ${quote.terminals_count || terminalsCount || 1} declarada(s) (hasta ${VENTAS_MAX_AUTO_QUOTE_TERMINALS} en cotización automática)`,
-          56,
-          lineY(3),
-          { width: doc.page.width - 120 }
-        )
         doc.fillColor('#0f172a')
       }
 
       cursorY = boxYAfterSummary(cursorY, boxHeight)
-
-      if (urgencyOffer?.isActive) {
-        const periodLabel = isMonthly ? 'mes' : 'año'
-        const urgencyHeight = 118
-        doc.roundedRect(40, cursorY, doc.page.width - 80, urgencyHeight, 12).stroke('#86efac')
-        doc.fontSize(12).fillColor('#0f172a').text('OFERTA POR CONTRATACIÓN RÁPIDA (72 H)', 56, cursorY + 16)
-        doc.fontSize(10)
-        doc.text(`Precio cotizado`, 56, cursorY + 40)
-        doc.text(`${formatMoney(quote.currency, urgencyOffer.quotedTotal)} / ${periodLabel}`, 0, cursorY + 40, {
-          align: 'right',
-          width: doc.page.width - 56,
-        })
-        doc.text('Descuento 20% por contratar en 72 h', 56, cursorY + 62)
-        doc.text(`-${formatMoney(quote.currency, urgencyOffer.discountAmount)} / ${periodLabel}`, 0, cursorY + 62, {
-          align: 'right',
-          width: doc.page.width - 56,
-        })
-        doc.fontSize(11).fillColor('#166534')
-        doc.text('Precio con descuento', 56, cursorY + 84)
-        doc.text(`${formatMoney(quote.currency, urgencyOffer.discountedTotal)} / ${periodLabel}`, 0, cursorY + 84, {
-          align: 'right',
-          width: doc.page.width - 56,
-        })
-        doc.fontSize(9).fillColor('#475569')
-        doc.text(
-          `Válido hasta ${formatUrgencyOfferExpiryFriendly(urgencyOffer.expiresAt)} (hora Honduras).`,
-          56,
-          cursorY + 102,
-          { width: doc.page.width - 120 }
-        )
-        doc.fillColor('#0f172a')
-        cursorY += urgencyHeight + 16
-      }
 
       if (bankDetails) {
         const bankLines = buildBankDetailsPlainText(bankDetails).split('\n')

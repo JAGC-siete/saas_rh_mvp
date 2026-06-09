@@ -4,8 +4,11 @@ import assert from 'node:assert/strict'
 import {
   buildModalityIncludesPlainLines,
   getVentasModalityDefinition,
+  hardwareFeeMonthly,
   ventasTooManyTerminalsErrorMessage,
+  VENTAS_MAX_AUTO_QUOTE_TERMINALS,
 } from '../lib/ventas/modality-includes'
+import { buildQuotationPlanSummary } from '../lib/ventas/quote-display'
 import { generateVentasQuotationEmailText } from '../lib/ventas/email-template'
 import type { QuotationQuote } from '../lib/ventas/types'
 
@@ -48,17 +51,45 @@ describe('ventas modality includes', () => {
       discount_pct_applied: 0,
       terminals_count: 1,
     }
+    const sentAt = new Date('2026-05-22T12:00:00.000Z')
     const text = generateVentasQuotationEmailText({
       quote,
       countryLabel: 'Honduras',
-      sentAt: new Date('2026-05-22T12:00:00.000Z'),
+      sentAt,
+      now: sentAt,
     })
-    assert.match(text, /Lo que incluye tu Plan Mensual/)
-    assert.match(text, /Licencia mensual de software/)
-    assert.match(text, /terminal biométrica.*vende por separado/i)
+    assert.match(text, /Precio normal Software: L\.\s?5,416\.67 \/ mes/)
+    assert.match(text, /Servicio de Continuidad de Hardware \(1 Terminal\): L\.\s?958\.33 \/ mes/)
   })
 
-  it('mensaje unificado para más de 3 terminales', () => {
-    assert.match(ventasTooManyTerminalsErrorMessage(), /modalidad anual o mensual/i)
+  it('hardware fee decrece por terminal hasta el piso', () => {
+    assert.equal(hardwareFeeMonthly(1).fee, 958.33)
+    assert.equal(hardwareFeeMonthly(2).fee, 1821.66)
+    assert.equal(hardwareFeeMonthly(4).fee, 3263.32)
+    assert.equal(hardwareFeeMonthly(5).fee, 3936.65)
+  })
+
+  it('mensaje unificado para más de 10 terminales', () => {
+    assert.match(ventasTooManyTerminalsErrorMessage(), new RegExp(String(VENTAS_MAX_AUTO_QUOTE_TERMINALS)))
+  })
+
+  it('plan summary anual no incluye hardware', () => {
+    const quote: QuotationQuote = {
+      tier: { min_employees: 1, max_employees: 30 },
+      billing_modality: 'annual',
+      currency: 'HNL',
+      annual_subtotal: 76500,
+      annual_discount_amount: 0,
+      annual_total: 76500,
+      monthly_software_total: 6375,
+      monthly_hardware_fee: 0,
+      monthly_total: 6375,
+      coupon_applied: false,
+      discount_pct_applied: 0,
+      terminals_count: 2,
+    }
+    const summary = buildQuotationPlanSummary({ quote })
+    assert.equal(summary.isMonthly, false)
+    assert.equal(summary.lines.some((l) => l.label.includes('Hardware')), false)
   })
 })

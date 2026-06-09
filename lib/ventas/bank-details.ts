@@ -25,21 +25,36 @@ export function getVentasBankDetailsFromEnv(): VentasBankDetails | null {
   }
 }
 
+export function buildPaymentConditionsPlainText(): string {
+  return [
+    'Condiciones de Implementación y Pago:',
+    'El tiempo de implementación máximo es de 3 a 5 días hábiles una vez recibido el depósito. Al confirmar la decisión, el siguiente paso es realizar el depósito del adelanto del 50% sobre la primera cuota/suscripción inicial.',
+  ].join('\n')
+}
+
+export function buildPaymentReportInstructionsPlainText(): string {
+  return [
+    '¿Cómo reportar tu pago para agendar la instalación?',
+    'Puedes hacerlo de dos formas sumamente sencillas:',
+    '1. Responde directamente a este correo adjuntando la foto o PDF de tu comprobante de depósito.',
+    '2. Envía el comprobante directamente a tu asesor asignado por WhatsApp (enlace al final de este correo).',
+  ].join('\n')
+}
+
 export function buildBankDetailsPlainText(bank: VentasBankDetails): string {
   const lines = [
-    'Gracias por su interés en el servicio Hondureño de RRHH.',
+    buildPaymentConditionsPlainText(),
     '',
-    'Le comparto las cuentas de banco disponibles.',
-    '',
+    'Datos Bancarios para el Depósito:',
   ]
 
-  if (bank.clientName) lines.push(`Cliente: ${bank.clientName}`)
-  if (bank.clientDni) lines.push(`DNI: ${bank.clientDni}`)
-  lines.push('')
-  if (bank.bacAccount) lines.push(`Número de cuenta BAC: ${bank.bacAccount}`)
-  if (bank.banpaisAccount) lines.push(`Número de cuenta Banpais: ${bank.banpaisAccount}`)
-  if (bank.atlantidaAccount) lines.push(`Número de cuenta Atlántida: ${bank.atlantidaAccount}`)
-  lines.push('', 'Será un gusto ayudarlo en su proceso de autorización de RRHH.')
+  if (bank.bacAccount) lines.push('• Banco: BAC Credomatic')
+  if (bank.clientName) lines.push(`• Cliente: ${bank.clientName}`)
+  if (bank.clientDni) lines.push(`• DNI: ${bank.clientDni}`)
+  if (bank.bacAccount) lines.push(`• Número de cuenta BAC: ${bank.bacAccount}`)
+  if (bank.banpaisAccount) lines.push(`• Número de cuenta Banpais: ${bank.banpaisAccount}`)
+  if (bank.atlantidaAccount) lines.push(`• Número de cuenta Atlántida: ${bank.atlantidaAccount}`)
+  lines.push('', buildPaymentReportInstructionsPlainText())
 
   return lines.join('\n')
 }
@@ -64,23 +79,28 @@ function bankRow(label: string, value?: string): string {
 }
 
 /** Bloque HTML para incrustar en cotización u otros correos comerciales. */
-export function buildBankDetailsInlineHtml(bank: VentasBankDetails, contactName?: string): string {
-  const greeting = contactName?.trim()
-    ? `Gracias por su interés, ${escapeHtml(contactName.trim())}.`
-    : 'Gracias por su interés en el servicio Hondureño de RRHH.'
-
+export function buildBankDetailsInlineHtml(bank: VentasBankDetails, _contactName?: string): string {
   return `
     <div style="background: #f8fafc; padding: 18px 20px; border-radius: 8px; margin: 22px 0; border-left: 4px solid #0b4fa1;">
-      <p style="margin: 0 0 10px 0; font-size: 15px; font-weight: bold; color: #111;">Datos bancarios para continuar</p>
-      <p style="margin: 0 0 14px 0; font-size: 14px; line-height: 1.55; color: #333;">${greeting} Le comparto las cuentas de banco disponibles.</p>
-      <table style="width: 100%; border-collapse: collapse;">
-        ${bank.clientName ? bankRow('Cliente', bank.clientName) : ''}
-        ${bank.clientDni ? bankRow('DNI', bank.clientDni) : ''}
-        ${bankRow('Número de cuenta BAC', bank.bacAccount)}
-        ${bankRow('Número de cuenta Banpais', bank.banpaisAccount)}
-        ${bankRow('Número de cuenta Atlántida', bank.atlantidaAccount)}
-      </table>
-      <p style="margin: 14px 0 0 0; font-size: 13px; color: #555;">Será un gusto ayudarlo en su proceso de autorización de RRHH.</p>
+      <p style="margin: 0 0 10px 0; font-size: 15px; font-weight: bold; color: #111;">Condiciones de Implementación y Pago</p>
+      <p style="margin: 0 0 16px 0; font-size: 14px; line-height: 1.6; color: #333;">
+        El tiempo de implementación máximo es de <strong>3 a 5 días hábiles</strong> una vez recibido el depósito. Al confirmar la decisión, el siguiente paso es realizar el depósito del <strong>adelanto del 50%</strong> sobre la primera cuota/suscripción inicial.
+      </p>
+      <p style="margin: 0 0 10px 0; font-size: 15px; font-weight: bold; color: #111;">Datos Bancarios para el Depósito</p>
+      <ul style="margin: 0 0 16px 0; padding: 0 0 0 18px; color: #333; font-size: 14px; line-height: 1.7;">
+        ${bank.bacAccount ? `<li style="margin-bottom: 6px;"><strong>Banco:</strong> BAC Credomatic</li>` : ''}
+        ${bank.clientName ? `<li style="margin-bottom: 6px;"><strong>Cliente:</strong> ${escapeHtml(bank.clientName)}</li>` : ''}
+        ${bank.clientDni ? `<li style="margin-bottom: 6px;"><strong>DNI:</strong> ${escapeHtml(bank.clientDni)}</li>` : ''}
+        ${bank.bacAccount ? `<li style="margin-bottom: 6px;"><strong>Número de cuenta BAC:</strong> <span style="font-family: monospace;">${escapeHtml(bank.bacAccount)}</span></li>` : ''}
+        ${bank.banpaisAccount ? `<li style="margin-bottom: 6px;"><strong>Número de cuenta Banpais:</strong> <span style="font-family: monospace;">${escapeHtml(bank.banpaisAccount)}</span></li>` : ''}
+        ${bank.atlantidaAccount ? `<li style="margin-bottom: 6px;"><strong>Número de cuenta Atlántida:</strong> <span style="font-family: monospace;">${escapeHtml(bank.atlantidaAccount)}</span></li>` : ''}
+      </ul>
+      <p style="margin: 0 0 8px 0; font-size: 15px; font-weight: bold; color: #111;">¿Cómo reportar tu pago para agendar la instalación?</p>
+      <p style="margin: 0 0 8px 0; font-size: 14px; line-height: 1.6; color: #333;">Puedes hacerlo de dos formas sumamente sencillas:</p>
+      <ol style="margin: 0; padding: 0 0 0 18px; color: #333; font-size: 14px; line-height: 1.7;">
+        <li style="margin-bottom: 6px;">Responde directamente a este correo adjuntando la foto o PDF de tu comprobante de depósito.</li>
+        <li style="margin-bottom: 6px;">Envía el comprobante directamente a tu asesor asignado por WhatsApp haciendo clic en el botón de abajo.</li>
+      </ol>
     </div>
   `
 }
@@ -119,7 +139,7 @@ export function buildQuotationAcquisitionWhatsAppText(params: {
     : ' ya revisé mi cotización de Humano SISU.'
 
   if (params.includeBankPrompt) {
-    return `${intro}${quoteScope} Quiero confirmar los datos bancarios y los pasos para formalizar la contratación.`
+    return `${intro}${quoteScope} y tengo el comprobante del 50%. ¿Me orientas con los siguientes pasos?`
   }
 
   return `${intro}${quoteScope} Quiero continuar con el proceso de contratación. ¿Me orientas con los siguientes pasos?`

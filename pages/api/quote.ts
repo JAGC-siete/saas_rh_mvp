@@ -13,7 +13,7 @@ import { hardwareFeeMonthly, ventasTooManyTerminalsErrorMessage } from '../../li
 import { generateVentasQuotationPDF } from '../../lib/ventas/pdf'
 import { generateVentasQuotationEmailHTML, generateVentasQuotationEmailSubject, generateVentasQuotationEmailText } from '../../lib/ventas/email-template'
 import { generateVentasActivationEmailHTML, generateVentasActivationEmailSubject } from '../../lib/ventas/activation-email'
-import { computeUrgencyOffer } from '../../lib/ventas/urgency-offer'
+import { buildQuotationPlanSummary } from '../../lib/ventas/quote-display'
 import {
   generateVentasBankDetailsEmailHTML,
   generateVentasBankDetailsEmailSubject,
@@ -359,8 +359,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
     })
 
     const sentAt = new Date()
-    const quotedTotalForUrgency = billingModality === 'monthly' ? monthlyTotal : annualTotal
-    const urgencyOffer = computeUrgencyOffer({ quotedTotal: quotedTotalForUrgency, sentAt })
+    const planSummary = buildQuotationPlanSummary({ quote, sentAt })
+    const urgencyOffer = planSummary.urgency
 
     const bankDetails = getVentasBankDetailsFromEnv()
 
@@ -375,6 +375,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
       terminalsCount: terminalsForPricing,
       couponCodeSubmitted: couponSubmittedNorm || undefined,
       countryLabel,
+      sentAt,
       bankDetails,
     })
 
@@ -548,9 +549,12 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
       urgency_offer: {
         is_active: urgencyOffer.isActive,
         quoted_total: urgencyOffer.quotedTotal,
-        discount_amount: urgencyOffer.discountAmount,
+        discount_amount: urgencyOffer.softwareDiscountAmount,
         discounted_total: urgencyOffer.discountedTotal,
         expires_at: urgencyOffer.expiresAt.toISOString(),
+        software_list_total: urgencyOffer.softwareListTotal,
+        hardware_total: urgencyOffer.hardwareTotal,
+        software_discount_amount: urgencyOffer.softwareDiscountAmount,
       },
     })
   } catch (error: any) {

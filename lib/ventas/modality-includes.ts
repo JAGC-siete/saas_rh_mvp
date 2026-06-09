@@ -1,15 +1,17 @@
 import type { QuotationQuote } from './types'
+import { roundMoney } from './pricing'
 
 export type VentasBillingModality = 'annual' | 'monthly'
 
-/** Tarifa de continuidad de hardware (modalidad mensual, 1–3 terminales). */
-export const VENTAS_HARDWARE_FEES_MONTHLY: Record<number, number> = {
-  1: 958.33,
-  2: 1320.0,
-  3: 1624.7,
-}
+/** Cuota mensual de la primera terminal (base). */
+export const VENTAS_HARDWARE_BASE_MONTHLY = 958.33
+/** Descuento incremental por cada terminal adicional (hasta el piso). */
+export const VENTAS_HARDWARE_INCREMENTAL_DISCOUNT = 95
+/** Piso de cuota mensual por terminal (desde la 4.ª en adelante). */
+export const VENTAS_HARDWARE_FLOOR_MONTHLY = 673.33
 
-export const VENTAS_MAX_AUTO_QUOTE_TERMINALS = 3
+/** Máximo de terminales en cotización automática del formulario web. */
+export const VENTAS_MAX_AUTO_QUOTE_TERMINALS = 10
 
 const SHARED_SERVICE_INCLUDES = [
   'Instalación de la terminal',
@@ -40,7 +42,7 @@ export function getVentasModalityDefinition(modality: VentasBillingModality): Ve
       modality: 'monthly',
       label: 'Plan Mensual',
       formHint:
-        'Incluye licencia mensual del software, instalación, migración, capacitación, soporte local e impuestos. La terminal biométrica se vende por separado; en esta cotización se suma la continuidad de hardware según terminales (hasta 3). Más de 3 requiere ajuste especial.',
+        'Incluye licencia mensual del software, instalación, migración, capacitación, soporte local e impuestos. La terminal biométrica se vende por separado; en esta cotización se suma el Servicio de Continuidad de Hardware según terminales (cuota decreciente por unidad).',
       includes: ['Licencia mensual de software Humano SISU', ...SHARED_SERVICE_INCLUDES],
       excludesOrNotes: [...MONTHLY_ONLY_NOTES],
       successSummaryLine:
@@ -52,26 +54,34 @@ export function getVentasModalityDefinition(modality: VentasBillingModality): Ve
     modality: 'annual',
     label: 'Plan Anual',
     formHint:
-      'Incluye licencia anual del software, terminal biométrica (hasta 3 en cotización automática), instalación, migración, capacitación, soporte local e impuestos. Más de 3 terminales requiere cotización especial.',
+      'Incluye licencia anual del software, terminal biométrica incluida, instalación, migración, capacitación, soporte local e impuestos.',
     includes: ['Licencia anual de software Humano SISU', ...SHARED_SERVICE_INCLUDES, ...ANNUAL_ONLY_INCLUDES],
-    excludesOrNotes: ['Más de 3 terminales: cotización aparte'],
+    excludesOrNotes: [],
     successSummaryLine:
       'Incluye licencia anual del software, terminal biométrica (hasta 3 en esta propuesta), instalación, migración, capacitación, soporte local e impuestos.',
   }
 }
 
 export function ventasTooManyTerminalsErrorMessage(): string {
-  return `Para más de ${VENTAS_MAX_AUTO_QUOTE_TERMINALS} terminales cotizamos aparte (modalidad anual o mensual). Escríbenos y te confirmamos el monto de terminales y continuidad de hardware.`
+  return `Para más de ${VENTAS_MAX_AUTO_QUOTE_TERMINALS} terminales cotizamos aparte. Escríbenos y te confirmamos el monto de terminales y continuidad de hardware.`
+}
+
+/** Cuota mensual de una terminal según su posición (1 = base, 2+ = decreciente hasta el piso). */
+export function hardwareUnitFeeMonthly(terminalIndex: number): number {
+  if (terminalIndex < 1) return 0
+  const raw =
+    VENTAS_HARDWARE_BASE_MONTHLY - (terminalIndex - 1) * VENTAS_HARDWARE_INCREMENTAL_DISCOUNT
+  return roundMoney(Math.max(raw, VENTAS_HARDWARE_FLOOR_MONTHLY))
 }
 
 export function hardwareFeeMonthly(terminalsCount: number): { fee: number; special: boolean } {
   if (terminalsCount <= 0) return { fee: 0, special: false }
   if (terminalsCount > VENTAS_MAX_AUTO_QUOTE_TERMINALS) return { fee: 0, special: true }
-  const fee = VENTAS_HARDWARE_FEES_MONTHLY[terminalsCount]
-  if (typeof fee === 'number' && Number.isFinite(fee)) {
-    return { fee: Math.round(fee * 100) / 100, special: false }
+  let total = 0
+  for (let i = 1; i <= terminalsCount; i++) {
+    total += hardwareUnitFeeMonthly(i)
   }
-  return { fee: 0, special: true }
+  return { fee: roundMoney(total), special: false }
 }
 
 export function buildTerminalsPricingNote(params: {
@@ -146,9 +156,8 @@ export function buildMonthlyPricingBreakdownLines(quote: QuotationQuote, fmt: (n
 }
 
 /** Párrafo de oferta 72 h (solo cuerpo del correo; el PDF mantiene precio de lista). */
-export function buildUrgencyOfferPitchText(modality: VentasBillingModality): string {
-  const period = modality === 'monthly' ? 'mensual' : 'anual'
-  return `Si aún haces estos procesos a mano, verdaderamente queremos ayudarte (de verdad). No con un 10%, ni con un 15%, sino con un enorme 20% sobre el total ${period} del plan que elegiste.`
+export function buildUrgencyOfferPitchText(_modality: VentasBillingModality): string {
+  return 'Si aún haces estos procesos a mano, verdaderamente queremos ayudarte. Te otorgamos un 20% de descuento sobre el total del plan de software que elegiste por contratación temprana.'
 }
 
 export function buildModalityPerksSummaryLines(modality: VentasBillingModality): string[] {

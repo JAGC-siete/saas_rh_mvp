@@ -2,7 +2,7 @@ import { formatDateTimeForHonduras, HONDURAS_TIMEZONE } from '../timezone'
 import type { CurrencyCode } from './types'
 import { formatMoney, roundMoney } from './pricing'
 
-/** 20% de descuento sobre el total cotizado al contratar dentro de la ventana. */
+/** 20% de descuento sobre el software al contratar dentro de la ventana (hardware sin descuento). */
 export const URGENCY_OFFER_DISCOUNT_PCT = 0.2
 
 /** Ventana de validez de la oferta desde el envío de la cotización. */
@@ -40,6 +40,48 @@ export function computeUrgencyOffer(params: {
   }
 }
 
+export interface QuotationUrgencyBreakdown extends UrgencyOffer {
+  softwareListTotal: number
+  hardwareTotal: number
+  softwareDiscountAmount: number
+  softwareOfferTotal: number
+}
+
+/** Oferta 72 h: 20% solo sobre software; hardware se suma sin descuento. */
+export function computeQuotationUrgencyOffer(params: {
+  billingModality: 'annual' | 'monthly'
+  monthlySoftwareTotal: number
+  monthlyHardwareFee: number
+  annualTotal: number
+  sentAt?: Date
+  now?: Date
+}): QuotationUrgencyBreakdown {
+  const sentAt = params.sentAt ?? new Date()
+  const now = params.now ?? new Date()
+  const expiresAt = new Date(sentAt.getTime() + URGENCY_OFFER_DURATION_MS)
+  const isMonthly = params.billingModality === 'monthly'
+
+  const softwareListTotal = roundMoney(isMonthly ? params.monthlySoftwareTotal : params.annualTotal)
+  const hardwareTotal = roundMoney(isMonthly ? params.monthlyHardwareFee : 0)
+  const softwareDiscountAmount = roundMoney(softwareListTotal * URGENCY_OFFER_DISCOUNT_PCT)
+  const softwareOfferTotal = roundMoney(softwareListTotal - softwareDiscountAmount)
+  const quotedTotal = roundMoney(softwareListTotal + hardwareTotal)
+  const discountedTotal = roundMoney(softwareOfferTotal + hardwareTotal)
+
+  return {
+    isActive: now.getTime() < expiresAt.getTime(),
+    quotedTotal,
+    discountAmount: softwareDiscountAmount,
+    discountedTotal,
+    expiresAt,
+    sentAt,
+    softwareListTotal,
+    hardwareTotal,
+    softwareDiscountAmount,
+    softwareOfferTotal,
+  }
+}
+
 export function formatUrgencyOfferExpiry(expiresAt: Date): string {
   return formatDateTimeForHonduras(expiresAt)
 }
@@ -62,5 +104,5 @@ export function formatUrgencyOfferSavings(currency: CurrencyCode, amount: number
 }
 
 export function urgencyOfferCtaText(): string {
-  return '⏳ Oferta por tiempo limitado: Reclama un 20% de descuento sobre el total de esta cotización al contratar tu licencia en las próximas 72 horas.'
+  return '⏳ Oferta por tiempo limitado: 20% de descuento sobre el plan de software al contratar en las próximas 72 horas.'
 }
