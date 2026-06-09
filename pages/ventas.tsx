@@ -21,6 +21,7 @@ import {
   buildVentasSupportWhatsAppUrl,
 } from '../lib/ventas/bank-details'
 import { getVentasModalityDefinition } from '../lib/ventas/modality-includes'
+import { buildModalityComparison } from '../lib/ventas/modality-comparison'
 import type { CountryCode } from '../lib/country/supported'
 import { isCountryCode } from '../lib/country/supported'
 import {
@@ -101,6 +102,11 @@ export default function VentasPage() {
   const planSummary = useMemo(() => {
     if (!quote) return null
     return buildQuotationPlanSummary({ quote })
+  }, [quote])
+
+  const modalityComparison = useMemo(() => {
+    if (!quote) return null
+    return buildModalityComparison({ quote })
   }, [quote])
 
   const whatsappUrl = useMemo(() => {
@@ -269,6 +275,25 @@ export default function VentasPage() {
                         {planSummary.expiryText && (
                           <p className="text-xs text-amber-200/90 pt-1">{planSummary.expiryText}</p>
                         )}
+                      </div>
+                    )}
+                    {modalityComparison && (
+                      <div className="mt-4 rounded-xl border border-slate-400/25 bg-slate-500/10 p-4 space-y-2">
+                        <p className="text-sm font-semibold text-slate-100">
+                          {modalityComparison.title}
+                        </p>
+                        {modalityComparison.lines.map((line) => (
+                          <p key={`alt-${line.label}`} className="text-sm text-brand-200">
+                            <strong>{line.label}:</strong> {line.value}
+                          </p>
+                        ))}
+                        <p className="text-sm font-semibold text-slate-100 pt-1">
+                          {modalityComparison.totalLabel}: {modalityComparison.totalValue}
+                        </p>
+                        {modalityComparison.equivalentNote && (
+                          <p className="text-xs text-brand-300">{modalityComparison.equivalentNote}</p>
+                        )}
+                        <p className="text-xs text-brand-400/90 italic pt-1">{modalityComparison.footnote}</p>
                       </div>
                     )}
                     <p className="text-sm text-cyan-100/70 pt-2">

@@ -32,6 +32,7 @@ import {
 } from '../../lib/analytics/metaCapiServer'
 import { enrollMarketingLead } from '../../lib/marketing/enroll-lead'
 import { sendLeadRegistroNotification } from '../../lib/leads/registro-notification'
+import { buildModalityComparisonSnapshot } from '../../lib/ventas/modality-comparison'
 import { computeFrozenQuoteAmounts } from '../../lib/billing/quote-amounts'
 import { getHondurasTimestamp } from '../../lib/timezone'
 import { addDays } from 'date-fns'
@@ -334,6 +335,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
       terminals_count: terminalsForPricing,
       monthly_hardware_fee: monthlyHardwareFee || undefined,
       monthly_total: monthlyTotal || undefined,
+      comparison_snapshot: buildModalityComparisonSnapshot(quote),
     }
 
     const { data: inserted, error: insertErr } = await (supabase as any)

@@ -52,9 +52,10 @@ describe('ventas quote coherence', () => {
     assert.equal(summary.urgency.discountedTotal, 6921.66)
     assert.equal(summary.urgency.hardwareTotal, 1821.66)
     assert.match(text, /verdaderamente queremos ayudarte/)
-    assert.match(text, /Precio normal Software: L\.\s?6,375\.00 \/ mes/)
-    assert.match(text, /Servicio de Continuidad de Hardware \(2 Terminales\): L\.\s?1,821\.66 \/ mes/)
-    assert.match(text, /Tu inversión mensual total hoy: L\.\s?6,921\.66 \/ mes/)
+    assert.match(text, /Precio mensual con 2 terminales: L\.\s?8,196\.66 \/ mes/)
+    assert.match(text, /Tu inversión mensual total hoy/)
+    assert.match(text, /L\.\s?6,921\.66 \/ mes/)
+    assert.match(text, /Ahorro exclusivo por contratación temprana: L\.\s?1,275\.00/)
   })
 
   it('WhatsApp message references quote review and 50% comprobante', () => {

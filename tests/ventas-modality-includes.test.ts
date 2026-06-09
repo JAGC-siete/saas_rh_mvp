@@ -58,8 +58,9 @@ describe('ventas modality includes', () => {
       sentAt,
       now: sentAt,
     })
-    assert.match(text, /Precio normal Software: L\.\s?5,416\.67 \/ mes/)
-    assert.match(text, /Servicio de Continuidad de Hardware \(1 Terminal\): L\.\s?958\.33 \/ mes/)
+    assert.match(text, /Precio mensual con 1 terminal: L\.\s?6,375\.00 \/ mes/)
+    assert.match(text, /Tu inversión mensual total hoy/)
+    assert.match(text, /Ahorro exclusivo por contratación temprana/)
   })
 
   it('hardware fee decrece por terminal hasta el piso', () => {
