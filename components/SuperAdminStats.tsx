@@ -22,7 +22,7 @@ interface SystemStats {
   totalRevenue: number
   monthlyRevenue: number
   systemHealth: 'healthy' | 'warning' | 'critical'
-  lastBackup: string
+  lastBackup: string | null
   serverUptime: string
 }
 
@@ -36,7 +36,7 @@ export default function SuperAdminStats() {
     totalRevenue: 0,
     monthlyRevenue: 0,
     systemHealth: 'healthy',
-    lastBackup: '',
+    lastBackup: null,
     serverUptime: ''
   })
   const [loading, setLoading] = useState(true)
@@ -151,7 +151,7 @@ export default function SuperAdminStats() {
         <CardContent>
           <div className="text-2xl font-bold">L. {stats.monthlyRevenue.toLocaleString()}</div>
           <p className="text-xs text-muted-foreground">
-            Total: L. {stats.totalRevenue.toLocaleString()}
+            Pagos manuales: L. {stats.totalRevenue.toLocaleString()}
           </p>
         </CardContent>
       </Card>
@@ -167,7 +167,7 @@ export default function SuperAdminStats() {
             {stats.systemHealth}
           </div>
           <p className="text-xs text-muted-foreground">
-            Último backup: {stats.lastBackup}
+            Último backup: {stats.lastBackup || 'Sin registros'}
           </p>
         </CardContent>
       </Card>

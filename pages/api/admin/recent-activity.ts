@@ -2,119 +2,102 @@ import { NextApiRequest, NextApiResponse } from 'next'
 import { requireSuperAdmin } from '../../../lib/auth/api-auth-fixed'
 import { createAdminClient } from '../../../lib/supabase/server'
 
+type ActivityType = 'company_created' | 'user_registered' | 'employee_registered' | 'payment_recorded'
+
+interface RecentActivityItem {
+  id: string
+  type: ActivityType
+  message: string
+  timestamp: string
+  severity: 'info' | 'warning' | 'error'
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
   try {
-    // Verify super admin using standardized auth
     await requireSuperAdmin(req, res)
-    
-    // Use admin client for all database operations (bypasses RLS)
     const supabase = createAdminClient()
 
-    // Obtener actividad reciente del sistema
-    const [
-      companiesResult,
-      usersResult,
-      employeesResult
-    ] = await Promise.all([
-      // Empresas creadas recientemente
+    const [companiesResult, usersResult, employeesResult, paymentsResult] = await Promise.all([
       supabase
         .from('companies')
-        .select('id, name, created_at, is_active')
+        .select('id, name, created_at')
         .order('created_at', { ascending: false })
         .limit(5),
-      
-      // Usuarios registrados recientemente
       supabase
         .from('user_profiles')
-        .select('id, role, created_at, is_active')
-        .in('role', ['super_admin', 'company_admin', 'hr_manager'])
+        .select('id, role, created_at')
+        .in('role', ['super_admin', 'company_admin'])
         .order('created_at', { ascending: false })
         .limit(5),
-      
-      // Empleados registrados recientemente
       supabase
         .from('employees')
-        .select('id, first_name, last_name, created_at, is_active')
+        .select('id, name, created_at, status')
         .order('created_at', { ascending: false })
-        .limit(5)
+        .limit(5),
+      supabase
+        .from('manual_payments')
+        .select('id, amount_hnl, paid_at, companies(name)')
+        .order('paid_at', { ascending: false })
+        .limit(5),
     ])
 
-    // Procesar actividades
-    const activities: any[] = []
+    const activities: RecentActivityItem[] = []
 
-    // Agregar empresas creadas
-    if (companiesResult.data) {
-      companiesResult.data.forEach((company: any) => {
-        activities.push({
-          id: `company_${company.id}`,
-          type: 'company_created',
-          message: `Nueva empresa creada: ${company.name}`,
-          timestamp: company.created_at,
-          severity: 'info'
-        })
+    for (const company of companiesResult.data || []) {
+      activities.push({
+        id: `company_${company.id}`,
+        type: 'company_created',
+        message: `Nueva empresa creada: ${company.name}`,
+        timestamp: company.created_at,
+        severity: 'info',
       })
     }
 
-    // Agregar usuarios registrados
-    if (usersResult.data) {
-      usersResult.data.forEach((user: any) => {
-        activities.push({
-          id: `user_${user.id}`,
-          type: 'user_registered',
-          message: `Nuevo usuario registrado: ${user.role}`,
-          timestamp: user.created_at,
-          severity: 'info'
-        })
+    for (const user of usersResult.data || []) {
+      activities.push({
+        id: `user_${user.id}`,
+        type: 'user_registered',
+        message: `Nuevo usuario admin: ${user.role}`,
+        timestamp: user.created_at,
+        severity: 'info',
       })
     }
 
-    // Agregar empleados registrados
-    if (employeesResult.data) {
-      employeesResult.data.forEach((employee: any) => {
-        activities.push({
-          id: `employee_${employee.id}`,
-          type: 'user_registered',
-          message: `Nuevo empleado: ${employee.first_name} ${employee.last_name}`,
-          timestamp: employee.created_at,
-          severity: 'info'
-        })
+    for (const employee of employeesResult.data || []) {
+      activities.push({
+        id: `employee_${employee.id}`,
+        type: 'employee_registered',
+        message: `Nuevo empleado: ${employee.name} (${employee.status || 'sin estado'})`,
+        timestamp: employee.created_at,
+        severity: 'info',
       })
     }
 
-    // Agregar actividad simulada de backup
-    activities.push({
-      id: 'backup_daily',
-      type: 'backup_completed',
-      message: 'Backup diario completado exitosamente',
-      timestamp: new Date().toISOString(),
-      severity: 'info'
-    })
+    for (const payment of paymentsResult.data || []) {
+      const companyName = (payment as any).companies?.name || 'empresa'
+      const amount = Number(payment.amount_hnl || 0).toLocaleString('es-HN', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })
+      activities.push({
+        id: `payment_${payment.id}`,
+        type: 'payment_recorded',
+        message: `Pago registrado: L. ${amount} — ${companyName}`,
+        timestamp: payment.paid_at,
+        severity: 'info',
+      })
+    }
 
-    // Agregar actividad simulada de sistema
-    activities.push({
-      id: 'system_check',
-      type: 'system_alert',
-      message: 'Verificación de salud del sistema completada',
-      timestamp: new Date(Date.now() - 3600000).toISOString(), // 1 hora atrás
-      severity: 'info'
-    })
-
-    // Ordenar por timestamp descendente
     activities.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
 
-    // Limitar a 10 actividades más recientes
-    const recentActivities = activities.slice(0, 10)
-
-    res.status(200).json({ activities: recentActivities })
-
+    res.status(200).json({ activities: activities.slice(0, 10) })
   } catch (error: any) {
-    // If error is from requireSuperAdmin, it already sent response
     if (error.message === 'UNAUTHORIZED' || error.message === 'INSUFFICIENT_PERMISSIONS') {
-      return // Response already sent
+      return
     }
     console.error('Error fetching recent activity:', error)
     res.status(500).json({ error: 'Internal server error' })
