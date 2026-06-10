@@ -4,6 +4,7 @@ import {
   buildLeadFollowUpWhatsAppMessage,
   normalizeWhatsAppForWaMe,
 } from '../lib/leads/registro-notification'
+import { buildLeadRegistroNotificationHtml } from '../lib/leads/registro-notification-html'
 
 describe('lead registro notification', () => {
   it('buildLeadFollowUpWhatsAppMessage varies by source', () => {
@@ -31,5 +32,26 @@ describe('lead registro notification', () => {
     assert.equal(normalizeWhatsAppForWaMe('98765432', 'HND'), '50498765432')
     assert.equal(normalizeWhatsAppForWaMe('50398765432', 'SLV'), '50398765432')
     assert.equal(normalizeWhatsAppForWaMe('50298765432', 'GTM'), '50298765432')
+  })
+
+  it('buildLeadRegistroNotificationHtml uses institutional ventas styling', () => {
+    const html = buildLeadRegistroNotificationHtml(
+      {
+        source: 'info',
+        nombre: 'Victor Obed Torres Paz',
+        empresa: null,
+        email: 'torrespazvictorobed017@gmail.com',
+        whatsapp: '9269-5154',
+      },
+      'https://wa.me/50492695154'
+    )
+
+    assert.ok(html.includes('linear-gradient'))
+    assert.ok(html.includes('#0b4fa1'))
+    assert.ok(html.includes('Victor Obed Torres Paz'))
+    assert.ok(html.includes('9269-5154'))
+    assert.ok(html.includes('Contactar vía WhatsApp'))
+    assert.ok(html.includes('Archivo vCard adjunto'))
+    assert.ok(!html.includes('#667eea'))
   })
 })

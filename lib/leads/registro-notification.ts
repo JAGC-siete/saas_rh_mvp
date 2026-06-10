@@ -1,5 +1,6 @@
 import type { CountryCode } from '../country/supported'
 import { getResendFromContact } from '../resend-from'
+import { buildLeadRegistroNotificationHtml } from './registro-notification-html'
 
 export type LeadRegistroSource = 'activar' | 'ventas' | 'suscripcion' | 'info'
 
@@ -144,174 +145,6 @@ function getNotificationDestinationEmail(): string {
   )
 }
 
-function buildExtraRows(data: LeadRegistroNotificationData): string {
-  const rows: string[] = []
-
-  if (data.whatsapp) {
-    rows.push(`
-      <div class="info-row">
-        <span class="label">📱 WhatsApp:</span>
-        <span class="value">${data.whatsapp}</span>
-      </div>
-    `)
-  }
-
-  if (data.empleados != null) {
-    rows.push(`
-      <div class="info-row">
-        <span class="label">👥 Empleados:</span>
-        <span class="value">${data.empleados}</span>
-      </div>
-    `)
-  }
-
-  if (data.country_code) {
-    rows.push(`
-      <div class="info-row">
-        <span class="label">🌎 País (nómina):</span>
-        <span class="value">${data.country_code}</span>
-      </div>
-    `)
-  }
-
-  if (data.tenant_id) {
-    rows.push(`
-      <div class="info-row">
-        <span class="label">🆔 Tenant ID:</span>
-        <span class="value">${data.tenant_id}</span>
-      </div>
-    `)
-  }
-
-  if (data.quote_id) {
-    rows.push(`
-      <div class="info-row">
-        <span class="label">📄 Cotización ID:</span>
-        <span class="value">${data.quote_id}</span>
-      </div>
-    `)
-  }
-
-  if (data.billing_modality) {
-    rows.push(`
-      <div class="info-row">
-        <span class="label">💳 Modalidad:</span>
-        <span class="value">${data.billing_modality}</span>
-      </div>
-    `)
-  }
-
-  if (data.monthly_total != null && data.currency) {
-    rows.push(`
-      <div class="info-row">
-        <span class="label">💰 Total mensual:</span>
-        <span class="value">${data.currency} ${data.monthly_total}</span>
-      </div>
-    `)
-  }
-
-  rows.push(`
-    <div class="info-row">
-      <span class="label">📍 Fuente:</span>
-      <span class="value">/${data.source === 'suscripcion' ? 'suscripcion' : data.source}</span>
-    </div>
-  `)
-
-  return rows.join('')
-}
-
-function buildEmailHtml(data: LeadRegistroNotificationData, whatsappContactUrl: string | null): string {
-  const labels = SOURCE_LABELS[data.source]
-  const empresa = data.empresa?.trim() || 'No especificada'
-
-  return `
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <meta charset="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>${labels.title}</title>
-        <style>
-          body {
-            font-family: Arial, sans-serif;
-            line-height: 1.6;
-            color: #333;
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 20px;
-          }
-          .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 30px;
-            text-align: center;
-            border-radius: 8px 8px 0 0;
-          }
-          .content {
-            background: #f8f9fa;
-            padding: 30px;
-            border-radius: 0 0 8px 8px;
-          }
-          .info-box {
-            background: white;
-            border-left: 4px solid #667eea;
-            padding: 20px;
-            margin: 20px 0;
-            border-radius: 4px;
-          }
-          .info-row {
-            margin: 10px 0;
-          }
-          .label {
-            font-weight: bold;
-            color: #555;
-          }
-          .value {
-            color: #333;
-          }
-          .vcard-note {
-            background: #fff3cd;
-            border-left: 4px solid #ffc107;
-            padding: 15px;
-            margin: 20px 0;
-            border-radius: 4px;
-          }
-        </style>
-      </head>
-      <body>
-        <div class="header">
-          <h1>📋 ${labels.title}</h1>
-          <p>${labels.subtitle}</p>
-        </div>
-        <div class="content">
-          <div class="info-box">
-            <div class="info-row">
-              <span class="label">👤 Nombre:</span>
-              <span class="value">${data.nombre}</span>
-            </div>
-            <div class="info-row">
-              <span class="label">🏢 Empresa:</span>
-              <span class="value">${empresa}</span>
-            </div>
-            <div class="info-row">
-              <span class="label">📧 Email:</span>
-              <span class="value">${data.email}</span>
-            </div>
-            ${buildExtraRows(data)}
-          </div>
-          <div class="vcard-note">
-            <strong>📎 Archivo vCard adjunto</strong>
-            <p>Se ha adjuntado un archivo de contacto (.vcf) que puedes descargar e importar directamente a tu libreta de contactos en el celular.</p>
-            <p><strong>Para importar en iPhone:</strong> Abre el archivo adjunto y toca "Agregar a contactos"</p>
-            <p><strong>Para importar en Android:</strong> Descarga el archivo y ábrelo con la app de Contactos</p>
-          </div>
-          ${whatsappContactUrl ? `<div style="text-align: center; margin: 20px 0;"><a href="${whatsappContactUrl}" style="display: inline-block; padding: 12px 24px; background-color: #25D366; color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: bold; font-family: Arial, sans-serif;">💬 Contactar vía WhatsApp</a></div>` : ''}
-        </div>
-      </body>
-    </html>
-  `
-}
-
 export async function sendLeadRegistroNotification(
   data: LeadRegistroNotificationData
 ): Promise<void> {
@@ -349,7 +182,7 @@ export async function sendLeadRegistroNotification(
       from: getResendFromContact(),
       to: emailDestino,
       subject: `📋 ${labels.title}: ${subjectSuffix}`,
-      html: buildEmailHtml(data, whatsappContactUrl),
+      html: buildLeadRegistroNotificationHtml(data, whatsappContactUrl),
       attachments: [
         {
           filename: `${data.nombre.replace(/[^a-z0-9]/gi, '_')}_${empresa.replace(/[^a-z0-9]/gi, '_')}.vcf`,
