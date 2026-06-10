@@ -5,13 +5,14 @@
  * - /activar  → StartTrial
  * - /ventas   → SubmitApplication
  * - /suscripcion → CompleteRegistration
+ * - /info       → Lead
  *
  * Píxel base en pages/_document.tsx.
  */
 
 export const META_PIXEL_ID = '833142547420951'
 
-type MetaStandardEvent = 'SubmitApplication' | 'CompleteRegistration' | 'StartTrial'
+type MetaStandardEvent = 'SubmitApplication' | 'CompleteRegistration' | 'StartTrial' | 'Lead'
 
 interface MetaAdvancedMatching {
   em?: string
@@ -191,6 +192,31 @@ export function trackNewsletterCompleteRegistration(params: {
     },
     params.eventId,
     { em: params.email }
+  )
+}
+
+/** Solicitud de información en /info (TOFU) */
+export function trackInfoLeadSubmit(params: {
+  eventId: string
+  email: string
+  phone?: string
+  firstName?: string
+}): void {
+  fireMetaPixelEvent(
+    'Lead',
+    {
+      content_name: 'info',
+      content_category: 'tofu',
+      value: 0,
+      currency: 'USD',
+      status: true,
+    },
+    params.eventId,
+    {
+      em: params.email,
+      ph: params.phone,
+      fn: params.firstName,
+    }
   )
 }
 

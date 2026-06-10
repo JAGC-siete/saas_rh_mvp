@@ -1,0 +1,111 @@
+import { NextApiRequest, NextApiResponse } from 'next'
+import { createSuccessResponse, createErrorResponse } from '../../lib/security/api-responses'
+import { logger } from '../../lib/logger'
+import { enrollMarketingLead } from '../../lib/marketing/enroll-lead'
+import { sendLeadRegistroNotification } from '../../lib/leads/registro-notification'
+import { normalizeSoftPhone } from '../../lib/privacy'
+import {
+  parseMetaTrackingPayload,
+  sendMetaWebsiteConversionFireAndForget,
+} from '../../lib/analytics/metaCapiServer'
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (req.method !== 'POST') {
+    return res.status(405).json(createErrorResponse('Method Not Allowed', 'METHOD_NOT_ALLOWED'))
+  }
+
+  try {
+    const { nombre, email, phone } = req.body
+
+    const trimmedName = typeof nombre === 'string' ? nombre.trim() : ''
+    if (!trimmedName) {
+      return res.status(400).json(createErrorResponse('El nombre es requerido', 'VALIDATION_ERROR'))
+    }
+    if (trimmedName.length > 120) {
+      return res.status(400).json(createErrorResponse('El nombre es demasiado largo', 'VALIDATION_ERROR'))
+    }
+
+    if (!email || typeof email !== 'string') {
+      return res.status(400).json(createErrorResponse('El email es requerido', 'VALIDATION_ERROR'))
+    }
+
+    const trimmedEmail = email.trim().toLowerCase()
+    if (!EMAIL_REGEX.test(trimmedEmail)) {
+      return res.status(400).json(createErrorResponse('Por favor ingresa un email válido', 'VALIDATION_ERROR'))
+    }
+
+    let phoneNorm: string | null = null
+    if (typeof phone === 'string' && phone.trim()) {
+      phoneNorm = normalizeSoftPhone(phone.trim())
+      if (!phoneNorm) {
+        return res.status(400).json(
+          createErrorResponse(
+            'Número de teléfono inválido. Incluye el código de país y al menos 7 dígitos.',
+            'VALIDATION_ERROR'
+          )
+        )
+      }
+    }
+
+    const leadSource = 'info'
+
+    const { leadId, welcomeSent, skippedReason } = await enrollMarketingLead({
+      email: trimmedEmail,
+      source: leadSource,
+      fullName: trimmedName,
+      phone: phoneNorm,
+    })
+
+    if (skippedReason !== 'excluded') {
+      void sendLeadRegistroNotification({
+        source: 'info',
+        nombre: trimmedName,
+        email: trimmedEmail,
+        whatsapp: phoneNorm,
+      })
+    }
+
+    if (skippedReason === 'excluded') {
+      return res.status(200).json(
+        createSuccessResponse({
+          message: 'Solicitud registrada.',
+          leadId: null,
+        })
+      )
+    }
+
+    const metaTracking = parseMetaTrackingPayload(req.body)
+    sendMetaWebsiteConversionFireAndForget({
+      req,
+      eventName: 'Lead',
+      tracking: metaTracking,
+      userData: {
+        email: trimmedEmail,
+        phone: phoneNorm || undefined,
+        firstName: trimmedName,
+      },
+      customData: {
+        content_name: leadSource,
+        content_category: 'tofu',
+        value: 0,
+        currency: 'USD',
+        status: true,
+      },
+    })
+
+    return res.status(200).json(
+      createSuccessResponse({
+        message: welcomeSent
+          ? 'Gracias. Te enviamos más información a tu correo.'
+          : 'Gracias. Pronto nos pondremos en contacto.',
+        leadId,
+      })
+    )
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error'
+    logger.error('Unexpected error in info lead capture', { error: message })
+    return res.status(500).json(createErrorResponse('Internal server error', 'INTERNAL_ERROR'))
+  }
+}

@@ -10,6 +10,7 @@ describe('lead registro notification', () => {
     const activar = buildLeadFollowUpWhatsAppMessage('activar')
     const ventas = buildLeadFollowUpWhatsAppMessage('ventas')
     const suscripcion = buildLeadFollowUpWhatsAppMessage('suscripcion')
+    const info = buildLeadFollowUpWhatsAppMessage('info')
 
     assert.ok(activar.includes('Tu sistema SISU ya está activo'))
     assert.ok(activar.includes('digitalizar la asistencia'))
@@ -17,8 +18,10 @@ describe('lead registro notification', () => {
     assert.ok(ventas.includes('automatización de nómina'))
     assert.ok(suscripcion.includes('Ya estás en la lista de SISU'))
     assert.ok(suscripcion.includes('automatizar tu nómina'))
+    assert.ok(info.includes('solicitud de más información'))
+    assert.ok(info.includes('equipo de RH'))
 
-    for (const msg of [activar, ventas, suscripcion]) {
+    for (const msg of [activar, ventas, suscripcion, info]) {
       assert.ok(msg.includes('jorgearturo@humanosisu.net'))
       assert.ok(msg.includes('Cuéntame si pudiste'))
     }

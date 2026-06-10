@@ -1,5 +1,5 @@
 /**
- * Dry-run: send internal lead summary emails for all 3 sources.
+ * Dry-run: send internal lead summary emails for all funnel sources.
  * Usage: railway run npx tsx scripts/send-lead-registro-notification-test.ts
  *    or: npx tsx scripts/send-lead-registro-notification-test.ts  (with env vars set)
  */
@@ -52,6 +52,15 @@ async function main() {
         source: 'suscripcion' as const,
         nombre: '[DRY RUN] Suscriptor Test',
         email: 'lead-suscripcion-test@example.com',
+      },
+    },
+    {
+      label: 'info',
+      data: {
+        source: 'info' as const,
+        nombre: '[DRY RUN] Jorge Test Info',
+        email: 'lead-info-test@example.com',
+        whatsapp: '99887766',
       },
     },
   ]

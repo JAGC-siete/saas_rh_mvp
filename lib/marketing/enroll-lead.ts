@@ -29,6 +29,8 @@ type MarketingLeadRow = {
 export type EnrollMarketingLeadInput = {
   email: string
   source: string
+  fullName?: string | null
+  phone?: string | null
   supabase?: SupabaseClient
 }
 
@@ -56,6 +58,30 @@ async function hasWelcomeInLedger(
   return (count ?? 0) > 0
 }
 
+function buildContactPatch(input: EnrollMarketingLeadInput): Record<string, string> {
+  const patch: Record<string, string> = {}
+  const fullName = typeof input.fullName === 'string' ? input.fullName.trim() : ''
+  const phone = typeof input.phone === 'string' ? input.phone.trim() : ''
+  if (fullName) patch.full_name = fullName
+  if (phone) patch.phone = phone
+  return patch
+}
+
+async function applyContactPatch(
+  client: SupabaseClient,
+  leadId: string,
+  patch: Record<string, string>
+): Promise<void> {
+  if (Object.keys(patch).length === 0) return
+  const { error } = await client.from('marketing_leads').update(patch).eq('id', leadId)
+  if (error) {
+    logger.warn('Could not update marketing lead contact fields', {
+      leadId,
+      error: error.message,
+    })
+  }
+}
+
 export async function enrollMarketingLead(
   input: EnrollMarketingLeadInput
 ): Promise<EnrollMarketingLeadResult> {
@@ -64,6 +90,7 @@ export async function enrollMarketingLead(
   const source = input.source.trim() || 'suscripcion-page'
   const now = new Date()
   const welcomeContent = SEQUENCE_CONTENT[SEQUENCE_STEP.WELCOME]
+  const contactPatch = buildContactPatch(input)
 
   if (await isMarketingExcluded(trimmedEmail, client)) {
     logger.info('Marketing enroll skipped: current customer', { email: trimmedEmail, source })
@@ -98,6 +125,7 @@ export async function enrollMarketingLead(
       .insert({
         email: trimmedEmail,
         source,
+        ...contactPatch,
         status: 'active',
         current_step: SEQUENCE_STEP.WELCOME,
         unsubscribe_token: token,
@@ -121,6 +149,7 @@ export async function enrollMarketingLead(
       .update({
         status: 'active',
         source,
+        ...contactPatch,
         unsubscribed_at: null,
         current_step: WATCHMAN_FIRST_STEP,
       })
@@ -145,6 +174,8 @@ export async function enrollMarketingLead(
       await client.from('marketing_leads').update({ source }).eq('id', existing.id)
       lead = { ...lead, source }
     }
+
+    await applyContactPatch(client, existing.id, contactPatch)
 
     if (existing.current_step <= SEQUENCE_STEP.WELCOME) {
       shouldSendWelcome = !(await hasWelcomeInLedger(client, existing.id))

@@ -1,7 +1,7 @@
 import type { CountryCode } from '../country/supported'
 import { getResendFromContact } from '../resend-from'
 
-export type LeadRegistroSource = 'activar' | 'ventas' | 'suscripcion'
+export type LeadRegistroSource = 'activar' | 'ventas' | 'suscripcion' | 'info'
 
 export interface LeadRegistroNotificationData {
   source: LeadRegistroSource
@@ -33,6 +33,10 @@ const SOURCE_LABELS: Record<LeadRegistroSource, { title: string; subtitle: strin
     title: 'Nueva Suscripción en SISU',
     subtitle: 'Lead se suscribió desde /suscripcion',
   },
+  info: {
+    title: 'Nueva Solicitud de Información en SISU',
+    subtitle: 'Lead solicitó más información desde /info',
+  },
 }
 
 export function buildLeadFollowUpWhatsAppMessage(source: LeadRegistroSource): string {
@@ -59,6 +63,18 @@ export function buildLeadFollowUpWhatsAppMessage(source: LeadRegistroSource): st
       'El siguiente paso es revisar la propuesta y activar tu automatización de nómina.',
       '',
       '¿Te parece si lo revisamos hoy juntos? Cuéntame si pudiste ver el correo. 👇',
+    ].join('\n')
+  }
+
+  if (source === 'info') {
+    return [
+      '¡Gracias por tu interés en SISU! 🙌 Recibimos tu solicitud de más información.',
+      '',
+      senderHint,
+      '',
+      'Muchas empresas se quedan en lo manual por no dar el primer paso — tú ya lo diste.',
+      '',
+      '¿Te parece si conversamos sobre cómo SISU puede ayudar a tu equipo de RH? Cuéntame si pudiste revisar el correo. 👇',
     ].join('\n')
   }
 

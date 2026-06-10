@@ -20,6 +20,8 @@ describe('marketing welcome greetings by source', () => {
     assert.equal(normalizeLeadSource('ventas:backfill'), 'ventas')
     assert.equal(normalizeLeadSource('activar'), 'activar')
     assert.equal(normalizeLeadSource('activaciones:trial_pending_data'), 'activar')
+    assert.equal(normalizeLeadSource('info'), 'info')
+    assert.equal(normalizeLeadSource('info-page'), 'info')
     assert.equal(normalizeLeadSource(undefined), 'suscripcion')
   })
 
@@ -35,6 +37,10 @@ describe('marketing welcome greetings by source', () => {
     const subs = buildWelcomeText('suscripcion-page')
     assert.ok(subs.startsWith(WELCOME_GREETINGS.suscripcion))
     assert.ok(subs.includes(WELCOME_BODY_AFTER_GREETING))
+
+    const info = buildWelcomeText('info')
+    assert.ok(info.startsWith(WELCOME_GREETINGS.info))
+    assert.ok(info.includes(WELCOME_BODY_AFTER_GREETING))
   })
 
   it('welcome body after greeting is identical across sources', () => {

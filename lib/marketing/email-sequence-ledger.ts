@@ -19,10 +19,11 @@ export const WATCHMAN_LAST_STEP = SEQUENCE_STEP.PAIN_POINT_4
 /** Leads with current_step >= this value have finished the sequence. */
 export const SEQUENCE_COMPLETE_STEP = WATCHMAN_LAST_STEP + 1
 
-export type LeadSourceKind = 'suscripcion' | 'ventas' | 'activar'
+export type LeadSourceKind = 'suscripcion' | 'info' | 'ventas' | 'activar'
 
 export const WELCOME_GREETINGS: Record<LeadSourceKind, string> = {
   suscripcion: 'Hola, gracias por unirte.',
+  info: 'Hola, gracias por tu interés en SISU.',
   ventas: 'Hola, estás más cerca que nunca.',
   activar: 'Hola, tu intuición es acertada.',
 }
@@ -32,6 +33,7 @@ export const WELCOME_BODY_AFTER_GREETING =
 
 const SOURCE_SPECIFICITY: Record<LeadSourceKind, number> = {
   suscripcion: 1,
+  info: 1,
   ventas: 2,
   activar: 3,
 }
@@ -45,6 +47,9 @@ export function normalizeLeadSource(raw?: string | null): LeadSourceKind {
   }
   if (s === 'ventas' || s.startsWith('ventas:')) {
     return 'ventas'
+  }
+  if (s === 'info' || s.startsWith('info:') || s === 'info-page') {
+    return 'info'
   }
   return 'suscripcion'
 }
