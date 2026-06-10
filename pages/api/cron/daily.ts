@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next'
 import { createAdminClient } from '../../../lib/supabase/server'
 import { sendTrialReminderEmail } from '../../../lib/emails/trial-reminder'
 import { calculateAttendanceHoursForDate } from '../../../lib/attendance/calculate-hours'
+import { runInfoDelayedSequenceWelcome } from '../../../lib/cron/info-sequence-welcome'
 import { runSequenceWatchman } from '../../../lib/cron/sequence-watchman'
 import { isBiMonthlyWatchDay } from '../../../lib/marketing/email-sequence-ledger'
 import { logger } from '../../../lib/logger'
@@ -37,7 +38,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // 4. Calculate attendance hours for yesterday (end of day batch)
     await calculateDailyAttendanceHours(supabase, now)
 
-    // 5. Marketing sequence watchman (bi-monthly windows: days 12–16 and 26–30)
+    // 5. /info delayed sequence welcome (24h after informational pack)
+    const infoWelcomeResult = await runInfoDelayedSequenceWelcome(now)
+    logger.info('Daily CRON: info delayed sequence welcome completed', infoWelcomeResult)
+
+    // 6. Marketing sequence watchman (bi-monthly windows: days 12–16 and 26–30)
     let watchmanResult: Awaited<ReturnType<typeof runSequenceWatchman>> | null = null
     if (isBiMonthlyWatchDay(now)) {
       watchmanResult = await runSequenceWatchman(now)
@@ -50,6 +55,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       success: true,
       message: 'Daily CRON job completed',
       timestamp: now.toISOString(),
+      infoWelcome: infoWelcomeResult,
       watchman: watchmanResult,
     })
 

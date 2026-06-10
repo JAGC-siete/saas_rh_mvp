@@ -51,7 +51,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const leadSource = 'info'
 
-    const { leadId, welcomeSent, skippedReason } = await enrollMarketingLead({
+    const { leadId, welcomeSent, infoPackSent, skippedReason } = await enrollMarketingLead({
       email: trimmedEmail,
       source: leadSource,
       fullName: trimmedName,
@@ -97,8 +97,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     return res.status(200).json(
       createSuccessResponse({
-        message: welcomeSent
-          ? 'Gracias. Te enviamos más información a tu correo.'
+        message: infoPackSent || welcomeSent
+          ? 'Gracias. Revisa tu correo: te enviamos la información general sobre SISU.'
           : 'Gracias. Pronto nos pondremos en contacto.',
         leadId,
       })

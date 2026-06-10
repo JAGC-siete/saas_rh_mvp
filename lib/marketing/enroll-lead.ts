@@ -3,12 +3,14 @@ import { logger } from '../logger'
 import {
   getWatchWindowKey,
   isMoreSpecificSource,
+  normalizeLeadSource,
   SEQUENCE_COMPLETE_STEP,
   SEQUENCE_CONTENT,
   SEQUENCE_STEP,
   WATCHMAN_FIRST_STEP,
 } from './email-sequence-ledger'
 import { isMarketingExcluded } from './is-marketing-excluded'
+import { sendInfoPackEmail } from './info-pack-email'
 import { sendSequenceEmail } from './send-sequence-email'
 import { generateUnsubscribeToken } from './unsubscribe'
 
@@ -37,7 +39,13 @@ export type EnrollMarketingLeadInput = {
 export type EnrollMarketingLeadResult = {
   leadId: string | null
   welcomeSent: boolean
+  /** /info: informational pack sent (sequence welcome follows after delay). */
+  infoPackSent?: boolean
   skippedReason?: 'excluded' | 'completed'
+}
+
+function isInfoLeadSource(source: string): boolean {
+  return normalizeLeadSource(source) === 'info'
 }
 
 async function hasWelcomeInLedger(
@@ -183,33 +191,69 @@ export async function enrollMarketingLead(
   }
 
   let welcomeSent = false
+  let infoPackSent = false
 
   if (shouldSendWelcome) {
     try {
-      await sendSequenceEmail({
-        to: trimmedEmail,
-        step: SEQUENCE_STEP.WELCOME,
-        unsubscribeToken: lead.unsubscribe_token,
-        source,
-      })
+      if (isInfoLeadSource(source)) {
+        const { data: infoState } = await client
+          .from('marketing_leads')
+          .select('info_pack_sent_at')
+          .eq('id', lead.id)
+          .maybeSingle()
 
-      await client.from('marketing_email_ledger').insert({
-        lead_id: lead.id,
-        step: SEQUENCE_STEP.WELCOME,
-        step_label: welcomeContent.label,
-        subject: welcomeContent.subject,
-        watch_window_key: getWatchWindowKey(now),
-      })
+        if (infoState?.info_pack_sent_at) {
+          logger.info('Info pack already sent; skipping duplicate', { email: trimmedEmail })
+        } else {
+          const displayName =
+            contactPatch.full_name ||
+            (typeof input.fullName === 'string' ? input.fullName.trim() : '') ||
+            undefined
 
-      await client
-        .from('marketing_leads')
-        .update({
-          current_step: WATCHMAN_FIRST_STEP,
-          last_mail_sent_at: now.toISOString(),
+          await sendInfoPackEmail({
+            to: trimmedEmail,
+            nombre: displayName,
+            unsubscribeToken: lead.unsubscribe_token,
+          })
+
+          await client
+            .from('marketing_leads')
+            .update({
+              info_pack_sent_at: now.toISOString(),
+              last_mail_sent_at: now.toISOString(),
+              current_step: SEQUENCE_STEP.WELCOME,
+            })
+            .eq('id', lead.id)
+
+          infoPackSent = true
+          welcomeSent = true
+        }
+      } else {
+        await sendSequenceEmail({
+          to: trimmedEmail,
+          step: SEQUENCE_STEP.WELCOME,
+          unsubscribeToken: lead.unsubscribe_token,
+          source,
         })
-        .eq('id', lead.id)
 
-      welcomeSent = true
+        await client.from('marketing_email_ledger').insert({
+          lead_id: lead.id,
+          step: SEQUENCE_STEP.WELCOME,
+          step_label: welcomeContent.label,
+          subject: welcomeContent.subject,
+          watch_window_key: getWatchWindowKey(now),
+        })
+
+        await client
+          .from('marketing_leads')
+          .update({
+            current_step: WATCHMAN_FIRST_STEP,
+            last_mail_sent_at: now.toISOString(),
+          })
+          .eq('id', lead.id)
+
+        welcomeSent = true
+      }
     } catch (emailError: unknown) {
       const message = emailError instanceof Error ? emailError.message : 'Unknown error'
       logger.warn('Welcome email failed to send, but lead was captured', {
@@ -220,5 +264,5 @@ export async function enrollMarketingLead(
     }
   }
 
-  return { leadId: lead.id, welcomeSent }
+  return { leadId: lead.id, welcomeSent, infoPackSent: infoPackSent || undefined }
 }
