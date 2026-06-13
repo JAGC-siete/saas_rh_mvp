@@ -11,6 +11,7 @@ import { Button } from '../../../components/ui/button'
 import {
   Activity,
   AlertCircle,
+  BookOpen,
   Building2,
   CreditCard,
   Database,
@@ -190,6 +191,12 @@ export default function AdminDashboard() {
       description: 'Eventos recientes e incidentes',
       href: '/app/admin/logs',
       icon: FileText
+    },
+    {
+      title: 'Recursos SEO',
+      description: 'Artículos públicos en /recursos',
+      href: '/app/admin/recursos',
+      icon: BookOpen
     }
   ]
 

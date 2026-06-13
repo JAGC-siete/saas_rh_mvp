@@ -21,6 +21,7 @@ import {
   Server,
   Key,
   FileText,
+  BookOpen,
   Crown,
   Activity,
   Mail,
@@ -66,6 +67,12 @@ export default function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
       href: '/app/admin/mail-list',
       icon: Mail,
       description: 'Secuencia de email y suscriptores'
+    },
+    {
+      name: 'Recursos SEO',
+      href: '/app/admin/recursos',
+      icon: BookOpen,
+      description: 'Artículos públicos en /recursos'
     },
     {
       name: 'Empresas',

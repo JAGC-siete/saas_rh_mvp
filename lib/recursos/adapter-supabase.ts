@@ -18,6 +18,7 @@ export const recursosAdapterSupabase: IRecursosAdapter = {
     const { data, error } = await supabase
       .from('recursos')
       .select('slug')
+      .eq('status', 'published')
       .order('date_published', { ascending: false })
     if (error) {
       console.error('[recursos/adapter-supabase] getAllSlugs error:', error.message)
@@ -32,6 +33,7 @@ export const recursosAdapterSupabase: IRecursosAdapter = {
       .from('recursos')
       .select('*')
       .eq('slug', slug)
+      .eq('status', 'published')
       .single()
     if (error || !data) {
       if (error?.code !== 'PGRST116') {
@@ -57,6 +59,7 @@ export const recursosAdapterSupabase: IRecursosAdapter = {
     const { data, error } = await supabase
       .from('recursos')
       .select('slug, title, description, date_published, date_modified, image, author')
+      .eq('status', 'published')
       .order('date_published', { ascending: false })
     if (error) {
       console.error('[recursos/adapter-supabase] getRecursosList error:', error.message)

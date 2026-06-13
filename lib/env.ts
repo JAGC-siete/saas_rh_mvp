@@ -1,10 +1,12 @@
 // Environment Variables Configuration
 // This file ensures all required environment variables are properly loaded
 
-// Load environment variables on server-side
+// Load environment variables on server-side (Next.js convention: .env then .env.local overrides)
 if (typeof window === 'undefined') {
   try {
-    require('dotenv').config()
+    const dotenv = require('dotenv')
+    dotenv.config({ path: '.env' })
+    dotenv.config({ path: '.env.local', override: true })
   } catch (error) {
     console.warn('⚠️ Could not load dotenv:', error)
   }
@@ -37,6 +39,9 @@ export const env = {
   NEXT_TELEMETRY_DISABLED: getEnvVar('NEXT_TELEMETRY_DISABLED', '1'),
   SKIP_ENV_VALIDATION: getEnvVar('SKIP_ENV_VALIDATION', 'false'),
   BASES_DE_DATOS_URL: getEnvVar('BASES_DE_DATOS_URL', 'https://humanosisu.net'),
+
+  /** Content source for /recursos: 'files' (markdown in repo) or 'supabase' (DB + admin CRUD) */
+  RECURSOS_SOURCE: getEnvVar('RECURSOS_SOURCE', 'files'),
   
   // Database Configuration
   DATABASE_URL: getEnvVar('DATABASE_URL', ''),

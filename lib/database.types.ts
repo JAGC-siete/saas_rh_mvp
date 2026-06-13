@@ -2547,6 +2547,7 @@ export type Database = {
           date_modified: string | null
           image: string | null
           author: string | null
+          status: string
           created_at: string
           updated_at: string
         }
@@ -2560,6 +2561,7 @@ export type Database = {
           date_modified?: string | null
           image?: string | null
           author?: string | null
+          status?: string
           created_at?: string
           updated_at?: string
         }
@@ -2573,6 +2575,7 @@ export type Database = {
           date_modified?: string | null
           image?: string | null
           author?: string | null
+          status?: string
           created_at?: string
           updated_at?: string
         }
