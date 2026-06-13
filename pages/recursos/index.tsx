@@ -8,7 +8,7 @@ import SchemaMarkup from '../../components/SEO/SchemaMarkup'
 import { generateWebPageSchema } from '../../lib/seo/schema'
 import { recursosAdapter } from '../../lib/recursos'
 import type { RecursoListItem } from '../../lib/recursos'
-import { GetStaticProps } from 'next'
+import { GetServerSideProps } from 'next'
 
 interface RecursosIndexProps {
   items: RecursoListItem[]
@@ -73,7 +73,9 @@ export default function RecursosIndex({ items }: RecursosIndexProps) {
   )
 }
 
-export const getStaticProps: GetStaticProps<RecursosIndexProps> = async () => {
+export const getServerSideProps: GetServerSideProps<RecursosIndexProps> = async ({ res }) => {
+  res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate=300')
+
   const raw = await recursosAdapter.getRecursosList()
   const items = raw.map((item) => ({
     slug: item.slug,
@@ -82,10 +84,7 @@ export const getStaticProps: GetStaticProps<RecursosIndexProps> = async () => {
     datePublished: item.datePublished,
     ...(item.dateModified != null && { dateModified: item.dateModified }),
     ...(item.image != null && { image: item.image }),
-    ...(item.author != null && { author: item.author })
+    ...(item.author != null && { author: item.author }),
   }))
-  return {
-    props: { items },
-    revalidate: 3600
-  }
+  return { props: { items } }
 }

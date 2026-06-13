@@ -4,17 +4,14 @@
  * Usage:
  *   npx tsx scripts/import-recursos-from-markdown.ts
  *
- * Requires in .env.local (or .env):
- *   NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
- *
+ * Requires: NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
  * Idempotent: skips slugs that already exist in the database.
  *
- * After import, set RECURSOS_SOURCE=supabase in .env.local / Railway.
+ * After import, set RECURSOS_SOURCE=supabase in production.
  */
 
 import fs from 'fs'
 import path from 'path'
-import { env } from '../lib/env'
 import { createAdminClient } from '../lib/supabase/admin-client'
 import { parseFrontmatter } from '../lib/recursos/markdown'
 
@@ -26,15 +23,6 @@ function getSlugFromFilename(filename: string): string {
 }
 
 async function main() {
-  if (!env.NEXT_PUBLIC_SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
-    console.error('❌ Missing Supabase credentials.')
-    console.error('   Create .env.local with:')
-    console.error('   NEXT_PUBLIC_SUPABASE_URL=...')
-    console.error('   SUPABASE_SERVICE_ROLE_KEY=...')
-    console.error('   (copy from .env.example or Railway variables)')
-    process.exit(1)
-  }
-
   if (!fs.existsSync(CONTENT_DIR)) {
     console.log('No content/recursos directory found. Nothing to import.')
     return

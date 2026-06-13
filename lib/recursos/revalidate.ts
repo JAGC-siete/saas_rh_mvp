@@ -5,10 +5,14 @@ export async function revalidateRecursosPages(
   res: NextApiResponse,
   slug: string
 ): Promise<void> {
-  try {
-    await res.revalidate('/recursos')
-    await res.revalidate(`/recursos/${slug}`)
-  } catch (err) {
-    console.warn('[recursos/revalidate] failed:', err)
+  const paths = ['/recursos', `/recursos/${slug}`]
+
+  for (const path of paths) {
+    try {
+      await res.revalidate(path)
+    } catch (err) {
+      // Slug pages may not exist in the prerender cache yet; index revalidation is the critical one.
+      console.error(`[recursos/revalidate] failed for ${path}:`, err)
+    }
   }
 }

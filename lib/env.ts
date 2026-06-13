@@ -1,12 +1,10 @@
 // Environment Variables Configuration
 // This file ensures all required environment variables are properly loaded
 
-// Load environment variables on server-side (Next.js convention: .env then .env.local overrides)
+// Load environment variables on server-side
 if (typeof window === 'undefined') {
   try {
-    const dotenv = require('dotenv')
-    dotenv.config({ path: '.env' })
-    dotenv.config({ path: '.env.local', override: true })
+    require('dotenv').config()
   } catch (error) {
     console.warn('⚠️ Could not load dotenv:', error)
   }

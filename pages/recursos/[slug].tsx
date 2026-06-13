@@ -105,6 +105,6 @@ export const getStaticProps: GetStaticProps<RecursoPageProps, { slug: string }> 
   }
   return {
     props: { article: articleSerialized },
-    revalidate: 3600
+    revalidate: 60,
   }
 }
