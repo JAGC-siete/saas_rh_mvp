@@ -18,12 +18,14 @@ import {
   GiftIcon,
   BanknotesIcon,
   CalculatorIcon,
-  ScaleIcon
+  ScaleIcon,
+  LifebuoyIcon
 } from '@heroicons/react/24/outline'
 import { TrophyIcon } from '@heroicons/react/24/solid'
 import { ClipboardList } from 'lucide-react'
 import { ClipboardCheck } from 'lucide-react'
 import NotificationBell from './ui/NotificationBell'
+import HelpButton from './support/HelpButton'
 import { normalizePermissionsToCanonical } from '../lib/security/canonical-permissions'
 import { canAccessPayrollNavigation } from '../lib/auth/role-access'
 
@@ -350,6 +352,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     // { name: 'Gamificación',  href: '/app/gamification',         icon: TrophyIcon,            permission: 'gamification' },
     // { name: 'Programa de Afiliados', href: '/app/affiliates',   icon: CurrencyDollarIcon,    permission: 'affiliates' },
     { name: 'Parametros',       href: '/app/settings',             icon: Cog6ToothIcon,         permission: 'settings' },
+    { name: 'Soporte',          href: '/app/support',              icon: LifebuoyIcon,          permission: 'dashboard' },
   ]
 
   // Filtrar navegación basada en permisos (rol) + features (plan/overrides).
@@ -508,7 +511,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           {children}
         </main>
       </div>
-      
+
+      <HelpButton />
     </div>
   )
 } 

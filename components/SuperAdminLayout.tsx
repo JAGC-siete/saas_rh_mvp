@@ -25,7 +25,8 @@ import {
   Crown,
   Activity,
   Mail,
-  Layers
+  Layers,
+  LifeBuoy
 } from 'lucide-react'
 
 interface SuperAdminLayoutProps {
@@ -73,6 +74,12 @@ export default function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
       href: '/app/admin/recursos',
       icon: BookOpen,
       description: 'Artículos públicos en /recursos'
+    },
+    {
+      name: 'Soporte',
+      href: '/app/admin/support',
+      icon: LifeBuoy,
+      description: 'Cola de tickets de soporte'
     },
     {
       name: 'Empresas',
