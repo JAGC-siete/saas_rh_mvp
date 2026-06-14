@@ -1,63 +1,90 @@
-import type { NextApiRequest, NextApiResponse } from 'next';
-import { createClient } from '@supabase/supabase-js';
-import { sendMassCommunication } from '@/lib/communication-service';
-
-const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+import type { NextApiRequest, NextApiResponse } from 'next'
+import { z } from 'zod'
+import { requireSuperAdminWithAudit } from '../../../../lib/auth/api-guards'
+import { createAdminClient } from '../../../../lib/supabase/server'
+import {
+  assertCommPayloadSize,
+  createCampaignSchema,
+  type CampaignRow,
+} from '../../../../lib/communications/schema'
+import { resolveAudience, sendMassCommunication } from '../../../../lib/communication-service'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
-
-  // 1. Security Gate: Only Super Admin
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return res.status(401).json({ error: 'Unauthorized' });
-  
-  // Verify super_admin role (Assuming role is stored in a profiles table or JWT)
-  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
-  if (profile?.role !== 'super_admin') return res.status(403).json({ error: 'Forbidden: Super Admin only' });
-
   try {
-    const { subject, body, segment } = req.body;
-
-    // 2. Create Campaign Record
-    const { data: campaign, error: campaignError } = await supabase
-      .from('communication_campaigns')
-      .insert({ subject, body, target_segment: segment, status: 'sending', created_by: user.id })
-      .select()
-      .single();
-
-    if (campaignError || !campaign) throw new Error('Failed to create campaign');
-
-    // 3. Segment Audience
-    let query = supabase.from('profiles').select('id, email');
-    
-    if (segment === 'new_admins') {
-      // New admins: joined in the last 7 days
-      query = query.filter('created_at', 'gte', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString());
-    } else if (segment === 'active_admins') {
-      query = query.eq('role', 'company_admin');
+    if (req.method !== 'POST') {
+      res.setHeader('Allow', ['POST'])
+      return res.status(405).json({ error: 'Method not allowed' })
     }
 
-    const { data: recipients, error: recError } = await query;
-    if (recError || !recipients) throw new Error('Failed to fetch recipients');
+    // Auth: super_admin only, with audit logging (real cookie session).
+    const auth = await requireSuperAdminWithAudit(req, res)
 
-    // 4. Execute Sending (Async processing)
-    // We don't 'await' the full batch here to avoid timeout; we trigger it.
-    sendMassCommunication(campaign.id, recipients)
-      .then(results => {
-        supabase.from('communication_campaigns').update({ status: 'sent' }).eq('id', campaign.id);
+    assertCommPayloadSize(req.body)
+    const input = createCampaignSchema.parse(req.body)
+
+    const admin = createAdminClient()
+
+    // 1. Resolve audience first; bail early if empty.
+    const recipients = await resolveAudience(input.segment)
+    if (recipients.length === 0) {
+      return res.status(400).json({ error: 'No hay destinatarios para el segmento seleccionado' })
+    }
+
+    // 2. Create the campaign record.
+    const { data: campaign, error: campaignError } = await admin
+      .from('communication_campaigns')
+      .insert({
+        subject: input.subject,
+        body: input.body,
+        target_segment: input.segment,
+        status: 'sending',
+        created_by: auth.user.id,
       })
-      .catch(err => {
-        supabase.from('communication_campaigns').update({ status: 'failed' }).eq('id', campaign.id);
-        console.error('Mass communication failure:', err);
-      });
+      .select('*')
+      .single()
 
-    return res.status(200).json({ 
-      message: 'Campaign triggered successfully', 
-      campaignId: campaign.id, 
-      recipientCount: recipients.length 
-    });
+    if (campaignError || !campaign) {
+      throw new Error('Failed to create campaign')
+    }
 
-  } catch (error: any) {
-    return res.status(500).json({ error: error.message });
+    await auth.auditLog('communication_campaign_created', {
+      campaignId: (campaign as CampaignRow).id,
+      segment: input.segment,
+      recipientCount: recipients.length,
+    })
+
+    // 3. Fire-and-forget the batch send to avoid serverless timeouts. Status is
+    //    updated to 'sent'/'failed' inside sendMassCommunication.
+    void sendMassCommunication((campaign as CampaignRow).id, recipients).catch((err) => {
+      console.error('Mass communication failure:', err)
+      admin
+        .from('communication_campaigns')
+        .update({ status: 'failed' })
+        .eq('id', (campaign as CampaignRow).id)
+        .then(() => undefined)
+    })
+
+    return res.status(200).json({
+      message: 'Campaign triggered successfully',
+      campaignId: (campaign as CampaignRow).id,
+      recipientCount: recipients.length,
+    })
+  } catch (error: unknown) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({
+        error: 'Datos inválidos',
+        details: error.issues.map((i) => i.message),
+      })
+    }
+    if (error instanceof Error) {
+      if (['UNAUTHORIZED', 'PROFILE_REQUIRED', 'INSUFFICIENT_PERMISSIONS', 'ACCOUNT_DEACTIVATED'].includes(error.message)) {
+        return
+      }
+      if (error.message === 'PAYLOAD_TOO_LARGE') {
+        return res.status(413).json({ error: 'Payload demasiado grande' })
+      }
+    }
+    console.error('[api/super-admin/communications/send] error:', error)
+    return res.status(500).json({ error: error instanceof Error ? error.message : 'Internal server error' })
   }
 }

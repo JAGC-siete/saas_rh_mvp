@@ -26,7 +26,8 @@ import {
   Activity,
   Mail,
   Layers,
-  LifeBuoy
+  LifeBuoy,
+  Send
 } from 'lucide-react'
 
 interface SuperAdminLayoutProps {
@@ -68,6 +69,12 @@ export default function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
       href: '/app/admin/mail-list',
       icon: Mail,
       description: 'Secuencia de email y suscriptores'
+    },
+    {
+      name: 'Comunicaciones',
+      href: '/app/admin/communications',
+      icon: Send,
+      description: 'Campañas y secuencias de adopción'
     },
     {
       name: 'Recursos SEO',
