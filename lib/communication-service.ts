@@ -2,9 +2,24 @@ import { createAdminClient } from './supabase/server'
 import { emailService } from './email-service'
 import { notificationManager } from './notification-providers'
 import { logger } from './logger'
-import type { CampaignRecipient, CommSegment } from './communications/schema'
+import { buildBroadcastEmailHtml, buildBroadcastEmailText, type BroadcastBlock } from './emails/broadcast'
+import type { CampaignRecipient, CampaignRow, CommSegment } from './communications/schema'
 
 const ADMIN_SEGMENT_ROLES = ['company_admin', 'hr_manager', 'manager']
+const BADGE_BY_DEFAULT = 'Novedades'
+
+/** Renders a campaign row into branded HTML + text using the SISU dark template. */
+export function renderCampaignEmail(campaign: Pick<CampaignRow, 'subject' | 'intro' | 'blocks' | 'cta_url' | 'cta_label'>) {
+  const input = {
+    badge: BADGE_BY_DEFAULT,
+    title: campaign.subject,
+    intro: campaign.intro ?? undefined,
+    blocks: (Array.isArray(campaign.blocks) ? campaign.blocks : []) as BroadcastBlock[],
+    ctaUrl: campaign.cta_url ?? undefined,
+    ctaLabel: campaign.cta_label ?? undefined,
+  }
+  return { html: buildBroadcastEmailHtml(input), text: buildBroadcastEmailText(input) }
+}
 
 /**
  * Builds an id -> email map from Supabase Auth (emails live in auth.users, not
@@ -14,7 +29,6 @@ async function buildAuthEmailMap(admin: ReturnType<typeof createAdminClient>): P
   const map = new Map<string, string>()
   const perPage = 200
   let page = 1
-  // Cap pages defensively to avoid unbounded loops.
   for (let i = 0; i < 50; i++) {
     const { data, error } = await admin.auth.admin.listUsers({ page, perPage })
     if (error) {
@@ -79,8 +93,8 @@ export interface SendResult {
 
 /**
  * Sends the campaign email to each recipient using the shared emailService
- * (Resend with retry), logging per-recipient delivery to communication_recipients
- * and updating the campaign status at the end.
+ * (Resend with retry), logging per-recipient delivery and updating campaign
+ * status. Renders the branded HTML from the campaign's structured content.
  */
 export async function sendMassCommunication(
   campaignId: string,
@@ -90,7 +104,7 @@ export async function sendMassCommunication(
 
   const { data: campaign, error: campaignError } = await admin
     .from('communication_campaigns')
-    .select('subject, body')
+    .select('subject, intro, blocks, cta_url, cta_label')
     .eq('id', campaignId)
     .single()
 
@@ -103,15 +117,16 @@ export async function sendMassCommunication(
     throw new Error('Email configuration not available')
   }
 
+  const { html, text } = renderCampaignEmail(campaign as CampaignRow)
   const result: SendResult = { success: 0, failed: 0 }
 
   for (const user of recipients) {
     try {
       const sent = await emailService.sendEmail(config, {
         to: user.email,
-        subject: campaign.subject,
-        text: campaign.body.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim(),
-        html: campaign.body,
+        subject: (campaign as CampaignRow).subject,
+        text,
+        html,
       })
 
       await admin.from('communication_recipients').insert({
@@ -143,5 +158,69 @@ export async function sendMassCommunication(
     .eq('id', campaignId)
 
   logger.info('communications: campaign send completed', { campaignId, ...result })
+  return result
+}
+
+export interface DispatchResult {
+  scanned: number
+  dispatched: number
+  errors: number
+}
+
+/**
+ * Dispatches scheduled campaigns whose time has arrived. Used by the cron.
+ * Flips status to 'sending' first (guard against concurrent runs), resolves the
+ * audience and sends.
+ */
+export async function dispatchScheduledCampaigns(now: Date = new Date()): Promise<DispatchResult> {
+  const admin = createAdminClient()
+  const result: DispatchResult = { scanned: 0, dispatched: 0, errors: 0 }
+
+  const { data, error } = await admin
+    .from('communication_campaigns')
+    .select('id, target_segment')
+    .eq('status', 'scheduled')
+    .lte('scheduled_at', now.toISOString())
+    .limit(50)
+
+  if (error) {
+    logger.error('communications dispatch: query failed', error)
+    throw error
+  }
+
+  const campaigns = data ?? []
+  result.scanned = campaigns.length
+
+  for (const c of campaigns) {
+    try {
+      // Claim the campaign so a concurrent run does not double-send.
+      const { data: claimed, error: claimError } = await admin
+        .from('communication_campaigns')
+        .update({ status: 'sending' })
+        .eq('id', c.id)
+        .eq('status', 'scheduled')
+        .select('id')
+        .single()
+
+      if (claimError || !claimed) continue
+
+      const segment = (c.target_segment ?? 'active_admins') as CommSegment
+      const recipients = await resolveAudience(segment)
+      if (recipients.length === 0) {
+        await admin.from('communication_campaigns').update({ status: 'failed' }).eq('id', c.id)
+        result.errors += 1
+        continue
+      }
+
+      await sendMassCommunication(c.id, recipients)
+      result.dispatched += 1
+    } catch (err) {
+      result.errors += 1
+      logger.error('communications dispatch: campaign error', { campaignId: c.id, err })
+      await admin.from('communication_campaigns').update({ status: 'failed' }).eq('id', c.id)
+    }
+  }
+
+  logger.info('communications dispatch: completed', result)
   return result
 }
