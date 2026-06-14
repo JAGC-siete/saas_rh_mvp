@@ -81,6 +81,28 @@ export const SEGMENT_LABELS: Record<CommSegment, string> = {
   new_admins: 'Nuevos administradores (últimos 7 días)',
 }
 
+export interface AudienceStats {
+  segment: CommSegment
+  profilesMatched: number
+  authUsersLoaded: number
+  recipientsResolved: number
+  skippedNoEmail: number
+  skippedDuplicateEmail: number
+  listUsersFailed: boolean
+  profilesQueryError?: string
+  listUsersError?: string
+}
+
+export interface AudiencePreview {
+  segment: CommSegment
+  recipientCount: number
+  profilesMatched: number
+  skippedNoEmail: number
+  warnings: string[]
+  sampleCompanies: string[]
+  ready: boolean
+}
+
 export const STATUS_LABELS: Record<CommStatus, string> = {
   draft: 'Borrador',
   scheduled: 'Programado',

@@ -8,7 +8,7 @@ import {
   createCampaignSchema,
   type CampaignRow,
 } from '../../../../lib/communications/schema'
-import { renderCampaignEmail, resolveAudience, sendMassCommunication } from '../../../../lib/communication-service'
+import { renderCampaignEmail, resolveAudience, sendMassCommunication, AudienceResolutionError } from '../../../../lib/communication-service'
 
 const listQuerySchema = z.object({
   status: commStatusSchema.optional(),
@@ -76,16 +76,32 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })
 
       if (input.action === 'send') {
-        const recipients = await resolveAudience(input.segment)
-        if (recipients.length === 0) {
+        try {
+          const recipients = await resolveAudience(input.segment)
+          if (recipients.length === 0) {
+            await admin.from('communication_campaigns').update({ status: 'failed' }).eq('id', row.id)
+            return res.status(400).json({ error: 'No hay destinatarios para el segmento seleccionado' })
+          }
+          void sendMassCommunication(row.id, recipients).catch((err) => {
+            console.error('Mass communication failure:', err)
+            admin.from('communication_campaigns').update({ status: 'failed' }).eq('id', row.id).then(() => undefined)
+          })
+          return res.status(200).json({ campaign: row, recipientCount: recipients.length })
+        } catch (audienceErr) {
           await admin.from('communication_campaigns').update({ status: 'failed' }).eq('id', row.id)
-          return res.status(400).json({ error: 'No hay destinatarios para el segmento seleccionado' })
+          if (audienceErr instanceof AudienceResolutionError) {
+            return res.status(502).json({
+              error: audienceErr.message,
+              code: audienceErr.code,
+              stats: {
+                profilesMatched: audienceErr.stats.profilesMatched,
+                authUsersLoaded: audienceErr.stats.authUsersLoaded,
+                skippedNoEmail: audienceErr.stats.skippedNoEmail,
+              },
+            })
+          }
+          throw audienceErr
         }
-        void sendMassCommunication(row.id, recipients).catch((err) => {
-          console.error('Mass communication failure:', err)
-          admin.from('communication_campaigns').update({ status: 'failed' }).eq('id', row.id).then(() => undefined)
-        })
-        return res.status(200).json({ campaign: row, recipientCount: recipients.length })
       }
 
       return res.status(201).json({ campaign: row })

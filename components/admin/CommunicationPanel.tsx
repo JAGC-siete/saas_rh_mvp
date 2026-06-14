@@ -8,6 +8,7 @@ import { useCommunications, type CampaignPayload, type RepoCommit } from '../../
 import {
   SEGMENT_LABELS,
   STATUS_LABELS,
+  type AudiencePreview,
   type CampaignRow,
   type CommAction,
   type CommBlock,
@@ -54,8 +55,18 @@ function formatDate(iso: string | null): string {
 const emptyBlock = (): CommBlock => ({ title: '', description: '' })
 
 export default function CommunicationPanel() {
-  const { campaigns, isLoading, isSubmitting, error, fetchCampaigns, createCampaign, updateCampaign, deleteCampaign, fetchCommits } =
-    useCommunications()
+  const {
+    campaigns,
+    isLoading,
+    isSubmitting,
+    error,
+    fetchCampaigns,
+    createCampaign,
+    updateCampaign,
+    deleteCampaign,
+    fetchCommits,
+    fetchAudiencePreview,
+  } = useCommunications()
 
   const [tab, setTab] = useState<Tab>('news')
 
@@ -82,6 +93,19 @@ export default function CommunicationPanel() {
   const [selectedShas, setSelectedShas] = useState<Set<string>>(new Set())
   const [onlyRelevant, setOnlyRelevant] = useState(true)
 
+  const [audiencePreview, setAudiencePreview] = useState<AudiencePreview | null>(null)
+  const [audienceLoading, setAudienceLoading] = useState(false)
+
+  const loadAudiencePreview = useCallback(
+    async (seg: CommSegment) => {
+      setAudienceLoading(true)
+      const preview = await fetchAudiencePreview(seg)
+      setAudiencePreview(preview)
+      setAudienceLoading(false)
+    },
+    [fetchAudiencePreview]
+  )
+
   const loadCommits = useCallback(async () => {
     setCommitsLoading(true)
     setCommitsError(null)
@@ -100,6 +124,12 @@ export default function CommunicationPanel() {
     fetchCampaigns()
     loadCommits()
   }, [fetchCampaigns, loadCommits])
+
+  useEffect(() => {
+    if (tab === 'compose') {
+      void loadAudiencePreview(segment)
+    }
+  }, [tab, segment, loadAudiencePreview])
 
   const resetForm = useCallback(() => {
     setEditingId(null)
@@ -389,6 +419,39 @@ export default function CommunicationPanel() {
                       </option>
                     ))}
                   </select>
+                  <div className="mt-2 min-h-[2.5rem]">
+                    {audienceLoading ? (
+                      <p className="text-xs text-gray-400">Calculando destinatarios…</p>
+                    ) : audiencePreview ? (
+                      <div className="space-y-1">
+                        <p
+                          className={cn(
+                            'text-xs',
+                            audiencePreview.ready ? 'text-emerald-400' : audiencePreview.recipientCount > 0 ? 'text-amber-400' : 'text-red-400'
+                          )}
+                        >
+                          {audiencePreview.recipientCount > 0
+                            ? `${audiencePreview.recipientCount} destinatario${audiencePreview.recipientCount === 1 ? '' : 's'}`
+                            : '0 destinatarios para este segmento'}
+                          {audiencePreview.profilesMatched > audiencePreview.recipientCount &&
+                            audiencePreview.recipientCount > 0 &&
+                            ` (${audiencePreview.skippedNoEmail} sin email en Auth)`}
+                        </p>
+                        {audiencePreview.sampleCompanies.length > 0 && (
+                          <p className="text-xs text-gray-500">
+                            Ej.: {audiencePreview.sampleCompanies.slice(0, 3).join(', ')}
+                          </p>
+                        )}
+                        {audiencePreview.warnings.map((w) => (
+                          <p key={w} className="text-xs text-amber-400">
+                            {w}
+                          </p>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-gray-500">No se pudo cargar el conteo de destinatarios.</p>
+                    )}
+                  </div>
                 </div>
                 <div>
                   <label className="block text-sm text-gray-300 mb-1">Programar (opcional)</label>
@@ -404,10 +467,17 @@ export default function CommunicationPanel() {
               {error && feedback.kind === 'idle' && <p className="text-sm text-red-400">{error}</p>}
 
               <div className="flex flex-wrap gap-2">
-                <Button onClick={() => submit('send')} disabled={isSubmitting || !canSubmit}>
+                <Button
+                  onClick={() => submit('send')}
+                  disabled={isSubmitting || !canSubmit || (audiencePreview !== null && audiencePreview.recipientCount === 0)}
+                >
                   <Send className="mr-1 h-4 w-4" /> Enviar ahora
                 </Button>
-                <Button variant="outline" onClick={() => submit('schedule')} disabled={isSubmitting || !canSchedule}>
+                <Button
+                  variant="outline"
+                  onClick={() => submit('schedule')}
+                  disabled={isSubmitting || !canSchedule || (audiencePreview !== null && audiencePreview.recipientCount === 0)}
+                >
                   <Clock className="mr-1 h-4 w-4" /> Programar
                 </Button>
                 <Button variant="ghost" onClick={() => submit('draft')} disabled={isSubmitting || !canSubmit}>

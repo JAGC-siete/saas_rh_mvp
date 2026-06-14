@@ -7,7 +7,7 @@ import {
   updateCampaignSchema,
   type CampaignRow,
 } from '../../../../lib/communications/schema'
-import { renderCampaignEmail, resolveAudience, sendMassCommunication } from '../../../../lib/communication-service'
+import { renderCampaignEmail, resolveAudience, sendMassCommunication, AudienceResolutionError } from '../../../../lib/communication-service'
 
 // Only draft / scheduled campaigns can be edited or transitioned by the admin.
 const EDITABLE_STATUSES = ['draft', 'scheduled']
@@ -95,16 +95,32 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       await auth.auditLog('communication_campaign_updated', { campaignId: id, action: input.action })
 
       if (input.action === 'send') {
-        const recipients = await resolveAudience(segment)
-        if (recipients.length === 0) {
+        try {
+          const recipients = await resolveAudience(segment)
+          if (recipients.length === 0) {
+            await admin.from('communication_campaigns').update({ status: 'failed' }).eq('id', id)
+            return res.status(400).json({ error: 'No hay destinatarios para el segmento seleccionado' })
+          }
+          void sendMassCommunication(id, recipients).catch((err) => {
+            console.error('Mass communication failure:', err)
+            admin.from('communication_campaigns').update({ status: 'failed' }).eq('id', id).then(() => undefined)
+          })
+          return res.status(200).json({ campaign: row, recipientCount: recipients.length })
+        } catch (audienceErr) {
           await admin.from('communication_campaigns').update({ status: 'failed' }).eq('id', id)
-          return res.status(400).json({ error: 'No hay destinatarios para el segmento seleccionado' })
+          if (audienceErr instanceof AudienceResolutionError) {
+            return res.status(502).json({
+              error: audienceErr.message,
+              code: audienceErr.code,
+              stats: {
+                profilesMatched: audienceErr.stats.profilesMatched,
+                authUsersLoaded: audienceErr.stats.authUsersLoaded,
+                skippedNoEmail: audienceErr.stats.skippedNoEmail,
+              },
+            })
+          }
+          throw audienceErr
         }
-        void sendMassCommunication(id, recipients).catch((err) => {
-          console.error('Mass communication failure:', err)
-          admin.from('communication_campaigns').update({ status: 'failed' }).eq('id', id).then(() => undefined)
-        })
-        return res.status(200).json({ campaign: row, recipientCount: recipients.length })
       }
 
       return res.status(200).json({ campaign: row })

@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react'
 import { logger } from '../logger'
-import type { CampaignRow, CommAction, CommBlock, CommSegment, CommStatus } from '../communications/schema'
+import type { CampaignRow, CommAction, CommBlock, CommSegment, CommStatus, AudiencePreview } from '../communications/schema'
 
 function apiErrorMessage(data: { error?: string; details?: string[] } | null, fallback: string): string {
   if (!data) return fallback
@@ -135,6 +135,21 @@ export function useCommunications() {
     return { commits: (commits || []) as RepoCommit[] }
   }, [])
 
+  const fetchAudiencePreview = useCallback(async (segment: CommSegment): Promise<AudiencePreview | null> => {
+    try {
+      const res = await fetch(`/api/super-admin/communications/audience-preview?segment=${encodeURIComponent(segment)}`)
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(apiErrorMessage(data, 'Error al cargar preview de audiencia'))
+      }
+      const { preview } = await res.json()
+      return preview as AudiencePreview
+    } catch (err) {
+      logger.error('useCommunications.fetchAudiencePreview', err)
+      return null
+    }
+  }, [])
+
   return {
     campaigns,
     isLoading,
@@ -145,5 +160,6 @@ export function useCommunications() {
     updateCampaign,
     deleteCampaign,
     fetchCommits,
+    fetchAudiencePreview,
   }
 }
