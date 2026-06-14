@@ -45,40 +45,62 @@ export function renderCampaignEmail(campaign: Pick<CampaignRow, 'subject' | 'int
   return { html: buildBroadcastEmailHtml(input), text: buildBroadcastEmailText(input) }
 }
 
-interface AuthEmailMapResult {
+interface AuthEmailLookupResult {
   map: Map<string, string>
   usersLoaded: number
   failed: boolean
   errorMessage?: string
 }
 
+function isAuthUserNotFoundError(error: { message?: string; code?: string }): boolean {
+  const code = (error.code ?? '').toLowerCase()
+  const msg = (error.message ?? '').toLowerCase()
+  return code === 'user_not_found' || msg.includes('user not found')
+}
+
 /**
- * Builds an id -> email map from Supabase Auth (emails live in auth.users, not
- * in user_profiles). Paginates through admin.listUsers.
+ * Resolves id -> email for the given profile ids via auth.admin.getUserById
+ * (one lookup per profile, chunked). Emails live in auth.users, not user_profiles.
  */
-async function buildAuthEmailMap(admin: ReturnType<typeof createAdminClient>): Promise<AuthEmailMapResult> {
+async function resolveAuthEmailsForProfileIds(
+  admin: ReturnType<typeof createAdminClient>,
+  profileIds: string[],
+  chunkSize = 15
+): Promise<AuthEmailLookupResult> {
   const map = new Map<string, string>()
-  const perPage = 200
-  let page = 1
   let usersLoaded = 0
   let failed = false
   let errorMessage: string | undefined
+  const unique = [...new Set(profileIds)]
 
-  for (let i = 0; i < 50; i++) {
-    const { data, error } = await admin.auth.admin.listUsers({ page, perPage })
-    if (error) {
-      failed = true
-      errorMessage = error.message
-      logger.error('communications: listUsers failed', { error: error.message, page })
-      break
-    }
-    const users = data?.users ?? []
-    usersLoaded += users.length
-    for (const u of users) {
-      if (u.id && u.email) map.set(u.id, u.email)
-    }
-    if (users.length < perPage) break
-    page += 1
+  for (let i = 0; i < unique.length; i += chunkSize) {
+    const chunk = unique.slice(i, i + chunkSize)
+    await Promise.all(
+      chunk.map(async (uid) => {
+        try {
+          const { data, error } = await admin.auth.admin.getUserById(uid)
+          if (error) {
+            if (isAuthUserNotFoundError(error)) return
+            if (!failed) {
+              failed = true
+              errorMessage = error.message
+              logger.error('communications: getUserById failed', { uid, error: error.message })
+            }
+            return
+          }
+          const user = data?.user
+          if (!user?.id) return
+          usersLoaded += 1
+          if (user.email) map.set(user.id, user.email)
+        } catch (e: unknown) {
+          if (!failed) {
+            failed = true
+            errorMessage = e instanceof Error ? e.message : 'unknown error'
+            logger.error('communications: getUserById exception', { uid, err: e })
+          }
+        }
+      })
+    )
   }
 
   return { map, usersLoaded, failed, errorMessage }
@@ -118,7 +140,7 @@ function assertAudienceResolvable(stats: AudienceStats): void {
   if (stats.listUsersFailed) {
     throw new AudienceResolutionError(
       'AUTH_LIST_USERS_FAILED',
-      'No se pudo leer usuarios de Auth. Verifique SUPABASE_SERVICE_ROLE_KEY en el servidor.',
+      'No se pudo consultar usuarios en Auth (getUserById). Verifique SUPABASE_SERVICE_ROLE_KEY en el servidor.',
       stats
     )
   }
@@ -126,7 +148,7 @@ function assertAudienceResolvable(stats: AudienceStats): void {
   if (stats.authUsersLoaded === 0) {
     throw new AudienceResolutionError(
       'EMAIL_MAP_EMPTY',
-      'Auth devolvió 0 usuarios. Revise que la service role key corresponda a este proyecto.',
+      'Ningún perfil tiene usuario correspondiente en Auth. Revise que la service role key corresponda a este proyecto.',
       stats
     )
   }
@@ -161,9 +183,9 @@ function buildPreviewWarnings(stats: AudienceStats): string[] {
     warnings.push('Error al consultar user_profiles. Revise SUPABASE_SERVICE_ROLE_KEY.')
   }
   if (stats.listUsersFailed) {
-    warnings.push('auth.admin.listUsers falló. Revise SUPABASE_SERVICE_ROLE_KEY.')
+    warnings.push('auth.admin.getUserById falló. Revise SUPABASE_SERVICE_ROLE_KEY.')
   } else if (stats.profilesMatched > 0 && stats.authUsersLoaded === 0) {
-    warnings.push('Auth devolvió 0 usuarios.')
+    warnings.push('Ningún perfil tiene usuario correspondiente en Auth.')
   }
   if (stats.profilesMatched > 0 && stats.recipientsResolved === 0) {
     warnings.push(
@@ -215,7 +237,11 @@ export async function resolveAudienceDetailed(segment: CommSegment): Promise<{
     return { recipients: [], stats, sampleCompanyIds: [] }
   }
 
-  const { map: emailMap, usersLoaded, failed, errorMessage } = await buildAuthEmailMap(admin)
+  const profileIds = rows.map((p) => p.id)
+  const { map: emailMap, usersLoaded, failed, errorMessage } = await resolveAuthEmailsForProfileIds(
+    admin,
+    profileIds
+  )
   stats.authUsersLoaded = usersLoaded
   stats.listUsersFailed = failed
   stats.listUsersError = errorMessage
