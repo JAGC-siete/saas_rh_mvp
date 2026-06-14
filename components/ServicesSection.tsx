@@ -2,6 +2,7 @@ import { ClockIcon, CurrencyDollarIcon, CheckCircleIcon, ArrowRightIcon } from '
 import Link from 'next/link'
 import { Button } from './ui/button'
 import CountdownTimer from './CountdownTimer'
+import { GUIDE_LINKS } from '../lib/seo/internal-links'
 
 export default function ServicesSection() {
   return (
@@ -72,6 +73,16 @@ export default function ServicesSection() {
 
           </article>
         </div>
+
+        <div className="mt-4 sm:mt-6 text-center">
+          <Link
+            href={GUIDE_LINKS.biometricoNomina.href}
+            className="inline-flex items-center gap-1.5 text-sm sm:text-base text-brand-300 hover:text-white transition-colors"
+          >
+            ¿Cómo se conecta la biometría con la planilla?
+            <ArrowRightIcon className="h-4 w-4" aria-hidden />
+          </Link>
+        </div>
       </div>
 
       {/* El Planillero - Nómina */}
@@ -123,6 +134,16 @@ export default function ServicesSection() {
           </article>
 
 
+        </div>
+
+        <div className="mt-4 sm:mt-6 text-center">
+          <Link
+            href={GUIDE_LINKS.deduccionesHonduras.href}
+            className="inline-flex items-center gap-1.5 text-sm sm:text-base text-brand-300 hover:text-white transition-colors"
+          >
+            Guía completa: IHSS, RAP e ISR en Honduras
+            <ArrowRightIcon className="h-4 w-4" aria-hidden />
+          </Link>
         </div>
       </div>
 

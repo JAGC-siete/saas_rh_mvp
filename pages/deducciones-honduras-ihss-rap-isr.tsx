@@ -5,6 +5,7 @@ import DemoFooter from '../components/DemoFooter'
 import { getPageTitle } from '../lib/seo/title'
 import { getPageDescription } from '../lib/seo/description'
 import SchemaMarkup from '../components/SEO/SchemaMarkup'
+import RelatedGuides from '../components/SEO/RelatedGuides'
 import { generateWebPageSchema, generateFAQPageSchema } from '../lib/seo/schema'
 import { CheckCircleIcon, XMarkIcon } from '@heroicons/react/24/outline'
 import dynamic from 'next/dynamic'
@@ -310,6 +311,8 @@ export default function DeduccionesHondurasPage() {
             </Link>
           </div>
         </section>
+
+        <RelatedGuides currentPath="/deducciones-honduras-ihss-rap-isr" />
       </main>
 
       <CloudBackground />

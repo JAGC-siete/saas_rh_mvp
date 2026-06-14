@@ -1,5 +1,8 @@
 import Link from 'next/link'
 import { CALCULATOR_HUB_LINKS } from '../lib/public-calculator/hub-links'
+import { GUIDE_LINKS } from '../lib/seo/internal-links'
+
+const RELATED_GUIDE_CARDS = [GUIDE_LINKS.deduccionesHonduras, GUIDE_LINKS.recursos]
 
 export default function FreeToolsSection() {
   return (
@@ -43,6 +46,24 @@ export default function FreeToolsSection() {
           <Link href={CALCULATOR_HUB_LINKS.prestaciones.href} className="text-brand-300 hover:text-white underline">
             {CALCULATOR_HUB_LINKS.prestaciones.title}
           </Link>
+        </div>
+
+        <div className="mt-10 sm:mt-12">
+          <h3 className="text-center text-sm uppercase tracking-wide text-brand-300 mb-4">Guías relacionadas</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {RELATED_GUIDE_CARDS.map((guide) => (
+              <Link
+                key={guide.href}
+                href={guide.href}
+                className="glass-strong rounded-xl p-5 border border-white/15 hover:border-cyan-400/40 transition-all hover:-translate-y-0.5 text-left group"
+              >
+                <div className="text-lg font-semibold text-white group-hover:text-brand-200">{guide.label}</div>
+                {guide.description && (
+                  <div className="text-sm text-brand-200/80 mt-1">{guide.description}</div>
+                )}
+              </Link>
+            ))}
+          </div>
         </div>
       </div>
     </section>

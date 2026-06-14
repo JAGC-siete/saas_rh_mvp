@@ -6,6 +6,7 @@ import TrackedWhatsAppLink from '../components/TrackedWhatsAppLink'
 import { getPageTitle } from '../lib/seo/title'
 import { getPageDescription } from '../lib/seo/description'
 import SchemaMarkup from '../components/SEO/SchemaMarkup'
+import RelatedGuides from '../components/SEO/RelatedGuides'
 import { generateWebPageSchema } from '../lib/seo/schema'
 import { ClockIcon, CheckCircleIcon } from '@heroicons/react/24/outline'
 import dynamic from 'next/dynamic'
@@ -286,6 +287,8 @@ export default function Implementacion48HorasPage() {
             </TrackedWhatsAppLink>
           </div>
         </section>
+
+        <RelatedGuides currentPath="/implementacion-48-horas" />
       </main>
 
       <CloudBackground />

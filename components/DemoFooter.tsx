@@ -1,12 +1,14 @@
 import React from 'react'
+import Link from 'next/link'
 import TrackedWhatsAppLink from './TrackedWhatsAppLink'
+import { FOOTER_GUIDE_KEYS, GUIDE_LINKS } from '../lib/seo/internal-links'
 
 const DemoFooter: React.FC = () => {
   return (
     <footer className="bg-white border-t border-gray-200 mt-auto">
       <div className="max-w-6xl mx-auto px-4 py-8">
         {/* Main Footer Content */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           
           {/* Contact Info */}
           <div>
@@ -98,6 +100,23 @@ const DemoFooter: React.FC = () => {
                 </svg>
               </a>
             </div>
+          </div>
+
+          {/* Guides & Resources */}
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Guías y recursos</h3>
+            <ul className="space-y-2">
+              {FOOTER_GUIDE_KEYS.map((key) => (
+                <li key={GUIDE_LINKS[key].href}>
+                  <Link
+                    href={GUIDE_LINKS[key].href}
+                    className="text-gray-600 text-sm hover:text-blue-600 transition-colors"
+                  >
+                    {GUIDE_LINKS[key].label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
           </div>
 
           {/* About */}
