@@ -3,11 +3,20 @@
  *
  * Generates Partida 1 (salaries + retentions) and Partida 2 (employer contributions + provisions)
  * from an authorized payroll_run.
+ *
+ * Trazabilidad: retenciones desde `payroll_run_lines.eff_*` (origen statutory-deductions-compute);
+ * parámetros fiscales vía `getTaxEngine` (mismo motor que nómina). Ver `payroll-statutory-trace.ts`.
  */
 
 import { createAdminClient } from '../supabase/server'
 import { normalizeCountryCode } from '../country/supported'
-import { getTaxBracketsForYear } from '../tax/honduras-tax'
+import { getTaxEngine } from '../tax/registry'
+import {
+  buildJournalPayrollSourceReference,
+  buildJournalStatutoryTraceBlock,
+  resolvePayrollLineTaxYear,
+  type JournalPayrollSourceReference
+} from './payroll-statutory-trace'
 import {
   calculateEmployerContributions,
   calculateINFOP
@@ -38,6 +47,7 @@ interface JournalLine {
 interface GenerateJournalResult {
   success: boolean
   journalEntryIds?: string[]
+  statutoryTrace?: JournalPayrollSourceReference['statutory']
   error?: string
 }
 
@@ -250,7 +260,9 @@ export async function generateJournalEntriesFromPayrollRun(
   // 2. Fetch lines
   const { data: lines, error: linesError } = await supabase
     .from('payroll_run_lines')
-    .select('id, employee_id, eff_bruto, eff_ihss, eff_rap, eff_isr, eff_neto, metadata')
+    .select(
+      'id, employee_id, eff_bruto, eff_ihss, eff_rap, eff_isr, eff_neto, tax_year, metadata'
+    )
     .eq('run_id', runId)
     .eq('company_id', companyId)
 
@@ -413,7 +425,14 @@ export async function generateJournalEntriesFromPayrollRun(
         'La generación de asientos contables desde nómina solo está implementada para empresas en Honduras (HND).'
     }
   }
-  const taxConstants = await getTaxBracketsForYear(run.year, 'HND')
+  const yearCtx = await getTaxEngine('HND').loadYearContext(run.year)
+  const taxConstants = yearCtx.hndTaxConstants
+  if (!taxConstants) {
+    return {
+      success: false,
+      error: 'No se pudieron cargar los parámetros fiscales de Honduras para el año de la corrida.'
+    }
+  }
   const factor2Pagos = run.tipo === '2PAGOS' ? 0.5 : 1
 
   // 6. Aggregate by cost center
@@ -483,11 +502,23 @@ export async function generateJournalEntriesFromPayrollRun(
   const entryDate = new Date(run.year, run.month - 1, 1)
   const periodLabel = `${run.year}-${String(run.month).padStart(2, '0')} Q${run.quincena}`
 
-  const sourceRef = {
-    payroll_run_id: runId,
+  const payrollLineTaxYear = resolvePayrollLineTaxYear(
+    payrollLines.map((l: { tax_year?: number | null }) => l.tax_year)
+  )
+  const statutoryTrace = buildJournalStatutoryTraceBlock({
+    trace: yearCtx.trace,
+    retentionTotals: {
+      ihss: totalIhss,
+      rap: totalRap,
+      isr: totalIsr
+    },
+    payrollLineTaxYear
+  })
+  const sourceRef = buildJournalPayrollSourceReference({
+    payrollRunId: runId,
     period: periodLabel,
-    generated_at: new Date().toISOString()
-  }
+    statutory: statutoryTrace
+  })
 
   const journalEntryIds: string[] = []
 
@@ -750,5 +781,5 @@ export async function generateJournalEntriesFromPayrollRun(
     }
   }
 
-  return { success: true, journalEntryIds }
+  return { success: true, journalEntryIds, statutoryTrace }
 }

@@ -34,9 +34,25 @@ UPDATE companies SET settings = settings || '{"is_infop_liable": true}'::jsonb W
 
 - `lib/payroll/employer-contributions.ts` — IHSS patronal, RAP patronal, INFOP
 - `lib/payroll/labor-provisions.ts` — 13°, 14°, vacaciones, cesantía
+- `lib/payroll/statutory-deductions-compute.ts` — deducciones de ley por empleado
+- `lib/accounting/payroll-statutory-trace.ts` — puente de trazabilidad planilla → asientos
 - `lib/accounting/journal-generator.ts` — motor que genera asientos desde payroll_run
 - `POST /api/accounting/generate-journal-entries` — genera asientos desde corrida autorizada
 - `POST /api/accounting/seed-company-defaults` — inicializa catálogo y mapeos por empresa
+
+### Trazabilidad (statutory-deductions-compute → journal-generator)
+
+La cadena de auditoría une el cálculo fiscal de nómina con los asientos contables:
+
+1. **Nómina** — `computePayrollEmployeeStatutoryDeductions` (vía `getTaxEngine`) calcula IHSS/RAP/ISR y persiste `eff_ihss`, `eff_rap`, `eff_isr`, `tax_year` en `payroll_run_lines`.
+2. **Contabilidad** — `generateJournalEntriesFromPayrollRun` lee esos montos para la Partida 1 (retenciones) y carga el mismo contexto fiscal con `getTaxEngine('HND').loadYearContext(year)` para aportaciones patronales y provisiones.
+3. **Persistencia** — `journal_entries.source_reference.statutory` guarda:
+   - `trace`: origen de parámetros (`payroll_statutory_params`, `tax_brackets` o fallback)
+   - `retention_totals`: suma de retenciones tomadas de la planilla
+   - `payroll_line_tax_year`: año fiscal en líneas
+   - `pipeline`: rutas de módulos en la cadena
+
+La UI en la pestaña Contabilidad de nómina (`StatutoryTraceabilityPanel`) muestra este bloque al listar asientos.
 
 ### Flujo de uso
 

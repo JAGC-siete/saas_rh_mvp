@@ -110,6 +110,9 @@ function normalizeIsrBracketsFromJson(raw: unknown): TaxBracket[] {
 /**
  * Deducciones de ley por empleado para un período (IHSS/RAP/ISR en HN; ISSS/AFP/ISR en SV; IGSS en GT).
  * Los campos de retorno mantienen nombres legacy ihss/rap/isr para compatibilidad con planilla y DB.
+ *
+ * Trazabilidad contable: los montos `eff_ihss` / `eff_rap` / `eff_isr` en `payroll_run_lines` alimentan
+ * `lib/accounting/journal-generator.ts` vía `lib/accounting/payroll-statutory-trace.ts`.
  */
 export async function computePayrollEmployeeStatutoryDeductions(
   input: ComputePayrollStatutoryInput

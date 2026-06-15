@@ -3,6 +3,8 @@ import { useToast } from '../../lib/toast'
 import { Button } from '../ui/button'
 import { Card, CardContent } from '../ui/card'
 import { JournalEntryTable } from './JournalEntryTable'
+import { StatutoryTraceabilityPanel } from './StatutoryTraceabilityPanel'
+import type { JournalStatutoryTraceBlock } from '../../lib/accounting/payroll-statutory-trace'
 import { StatusBadge } from './StatusBadge'
 import { CalculatorIcon, DocumentArrowDownIcon } from '@heroicons/react/24/outline'
 import { Loader2 } from 'lucide-react'
@@ -22,6 +24,8 @@ export function PayrollAccountingTab({
 }: PayrollAccountingTabProps) {
   const toast = useToast()
   const [entries, setEntries] = useState<any[]>([])
+  const [statutoryTrace, setStatutoryTrace] =
+    useState<JournalStatutoryTraceBlock | null>(null)
   const [loading, setLoading] = useState(false)
   const [generating, setGenerating] = useState(false)
 
@@ -38,13 +42,16 @@ export function PayrollAccountingTab({
         { credentials: 'include' }
       )
       if (res.ok) {
-        const { entries: data } = await res.json()
+        const { entries: data, statutory_trace: trace } = await res.json()
         setEntries(data ?? [])
+        setStatutoryTrace(trace ?? null)
       } else {
         setEntries([])
+        setStatutoryTrace(null)
       }
     } catch {
       setEntries([])
+      setStatutoryTrace(null)
     } finally {
       setLoading(false)
     }
@@ -178,6 +185,10 @@ export function PayrollAccountingTab({
           </Button>
         </div>
       </div>
+      <StatutoryTraceabilityPanel
+        statutory={statutoryTrace}
+        className="backdrop-blur-md bg-white/10 border border-white/20"
+      />
       <JournalEntryTable entries={entries} />
     </div>
   )

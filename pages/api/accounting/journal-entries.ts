@@ -49,7 +49,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
     const { data: entries, error: entriesError } = await supabase
       .from('journal_entries')
-      .select('id, entry_date, description, status, currency')
+      .select('id, entry_date, description, status, currency, source_reference')
       .eq('payroll_run_id', payroll_run_id)
       .eq('company_id', companyId)
       .order('created_at')
@@ -67,7 +67,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     const lineIds = entriesList.flatMap((e: any) => [e.id])
     if (lineIds.length === 0) {
       return res.status(200).json({
-        entries: entriesList.map((e: any) => ({ ...e, lines: [] }))
+        entries: entriesList.map((e: any) => ({ ...e, lines: [] })),
+        statutory_trace: null
       })
     }
 
@@ -104,7 +105,18 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       lines: linesByEntry.get(e.id) ?? []
     }))
 
-    return res.status(200).json({ entries: enriched })
+    const statutoryTrace =
+      entriesList
+        .map(
+          (e: { source_reference?: { statutory?: unknown } | null }) =>
+            e.source_reference?.statutory
+        )
+        .find(Boolean) ?? null
+
+    return res.status(200).json({
+      entries: enriched,
+      statutory_trace: statutoryTrace
+    })
   } catch (err) {
     console.error('Error en journal-entries:', err)
     const message = err instanceof Error ? err.message : 'Error interno'
