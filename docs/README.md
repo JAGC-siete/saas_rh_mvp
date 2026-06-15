@@ -7,6 +7,7 @@ Este directorio contiene la documentación relevante y vigente del proyecto. Si 
 - **Ficha técnica (visión general, módulos, stack, env vars)**: `docs/FICHA_TECNICA_SAAS.md`
 - **Onboarding por capas (legal → empresa/empleado → cálculo/ajustes)**: `docs/ONBOARDING_SAAS_POR_CAPAS.md`
 - **Arquitectura de asistencia (3 capas)**: `docs/ARQUITECTURA_ASISTENCIA_3_CAPAS.md`
+- **Módulo Contable (Honduras)**: `docs/ACCOUNTING_MODULE_HONDURAS.md`
 
 ## Deploy / Staging / Operación
 
@@ -22,9 +23,10 @@ Este directorio contiene la documentación relevante y vigente del proyecto. Si 
 
 ## Hikvision (biométricos)
 
-- **Implementación actual (integrado en Next.js)**: `docs/HIKVISION_PROXY_INTEGRATED.md`
+- **Arquitectura de Ingesta y Sincronización (Verdad Actual)**: `docs/ARQUITECTURA_INGESTA_ASISTENCIA.md`
+- **Implementación integrada en Next.js**: `docs/HIKVISION_PROXY_INTEGRATED.md`
 - **Resumen de integración**: `docs/INTEGRATION_SUMMARY.md`
-- **Análisis de opciones en Railway (histórico, pero alineado con integración)**: `docs/RAILWAY_INTEGRATION_ANALYSIS.md`
+- **Análisis de opciones en Railway (histórico)**: `docs/RAILWAY_INTEGRATION_ANALYSIS.md`
 
 ## Reportes / análisis históricos
 
@@ -38,6 +40,7 @@ Estos documentos son útiles como contexto (incidentes, post-mortems, timelines)
 
 Se eliminaron guías que asumían un **proxy Hikvision separado** y `HIKVISION_PROXY_URL`:
 
+- `docs/ARQUITECTURA_HIKVISION_PROXY.md`
 - `docs/HIKVISION_PROXY_SETUP.md`
 - `docs/HIKVISION_PROXY_RAILWAY_STATUS.md`
 - `docs/DEPLOY_PROXY_RENDER.md`
