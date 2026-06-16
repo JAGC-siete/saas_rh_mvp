@@ -71,12 +71,12 @@ export function buildLeadFollowUpWhatsAppMessage(source: LeadRegistroSource): st
     return [
       '¡Gracias por tu interés! 🙌',
       '',
-      `(Si no ves el correo en tu bandeja, búscalo el remitente: ${CONTACT_SENDER_HINT}).`,
+      `Recibimos tu solicitud de más información. (Si no ves el correo en tu bandeja, búscalo el remitente: ${CONTACT_SENDER_HINT}).`,
       '',
       'Muchos profesionales se quedan con la duda por preguntar — tú ya preguntaste',
       '',
       'Cuéntame si recibiste el correo y si era la información que esperabas . 👇',
-    ].join('\\n')
+    ].join('\n')
   }
 
   return [

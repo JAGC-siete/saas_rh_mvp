@@ -20,10 +20,14 @@ describe('lead registro notification', () => {
     assert.ok(suscripcion.includes('Ya estás en la lista de SISU'))
     assert.ok(suscripcion.includes('automatizar tu nómina'))
     assert.ok(info.includes('solicitud de más información'))
-    assert.ok(info.includes('equipo de RH'))
+    assert.ok(info.includes('Recibimos tu solicitud'))
+    assert.ok(info.includes('Cuéntame si recibiste el correo'))
 
     for (const msg of [activar, ventas, suscripcion, info]) {
       assert.ok(msg.includes('jorgearturo@humanosisu.net'))
+    }
+
+    for (const msg of [activar, ventas, suscripcion]) {
       assert.ok(msg.includes('Cuéntame si pudiste'))
     }
   })
