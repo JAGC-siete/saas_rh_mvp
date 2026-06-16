@@ -67,6 +67,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })
     }
 
+    if (skippedReason === 'completed') {
+      return res.status(200).json(
+        createSuccessResponse({
+          message: 'La información ya ha sido enviada a este correo electrónico. Por favor, revisa tu bandeja de entrada buscando al remitente: jorgearturo@humanosisu.com',
+          leadId,
+        })
+      )
+    }
+
     if (skippedReason === 'excluded') {
       return res.status(200).json(
         createSuccessResponse({
