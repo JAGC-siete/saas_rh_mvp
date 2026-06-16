@@ -69,14 +69,14 @@ export function buildLeadFollowUpWhatsAppMessage(source: LeadRegistroSource): st
 
   if (source === 'info') {
     return [
-      '¡Gracias por tu interés en SISU! 🙌 Recibimos tu solicitud de más información.',
+      '¡Gracias por tu interés! 🙌',
       '',
-      senderHint,
+      `(Si no ves el correo en tu bandeja, búscalo el remitente: ${CONTACT_SENDER_HINT}).`,
       '',
-      'Muchas empresas se quedan en lo manual por no dar el primer paso — tú ya lo diste.',
+      'Muchos profesionales se quedan con la duda por preguntar — tú ya preguntaste',
       '',
-      '¿Te parece si conversamos sobre cómo SISU puede ayudar a tu equipo de RH? Cuéntame si pudiste revisar el correo. 👇',
-    ].join('\n')
+      'Cuéntame si recibiste el correo y si era la información que esperabas . 👇',
+    ].join('\\n')
   }
 
   return [
