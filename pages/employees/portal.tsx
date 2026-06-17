@@ -31,7 +31,7 @@ import EmployeePermissionForm from '../../components/employee-portal/EmployeePer
 import EmployeePermissionHistory from '../../components/employee-portal/EmployeePermissionHistory'
 import { formatTimeDisplay, parseDateOnlyAsHonduras, formatDateOnlyForHonduras, HONDURAS_TIMEZONE } from '../../lib/timezone'
 import NotificationBell from '../../components/ui/NotificationBell'
-import PublicPageShell from '../../components/landing/PublicPageShell'
+import EmployeePortalShell from '../../components/employee-portal/EmployeePortalShell'
 
 // Component for attendance records list
 function AttendanceRecordsList({ employeeId }: { employeeId?: string }) {
@@ -982,22 +982,22 @@ export default function EmployeePortal() {
 
   if (loading) {
     return (
-      <PublicPageShell centered showFooter={false}>
+      <EmployeePortalShell centered>
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-400"></div>
-      </PublicPageShell>
+      </EmployeePortalShell>
     )
   }
 
   if (!session) {
     return (
-      <PublicPageShell centered showFooter={false}>
+      <EmployeePortalShell centered>
         <EmployeePasswordLogin onLoginSuccess={handleLoginSuccess} />
-      </PublicPageShell>
+      </EmployeePortalShell>
     )
   }
 
   return (
-    <PublicPageShell showFooter={false}>
+    <EmployeePortalShell showAppBar={false}>
       {/* Header */}
       <div className="bg-black/20 border-b border-white/10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -1598,6 +1598,6 @@ export default function EmployeePortal() {
           </Button>
         </div>
       </div>
-    </PublicPageShell>
+    </EmployeePortalShell>
   )
 }

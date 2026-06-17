@@ -157,7 +157,7 @@ export default function AuthUpdatePasswordPage() {
                     />
                   </div>
                   {error ? (
-                    <div className="text-red-200 text-sm glass-strong p-3 rounded-md">{error}</div>
+                    <div className="text-red-200 text-sm glass-modern p-3 rounded-md">{error}</div>
                   ) : null}
                   <Button
                     type="submit"

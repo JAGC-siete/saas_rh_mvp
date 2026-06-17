@@ -370,7 +370,7 @@ export default function AuthStart() {
                     </div>
 
                     {error && (
-                      <div className="text-red-200 text-sm glass-strong p-3 rounded-md">
+                      <div className="text-red-200 text-sm glass-modern p-3 rounded-md">
                         {error}
                       </div>
                     )}
@@ -408,7 +408,7 @@ export default function AuthStart() {
               {step === 'email' && (
                 <div className="space-y-4">
                   <div className="text-center">
-                    <div className="text-green-400 text-sm glass-strong p-3 rounded-md">
+                    <div className="text-green-400 text-sm glass-modern p-3 rounded-md">
                       <div className="font-semibold mb-2">¡Enlace enviado exitosamente!</div>
                       <div>Revisá tu bandeja de entrada (o carpeta de spam).</div>
                       <div className="mt-1 text-xs">Asunto: "Tu acceso a Humano SISU" - Válido por 1 hora</div>
@@ -435,7 +435,7 @@ export default function AuthStart() {
                     </div>
 
                     {error && (
-                      <div className="text-red-200 text-sm glass-strong p-3 rounded-md">
+                      <div className="text-red-200 text-sm glass-modern p-3 rounded-md">
                         {error}
                       </div>
                     )}
@@ -484,7 +484,7 @@ export default function AuthStart() {
                   </div>
 
                   {error && (
-                    <div className="text-red-200 text-sm glass-strong p-3 rounded-md">
+                    <div className="text-red-200 text-sm glass-modern p-3 rounded-md">
                       {error}
                     </div>
                   )}

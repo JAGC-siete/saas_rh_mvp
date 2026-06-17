@@ -22,6 +22,7 @@ El landing usa el diseño **Infraestructura Líquida** implementado en `componen
 | `TrustBar.tsx` | Marquee de clientes pre-footer |
 | `ScrollReveal.tsx` | Animación scroll con Framer Motion |
 | `PublicPageShell.tsx` | Layout compartido para ~40 páginas públicas |
+| `AppMeshShell.tsx` | Atmósfera mesh para `/app` autenticado (Dashboard + Super Admin) |
 | `BorderBeam.tsx` | Borde animado opcional en cards de formulario |
 
 **Paleta minimalista:** fondo `slate-950`, texto `slate-400` / `white`, acento números `cyan-400`, CTAs `brand-500` + `btn-shiny`.
@@ -68,7 +69,28 @@ Todas las páginas públicas (excepto `/app/*` dashboard y páginas de debug) us
 
 **Excluidas:** `/app/*` (dashboard), debug, `404`/`500`.
 
-**Legacy (solo dashboard interno):** `MainHeader`, `CloudBackground`, `.glass` / `.glass-strong` siguen en el repo para rutas `/app/*` no migradas.
+**Legacy (solo rutas no migradas):** `MainHeader`, `CloudBackground`, `.glass` / `.glass-strong` en código legacy.
+
+---
+
+## AppMeshShell — atmósfera `/app` autenticado
+
+Layouts internos (`DashboardLayout`, `SuperAdminLayout`) comparten `components/landing/AppMeshShell.tsx`:
+
+```tsx
+<AppMeshShell className="h-screen min-h-0">
+  {/* sidebar glass-modern z-20 + main z-10 */}
+</AppMeshShell>
+```
+
+| Layout | Rutas | Nav activo |
+|---|---|---|
+| `SuperAdminLayout` | `/app/admin/*` | Command Center: `bg-brand-600/20` + `border-brand-400/30` |
+| `DashboardLayout` | `/app/dashboard`, nómina, asistencia, etc. | Mismo patrón Command Center |
+
+**Cards en app:** `variant="liquid"` (estándar). **Inputs:** clase `input-glass`.
+
+**`_app.tsx`:** sin `bg-app` en rutas `/app` autenticadas (mesh del layout prevalece). Login/forgot-password usan `PublicPageShell`.
 
 ---
 

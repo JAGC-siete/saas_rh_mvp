@@ -336,7 +336,7 @@ export default function PublicDeductionCalculator({ config }: { config: PublicCa
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="glass-strong rounded-2xl shadow-2xl p-6 sm:p-8 relative overflow-hidden">
+          <div className="glass-modern rounded-2xl shadow-2xl p-6 sm:p-8 relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/20 via-blue-500/20 to-purple-500/20 opacity-50 blur-xl pointer-events-none" />
             <form onSubmit={handleCalculate} className="space-y-6 relative z-10">
               <div>
@@ -501,7 +501,7 @@ export default function PublicDeductionCalculator({ config }: { config: PublicCa
             </form>
           </div>
 
-          <div className="glass-strong rounded-2xl shadow-2xl p-6 sm:p-8 relative overflow-hidden">
+          <div className="glass-modern rounded-2xl shadow-2xl p-6 sm:p-8 relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-r from-green-500/20 via-cyan-500/20 to-blue-500/20 opacity-50 blur-xl pointer-events-none" />
             <div className="relative z-10">
               {!result && (
@@ -611,7 +611,7 @@ export default function PublicDeductionCalculator({ config }: { config: PublicCa
                     </div>
                   )}
 
-                  <div className="glass-strong rounded-xl p-6 border border-cyan-500/30 text-center mb-6">
+                  <div className="glass-modern rounded-xl p-6 border border-cyan-500/30 text-center mb-6">
                     <h3 className="text-xl font-bold text-white mb-2">{config.conversion.inlineTitle}</h3>
                     <p className="text-brand-200/90 mb-4">{config.conversion.inlineBody}</p>
                     <ConversionButtons campaign="post-calc" />
@@ -622,7 +622,7 @@ export default function PublicDeductionCalculator({ config }: { config: PublicCa
           </div>
         </div>
 
-        <div className="mt-8 glass-strong rounded-2xl shadow-2xl p-6 sm:p-8 text-center border border-white/10">
+        <div className="mt-8 glass-modern rounded-2xl shadow-2xl p-6 sm:p-8 text-center border border-white/10">
           <h3 className="text-lg font-bold text-white mb-2">{config.landingBridge.title}</h3>
           <p className="text-brand-200/90 mb-4 max-w-2xl mx-auto">{config.landingBridge.body}</p>
           <Link
@@ -634,7 +634,7 @@ export default function PublicDeductionCalculator({ config }: { config: PublicCa
         </div>
 
         {config.seoGuide && (
-          <section className="mt-6 glass-strong rounded-2xl shadow-2xl p-6 sm:p-8 border border-white/10 text-left">
+          <section className="mt-6 glass-modern rounded-2xl shadow-2xl p-6 sm:p-8 border border-white/10 text-left">
             <h2 className="text-xl sm:text-2xl font-bold text-white mb-3">{config.seoGuide.title}</h2>
             <p className="text-brand-200/90 mb-6">{config.seoGuide.intro}</p>
             <div className="space-y-4">
@@ -654,7 +654,7 @@ export default function PublicDeductionCalculator({ config }: { config: PublicCa
           </section>
         )}
 
-        <div className="mt-6 glass-strong rounded-2xl shadow-2xl p-6 sm:p-8 text-center">
+        <div className="mt-6 glass-modern rounded-2xl shadow-2xl p-6 sm:p-8 text-center">
           <h3 className="text-xl font-bold text-white mb-4">{config.conversion.footerTitle}</h3>
           <p className="text-brand-200/90 mb-6">{config.conversion.footerBody}</p>
           <ConversionButtons campaign="footer" size="sm" activarLabel={config.conversion.footerButton} />

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import { Button } from '../../components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card'
-import PublicPageShell from '../../components/landing/PublicPageShell'
+import EmployeePortalShell from '../../components/employee-portal/EmployeePortalShell'
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline'
 
 interface InvitationData {
@@ -113,7 +113,7 @@ export default function InvitationAcceptance() {
 
   if (success) {
     return (
-      <PublicPageShell centered showFooter={false}>
+      <EmployeePortalShell centered>
         <Card variant="liquid" className="w-full max-w-md">
           <CardHeader className="text-center">
             <div className="mx-auto w-16 h-16 bg-green-600 rounded-full flex items-center justify-center mb-4">
@@ -122,17 +122,17 @@ export default function InvitationAcceptance() {
             <CardTitle className="text-2xl font-bold text-white">
               ¡Cuenta Creada Exitosamente!
             </CardTitle>
-            <CardDescription className="text-gray-300">
+            <CardDescription className="text-slate-400">
               Su cuenta ha sido creada y será redirigido al portal de empleados
             </CardDescription>
           </CardHeader>
         </Card>
-      </PublicPageShell>
+      </EmployeePortalShell>
     )
   }
 
   return (
-    <PublicPageShell centered showFooter={false}>
+    <EmployeePortalShell centered>
       <Card variant="liquid" className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="mx-auto w-16 h-16 bg-brand-600 rounded-full flex items-center justify-center mb-4">
@@ -141,7 +141,7 @@ export default function InvitationAcceptance() {
           <CardTitle className="text-2xl font-bold text-white">
             Bienvenido a Humano SISU
           </CardTitle>
-          <CardDescription className="text-gray-300">
+          <CardDescription className="text-slate-400">
             Complete su registro estableciendo su contraseña
           </CardDescription>
         </CardHeader>
@@ -149,15 +149,15 @@ export default function InvitationAcceptance() {
         <CardContent>
           {invitationData ? (
             <>
-              <div className="mb-6 p-4 bg-blue-500/20 border border-blue-500/30 rounded-md">
+              <div className="mb-6 p-4 rounded-xl bg-brand-500/10 border border-brand-400/20">
                 <h3 className="text-white font-medium mb-2">Detalles de la Invitación:</h3>
-                <p className="text-sm text-gray-300">
+                <p className="text-sm text-slate-400">
                   <span className="text-brand-400">Empleado:</span> {invitationData.employees.name}
                 </p>
-                <p className="text-sm text-gray-300">
+                <p className="text-sm text-slate-400">
                   <span className="text-brand-400">Email:</span> {invitationData.email}
                 </p>
-                <p className="text-sm text-gray-300">
+                <p className="text-sm text-slate-400">
                   <span className="text-brand-400">Expira:</span> {new Date(invitationData.expires_at).toLocaleString()}
                 </p>
               </div>
@@ -170,7 +170,7 @@ export default function InvitationAcceptance() {
                 )}
 
                 <div>
-                  <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-2">
+                  <label htmlFor="password" className="block text-sm font-medium text-slate-300 mb-2">
                     Nueva Contraseña
                   </label>
                   <div className="relative">
@@ -180,7 +180,7 @@ export default function InvitationAcceptance() {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="Mínimo 8 caracteres"
-                      className="w-full px-4 py-3 pr-12 bg-white/10 border border-white/20 rounded-lg text-white text-lg placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-transparent"
+                      className="input-glass text-lg pr-12"
                       autoComplete="new-password"
                     />
                     <button
@@ -198,7 +198,7 @@ export default function InvitationAcceptance() {
                 </div>
 
                 <div>
-                  <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-300 mb-2">
+                  <label htmlFor="confirmPassword" className="block text-sm font-medium text-slate-300 mb-2">
                     Confirmar Contraseña
                   </label>
                   <div className="relative">
@@ -208,7 +208,7 @@ export default function InvitationAcceptance() {
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       placeholder="Repita su contraseña"
-                      className="w-full px-4 py-3 pr-12 bg-white/10 border border-white/20 rounded-lg text-white text-lg placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-transparent"
+                      className="input-glass text-lg pr-12"
                       autoComplete="new-password"
                     />
                     <button
@@ -256,23 +256,23 @@ export default function InvitationAcceptance() {
 
         <div className="px-6 pb-6">
           <div className="text-center space-y-2">
-            <p className="text-xs text-gray-400">
+            <p className="text-xs text-slate-400">
               ¿Problemas con la invitación?
             </p>
-            <p className="text-xs text-gray-400">
+            <p className="text-xs text-slate-400">
               Contacte a Recursos Humanos: <br />
               <span className="text-brand-400 font-medium">rrhh@humanosisu.net</span>
             </p>
           </div>
 
           <div className="mt-4 pt-4 border-t border-white/10">
-            <div className="flex items-center justify-center space-x-1 text-xs text-gray-500">
+            <div className="flex items-center justify-center space-x-1 text-xs text-slate-500">
               <span>🔒</span>
               <span>Conexión segura y encriptada</span>
             </div>
           </div>
         </div>
       </Card>
-    </PublicPageShell>
+    </EmployeePortalShell>
   )
 }

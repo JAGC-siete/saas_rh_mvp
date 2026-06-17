@@ -25,7 +25,7 @@ export default function RelatedGuides({ currentPath, className = '' }: RelatedGu
             <Link
               key={guide.href}
               href={guide.href}
-              className="glass-strong rounded-xl sm:rounded-2xl p-4 sm:p-5 border border-white/10 hover:border-brand-400/40 transition-all hover:-translate-y-0.5 group"
+              className="glass-modern rounded-xl sm:rounded-2xl p-4 sm:p-5 border border-white/10 hover:border-brand-400/40 transition-all hover:-translate-y-0.5 group"
             >
               <div className="flex items-start justify-between gap-2">
                 <h3 className="text-base font-bold text-white group-hover:text-brand-200">{guide.label}</h3>

@@ -600,7 +600,7 @@ export default function CalculadoraPrestacionesPage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="glass-strong rounded-2xl shadow-2xl p-6 sm:p-8 relative">
+          <div className="glass-modern rounded-2xl shadow-2xl p-6 sm:p-8 relative">
             <div className="absolute inset-0 bg-gradient-to-r from-green-500/20 via-cyan-500/20 to-blue-500/20 opacity-50 blur-xl pointer-events-none" />
             <form onSubmit={handleSubmit} className="space-y-6 relative z-10">
               <div>
@@ -1037,7 +1037,7 @@ export default function CalculadoraPrestacionesPage() {
             </form>
           </div>
 
-          <div className="glass-strong rounded-2xl shadow-2xl p-6 sm:p-8 relative">
+          <div className="glass-modern rounded-2xl shadow-2xl p-6 sm:p-8 relative">
             <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/15 via-blue-500/15 to-purple-500/15 opacity-50 blur-xl pointer-events-none" />
             <div className="relative z-10">
               {!result && (

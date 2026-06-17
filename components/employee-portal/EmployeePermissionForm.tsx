@@ -154,7 +154,7 @@ export default function EmployeePermissionForm({ onSubmit, onCancel, isLoading }
   }
 
   return (
-    <Card className="glass-strong">
+    <Card variant="liquid" className="w-full max-w-md">
       <CardHeader>
         <CardTitle className="text-white flex items-center gap-2">
           <span className="w-8 h-8 bg-blue-500/20 rounded-full flex items-center justify-center">
