@@ -180,7 +180,7 @@ export default function LeaveDashboard({
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <Card variant="glass" className="border-white/10">
+        <Card variant="liquid" className="border-white/10">
           <CardHeader className="pb-2">
             <CardTitle className="text-white text-base">Por tipo de permiso</CardTitle>
             <p className="text-xs text-gray-400 font-normal">Cantidad de solicitudes · {rangeLabel}</p>
@@ -223,7 +223,7 @@ export default function LeaveDashboard({
           </CardContent>
         </Card>
 
-        <Card variant="glass" className="border-white/10">
+        <Card variant="liquid" className="border-white/10">
           <CardHeader className="pb-2">
             <CardTitle className="text-white text-base">Solicitudes por semana</CardTitle>
             <p className="text-xs text-gray-400 font-normal">Alta según fecha de creación · últimas barras</p>

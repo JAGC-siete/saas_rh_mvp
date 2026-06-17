@@ -258,7 +258,9 @@ export default function CommunicationPanel() {
       onClick={() => setTab(id)}
       className={cn(
         'inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-        tab === id ? 'bg-brand-600 text-white' : 'text-gray-300 hover:bg-white/10'
+        tab === id
+          ? 'bg-brand-600/20 text-white border border-brand-400/30'
+          : 'text-white/70 hover:bg-white/10 border border-transparent'
       )}
     >
       <Icon className="h-4 w-4" />
@@ -276,12 +278,12 @@ export default function CommunicationPanel() {
       </div>
 
       {tab === 'news' && (
-        <Card className="border-white/10 bg-white/5">
+        <Card variant="liquid" className="border-white/10">
           <CardHeader>
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <CardTitle className="text-white">Commits recientes</CardTitle>
-                <p className="text-xs text-gray-400">Selecciona los cambios relevantes para difundir.</p>
+                <p className="text-xs text-white/60">Selecciona los cambios relevantes para difundir.</p>
               </div>
               <div className="flex items-center gap-3">
                 <label className="flex items-center gap-2 text-xs text-gray-300">
@@ -306,9 +308,9 @@ export default function CommunicationPanel() {
             ) : commitsError ? (
               <p className="text-sm text-red-400">{commitsError}</p>
             ) : commitsLoading ? (
-              <p className="text-sm text-gray-400">Cargando commits…</p>
+              <p className="text-sm text-white/50">Cargando commits…</p>
             ) : visibleCommits.length === 0 ? (
-              <p className="text-sm text-gray-400">No hay commits para mostrar.</p>
+              <p className="text-sm text-white/50">No hay commits para mostrar.</p>
             ) : (
               <div className="divide-y divide-white/10">
                 {visibleCommits.map((c) => (
@@ -343,18 +345,31 @@ export default function CommunicationPanel() {
       {tab === 'compose' && (
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           {/* Editor */}
-          <Card className="border-white/10 bg-white/5">
+          <Card variant="liquid" className="border-white/10">
             <CardHeader>
               <CardTitle className="text-white">{editingId ? 'Editar comunicado' : 'Nuevo comunicado'}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
                 <label className="block text-sm text-gray-300 mb-1">Asunto</label>
-                <Input value={subject} onChange={(e) => setSubject(e.target.value)} maxLength={200} placeholder="Ej. Novedades de la semana" />
+                <Input
+                  className="input-glass text-white placeholder:text-white/50"
+                  value={subject}
+                  onChange={(e) => setSubject(e.target.value)}
+                  maxLength={200}
+                  placeholder="Ej. Novedades de la semana"
+                />
               </div>
               <div>
                 <label className="block text-sm text-gray-300 mb-1">Introducción (opcional)</label>
-                <Textarea value={intro} onChange={(e) => setIntro(e.target.value)} rows={2} maxLength={1000} placeholder="Texto del encabezado" />
+                <Textarea
+                  className="input-glass text-white placeholder:text-white/50 min-h-[80px]"
+                  value={intro}
+                  onChange={(e) => setIntro(e.target.value)}
+                  rows={2}
+                  maxLength={1000}
+                  placeholder="Texto del encabezado"
+                />
               </div>
 
               <div className="space-y-3">
@@ -368,6 +383,7 @@ export default function CommunicationPanel() {
                   <div key={i} className="rounded-lg border border-white/10 bg-black/20 p-3 space-y-2">
                     <div className="flex items-center gap-2">
                       <Input
+                        className="input-glass text-white placeholder:text-white/50"
                         value={b.title}
                         onChange={(e) => setBlocks((arr) => arr.map((x, j) => (j === i ? { ...x, title: e.target.value } : x)))}
                         placeholder="Título del cambio"
@@ -384,6 +400,7 @@ export default function CommunicationPanel() {
                       </Button>
                     </div>
                     <Textarea
+                      className="input-glass text-white placeholder:text-white/50"
                       value={b.description}
                       onChange={(e) => setBlocks((arr) => arr.map((x, j) => (j === i ? { ...x, description: e.target.value } : x)))}
                       rows={2}
@@ -397,11 +414,22 @@ export default function CommunicationPanel() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm text-gray-300 mb-1">CTA URL (opcional)</label>
-                  <Input value={ctaUrl} onChange={(e) => setCtaUrl(e.target.value)} placeholder="https://humanosisu.net/app" />
+                  <Input
+                    className="input-glass text-white placeholder:text-white/50"
+                    value={ctaUrl}
+                    onChange={(e) => setCtaUrl(e.target.value)}
+                    placeholder="https://humanosisu.net/app"
+                  />
                 </div>
                 <div>
                   <label className="block text-sm text-gray-300 mb-1">CTA texto (opcional)</label>
-                  <Input value={ctaLabel} onChange={(e) => setCtaLabel(e.target.value)} placeholder="Ver en el panel" maxLength={60} />
+                  <Input
+                    className="input-glass text-white placeholder:text-white/50"
+                    value={ctaLabel}
+                    onChange={(e) => setCtaLabel(e.target.value)}
+                    placeholder="Ver en el panel"
+                    maxLength={60}
+                  />
                 </div>
               </div>
 
@@ -411,7 +439,7 @@ export default function CommunicationPanel() {
                   <select
                     value={segment}
                     onChange={(e) => setSegment(e.target.value as CommSegment)}
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    className="input-glass w-full text-white"
                   >
                     {(Object.keys(SEGMENT_LABELS) as CommSegment[]).map((value) => (
                       <option key={value} value={value}>
@@ -455,7 +483,12 @@ export default function CommunicationPanel() {
                 </div>
                 <div>
                   <label className="block text-sm text-gray-300 mb-1">Programar (opcional)</label>
-                  <Input type="datetime-local" value={scheduledAt} onChange={(e) => setScheduledAt(e.target.value)} />
+                  <Input
+                    className="input-glass text-white"
+                    type="datetime-local"
+                    value={scheduledAt}
+                    onChange={(e) => setScheduledAt(e.target.value)}
+                  />
                 </div>
               </div>
 
@@ -493,7 +526,7 @@ export default function CommunicationPanel() {
           </Card>
 
           {/* Preview */}
-          <Card className="border-white/10 bg-white/5">
+          <Card variant="liquid" className="border-white/10">
             <CardHeader>
               <CardTitle className="text-white">Vista previa</CardTitle>
               <p className="text-xs text-gray-400">Así se verá el correo (estilo SISU).</p>
@@ -506,7 +539,7 @@ export default function CommunicationPanel() {
       )}
 
       {tab === 'drafts' && (
-        <Card className="border-white/10 bg-white/5">
+        <Card variant="liquid" className="border-white/10">
           <CardContent className="p-0">
             {isLoading ? (
               <p className="p-6 text-sm text-gray-400">Cargando…</p>
@@ -540,7 +573,7 @@ export default function CommunicationPanel() {
       )}
 
       {tab === 'history' && (
-        <Card className="border-white/10 bg-white/5">
+        <Card variant="liquid" className="border-white/10">
           <CardContent className="p-0">
             {isLoading ? (
               <p className="p-6 text-sm text-gray-400">Cargando…</p>

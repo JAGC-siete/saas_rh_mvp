@@ -108,7 +108,7 @@ export default function Demo() {
   }
 
   const DemoBanner = () => (
-    <div className="glass-strong border-b border-white/10 text-white p-4 text-center">
+    <div className="glass-modern border-b border-white/10 text-white p-4 text-center">
       <div className="flex items-center justify-center space-x-2">
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -125,7 +125,7 @@ export default function Demo() {
     <div className="space-y-6">
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card variant="glass">
+        <Card variant="liquid">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-white">Total Empleados</CardTitle>
             <svg className="h-4 w-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -140,7 +140,7 @@ export default function Demo() {
           </CardContent>
         </Card>
 
-        <Card variant="glass">
+        <Card variant="liquid">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-white">Presentes Hoy</CardTitle>
             <svg className="h-4 w-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -155,7 +155,7 @@ export default function Demo() {
           </CardContent>
         </Card>
 
-        <Card variant="glass">
+        <Card variant="liquid">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-white">Llegadas Tarde</CardTitle>
             <svg className="h-4 w-4 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -170,7 +170,7 @@ export default function Demo() {
           </CardContent>
         </Card>
 
-        <Card variant="glass">
+        <Card variant="liquid">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-white">Nómina Actual</CardTitle>
             <svg className="h-4 w-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -236,7 +236,7 @@ export default function Demo() {
       </div>
 
       {/* Call to Action */}
-      <Card variant="glass">
+      <Card variant="liquid">
         <CardContent className="p-6">
           <div className="flex items-center justify-between">
             <div>
@@ -285,7 +285,7 @@ export default function Demo() {
         
         <div className="flex">
           {/* Demo Sidebar */}
-          <div className="w-64 glass-strong border-r border-white/10">
+          <div className="w-64 glass-modern border-r border-white/10">
             <nav className="mt-8 space-y-1">
               {[
                 { id: 'dashboard', name: 'Dashboard', icon: ChartBarIcon },

@@ -19,7 +19,7 @@ export default function SettingsPage() {
                 Ajustes y parámetros del sistema
               </p>
             </div>
-            <Card variant="glass" className="border-white/10">
+            <Card variant="liquid" className="border-white/10">
               <CardHeader>
                 <CardTitle className="text-white">Próximamente</CardTitle>
               </CardHeader>

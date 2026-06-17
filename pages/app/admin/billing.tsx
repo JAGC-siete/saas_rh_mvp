@@ -337,7 +337,7 @@ export default function BillingPage() {
             {activeTab === 'meters' && (
               <div className="space-y-4">
                 {/* Filters */}
-                <Card variant="glass" className="border-white/10">
+                <Card variant="liquid" className="border-white/10">
                   <CardHeader>
                     <CardTitle className="text-white">Filtros</CardTitle>
                   </CardHeader>
@@ -348,7 +348,7 @@ export default function BillingPage() {
                         <select
                           value={meterFilters.company_id}
                           onChange={(e) => setMeterFilters({ ...meterFilters, company_id: e.target.value })}
-                          className="w-full px-3 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-md text-white"
+                          className="input-glass w-full text-white"
                         >
                           <option value="">Todas</option>
                           {companies.map((c) => (
@@ -362,7 +362,7 @@ export default function BillingPage() {
                           type="number"
                           value={meterFilters.year}
                           onChange={(e) => setMeterFilters({ ...meterFilters, year: e.target.value })}
-                          className="w-full px-3 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-md text-white"
+                          className="input-glass w-full text-white"
                           placeholder="2025"
                         />
                       </div>
@@ -371,7 +371,7 @@ export default function BillingPage() {
                         <select
                           value={meterFilters.month}
                           onChange={(e) => setMeterFilters({ ...meterFilters, month: e.target.value })}
-                          className="w-full px-3 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-md text-white"
+                          className="input-glass w-full text-white"
                         >
                           <option value="">Todos</option>
                           {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
@@ -384,7 +384,7 @@ export default function BillingPage() {
                 </Card>
 
                 {/* Table */}
-                <Card variant="glass" className="border-white/10">
+                <Card variant="liquid" className="border-white/10">
                   <CardHeader>
                     <CardTitle className="text-white">
                       Uso Mensual ({metersTotal} registros)
@@ -463,7 +463,7 @@ export default function BillingPage() {
             {activeTab === 'payments' && (
               <div className="space-y-4">
                 {/* Filters and Create Button */}
-                <Card variant="glass" className="border-white/10">
+                <Card variant="liquid" className="border-white/10">
                   <CardHeader>
                     <div className="flex justify-between items-center">
                       <CardTitle className="text-white">Filtros</CardTitle>
@@ -483,7 +483,7 @@ export default function BillingPage() {
                         <select
                           value={paymentFilters.company_id}
                           onChange={(e) => setPaymentFilters({ ...paymentFilters, company_id: e.target.value })}
-                          className="w-full px-3 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-md text-white"
+                          className="input-glass w-full text-white"
                         >
                           <option value="">Todas</option>
                           {companies.map((c) => (
@@ -497,7 +497,7 @@ export default function BillingPage() {
                           type="date"
                           value={paymentFilters.start_date}
                           onChange={(e) => setPaymentFilters({ ...paymentFilters, start_date: e.target.value })}
-                          className="w-full px-3 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-md text-white"
+                          className="input-glass w-full text-white"
                         />
                       </div>
                       <div>
@@ -506,7 +506,7 @@ export default function BillingPage() {
                           type="date"
                           value={paymentFilters.end_date}
                           onChange={(e) => setPaymentFilters({ ...paymentFilters, end_date: e.target.value })}
-                          className="w-full px-3 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-md text-white"
+                          className="input-glass w-full text-white"
                         />
                       </div>
                     </div>
@@ -515,7 +515,7 @@ export default function BillingPage() {
 
                 {/* Payment Form Modal */}
                 {showPaymentForm && (
-                  <Card variant="glass" className="border-white/10">
+                  <Card variant="liquid" className="border-white/10">
                     <CardHeader>
                       <CardTitle className="text-white">Registrar Pago Manual</CardTitle>
                     </CardHeader>
@@ -533,7 +533,7 @@ export default function BillingPage() {
                                 amount_hnl: '',
                                 reference: '',
                               })}
-                              className="w-full px-3 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-md text-white"
+                              className="input-glass w-full text-white"
                               required
                             >
                               <option value="">Seleccionar...</option>
@@ -551,7 +551,7 @@ export default function BillingPage() {
                                 if (quote) applyQuoteToForm(quote)
                                 else setPaymentForm((prev) => ({ ...prev, quote_id: '', reference: '' }))
                               }}
-                              className="w-full px-3 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-md text-white"
+                              className="input-glass w-full text-white"
                               disabled={!paymentForm.company_id || loadingPendingQuotes}
                             >
                               <option value="">
@@ -597,7 +597,7 @@ export default function BillingPage() {
                               step="0.01"
                               value={paymentForm.amount_hnl}
                               onChange={(e) => setPaymentForm({ ...paymentForm, amount_hnl: e.target.value })}
-                              className="w-full px-3 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-md text-white"
+                              className="input-glass w-full text-white"
                               required
                             />
                           </div>
@@ -607,7 +607,7 @@ export default function BillingPage() {
                               type="text"
                               value={paymentForm.reference}
                               onChange={(e) => setPaymentForm({ ...paymentForm, reference: e.target.value })}
-                              className="w-full px-3 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-md text-white"
+                              className="input-glass w-full text-white"
                               placeholder="# transferencia, notas..."
                             />
                           </div>
@@ -617,7 +617,7 @@ export default function BillingPage() {
                               type="date"
                               value={paymentForm.paid_at}
                               onChange={(e) => setPaymentForm({ ...paymentForm, paid_at: e.target.value })}
-                              className="w-full px-3 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-md text-white"
+                              className="input-glass w-full text-white"
                             />
                           </div>
                         </div>
@@ -645,7 +645,7 @@ export default function BillingPage() {
                 )}
 
                 {/* Table */}
-                <Card variant="glass" className="border-white/10">
+                <Card variant="liquid" className="border-white/10">
                   <CardHeader>
                     <CardTitle className="text-white">
                       Pagos Manuales ({paymentsTotal} registros)

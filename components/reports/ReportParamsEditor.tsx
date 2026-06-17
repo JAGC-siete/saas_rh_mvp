@@ -128,7 +128,7 @@ export default function ReportParamsEditor({ companyId, onSave }: ReportParamsEd
 
   if (loading) {
     return (
-      <Card variant="glass" className="p-6">
+      <Card variant="liquid" className="p-6">
         <div className="flex items-center justify-center py-8">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-400" />
         </div>
@@ -138,7 +138,7 @@ export default function ReportParamsEditor({ companyId, onSave }: ReportParamsEd
 
   return (
     <div className="space-y-6">
-      <Card variant="glass" className="border border-white/10">
+      <Card variant="liquid" className="border border-white/10">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-white">
             <DocumentChartBarIcon className="h-5 w-5" />

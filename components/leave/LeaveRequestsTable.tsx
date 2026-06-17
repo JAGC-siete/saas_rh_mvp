@@ -231,7 +231,7 @@ export default function LeaveRequestsTable({
   }
 
   return (
-    <Card variant="glass" className="border border-white/10">
+    <Card variant="liquid" className="border border-white/10">
       <CardHeader className="border-b border-white/10 pb-3 space-y-3">
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div>

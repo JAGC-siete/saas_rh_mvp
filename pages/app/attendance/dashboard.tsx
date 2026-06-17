@@ -549,7 +549,7 @@ export default function AttendanceDashboardApp() {
               loading={loading}
             />
 
-            <Card variant="glass" className="border border-white/10">
+            <Card variant="liquid" className="border border-white/10">
               <button
                 type="button"
                 onClick={() => setShowDistribution((v) => !v)}
@@ -617,7 +617,7 @@ export default function AttendanceDashboardApp() {
             onSelectEmployee={handleEmployeeClick}
           />
 
-          <Card variant="glass" className="border border-white/10">
+          <Card variant="liquid" className="border border-white/10">
             <div className="p-6">
               <h3 className="text-lg font-semibold text-white mb-6 flex flex-wrap items-center gap-2">
                 <ArrowTrendingUpIcon className="h-6 w-6 text-gray-300 shrink-0" aria-hidden />

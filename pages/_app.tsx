@@ -5,6 +5,7 @@ import { AuthProvider } from '../lib/auth'
 import { NotificationProvider } from '../components/NotificationProvider'
 import { SessionExpiryWarning } from '../components/SessionExpiryWarning'
 import { ToastContainer } from '../lib/toast'
+import { cn } from '../lib/utils'
 import '../styles/globals.css'
 import '../styles/landing.css'
 import '../styles/landing-liquid.css'
@@ -26,10 +27,15 @@ export default function App({ Component, pageProps }: AppProps) {
     setIsClient(true)
   }, [])
 
+  const isMeshAppRoute =
+    router.pathname.startsWith('/app') &&
+    router.pathname !== '/app/login' &&
+    router.pathname !== '/app/forgot-password'
+
   // Show loading state during hydration
   if (!isClient) {
     return (
-      <div className="min-h-screen bg-app flex items-center justify-center">
+      <div className={cn('min-h-screen flex items-center justify-center', !isMeshAppRoute && 'bg-app')}>
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div>
       </div>
     )
@@ -39,7 +45,7 @@ export default function App({ Component, pageProps }: AppProps) {
     <SupabaseContext.Provider value={null}>
       <AuthProvider>
         <NotificationProvider>
-          <div className="min-h-screen bg-app">
+          <div className={cn('min-h-screen', !isMeshAppRoute && 'bg-app')}>
             {/* Title tags are now handled by individual pages to avoid duplication */}
             <Component {...pageProps} />
             {/* Idle Timeout Warning - Shows at 80 minutes of inactivity */}

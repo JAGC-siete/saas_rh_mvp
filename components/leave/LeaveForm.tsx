@@ -217,7 +217,7 @@ export default function LeaveForm({
   }
 
   return (
-    <Card variant="glass" className="shadow-2xl border-white/20">
+    <Card variant="liquid" className="shadow-2xl border-white/20">
       <CardHeader className="border-b border-white/10">
         <CardTitle className="text-white text-xl font-bold">Registrar permiso pre-autorizado</CardTitle>
         <p className="text-gray-300 text-sm mt-2">

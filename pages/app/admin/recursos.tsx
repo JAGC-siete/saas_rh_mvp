@@ -265,7 +265,7 @@ export default function RecursosAdminPage() {
           </div>
 
           {error && (
-            <Card variant="glass" className="border-red-400/40 bg-red-500/10">
+            <Card variant="liquid" className="border-red-400/40 bg-red-500/10">
               <CardContent className="pt-4 flex items-center gap-3 text-red-100 text-sm">
                 <AlertCircle className="h-5 w-5 text-red-400 flex-shrink-0" />
                 <span>{error}</span>
@@ -274,7 +274,7 @@ export default function RecursosAdminPage() {
           )}
 
           {showForm && formData && (
-            <Card variant="glass" className="border-white/10">
+            <Card variant="liquid" className="border-white/10">
               <CardHeader>
                 <CardTitle className="text-white">
                   {isCreating ? 'Nuevo artículo' : `Editar: ${formData.title}`}
@@ -400,7 +400,7 @@ export default function RecursosAdminPage() {
                     onClick={() => handleSave('draft')}
                     disabled={saving}
                     variant="outline"
-                    className="border-white/20 text-white hover:bg-white/10"
+                    className="input-glass text-white"
                   >
                     <Save className="h-4 w-4 mr-2" />
                     Guardar borrador
@@ -417,7 +417,7 @@ export default function RecursosAdminPage() {
                     onClick={handleCancel}
                     disabled={saving}
                     variant="outline"
-                    className="border-white/20 text-white hover:bg-white/10"
+                    className="input-glass text-white"
                   >
                     <X className="h-4 w-4 mr-2" />
                     Cancelar
@@ -451,7 +451,7 @@ export default function RecursosAdminPage() {
                   <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
                 </div>
               ) : filteredRecursos.length === 0 ? (
-                <Card variant="glass" className="border-white/10">
+                <Card variant="liquid" className="border-white/10">
                   <CardContent className="pt-6 text-center py-12">
                     <BookOpen className="h-12 w-12 text-white/40 mx-auto mb-4" />
                     <p className="text-white/70 text-lg mb-2">No hay artículos</p>
@@ -467,7 +467,7 @@ export default function RecursosAdminPage() {
               ) : (
                 <div className="grid gap-4">
                   {filteredRecursos.map((recurso) => (
-                    <Card key={recurso.id} variant="glass" className="border-white/10">
+                    <Card key={recurso.id} variant="liquid" className="border-white/10">
                       <CardContent className="pt-6">
                         <div className="flex flex-wrap items-start justify-between gap-4">
                           <div className="flex-1 min-w-0">
@@ -498,7 +498,7 @@ export default function RecursosAdminPage() {
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  className="border-white/20 text-white hover:bg-white/10"
+                                  className="input-glass text-white"
                                 >
                                   <ExternalLink className="h-4 w-4 mr-1" />
                                   Ver
@@ -509,7 +509,7 @@ export default function RecursosAdminPage() {
                               variant="outline"
                               size="sm"
                               onClick={() => handleEdit(recurso)}
-                              className="border-white/20 text-white hover:bg-white/10"
+                              className="input-glass text-white"
                             >
                               <Edit className="h-4 w-4 mr-1" />
                               Editar

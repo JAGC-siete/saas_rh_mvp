@@ -226,7 +226,7 @@ export default function PerformanceEvaluationEditor() {
             <div className="text-gray-300">No se encontró la evaluación.</div>
           ) : (
             <div className="space-y-6">
-              <Card variant="glass">
+              <Card variant="liquid">
                 <CardHeader>
                   <CardTitle className="text-white">Score</CardTitle>
                   <CardDescription className="text-gray-300">
@@ -241,7 +241,7 @@ export default function PerformanceEvaluationEditor() {
                 </CardContent>
               </Card>
 
-              <Card variant="glass">
+              <Card variant="liquid">
                 <CardHeader>
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div>

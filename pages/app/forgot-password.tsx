@@ -75,10 +75,10 @@ export default function ForgotPasswordPage() {
                     />
                   </div>
                   {error ? (
-                    <div className="text-red-200 text-sm glass-strong p-3 rounded-md">{error}</div>
+                    <div className="text-red-200 text-sm glass-modern p-3 rounded-xl border border-red-500/30">{error}</div>
                   ) : null}
                   {message ? (
-                    <div className="text-emerald-200/90 text-sm glass-strong p-3 rounded-md">{message}</div>
+                    <div className="text-emerald-200/90 text-sm glass-modern p-3 rounded-xl border border-emerald-500/30">{message}</div>
                   ) : null}
                   <Button
                     type="submit"

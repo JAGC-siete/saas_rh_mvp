@@ -68,8 +68,7 @@ export default function UserProfileSetup({ onComplete }: UserProfileSetupProps) 
   }
 
   return (
-    <div className="min-h-screen bg-app flex items-center justify-center p-4">
-      <Card variant="glass" className="w-full max-w-md shadow-xl">
+    <Card variant="liquid" className="w-full max-w-md shadow-xl">
         <CardHeader className="text-center">
           <div className="mx-auto h-12 w-12 bg-white/10 rounded-full flex items-center justify-center mb-4 border border-white/20">
             <Building className="h-6 w-6 text-white" />
@@ -108,7 +107,7 @@ export default function UserProfileSetup({ onComplete }: UserProfileSetupProps) 
                 value={formData.country_code}
                 onChange={(e) => handleCountryChange(e.target.value)}
                 disabled={loading}
-                className="input-glass h-12 w-full rounded-md border border-white/20 bg-white/5 px-3 text-white"
+                className="input-glass h-12 w-full text-white"
               >
                 <option value="HND" className="bg-slate-900">
                   Honduras
@@ -143,7 +142,7 @@ export default function UserProfileSetup({ onComplete }: UserProfileSetupProps) 
             </div>
 
             {/* Role Info */}
-            <div className="glass-strong p-4">
+            <div className="glass-modern rounded-xl p-4 border border-white/10">
               <div className="flex items-center gap-2 mb-2">
                 <CheckCircle className="h-4 w-4 text-green-400" />
                 <span className="text-sm font-medium text-white">Rol Asignado</span>
@@ -154,7 +153,7 @@ export default function UserProfileSetup({ onComplete }: UserProfileSetupProps) 
             </div>
 
             {error && (
-              <div className="text-red-200 text-sm glass-strong p-3 rounded-md">
+              <div className="text-red-200 text-sm glass-modern p-3 rounded-xl border border-red-500/30">
                 {error}
               </div>
             )}
@@ -178,6 +177,5 @@ export default function UserProfileSetup({ onComplete }: UserProfileSetupProps) 
           </form>
         </CardContent>
       </Card>
-    </div>
   )
 }

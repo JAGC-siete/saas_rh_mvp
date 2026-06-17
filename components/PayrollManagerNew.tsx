@@ -481,7 +481,7 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
 
       {/* Error Display */}
       {payroll.error && (
-        <Card variant="glass" className="border-red-500/30 bg-red-500/20">
+        <Card variant="liquid" className="border-red-500/30 bg-red-500/20">
           <CardContent className="pt-6">
             <div className="flex items-center gap-2 text-red-300">
               <Icon name="alert" className="h-5 w-5" />
@@ -504,7 +504,7 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
       {/* DASHBOARD DE MÉTRICAS - GRID RESPONSIVE */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 lg:gap-6">
         {/* 1. Empleados Activos */}
-        <Card variant="glass" className="hover:scale-105 transition-all duration-200 cursor-pointer backdrop-blur-md bg-white/10 border border-white/20">
+        <Card variant="liquid" className="hover:scale-105 transition-all duration-200 cursor-pointer backdrop-blur-md bg-white/10 border border-white/20">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -525,7 +525,7 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
         </Card>
 
         {/* 2. Total Salario Quincenal */}
-        <Card variant="glass" className="hover:scale-105 transition-all duration-200 cursor-pointer backdrop-blur-md bg-white/10 border border-white/20">
+        <Card variant="liquid" className="hover:scale-105 transition-all duration-200 cursor-pointer backdrop-blur-md bg-white/10 border border-white/20">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -546,7 +546,7 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
         </Card>
 
         {/* 3. Total Deducciones */}
-        <Card variant="glass" className="hover:scale-105 transition-all duration-200 cursor-pointer backdrop-blur-md bg-white/10 border border-white/20">
+        <Card variant="liquid" className="hover:scale-105 transition-all duration-200 cursor-pointer backdrop-blur-md bg-white/10 border border-white/20">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -567,7 +567,7 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
         </Card>
 
         {/* 4. Total Salario Neto */}
-        <Card variant="glass" className="hover:scale-105 transition-all duration-200 cursor-pointer backdrop-blur-md bg-white/10 border border-white/20">
+        <Card variant="liquid" className="hover:scale-105 transition-all duration-200 cursor-pointer backdrop-blur-md bg-white/10 border border-white/20">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -613,7 +613,7 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
       {/* Preflight AHC (overtime readiness) */}
       {payroll.unifiedData && payroll.ahcPreflight && (
         <Card
-          variant="glass"
+          variant="liquid"
           className={`border ${
             payroll.ahcPreflight.status === 'GREEN'
               ? 'border-emerald-500/30 bg-emerald-500/10'
@@ -749,7 +749,7 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
 
       {/* Loading State */}
       {!payroll.unifiedData && payroll.loading && (
-        <Card variant="glass" className="backdrop-blur-md bg-white/10 border border-white/20">
+        <Card variant="liquid" className="backdrop-blur-md bg-white/10 border border-white/20">
           <CardContent className="p-6 text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-400 mx-auto mb-4"></div>
             <h2 className="text-xl font-semibold text-blue-300 mb-2">Cargando Datos</h2>
@@ -760,7 +760,7 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
 
       {/* No Data State */}
       {!payroll.unifiedData && !payroll.loading && (
-        <Card variant="glass" className="backdrop-blur-md bg-white/10 border border-white/20">
+        <Card variant="liquid" className="backdrop-blur-md bg-white/10 border border-white/20">
           <CardContent className="p-6 text-center">
             <Icon name="alert" className="h-12 w-12 text-gray-400 mx-auto mb-4" />
             <h2 className="text-xl font-semibold text-gray-300 mb-2">Sin Datos</h2>

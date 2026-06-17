@@ -633,7 +633,7 @@ export default function ReportBuilder() {
         })}
       </div>
 
-      <Card variant="glass" className="border border-white/10">
+      <Card variant="liquid" className="border border-white/10">
         <ReportFilters
           reportType={activeTab}
           filters={filters}
@@ -643,7 +643,7 @@ export default function ReportBuilder() {
       </Card>
 
       {error && (
-        <Card variant="glass" className="border-red-500/50 bg-red-500/10">
+        <Card variant="liquid" className="border-red-500/50 bg-red-500/10">
           <div className="p-4 flex items-center gap-2 text-red-300">
             <span className="text-xl" aria-hidden>
               ⚠️
@@ -675,7 +675,7 @@ export default function ReportBuilder() {
       )}
 
       {!previewData && !loading && !error && (
-        <Card variant="glass" className="border border-white/10">
+        <Card variant="liquid" className="border border-white/10">
           <div className="p-12 text-center">
             <Calendar className="h-16 w-16 text-gray-600 mx-auto mb-4" />
             <h3 className="text-xl font-semibold text-white mb-2">{emptyMessage.title}</h3>

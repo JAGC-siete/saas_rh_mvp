@@ -335,7 +335,7 @@ export default function CompanySettings() {
   // Show error state if company context failed
   if ((error || companyError) && !company) {
     return (
-      <Card variant="glass" className="p-6">
+      <Card variant="liquid" className="p-6">
         <CardContent className="text-center">
           <p className="text-red-400 mb-2">{error || companyError}</p>
           <p className="text-sm text-gray-300 mt-2">
@@ -348,7 +348,7 @@ export default function CompanySettings() {
 
   if (!settingsAccess.showSettingsNav) {
     return (
-      <Card variant="glass" className="p-6">
+      <Card variant="liquid" className="p-6">
         <CardContent className="text-center">
           <p className="text-red-400">No tiene permiso para acceder a parámetros.</p>
         </CardContent>
@@ -417,13 +417,13 @@ export default function CompanySettings() {
           </div>
 
           {error && (
-            <Card variant="glass" className="p-4 border border-red-500/30 bg-red-500/10">
+            <Card variant="liquid" className="p-4 border border-red-500/30 bg-red-500/10">
               <p className="text-red-400 text-sm">{error}</p>
             </Card>
           )}
 
           {canViewFullSettings && (
-          <Card variant="glass" className="p-5 border border-white/15">
+          <Card variant="liquid" className="p-5 border border-white/15">
             <h4 className="text-md font-medium text-white mb-1">Modalidad de marcas biométricas</h4>
             <p className="text-xs text-gray-400 mb-3">
               Define cómo se interpretan las marcas del reloj al consolidar el día (cierre diario). STRICT_2: entrada y
@@ -458,7 +458,7 @@ export default function CompanySettings() {
           )}
 
           {showScheduleForm && (
-            <Card variant="glass" className="p-6">
+            <Card variant="liquid" className="p-6">
               <h4 className="text-md font-medium text-white mb-4">
                 {editingSchedule ? 'Editar Horario' : 'Nuevo Horario'}
               </h4>
@@ -480,7 +480,7 @@ export default function CompanySettings() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {workSchedules.length === 0 ? (
-              <Card variant="glass" className="p-8 col-span-2">
+              <Card variant="liquid" className="p-8 col-span-2">
                 <div className="text-center">
                   <ClockIcon className="h-12 w-12 mx-auto text-gray-400 mb-3" />
                   <p className="text-gray-300 text-sm">No hay horarios configurados</p>
@@ -489,7 +489,7 @@ export default function CompanySettings() {
               </Card>
             ) : (
               workSchedules.map((schedule) => (
-                <Card key={schedule.id} variant="glass" className="p-5 glass-list-item border border-white/20">
+                <Card key={schedule.id} variant="liquid" className="p-5 glass-list-item border border-white/20">
                   <div className="flex justify-between items-start mb-4">
                     <div className="flex-1">
                       <h4 className="font-semibold text-white text-lg mb-1">{schedule.name}</h4>
@@ -539,7 +539,7 @@ export default function CompanySettings() {
             }}
           />
         ) : (
-          <Card variant="glass" className="p-6">
+          <Card variant="liquid" className="p-6">
             <CardContent className="text-center">
               <p className="text-red-400 mb-4">{error || companyError || 'No se pudo cargar la información de la empresa'}</p>
               {!companyId && (
@@ -557,7 +557,7 @@ export default function CompanySettings() {
             onSave={() => console.log('Report params saved')}
           />
         ) : (
-          <Card variant="glass" className="p-6">
+          <Card variant="liquid" className="p-6">
             <CardContent className="text-center">
               <p className="text-red-400 mb-4">{error || companyError || 'No se pudo cargar la información de la empresa'}</p>
               {!companyId && (
@@ -572,7 +572,7 @@ export default function CompanySettings() {
         companyId && company ? (
           <LeaveTypesSettings companyId={companyId} />
         ) : (
-          <Card variant="glass" className="p-6">
+          <Card variant="liquid" className="p-6">
             <CardContent className="text-center">
               <p className="text-red-400 mb-4">{error || companyError || 'No se pudo cargar la información de la empresa'}</p>
               {!companyId && (
@@ -585,7 +585,7 @@ export default function CompanySettings() {
 
       {canViewFullSettings && activeTab === 'performance' && (
         <div className="space-y-6">
-          <Card variant="glass" className="p-5 border border-white/15">
+          <Card variant="liquid" className="p-5 border border-white/15">
             <h4 className="text-md font-medium text-white mb-1">Evaluación de desempeño</h4>
             <p className="text-xs text-gray-400 mb-4">
               Estos parámetros controlan validaciones al finalizar evaluaciones y el peso relativo de “Supera”.

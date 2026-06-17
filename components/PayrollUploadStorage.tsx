@@ -292,7 +292,7 @@ export default function PayrollUploadStorage({ tenantId, onUploadComplete, varia
   }
 
   return (
-    <Card variant="glass" className="w-full max-w-2xl mx-auto">
+    <Card variant="liquid" className="w-full max-w-2xl mx-auto">
       <CardHeader>
         <CardTitle className="text-white flex items-center gap-2">
           <FileText className="h-5 w-5" />

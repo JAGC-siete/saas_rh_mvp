@@ -187,7 +187,7 @@ export default function AttendanceCorrectionsPage() {
             </div>
           </div>
 
-          <Card variant="glass" className="border border-white/10">
+          <Card variant="liquid" className="border border-white/10">
             <div className="p-5 space-y-4">
               <h2 className="text-lg font-semibold text-white">Nueva solicitud</h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -282,7 +282,7 @@ export default function AttendanceCorrectionsPage() {
             </div>
           </Card>
 
-          <Card variant="glass" className="border border-white/10">
+          <Card variant="liquid" className="border border-white/10">
             <div className="p-5">
               <h2 className="text-lg font-semibold text-white mb-3">
                 {status === 'pending' ? 'Pendientes' : status === 'approved' ? 'Aprobadas' : 'Rechazadas'}

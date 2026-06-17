@@ -742,7 +742,7 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
   if (loading) {
     console.log('⏳ PayrollConfigEditor: Rendering loading state')
     return (
-      <Card variant="glass" className="p-6">
+      <Card variant="liquid" className="p-6">
         <CardContent className="text-center">
           <Loader2 className="h-6 w-6 animate-spin mx-auto text-white mb-2" />
           <p className="text-white">Cargando configuración...</p>
@@ -757,7 +757,7 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
   return (
     <div className="space-y-6">
       {/* Header */}
-      <Card variant="glass" className="p-6">
+      <Card variant="liquid" className="p-6">
         <CardHeader>
           <CardTitle className="text-white flex items-center gap-2">
             <Settings className="h-5 w-5" />
@@ -1665,7 +1665,7 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
       </Card>
 
       {/* Custom Fields */}
-      <Card variant="glass" className="p-6">
+      <Card variant="liquid" className="p-6">
         <CardHeader>
           <div className="flex items-start justify-between flex-wrap gap-4">
             <div className="flex-1">
@@ -2345,7 +2345,7 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
 
 
       {/* Save Button - Siempre visible, deshabilitado si no hay cambios */}
-      <Card variant="glass" className={`p-4 ${hasChangesState ? 'border-yellow-400/30' : 'border-white/10'}`}>
+      <Card variant="liquid" className={`p-4 ${hasChangesState ? 'border-yellow-400/30' : 'border-white/10'}`}>
         <div className="flex items-center justify-between">
           {hasChangesState ? (
             <div className="flex items-center gap-2 text-yellow-300 text-sm">

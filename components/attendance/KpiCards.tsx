@@ -99,7 +99,7 @@ export default function KpiCards({
     return (
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {Array.from({ length: 4 }).map((_, i) => (
-          <Card key={i} variant="glass" className="border border-white/10">
+          <Card key={i} variant="liquid" className="border border-white/10">
             <CardContent className="p-4">
               <div className="h-4 bg-gray-700 rounded animate-pulse mb-3" />
               <div className="h-10 bg-gray-700 rounded animate-pulse" />
@@ -116,7 +116,7 @@ export default function KpiCards({
         {items.map((k) => (
           <Card
             key={k.label}
-            variant="glass"
+            variant="liquid"
             className={`border ${k.borderColor} hover:scale-[1.02] transition-transform`}
           >
             <CardContent className="p-5">

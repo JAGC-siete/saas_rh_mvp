@@ -946,7 +946,7 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
   if (isLoading && !hasErrors) {
     return (
       <div className="p-6">
-        <Card variant="glass">
+        <Card variant="liquid">
           <CardHeader>
             <CardTitle className="text-white">Empleados</CardTitle>
           </CardHeader>
@@ -969,7 +969,7 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
   if (hasErrors && !showForm) {
     return (
       <div className="p-6">
-        <Card variant="glass">
+        <Card variant="liquid">
           <CardHeader>
             <CardTitle className="text-white">Empleados</CardTitle>
           </CardHeader>
@@ -1179,7 +1179,7 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
         </>
       )}
 
-      <Card variant="glass">
+      <Card variant="liquid">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>

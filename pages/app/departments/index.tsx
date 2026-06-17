@@ -161,7 +161,7 @@ export default function DepartmentsPage() {
 
           {/* Summary Stats */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <Card variant="glass">
+            <Card variant="liquid">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-gray-200">Total Departamentos</CardTitle>
                 <span className="text-2xl">🏢</span>
@@ -174,7 +174,7 @@ export default function DepartmentsPage() {
               </CardContent>
             </Card>
 
-            <Card variant="glass">
+            <Card variant="liquid">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-gray-200">Total Empleados</CardTitle>
                 <span className="text-2xl">👥</span>
@@ -187,7 +187,7 @@ export default function DepartmentsPage() {
               </CardContent>
             </Card>
 
-            <Card variant="glass">
+            <Card variant="liquid">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-gray-200">Nómina Total</CardTitle>
                 <span className="text-2xl">💰</span>
@@ -200,7 +200,7 @@ export default function DepartmentsPage() {
               </CardContent>
             </Card>
 
-            <Card variant="glass">
+            <Card variant="liquid">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-gray-200">Salario Promedio</CardTitle>
                 <span className="text-2xl">📊</span>
@@ -217,7 +217,7 @@ export default function DepartmentsPage() {
           {/* Department Details */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Department List */}
-            <Card variant="glass">
+            <Card variant="liquid">
               <CardHeader>
                 <CardTitle className="text-white">📋 Lista de Departamentos</CardTitle>
                 <CardDescription className="text-gray-300">
@@ -287,7 +287,7 @@ export default function DepartmentsPage() {
             </Card>
 
             {/* Department Details */}
-            <Card variant="glass">
+            <Card variant="liquid">
               <CardHeader>
                 <CardTitle className="text-white">
                   {selectedDepartment ? `👥 ${selectedDepartment}` : '📊 Detalles del Departamento'}
@@ -370,7 +370,7 @@ export default function DepartmentsPage() {
           </div>
 
           {/* Department Distribution Chart */}
-          <Card variant="glass">
+          <Card variant="liquid">
             <CardHeader>
               <CardTitle className="text-white">📊 Distribución por Departamento</CardTitle>
               <CardDescription className="text-gray-300">

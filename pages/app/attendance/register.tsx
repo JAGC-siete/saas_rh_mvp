@@ -50,7 +50,7 @@ export default function AttendanceRegisterPage() {
           </div>
 
           {/* Attendance Form */}
-          <Card variant="glass">
+          <Card variant="liquid">
             <CardHeader className="text-center pb-6">
               <CardTitle className="flex items-center justify-center gap-2 text-white">
                 <User className="h-5 w-5" />

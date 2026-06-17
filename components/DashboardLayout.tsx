@@ -3,6 +3,7 @@ import { useRouter } from 'next/router'
 import Link from 'next/link'
 import { useAuth } from '../lib/auth'
 import { Button } from './ui/button'
+import AppMeshShell from './landing/AppMeshShell'
 import { SessionExpiryWarning, useSessionExpiryMonitor } from './SessionExpiryWarning'
 import { SessionStatusIndicator } from './SessionStatusIndicator'
 import { 
@@ -395,15 +396,15 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   }, [filteredNavigation, userPermissions, loadingPermissions])
 
   return (
-    <div className="h-screen flex overflow-hidden bg-app">
-      {/* Hot zone invisible para activar hover en desktop */}
+    <AppMeshShell className="h-screen min-h-0">
       <div className="sidebar-hover-zone" aria-hidden="true" />
-      
-      {/* Sidebar */}
-      <div className={`dashboard-sidebar ${sidebarOpen ? 'w-64' : 'w-16'} glass-strong border-r border-white/10 transition-all duration-300 ease-in-out`}>
+
+      <aside
+        className={`dashboard-sidebar ${sidebarOpen ? 'w-64' : 'w-16'} relative glass-modern border-r border-white/10 transition-all duration-300 ease-in-out shadow-glass z-20 shrink-0`}
+      >
         <div className="flex flex-col h-full">
           {/* Header (sin logo) */}
-          <div className="flex items-center justify-between h-16 px-4 border-b border-white/10">
+          <div className="flex items-center justify-between h-16 px-4 border-b border-white/10 bg-white/5 backdrop-blur-lg">
             <div className="text-sm font-semibold text-white/90">
               {sidebarOpen ? 'SISU' : 'S'}
             </div>
@@ -425,10 +426,10 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 <Link
                   key={`nav-${index}`}
                   href={item.href}
-                  className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors ${
+                  className={`group flex items-center px-2 py-2 text-sm font-medium rounded-lg transition-all duration-200 border ${
                     isActive
-                      ? 'bg-brand-900 text-white'
-                      : 'text-gray-200 hover:bg-white/10 hover:text-white'
+                      ? 'bg-brand-600/20 text-white border-brand-400/30 shadow-sm'
+                      : 'text-white/70 hover:bg-white/10 hover:text-white border-transparent'
                   }`}
                   onClick={(e) => {
                     // Add explicit handling to ensure clicks are properly processed
@@ -437,7 +438,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 >
                   <item.icon
                     className={`mr-3 h-5 w-5 flex-shrink-0 ${
-                      isActive ? 'text-brand-400' : 'text-gray-300 group-hover:text-brand-400'
+                      isActive ? 'text-brand-400' : 'text-white/50 group-hover:text-white'
                     }`}
                   />
                   <span className={`nav-text-hidden whitespace-nowrap ${!sidebarOpen ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'}`}>
@@ -498,21 +499,18 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             </div>
           </div>
         </div>
-      </div>
+      </aside>
 
-      {/* Main content */}
-      <div className="flex-1 overflow-auto">
-        <div className="sticky top-0 z-40 border-b border-white/10 bg-black/20 backdrop-blur-md">
+      <div className="flex-1 flex flex-col overflow-hidden relative z-10 min-w-0">
+        <header className="glass-modern border-b border-white/10 shadow-glass shrink-0 sticky top-0 z-40">
           <div className="h-16 px-4 flex items-center justify-end">
             <NotificationBell />
           </div>
-        </div>
-        <main className="h-full">
-          {children}
-        </main>
+        </header>
+        <main className="flex-1 overflow-auto">{children}</main>
       </div>
 
       <HelpButton />
-    </div>
+    </AppMeshShell>
   )
 } 

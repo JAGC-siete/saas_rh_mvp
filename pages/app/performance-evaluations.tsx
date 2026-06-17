@@ -176,7 +176,7 @@ export default function PerformanceEvaluationsPage() {
           )}
 
           <div className="grid grid-cols-1 gap-6 xl:grid-cols-[360px_1fr]">
-            <Card variant="glass">
+            <Card variant="liquid">
               <CardHeader>
                 <CardTitle className="text-white">Nueva evaluación</CardTitle>
                 <CardDescription className="text-gray-300">
@@ -239,7 +239,7 @@ export default function PerformanceEvaluationsPage() {
               </CardContent>
             </Card>
 
-            <Card variant="glass">
+            <Card variant="liquid">
               <CardHeader>
                 <CardTitle className="text-white">Empleados</CardTitle>
                 <CardDescription className="text-gray-300">

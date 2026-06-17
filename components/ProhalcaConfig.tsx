@@ -132,7 +132,7 @@ export default function ProhalcaConfig({ companyId, onConfigComplete }: Prohalca
   return (
     <div className="space-y-6">
       {/* Header */}
-      <Card variant="glass">
+      <Card variant="liquid">
         <CardHeader>
           <CardTitle className="text-white flex items-center gap-2">
             <Settings className="h-5 w-5" />
@@ -186,7 +186,7 @@ export default function ProhalcaConfig({ companyId, onConfigComplete }: Prohalca
       {config && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Departments */}
-          <Card variant="glass">
+          <Card variant="liquid">
             <CardHeader>
               <CardTitle className="text-white flex items-center gap-2">
                 <Users className="h-5 w-5" />
@@ -233,7 +233,7 @@ export default function ProhalcaConfig({ companyId, onConfigComplete }: Prohalca
           </Card>
 
           {/* Shifts */}
-          <Card variant="glass">
+          <Card variant="liquid">
             <CardHeader>
               <CardTitle className="text-white flex items-center gap-2">
                 <Clock className="h-5 w-5" />
@@ -284,7 +284,7 @@ export default function ProhalcaConfig({ companyId, onConfigComplete }: Prohalca
 
       {/* Payroll Fields Info */}
       {config && isProhalca && (
-        <Card variant="glass">
+        <Card variant="liquid">
           <CardHeader>
             <CardTitle className="text-white flex items-center gap-2">
               <FileText className="h-5 w-5" />
@@ -329,7 +329,7 @@ export default function ProhalcaConfig({ companyId, onConfigComplete }: Prohalca
 
       {/* Completion */}
       {setupStatus.departments && setupStatus.shifts && (
-        <Card variant="glass" className="border-green-500/30 bg-green-900/10">
+        <Card variant="liquid" className="border-green-500/30 bg-green-900/10">
           <CardHeader>
             <CardTitle className="text-green-400 flex items-center gap-2">
               <CheckCircle className="h-5 w-5" />

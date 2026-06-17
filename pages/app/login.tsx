@@ -143,7 +143,7 @@ export default function LoginExisting() {
                   </div>
 
                   {error && (
-                    <div className="text-red-200 text-sm glass-strong p-3 rounded-md">
+                    <div className="text-red-200 text-sm glass-modern p-3 rounded-xl border border-red-500/30">
                       {error}
                     </div>
                   )}

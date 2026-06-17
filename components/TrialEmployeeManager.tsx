@@ -97,7 +97,7 @@ export default function TrialEmployeeManager({ tenant }: TrialEmployeeManagerPro
   return (
     <div className="space-y-6">
       {/* Header Stats */}
-      <Card variant="glass">
+      <Card variant="liquid">
         <CardHeader>
           <CardTitle className="text-white">👥 Gestión de Empleados (Trial)</CardTitle>
           <CardDescription className="text-gray-300">
@@ -133,7 +133,7 @@ export default function TrialEmployeeManager({ tenant }: TrialEmployeeManagerPro
       </Card>
 
       {/* Employee List */}
-      <Card variant="glass">
+      <Card variant="liquid">
         <CardHeader>
           <CardTitle className="text-white">Lista de Empleados</CardTitle>
           <CardDescription className="text-gray-300">
@@ -212,7 +212,7 @@ export default function TrialEmployeeManager({ tenant }: TrialEmployeeManagerPro
       {/* Employee Detail Modal */}
       {selectedEmployee && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <Card variant="glass" className="max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <Card variant="liquid" className="max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <CardHeader>
               <CardTitle className="text-white">Detalles del Empleado</CardTitle>
               <CardDescription className="text-gray-300">

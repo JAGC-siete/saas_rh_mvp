@@ -171,7 +171,7 @@ export default function MailListPage() {
 
           <MailListStats />
 
-          <Card variant="glass" className="border-white/10">
+          <Card variant="liquid" className="border-white/10">
             <CardHeader>
               <CardTitle className="text-white">Filtros</CardTitle>
               <CardDescription className="text-white/70">Filtra y busca leads</CardDescription>
@@ -216,7 +216,7 @@ export default function MailListPage() {
             </CardContent>
           </Card>
 
-          <Card variant="glass" className="border-white/10">
+          <Card variant="liquid" className="border-white/10">
             <CardHeader>
               <CardTitle className="text-white">Leads</CardTitle>
               <CardDescription className="text-white/70">
@@ -267,7 +267,7 @@ export default function MailListPage() {
                       </thead>
                       <tbody className="bg-white/5 divide-y divide-white/10">
                         {leads.map(lead => (
-                          <tr key={lead.id} className="hover:bg-white/10 transition-colors">
+                          <tr key={lead.id} className="input-glass text-white">
                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-white/90">
                               <div className="flex items-center">
                                 <Mail className="h-4 w-4 mr-2 text-white/60" />

@@ -96,7 +96,7 @@ export default function GamificationDashboard() {
 
           {/* Gamification Stats */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-            <Card variant="glass">
+            <Card variant="liquid">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-gray-200">Total Puntos</CardTitle>
                 <span className="text-2xl">⭐</span>
@@ -109,7 +109,7 @@ export default function GamificationDashboard() {
               </CardContent>
             </Card>
 
-            <Card variant="glass">
+            <Card variant="liquid">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-gray-200">Logros</CardTitle>
                 <span className="text-2xl"></span>
@@ -122,7 +122,7 @@ export default function GamificationDashboard() {
               </CardContent>
             </Card>
 
-            <Card variant="glass">
+            <Card variant="liquid">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-gray-200">Empleados Activos</CardTitle>
                 <span className="text-2xl"></span>
@@ -135,7 +135,7 @@ export default function GamificationDashboard() {
               </CardContent>
             </Card>
 
-            <Card variant="glass">
+            <Card variant="liquid">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-gray-200">Mejor Puntaje</CardTitle>
                 <span className="text-2xl"></span>
@@ -148,7 +148,7 @@ export default function GamificationDashboard() {
               </CardContent>
             </Card>
 
-            <Card variant="glass">
+            <Card variant="liquid">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-gray-200">Promedio</CardTitle>
                 <span className="text-2xl"></span>
@@ -179,7 +179,7 @@ export default function GamificationDashboard() {
           <PointHistoryPanel leaderboard={[]} />
 
           {/* How It Works */}
-          <Card variant="glass">
+          <Card variant="liquid">
             <CardHeader>
               <CardTitle className="text-white">¿Cómo Funciona la Gamificación?</CardTitle>
               <CardDescription className="text-gray-300">

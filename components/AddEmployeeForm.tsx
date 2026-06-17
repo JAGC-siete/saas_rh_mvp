@@ -92,7 +92,7 @@ function AddEmployeeForm({
       : ''
 
   return (
-    <Card variant="glass">
+    <Card variant="liquid">
       <CardHeader>
         <CardTitle className="text-white">{isEditing ? 'Editar Empleado' : 'Agregar Nuevo Empleado'}</CardTitle>
         <CardDescription className="text-gray-300">

@@ -171,7 +171,7 @@ export default function VentasConfigPage() {
               </div>
             </div>
 
-            <Card variant="glass" className="border-white/10">
+            <Card variant="liquid" className="border-white/10">
               <CardHeader>
                 <CardTitle className="text-white">Parámetros</CardTitle>
               </CardHeader>
@@ -183,7 +183,7 @@ export default function VentasConfigPage() {
                     <div>
                       <label className="block text-sm text-white/80 mb-1">Moneda</label>
                       <select
-                        className="w-full border border-white/20 rounded-md px-3 py-2 bg-white/10 text-white backdrop-blur-sm focus:outline-none"
+                        className="input-glass w-full text-white"
                         value={currency}
                         onChange={(e) => setCurrency(e.target.value as any)}
                       >
@@ -195,7 +195,7 @@ export default function VentasConfigPage() {
                     <div>
                       <label className="block text-sm text-white/80 mb-1">Cupón</label>
                       <input
-                        className="w-full border border-white/20 rounded-md px-3 py-2 bg-white/10 text-white placeholder:text-white/50 backdrop-blur-sm focus:outline-none"
+                        className="input-glass w-full text-white placeholder:text-white/50"
                         value={couponCode}
                         onChange={(e) => setCouponCode(e.target.value)}
                         placeholder="gastro2026"
@@ -209,7 +209,7 @@ export default function VentasConfigPage() {
                         step="0.01"
                         min={0}
                         max={1}
-                        className="w-full border border-white/20 rounded-md px-3 py-2 bg-white/10 text-white placeholder:text-white/50 backdrop-blur-sm focus:outline-none"
+                        className="input-glass w-full text-white placeholder:text-white/50"
                         value={discountPct}
                         onChange={(e) => setDiscountPct(Number(e.target.value))}
                       />
@@ -220,7 +220,7 @@ export default function VentasConfigPage() {
               </CardContent>
             </Card>
 
-            <Card variant="glass" className="border-white/10">
+            <Card variant="liquid" className="border-white/10">
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="text-white">Rangos y precios</CardTitle>
                 <Button
@@ -244,7 +244,7 @@ export default function VentasConfigPage() {
                           <input
                             type="number"
                             min={1}
-                            className="w-full border border-white/20 rounded-md px-3 py-2 bg-white/10 text-white focus:outline-none"
+                            className="input-glass w-full text-white"
                             value={t.min_employees}
                             onChange={(e) => updateTier(idx, { min_employees: Number(e.target.value) })}
                           />
@@ -254,7 +254,7 @@ export default function VentasConfigPage() {
                           <input
                             type="number"
                             min={1}
-                            className="w-full border border-white/20 rounded-md px-3 py-2 bg-white/10 text-white focus:outline-none"
+                            className="input-glass w-full text-white"
                             value={t.max_employees}
                             onChange={(e) => updateTier(idx, { max_employees: Number(e.target.value) })}
                           />
@@ -265,7 +265,7 @@ export default function VentasConfigPage() {
                             type="number"
                             step="0.01"
                             min={0}
-                            className="w-full border border-white/20 rounded-md px-3 py-2 bg-white/10 text-white focus:outline-none"
+                            className="input-glass w-full text-white"
                             value={t.price}
                             onChange={(e) => updateTier(idx, { price: Number(e.target.value) })}
                           />

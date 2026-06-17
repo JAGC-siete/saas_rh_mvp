@@ -447,10 +447,10 @@ export default function UsersAdminPage() {
                   value={search}
                   onChange={(e) => { setPage(1); setSearch(e.target.value) }}
                   placeholder="Buscar por email, nombre o empresa"
-                  className="px-3 py-2 border border-white/20 rounded-md w-72 min-w-[12rem] bg-white/10 text-white placeholder:text-white/50 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-amber-300/50 focus:border-amber-300/50"
+                  className="input-glass w-72 min-w-[12rem] text-white placeholder:text-white/50 focus:ring-amber-300/50"
                 />
                 <select
-                  className="border border-white/20 rounded-md px-2 py-2 text-sm max-w-[14rem] truncate bg-white/10 text-white backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-amber-300/50 focus:border-amber-300/50"
+                  className="input-glass text-sm text-white focus:ring-amber-300/50"
                   value={companyFilter}
                   onChange={(e) => {
                     setPage(1)
@@ -471,7 +471,7 @@ export default function UsersAdminPage() {
                   ))}
                 </select>
                 <select 
-                  className="border border-white/20 rounded-md px-2 py-2 text-sm bg-white/10 text-white backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-amber-300/50 focus:border-amber-300/50" 
+                  className="input-glass text-sm text-white focus:ring-amber-300/50" 
                   value={role} 
                   onChange={(e) => { setPage(1); setRole(e.target.value) }}
                 >
@@ -483,7 +483,7 @@ export default function UsersAdminPage() {
                   <option value="employee" className="bg-slate-800">Empleado</option>
                 </select>
                 <select 
-                  className="border border-white/20 rounded-md px-2 py-2 text-sm bg-white/10 text-white backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-amber-300/50 focus:border-amber-300/50" 
+                  className="input-glass text-sm text-white focus:ring-amber-300/50" 
                   value={state} 
                   onChange={(e) => { setPage(1); setState(e.target.value) }}
                 >
@@ -495,7 +495,7 @@ export default function UsersAdminPage() {
               </div>
             </div>
 
-            <Card variant="glass" className="border-white/10">
+            <Card variant="liquid" className="border-white/10">
               <CardHeader>
                 <CardTitle className="text-base text-white">
                   Listado ({totalUsers})
@@ -511,12 +511,12 @@ export default function UsersAdminPage() {
               </CardHeader>
               <CardContent>
               {error && (
-                <Card variant="glass" className="mb-4 border-red-400/40 bg-red-500/10">
+                <Card variant="liquid" className="mb-4 border-red-400/40 bg-red-500/10">
                   <CardContent className="pt-4 text-red-100 text-sm">{error}</CardContent>
                 </Card>
               )}
               {showCreate && (
-                <Card variant="glass" className="mb-4 border-white/20">
+                <Card variant="liquid" className="mb-4 border-white/20">
                   <CardContent className="pt-4">
                     <form onSubmit={createUser} className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="md:col-span-2 rounded-md border border-white/15 bg-white/5 px-3 py-2 text-sm text-white/80">
@@ -529,7 +529,7 @@ export default function UsersAdminPage() {
                         <input 
                           type="email" 
                           required 
-                          className="w-full border border-white/20 rounded-md px-3 py-2 bg-white/10 text-white placeholder:text-white/50 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-amber-300/50 focus:border-amber-300/50" 
+                          className="input-glass w-full text-white placeholder:text-white/50 focus:ring-amber-300/50" 
                           value={form.email} 
                           onChange={(e) => setForm({ ...form, email: e.target.value })} 
                         />
@@ -554,7 +554,7 @@ export default function UsersAdminPage() {
                           required={useManualPasswordOnCreate}
                           minLength={8}
                           autoComplete="new-password"
-                          className="w-full border border-white/20 rounded-md px-3 py-2 bg-white/10 text-white placeholder:text-white/50 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-amber-300/50 focus:border-amber-300/50"
+                          className="input-glass w-full text-white placeholder:text-white/50 focus:ring-amber-300/50"
                           value={form.password}
                           onChange={(e) => setForm({ ...form, password: e.target.value })}
                         />
@@ -581,7 +581,7 @@ export default function UsersAdminPage() {
                           required={useManualPasswordOnCreate}
                           minLength={8}
                           autoComplete="new-password"
-                          className="w-full border border-white/20 rounded-md px-3 py-2 bg-white/10 text-white placeholder:text-white/50 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-amber-300/50 focus:border-amber-300/50"
+                          className="input-glass w-full text-white placeholder:text-white/50 focus:ring-amber-300/50"
                           value={form.passwordConfirm}
                           onChange={(e) => setForm({ ...form, passwordConfirm: e.target.value })}
                         />
@@ -591,7 +591,7 @@ export default function UsersAdminPage() {
                       <div>
                         <label className="block text-sm text-white/80 mb-1">Rol</label>
                         <select 
-                          className="w-full border border-white/20 rounded-md px-3 py-2 bg-white/10 text-white backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-amber-300/50 focus:border-amber-300/50" 
+                          className="input-glass w-full text-white placeholder:text-white/50 focus:ring-amber-300/50" 
                           value={form.role} 
                           onChange={(e) => setForm({ ...form, role: e.target.value })}
                         >
@@ -605,7 +605,7 @@ export default function UsersAdminPage() {
                         <label className="block text-sm text-white/80 mb-1">Empresa</label>
                         <select 
                           required 
-                          className="w-full border border-white/20 rounded-md px-3 py-2 bg-white/10 text-white backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-amber-300/50 focus:border-amber-300/50" 
+                          className="input-glass w-full text-white placeholder:text-white/50 focus:ring-amber-300/50" 
                           value={form.company_id} 
                           onChange={(e) => setForm({ ...form, company_id: e.target.value })}
                         >
@@ -633,7 +633,7 @@ export default function UsersAdminPage() {
                     {pageItems.map((u) => (
                       <Card 
                         key={u.id} 
-                        variant="glass" 
+                        variant="liquid" 
                         className="border-white/10 cursor-pointer hover:border-white/30 transition-colors"
                         onClick={() => openUserDetails(u)}
                       >
@@ -684,7 +684,7 @@ export default function UsersAdminPage() {
                       <Button variant="outline" size="sm" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="border-white/30 text-white hover:bg-white/10">Anterior</Button>
                       <Button variant="outline" size="sm" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="border-white/30 text-white hover:bg-white/10">Siguiente</Button>
                       <select 
-                        className="border border-white/20 rounded-md text-sm px-2 py-1 bg-white/10 text-white focus:outline-none focus:ring-2 focus:ring-amber-300/50 focus:border-amber-300/50" 
+                        className="input-glass text-sm text-white focus:ring-amber-300/50" 
                         value={pageSize} 
                         onChange={(e) => { setPage(1); setPageSize(Number(e.target.value)) }}
                       >
@@ -761,7 +761,7 @@ export default function UsersAdminPage() {
                       minLength={8}
                       autoComplete="new-password"
                       disabled={resetSubmitting}
-                      className="w-full border border-white/20 rounded-md px-3 py-2 bg-white/10 text-white placeholder:text-white/50 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-amber-300/50 focus:border-amber-300/50 disabled:opacity-50"
+                      className="input-glass w-full text-white placeholder:text-white/50 focus:ring-amber-300/50 disabled:opacity-50"
                       value={resetPassword}
                       onChange={(e) => setResetPassword(e.target.value)}
                     />
@@ -787,7 +787,7 @@ export default function UsersAdminPage() {
                       minLength={8}
                       autoComplete="new-password"
                       disabled={resetSubmitting}
-                      className="w-full border border-white/20 rounded-md px-3 py-2 bg-white/10 text-white placeholder:text-white/50 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-amber-300/50 focus:border-amber-300/50 disabled:opacity-50"
+                      className="input-glass w-full text-white placeholder:text-white/50 focus:ring-amber-300/50 disabled:opacity-50"
                       value={resetPasswordConfirm}
                       onChange={(e) => setResetPasswordConfirm(e.target.value)}
                     />
@@ -964,7 +964,7 @@ export default function UsersAdminPage() {
                               const v = e.target.value
                               setFieldPermView(v === 'inherit' ? null : v === 'true')
                             }}
-                            className="w-full border border-white/20 rounded-md px-3 py-2 bg-white/10 text-white text-sm"
+                            className="input-glass w-full text-white text-sm"
                           >
                             <option value="inherit" className="text-black">Usar rol</option>
                             <option value="true" className="text-black">Permitir</option>
@@ -984,7 +984,7 @@ export default function UsersAdminPage() {
                               const v = e.target.value
                               setFieldPermEdit(v === 'inherit' ? null : v === 'true')
                             }}
-                            className="w-full border border-white/20 rounded-md px-3 py-2 bg-white/10 text-white text-sm"
+                            className="input-glass w-full text-white text-sm"
                           >
                             <option value="inherit" className="text-black">Usar rol</option>
                             <option value="true" className="text-black">Permitir</option>

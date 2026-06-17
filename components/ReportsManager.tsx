@@ -12,7 +12,7 @@ export default function ReportsManager() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {/* Reporte de Asistencia */}
-        <Card variant="glass">
+        <Card variant="liquid">
           <CardHeader className="pb-4">
             <CardTitle className="text-white flex items-center gap-2">
               <Calendar className="h-5 w-5 text-brand-400" />
@@ -35,7 +35,7 @@ export default function ReportsManager() {
         </Card>
 
         {/* Reporte de Empleados */}
-        <Card variant="glass">
+        <Card variant="liquid">
           <CardHeader className="pb-4">
             <CardTitle className="text-white flex items-center gap-2">
               <Users className="h-5 w-5 text-brand-400" />
@@ -58,7 +58,7 @@ export default function ReportsManager() {
         </Card>
 
         {/* Reporte de Nómina */}
-        <Card variant="glass">
+        <Card variant="liquid">
           <CardHeader className="pb-4">
             <CardTitle className="text-white flex items-center gap-2">
               <FileText className="h-5 w-5 text-brand-400" />
@@ -81,7 +81,7 @@ export default function ReportsManager() {
         </Card>
       </div>
 
-      <Card variant="glass">
+      <Card variant="liquid">
         <CardHeader>
           <CardTitle className="text-white">Demo - Vista de Reportes</CardTitle>
         </CardHeader>

@@ -279,7 +279,7 @@ export default function MTPPage() {
           )}
 
           <div className="grid grid-cols-1 gap-6 xl:grid-cols-[320px_1fr]">
-            <Card variant="glass">
+            <Card variant="liquid">
               <CardHeader>
                 <CardTitle className="text-white">Borradores</CardTitle>
                 <CardDescription className="text-gray-300">
@@ -312,7 +312,7 @@ export default function MTPPage() {
             </Card>
 
             <div className="space-y-6">
-              <Card variant="glass">
+              <Card variant="liquid">
                 <CardHeader>
                   <CardTitle className="text-white">Datos del perfil</CardTitle>
                   <CardDescription className="text-gray-300">
@@ -355,7 +355,7 @@ export default function MTPPage() {
 
               <div className="space-y-4">
                 {items.map((item, index) => (
-                  <Card key={item.id} variant="glass">
+                  <Card key={item.id} variant="liquid">
                     <CardHeader>
                       <div className="flex items-start justify-between gap-3">
                         <div>

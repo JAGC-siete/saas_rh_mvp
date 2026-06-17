@@ -356,7 +356,7 @@ export default function ReportsAndAnalytics() {
 
       {/* Métricas clave */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card variant="glass" className="p-6">
+        <Card variant="liquid" className="p-6">
           <div className="flex items-center">
             <div className="flex-shrink-0">
               <UsersIcon className="h-8 w-8 text-brand-400" />
@@ -369,7 +369,7 @@ export default function ReportsAndAnalytics() {
           </div>
         </Card>
 
-        <Card variant="glass" className="p-6">
+        <Card variant="liquid" className="p-6">
           <div className="flex items-center">
             <div className="flex-shrink-0">
               <ClockIcon className="h-8 w-8 text-emerald-400" />
@@ -384,7 +384,7 @@ export default function ReportsAndAnalytics() {
           </div>
         </Card>
 
-        <Card variant="glass" className="p-6">
+        <Card variant="liquid" className="p-6">
           <div className="flex items-center">
             <div className="flex-shrink-0">
               <CurrencyDollarIcon className="h-8 w-8 text-orange-400" />
@@ -397,7 +397,7 @@ export default function ReportsAndAnalytics() {
           </div>
         </Card>
 
-        <Card variant="glass" className="p-6">
+        <Card variant="liquid" className="p-6">
           <div className="flex items-center">
             <div className="flex-shrink-0">
               <CalendarDaysIcon className="h-8 w-8 text-purple-400" />
@@ -414,7 +414,7 @@ export default function ReportsAndAnalytics() {
       {/* Tendencias movidas al dashboard de asistencia */}
 
       {/* Exportar reportes */}
-      <Card variant="glass" className="p-6">
+      <Card variant="liquid" className="p-6">
         <div className="flex items-center justify-between mb-4">
           <div>
             <h3 className="text-lg font-semibold text-white">Exportar Reportes</h3>

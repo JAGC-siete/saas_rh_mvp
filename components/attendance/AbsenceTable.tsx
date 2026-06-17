@@ -31,7 +31,7 @@ export default function AbsenceTable({ data, title, onSelect, pageSize = 10 }: A
   const goPrev = () => setPage((p) => (p > 1 ? p - 1 : p))
   const goNext = () => setPage((p) => (p < totalPages ? p + 1 : p))
   return (
-    <Card variant="glass" className="border border-white/10">
+    <Card variant="liquid" className="border border-white/10">
       <CardHeader className="pb-3 border-b border-white/10">
         <CardTitle className="text-base font-semibold text-white flex items-center gap-2">
           <span className="text-xl">❌</span>

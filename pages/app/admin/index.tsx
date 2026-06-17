@@ -258,7 +258,7 @@ export default function AdminDashboard() {
                   Controla empresas, usuarios, facturación y salud del sistema
                 </p>
               </div>
-              <div className="flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-white">
+              <div className="input-glass text-white">
                 <Shield className="h-4 w-4 text-amber-300" />
                 <span className="text-sm font-medium tracking-wide">
                   {userProfile?.role === 'super_admin' ? 'Super Admin' : 'Acceso restringido'}
@@ -333,7 +333,7 @@ export default function AdminDashboard() {
                       icon: CreditCard
                     }
                   ].map((card, index) => (
-                    <Card key={card.label} variant="glass" className="border-white/10">
+                    <Card key={card.label} variant="liquid" className="border-white/10">
                       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">{card.label}</CardTitle>
                         <card.icon className="h-4 w-4 text-white/70" />
@@ -367,7 +367,7 @@ export default function AdminDashboard() {
                         icon: Users,
                       },
                     ].map((card) => (
-                      <Card key={card.label} variant="glass" className="border-white/10 border-dashed">
+                      <Card key={card.label} variant="liquid" className="border-white/10 border-dashed">
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                           <CardTitle className="text-sm font-medium text-white/80">{card.label}</CardTitle>
                           <card.icon className="h-4 w-4 text-white/50" />
@@ -432,7 +432,7 @@ export default function AdminDashboard() {
                         icon: Activity,
                       },
                     ].map((card) => (
-                      <Card key={card.label} variant="glass" className="border-white/10">
+                      <Card key={card.label} variant="liquid" className="border-white/10">
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                           <CardTitle className="text-sm font-medium">{card.label}</CardTitle>
                           <card.icon className="h-4 w-4 text-white/70" />
@@ -457,7 +457,7 @@ export default function AdminDashboard() {
                 </div>
 
                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-                  <Card variant="glass" className="lg:col-span-2 border-white/10">
+                  <Card variant="liquid" className="lg:col-span-2 border-white/10">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                       <div>
                         <CardTitle className="text-base font-semibold">
@@ -483,7 +483,7 @@ export default function AdminDashboard() {
                         {quickActions.map((action) => (
                           <Link key={action.href} href={action.href} className="block" prefetch={false}>
                             <Card
-                              variant="glass"
+                              variant="liquid"
                               className="h-full border border-white/10 transition hover:border-white/30 hover:shadow-glass"
                             >
                               <CardHeader className="space-y-1">
@@ -510,7 +510,7 @@ export default function AdminDashboard() {
                     </CardContent>
                   </Card>
 
-                  <Card variant="glass" className="border-white/10">
+                  <Card variant="liquid" className="border-white/10">
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
                         <Activity className="h-5 w-5 text-emerald-200" />
@@ -567,7 +567,7 @@ export default function AdminDashboard() {
                 </div>
 
                 {/* Recent Activity */}
-                <Card variant="glass" className="border-white/10">
+                <Card variant="liquid" className="border-white/10">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <Activity className="h-5 w-5 text-blue-200" />
@@ -581,7 +581,7 @@ export default function AdminDashboard() {
                     <div className="space-y-3">
                       {recentActivity.length > 0 ? (
                         recentActivity.slice(0, 5).map((activity) => (
-                          <div key={activity.id} className="flex items-start gap-3 p-3 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition-colors">
+                          <div key={activity.id} className="input-glass text-white">
                             {getActivityIcon(activity.type)}
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-medium text-white">
