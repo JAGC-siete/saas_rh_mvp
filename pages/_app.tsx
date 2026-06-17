@@ -7,6 +7,7 @@ import { SessionExpiryWarning } from '../components/SessionExpiryWarning'
 import { ToastContainer } from '../lib/toast'
 import '../styles/globals.css'
 import '../styles/landing.css'
+import '../styles/landing-liquid.css'
 
 // Load environment variables at the top level
 if (typeof window === 'undefined') {

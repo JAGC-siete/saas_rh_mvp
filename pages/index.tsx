@@ -18,7 +18,6 @@ import { getPageTitle } from '../lib/seo/title'
 import { getPageDescription } from '../lib/seo/description'
 import { generateOrganizationSchema, generateWebSiteSchema, generateWebPageSchema, generateReviewSchema } from '../lib/seo/schema'
 import { initGoogleAdsTracking } from '../lib/analytics/googleAds'
-import '../styles/landing-liquid.css'
 
 const CursorSpotlight = dynamic(() => import('../components/landing/CursorSpotlight'), { ssr: false })
 

@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest'
+import { describe, it } from 'node:test'
+import assert from 'node:assert/strict'
 import {
   buildJournalPayrollSourceReference,
   buildJournalStatutoryTraceBlock,
@@ -19,16 +20,14 @@ const sampleTrace: PayrollStatutoryTrace = {
 
 describe('payroll-statutory-trace', () => {
   it('resuelve tax_year único de líneas de planilla', () => {
-    expect(resolvePayrollLineTaxYear([2026, 2026, null])).toBe(2026)
-    expect(resolvePayrollLineTaxYear([null, undefined])).toBeNull()
-    expect(resolvePayrollLineTaxYear([2025, 2026])).toBe(2025)
+    assert.equal(resolvePayrollLineTaxYear([2026, 2026, null]), 2026)
+    assert.equal(resolvePayrollLineTaxYear([null, undefined]), null)
+    assert.equal(resolvePayrollLineTaxYear([2025, 2026]), 2025)
   })
 
   it('conecta statutory-deductions-compute con journal-generator en pipeline', () => {
-    expect(PAYROLL_STATUTORY_PIPELINE.deductions).toContain(
-      'statutory-deductions-compute'
-    )
-    expect(PAYROLL_STATUTORY_PIPELINE.journal).toContain('journal-generator')
+    assert.ok(PAYROLL_STATUTORY_PIPELINE.deductions.includes('statutory-deductions-compute'))
+    assert.ok(PAYROLL_STATUTORY_PIPELINE.journal.includes('journal-generator'))
   })
 
   it('arma bloque statutory para source_reference', () => {
@@ -38,11 +37,9 @@ describe('payroll-statutory-trace', () => {
       payrollLineTaxYear: 2026
     })
 
-    expect(block.retention_totals).toEqual({ ihss: 100, rap: 50, isr: 200 })
-    expect(block.trace.dataSource).toBe('payroll_statutory_params')
-    expect(block.pipeline.deductions).toBe(
-      'lib/payroll/statutory-deductions-compute.ts'
-    )
+    assert.deepEqual(block.retention_totals, { ihss: 100, rap: 50, isr: 200 })
+    assert.equal(block.trace.dataSource, 'payroll_statutory_params')
+    assert.equal(block.pipeline.deductions, 'lib/payroll/statutory-deductions-compute.ts')
   })
 
   it('incluye statutory en source_reference de asiento', () => {
@@ -56,8 +53,8 @@ describe('payroll-statutory-trace', () => {
       statutory
     })
 
-    expect(ref.payroll_run_id).toBe('run-1')
-    expect(ref.statutory?.retention_totals.ihss).toBe(10)
-    expect(ref.generated_at).toBeTruthy()
+    assert.equal(ref.payroll_run_id, 'run-1')
+    assert.equal(ref.statutory?.retention_totals.ihss, 10)
+    assert.ok(ref.generated_at)
   })
 })
