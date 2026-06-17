@@ -1,16 +1,12 @@
 import Head from 'next/head'
 import Link from 'next/link'
-import MainHeader from '../components/MainHeader'
-import DemoFooter from '../components/DemoFooter'
+import PublicPageShell from '../components/landing/PublicPageShell'
 import { getPageTitle } from '../lib/seo/title'
 import { getPageDescription } from '../lib/seo/description'
 import SchemaMarkup from '../components/SEO/SchemaMarkup'
 import RelatedGuides from '../components/SEO/RelatedGuides'
 import { generateWebPageSchema, generateFAQPageSchema } from '../lib/seo/schema'
 import { CheckCircleIcon, XMarkIcon } from '@heroicons/react/24/outline'
-import dynamic from 'next/dynamic'
-
-const CloudBackground = dynamic(() => import('../components/CloudBackground'), { ssr: false })
 
 export default function DeduccionesHondurasPage() {
   const pageTitle = getPageTitle('deduccionesHonduras')
@@ -80,7 +76,7 @@ export default function DeduccionesHondurasPage() {
   ]
 
   return (
-    <div className="min-h-screen bg-app text-white flex flex-col pt-16 sm:pt-20 md:pt-24 relative">
+    <PublicPageShell showSpotlight>
       <Head>
         <title>{pageTitle}</title>
         <meta name="description" content={pageDescription} />
@@ -91,8 +87,6 @@ export default function DeduccionesHondurasPage() {
         <meta name="keywords" content="cálculo IHSS RAP ISR automático, deducciones Honduras, planilla con IHSS, cálculo nómina Honduras, IHSS RAP ISR 2025" />
       </Head>
       <SchemaMarkup schema={[webPageSchema, faqSchema]} />
-
-      <MainHeader enableScrollEffect={true} fixed={true} />
 
       {/* Hero Section */}
       <section className="py-4 sm:py-6 md:py-8 relative overflow-hidden">
@@ -142,7 +136,7 @@ export default function DeduccionesHondurasPage() {
         </div>
       </section>
 
-      <main className="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 relative z-10">
+      <div className="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 relative z-10">
 
         {/* What Are Deductions */}
         <section className="mb-12 sm:mb-16 md:mb-20">
@@ -150,7 +144,7 @@ export default function DeduccionesHondurasPage() {
             ¿Qué son las Deducciones en Honduras?
           </h2>
           <div className="grid md:grid-cols-3 gap-4 sm:gap-6">
-            <div className="glass-strong rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-white/10 transition-all duration-300 hover:border-brand-400/40 hover:shadow-xl hover:shadow-brand-900/30">
+            <div className="glass-modern rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-white/10 transition-all duration-300 hover:border-brand-400/40 hover:shadow-xl hover:shadow-brand-900/30">
               <div className="text-4xl mb-4">🏥</div>
               <h3 className="text-lg sm:text-xl font-bold mb-2 text-white">IHSS</h3>
               <p className="text-brand-200/90 mb-3 text-sm sm:text-base">
@@ -161,7 +155,7 @@ export default function DeduccionesHondurasPage() {
                 con tope máximo establecido por ley.
               </p>
             </div>
-            <div className="glass-strong rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-white/10 transition-all duration-300 hover:border-brand-400/40 hover:shadow-xl hover:shadow-brand-900/30">
+            <div className="glass-modern rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-white/10 transition-all duration-300 hover:border-brand-400/40 hover:shadow-xl hover:shadow-brand-900/30">
               <div className="text-4xl mb-4">💰</div>
               <h3 className="text-lg sm:text-xl font-bold mb-2 text-white">RAP</h3>
               <p className="text-brand-200/90 mb-3 text-sm sm:text-base">
@@ -172,7 +166,7 @@ export default function DeduccionesHondurasPage() {
                 establecido por ley.
               </p>
             </div>
-            <div className="glass-strong rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-white/10 transition-all duration-300 hover:border-brand-400/40 hover:shadow-xl hover:shadow-brand-900/30">
+            <div className="glass-modern rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-white/10 transition-all duration-300 hover:border-brand-400/40 hover:shadow-xl hover:shadow-brand-900/30">
               <div className="text-4xl mb-4">📊</div>
               <h3 className="text-lg sm:text-xl font-bold mb-2 text-white">ISR</h3>
               <p className="text-brand-200/90 mb-3 text-sm sm:text-base">
@@ -191,7 +185,7 @@ export default function DeduccionesHondurasPage() {
           <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-6 sm:mb-8 text-center text-white">
             Excel vs Humano SISU: ¿Cuál es Mejor?
           </h2>
-          <div className="glass-strong rounded-xl sm:rounded-2xl p-4 sm:p-6 md:p-8 overflow-x-auto border border-white/10">
+          <div className="glass-modern rounded-xl sm:rounded-2xl p-4 sm:p-6 md:p-8 overflow-x-auto border border-white/10">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-white/20">
@@ -227,7 +221,7 @@ export default function DeduccionesHondurasPage() {
           <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-6 sm:mb-8 text-center text-white">
             ¿Cómo Calcula Humano SISU?
           </h2>
-          <div className="glass-strong rounded-xl sm:rounded-2xl p-4 sm:p-6 md:p-8 border border-white/10">
+          <div className="glass-modern rounded-xl sm:rounded-2xl p-4 sm:p-6 md:p-8 border border-white/10">
             <div className="space-y-4">
               <div className="flex items-start gap-4">
                 <CheckCircleIcon className="h-6 w-6 text-green-400 flex-shrink-0 mt-1" />
@@ -280,7 +274,7 @@ export default function DeduccionesHondurasPage() {
           </h2>
           <div className="space-y-4 sm:space-y-6">
             {faqs.map((faq, index) => (
-              <div key={index} className="glass-strong rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-white/10">
+              <div key={index} className="glass-modern rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-white/10">
                 <h3 className="text-base sm:text-lg font-bold mb-2 text-white">{faq.question}</h3>
                 <p className="text-brand-200/90 text-sm sm:text-base">{faq.answer}</p>
               </div>
@@ -289,7 +283,7 @@ export default function DeduccionesHondurasPage() {
         </section>
 
         {/* CTA Section */}
-        <section className="text-center glass-strong rounded-xl sm:rounded-2xl p-6 sm:p-8 md:p-12 mb-12 sm:mb-16 border border-white/10">
+        <section className="text-center glass-modern rounded-xl sm:rounded-2xl p-6 sm:p-8 md:p-12 mb-12 sm:mb-16 border border-white/10">
           <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-4 text-white">
             ¿Listo para automatizar tus deducciones?
           </h2>
@@ -313,11 +307,8 @@ export default function DeduccionesHondurasPage() {
         </section>
 
         <RelatedGuides currentPath="/deducciones-honduras-ihss-rap-isr" />
-      </main>
-
-      <CloudBackground />
-      <DemoFooter />
-    </div>
+      </div>
+    </PublicPageShell>
   )
 }
 

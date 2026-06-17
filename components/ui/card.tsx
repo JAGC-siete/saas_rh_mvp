@@ -2,7 +2,7 @@ import React from 'react'
 import { cn } from '../../lib/utils'
 
 export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
-  variant?: 'default' | 'solid' | 'glass'
+  variant?: 'default' | 'solid' | 'glass' | 'liquid'
 }
 
 const Card = React.forwardRef<HTMLDivElement, CardProps>(
@@ -10,7 +10,8 @@ const Card = React.forwardRef<HTMLDivElement, CardProps>(
     const variants = {
       default: "bg-card text-card-foreground rounded-lg border shadow-sm",
       solid: "bg-white text-slate-900 rounded-lg border shadow-sm",
-      glass: "glass text-white", // usa utilidades globales
+      glass: "glass text-white",
+      liquid: "glass-modern text-white rounded-2xl",
     } as const
     return (
       <div

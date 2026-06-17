@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import { Button } from '../../components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card'
+import PublicPageShell from '../../components/landing/PublicPageShell'
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline'
 
 interface InvitationData {
@@ -112,8 +113,8 @@ export default function InvitationAcceptance() {
 
   if (success) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 p-4">
-        <Card className="w-full max-w-md glass-strong">
+      <PublicPageShell centered showFooter={false}>
+        <Card variant="liquid" className="w-full max-w-md">
           <CardHeader className="text-center">
             <div className="mx-auto w-16 h-16 bg-green-600 rounded-full flex items-center justify-center mb-4">
               <span className="text-2xl font-bold text-white">✓</span>
@@ -126,13 +127,13 @@ export default function InvitationAcceptance() {
             </CardDescription>
           </CardHeader>
         </Card>
-      </div>
+      </PublicPageShell>
     )
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 p-4">
-      <Card className="w-full max-w-md glass-strong">
+    <PublicPageShell centered showFooter={false}>
+      <Card variant="liquid" className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="mx-auto w-16 h-16 bg-brand-600 rounded-full flex items-center justify-center mb-4">
             <span className="text-2xl font-bold text-white">P</span>
@@ -272,6 +273,6 @@ export default function InvitationAcceptance() {
           </div>
         </div>
       </Card>
-    </div>
+    </PublicPageShell>
   )
 }

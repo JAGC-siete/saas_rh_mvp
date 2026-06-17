@@ -1,13 +1,12 @@
 import Head from 'next/head'
-import dynamic from 'next/dynamic'
 import Link from 'next/link'
+import PublicPageShell from '../components/landing/PublicPageShell'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
 import { ArrowRight, Briefcase, Clock } from 'lucide-react'
 
 export default function DemoPage() {
-  const CloudBackground = dynamic(() => import('../components/CloudBackground'), { ssr: false })
   return (
-    <div className="min-h-screen bg-app flex items-center justify-center p-4 relative">
+    <PublicPageShell centered showFooter={false}>
       <Head>
         <title>Request a Demo - HUMANO SISU</title>
         <meta
@@ -15,8 +14,7 @@ export default function DemoPage() {
           content="Solicita una demostración de Los Robots de Humano SISU"
         />
       </Head>
-      <CloudBackground />
-      <div className="w-full max-w-md space-y-8 relative z-10">
+      <div className="w-full max-w-md space-y-8 p-4">
         <div className="text-center">
           <div className="mx-auto h-20 w-20 bg-white rounded-full flex items-center justify-center mb-6 shadow-lg">
             <Briefcase className="h-10 w-10 text-brand-600" />
@@ -32,7 +30,7 @@ export default function DemoPage() {
           </p>
         </div>
 
-        <Card variant="glass">
+        <Card variant="liquid">
           <CardHeader className="text-center pb-6">
             <CardTitle className="flex items-center justify-center gap-2 text-white">
               <Clock className="h-5 w-5" />
@@ -45,21 +43,21 @@ export default function DemoPage() {
           <CardContent className="space-y-4">
             <Link
               href="/app/login"
-              className="w-full bg-brand-600 hover:bg-brand-700 text-white py-3 px-4 rounded-lg font-medium transition-colors inline-flex items-center justify-center gap-2"
+              className="w-full btn-shiny bg-brand-500 hover:bg-brand-600 text-white py-3 px-4 rounded-lg font-medium transition-colors inline-flex items-center justify-center gap-2"
             >
               Automatiza tu RH Ahora
               <ArrowRight className="w-4 h-4" />
             </Link>
-            
+
             <Link
               href="/"
-              className="w-full glass text-brand-200 hover:text-white py-3 px-4 rounded-lg font-medium transition-colors inline-flex items-center justify-center gap-2 border border-brand-600/30 hover:border-brand-500"
+              className="w-full glass-modern text-brand-200 hover:text-white py-3 px-4 rounded-lg font-medium transition-colors inline-flex items-center justify-center gap-2 border border-brand-600/30 hover:border-brand-500"
             >
               Volver al Inicio
             </Link>
           </CardContent>
         </Card>
       </div>
-    </div>
+    </PublicPageShell>
   )
 }

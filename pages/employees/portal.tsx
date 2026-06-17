@@ -31,6 +31,7 @@ import EmployeePermissionForm from '../../components/employee-portal/EmployeePer
 import EmployeePermissionHistory from '../../components/employee-portal/EmployeePermissionHistory'
 import { formatTimeDisplay, parseDateOnlyAsHonduras, formatDateOnlyForHonduras, HONDURAS_TIMEZONE } from '../../lib/timezone'
 import NotificationBell from '../../components/ui/NotificationBell'
+import PublicPageShell from '../../components/landing/PublicPageShell'
 
 // Component for attendance records list
 function AttendanceRecordsList({ employeeId }: { employeeId?: string }) {
@@ -981,18 +982,22 @@ export default function EmployeePortal() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900">
+      <PublicPageShell centered showFooter={false}>
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-400"></div>
-      </div>
+      </PublicPageShell>
     )
   }
 
   if (!session) {
-    return <EmployeePasswordLogin onLoginSuccess={handleLoginSuccess} />
+    return (
+      <PublicPageShell centered showFooter={false}>
+        <EmployeePasswordLogin onLoginSuccess={handleLoginSuccess} />
+      </PublicPageShell>
+    )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900">
+    <PublicPageShell showFooter={false}>
       {/* Header */}
       <div className="bg-black/20 border-b border-white/10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -1041,7 +1046,7 @@ export default function EmployeePortal() {
 
         {/* Quick Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <Card className="glass-strong">
+          <Card variant="liquid">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -1057,7 +1062,7 @@ export default function EmployeePortal() {
             </CardContent>
           </Card>
 
-          <Card className="glass-strong">
+          <Card variant="liquid">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -1073,7 +1078,7 @@ export default function EmployeePortal() {
             </CardContent>
           </Card>
 
-          <Card className="glass-strong">
+          <Card variant="liquid">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -1089,7 +1094,7 @@ export default function EmployeePortal() {
             </CardContent>
           </Card>
 
-          <Card className="glass-strong">
+          <Card variant="liquid">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -1108,7 +1113,7 @@ export default function EmployeePortal() {
 
         {/* === MEJORA 4: MINI GRÁFICOS RECHARTS === */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          <Card className="glass-strong">
+          <Card variant="liquid">
             <CardHeader>
               <CardTitle className="text-lg">Distribución de Asistencia (mes)</CardTitle>
             </CardHeader>
@@ -1134,7 +1139,7 @@ export default function EmployeePortal() {
             </CardContent>
           </Card>
 
-          <Card className="glass-strong">
+          <Card variant="liquid">
             <CardHeader>
               <CardTitle className="text-lg">Horas trabajadas (días recientes)</CardTitle>
               <CardDescription className="text-gray-400">
@@ -1163,7 +1168,7 @@ export default function EmployeePortal() {
 
         {/* === MEJORA 1: BALANCES GRANDES (datos del dashboard) === */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
-          <Card className="glass-strong border-emerald-400/30">
+          <Card variant="liquid" className="border-emerald-400/30">
             <CardContent className="p-6 text-center">
               <div className="flex justify-between items-start">
                 <div className="text-left flex-1 min-w-0">
@@ -1191,7 +1196,7 @@ export default function EmployeePortal() {
             </CardContent>
           </Card>
 
-          <Card className="glass-strong border-orange-400/30">
+          <Card variant="liquid" className="border-orange-400/30">
             <CardContent className="p-6 text-center">
               <div className="flex justify-between items-start">
                 <div>
@@ -1205,7 +1210,7 @@ export default function EmployeePortal() {
             </CardContent>
           </Card>
 
-          <Card className="glass-strong border-blue-400/30">
+          <Card variant="liquid" className="border-blue-400/30">
             <CardContent className="p-6 text-center">
               <div className="flex justify-between items-start">
                 <div>
@@ -1219,7 +1224,7 @@ export default function EmployeePortal() {
             </CardContent>
           </Card>
 
-          <Card className="glass-strong border-purple-400/30">
+          <Card variant="liquid" className="border-purple-400/30">
             <CardContent className="p-6 text-center">
               <div className="flex justify-between items-start">
                 <div>
@@ -1259,7 +1264,7 @@ export default function EmployeePortal() {
         {/* Tab Content */}
         <div className="space-y-6">
           {activeTab === 'profile' && (
-            <Card className="glass-strong">
+            <Card variant="liquid">
               <CardHeader>
                 <CardTitle className="text-white">Información Personal</CardTitle>
                 <CardDescription className="text-gray-300">
@@ -1348,7 +1353,7 @@ export default function EmployeePortal() {
           )}
 
           {activeTab === 'attendance' && (
-            <Card className="glass-strong">
+            <Card variant="liquid">
               <CardHeader>
                 <CardTitle className="text-white">Asistencia</CardTitle>
                 <CardDescription className="text-gray-300">
@@ -1405,7 +1410,7 @@ export default function EmployeePortal() {
           )}
 
           {activeTab === 'permissions' && (
-            <Card className="glass-strong">
+            <Card variant="liquid">
               <CardHeader>
                 <div className="flex justify-between items-center">
                   <div>
@@ -1474,7 +1479,7 @@ export default function EmployeePortal() {
           )}
 
           {activeTab === 'payroll' && (
-            <Card className="glass-strong">
+            <Card variant="liquid">
               <CardHeader>
                 <CardTitle className="text-white">Recibos de pago</CardTitle>
                 <CardDescription className="text-gray-300">
@@ -1491,7 +1496,7 @@ export default function EmployeePortal() {
           )}
 
           {activeTab === 'performance' && (
-            <Card className="glass-strong">
+            <Card variant="liquid">
               <CardHeader>
                 <CardTitle className="text-white">Desempeño</CardTitle>
                 <CardDescription className="text-gray-300">
@@ -1593,6 +1598,6 @@ export default function EmployeePortal() {
           </Button>
         </div>
       </div>
-    </div>
+    </PublicPageShell>
   )
 }

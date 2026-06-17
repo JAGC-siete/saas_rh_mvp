@@ -1,7 +1,6 @@
 import Head from 'next/head'
 import Link from 'next/link'
-import MainHeader from '../../components/MainHeader'
-import DemoFooter from '../../components/DemoFooter'
+import PublicPageShell from '../../components/landing/PublicPageShell'
 import { getPageTitle } from '../../lib/seo/title'
 import { getPageDescription } from '../../lib/seo/description'
 import SchemaMarkup from '../../components/SEO/SchemaMarkup'
@@ -24,7 +23,7 @@ export default function RecursosIndex({ items }: RecursosIndexProps) {
   })
 
   return (
-    <div className="min-h-screen bg-app text-white flex flex-col pt-16 sm:pt-20 md:pt-24">
+    <PublicPageShell>
       <Head>
         <title>{pageTitle}</title>
         <meta name="description" content={pageDescription} />
@@ -36,9 +35,7 @@ export default function RecursosIndex({ items }: RecursosIndexProps) {
       </Head>
       <SchemaMarkup schema={webPageSchema} />
 
-      <MainHeader enableScrollEffect={true} fixed={true} />
-
-      <main className="flex-1 max-w-4xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-12">
+      <div className="flex-1 max-w-4xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-12">
         <h1 className="text-3xl font-bold mb-2">Recursos</h1>
         <p className="text-brand-200 mb-10">{pageDescription}</p>
 
@@ -50,7 +47,7 @@ export default function RecursosIndex({ items }: RecursosIndexProps) {
               <li key={item.slug}>
                 <Link
                   href={`/recursos/${item.slug}`}
-                  className="block p-4 rounded-lg border border-brand-800 hover:border-brand-600 transition-colors"
+                  className="block p-4 rounded-lg glass-modern border border-brand-800 hover:border-brand-600 transition-colors"
                 >
                   <h2 className="text-xl font-semibold text-white mb-1">{item.title}</h2>
                   <p className="text-brand-300 text-sm mb-2">{item.description}</p>
@@ -67,7 +64,7 @@ export default function RecursosIndex({ items }: RecursosIndexProps) {
           </ul>
         )}
 
-        <div className="mt-12 text-center glass-strong rounded-2xl p-6 sm:p-8 border border-white/10">
+        <div className="mt-12 text-center glass-modern rounded-2xl p-6 sm:p-8 border border-white/10">
           <h2 className="text-xl sm:text-2xl font-bold text-white mb-3">¿Listo para automatizar tu nómina?</h2>
           <p className="text-brand-200/90 mb-6 max-w-2xl mx-auto">
             Pon en práctica lo que leíste: Humano SISU integra asistencia biométrica y planilla con deducciones de ley.
@@ -87,10 +84,8 @@ export default function RecursosIndex({ items }: RecursosIndexProps) {
             </Link>
           </div>
         </div>
-      </main>
-
-      <DemoFooter />
-    </div>
+      </div>
+    </PublicPageShell>
   )
 }
 

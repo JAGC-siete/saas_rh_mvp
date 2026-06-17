@@ -1,16 +1,12 @@
 import Head from 'next/head'
 import Link from 'next/link'
-import MainHeader from '../components/MainHeader'
-import DemoFooter from '../components/DemoFooter'
+import PublicPageShell from '../components/landing/PublicPageShell'
 import { getPageTitle } from '../lib/seo/title'
 import { getPageDescription } from '../lib/seo/description'
 import SchemaMarkup from '../components/SEO/SchemaMarkup'
 import RelatedGuides from '../components/SEO/RelatedGuides'
 import { generateWebPageSchema, generateSoftwareApplicationSchema } from '../lib/seo/schema'
 import { CheckCircleIcon } from '@heroicons/react/24/outline'
-import dynamic from 'next/dynamic'
-
-const CloudBackground = dynamic(() => import('../components/CloudBackground'), { ssr: false })
 
 export default function SistemaBiometricoNominaPage() {
   const pageTitle = getPageTitle('biometricoNomina')
@@ -74,7 +70,7 @@ export default function SistemaBiometricoNominaPage() {
   ]
 
   return (
-    <div className="min-h-screen bg-app text-white flex flex-col pt-16 sm:pt-20 md:pt-24 relative">
+    <PublicPageShell showSpotlight>
       <Head>
         <title>{pageTitle}</title>
         <meta name="description" content={pageDescription} />
@@ -85,8 +81,6 @@ export default function SistemaBiometricoNominaPage() {
         <meta name="keywords" content="sistema biométrico con nómina, control asistencia biométrico, biométrico integrado nómina, asistencia nómina El Salvador Guatemala Honduras" />
       </Head>
       <SchemaMarkup schema={[webPageSchema, softwareSchema]} />
-
-      <MainHeader enableScrollEffect={true} fixed={true} />
 
       {/* Hero Section */}
       <section className="py-4 sm:py-6 md:py-8 relative overflow-hidden">
@@ -130,11 +124,11 @@ export default function SistemaBiometricoNominaPage() {
         </div>
       </section>
 
-      <main className="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 relative z-10">
+      <div className="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 relative z-10">
 
         {/* Problem vs Solution */}
         <section className="mb-12 sm:mb-16 md:mb-20 grid md:grid-cols-2 gap-4 sm:gap-6">
-          <div className="glass-strong rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-red-500/20">
+          <div className="glass-modern rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-red-500/20">
             <h2 className="text-xl sm:text-2xl font-bold mb-4 text-red-400">❌ Sistemas Separados</h2>
             <ul className="space-y-2 text-brand-200/90 text-sm sm:text-base">
               <li>• Tienes que usar dos sistemas diferentes</li>
@@ -144,7 +138,7 @@ export default function SistemaBiometricoNominaPage() {
               <li>• Más tiempo de capacitación</li>
             </ul>
           </div>
-          <div className="glass-strong rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-green-500/20">
+          <div className="glass-modern rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-green-500/20">
             <h2 className="text-xl sm:text-2xl font-bold mb-4 text-green-400">✅ Humano SISU Integrado</h2>
             <ul className="space-y-2 text-brand-200/90 text-sm sm:text-base">
               <li>• Un solo sistema para todo</li>
@@ -163,7 +157,7 @@ export default function SistemaBiometricoNominaPage() {
           </h2>
           <div className="grid md:grid-cols-3 gap-4 sm:gap-6">
             {benefits.map((benefit, index) => (
-              <div key={index} className="glass-strong rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-white/10 transition-all duration-300 hover:border-brand-400/40 hover:shadow-xl hover:shadow-brand-900/30">
+              <div key={index} className="glass-modern rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-white/10 transition-all duration-300 hover:border-brand-400/40 hover:shadow-xl hover:shadow-brand-900/30">
                 <div className="text-4xl mb-4">{benefit.icon}</div>
                 <h3 className="text-lg sm:text-xl font-bold mb-2 text-white">{benefit.title}</h3>
                 <p className="text-brand-200/90 text-sm sm:text-base">{benefit.description}</p>
@@ -177,7 +171,7 @@ export default function SistemaBiometricoNominaPage() {
           <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-6 sm:mb-8 text-center text-white">
             ¿Cómo Funciona?
           </h2>
-          <div className="glass-strong rounded-xl sm:rounded-2xl p-4 sm:p-6 md:p-8 border border-white/10">
+          <div className="glass-modern rounded-xl sm:rounded-2xl p-4 sm:p-6 md:p-8 border border-white/10">
             <div className="space-y-4 sm:space-y-6">
               <div className="flex gap-3 sm:gap-4">
                 <div className="flex-shrink-0 w-10 h-10 bg-sky-600 rounded-full flex items-center justify-center font-bold text-white">
@@ -226,7 +220,7 @@ export default function SistemaBiometricoNominaPage() {
           </h2>
           <div className="grid md:grid-cols-3 gap-4 sm:gap-6">
             {useCases.map((useCase, index) => (
-              <div key={index} className="glass-strong rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-white/10 transition-all duration-300 hover:border-brand-400/40 hover:shadow-xl hover:shadow-brand-900/30">
+              <div key={index} className="glass-modern rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-white/10 transition-all duration-300 hover:border-brand-400/40 hover:shadow-xl hover:shadow-brand-900/30">
                 <h3 className="text-lg sm:text-xl font-bold mb-2 text-white">{useCase.title}</h3>
                 <p className="text-brand-200/90 mb-4 text-sm sm:text-base">{useCase.description}</p>
                 <p className="text-xs sm:text-sm text-sky-400 font-semibold">{useCase.example}</p>
@@ -236,7 +230,7 @@ export default function SistemaBiometricoNominaPage() {
         </section>
 
         {/* CTA Section */}
-        <section className="text-center glass-strong rounded-xl sm:rounded-2xl p-6 sm:p-8 md:p-12 mb-12 sm:mb-16 border border-white/10">
+        <section className="text-center glass-modern rounded-xl sm:rounded-2xl p-6 sm:p-8 md:p-12 mb-12 sm:mb-16 border border-white/10">
           <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-4 text-white">
             ¿Listo para integrar biométrico y nómina?
           </h2>
@@ -252,11 +246,8 @@ export default function SistemaBiometricoNominaPage() {
         </section>
 
         <RelatedGuides currentPath="/sistema-biometrico-nomina" />
-      </main>
-
-      <CloudBackground />
-      <DemoFooter />
-    </div>
+      </div>
+    </PublicPageShell>
   )
 }
 

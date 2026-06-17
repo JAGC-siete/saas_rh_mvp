@@ -1,7 +1,6 @@
 import Head from 'next/head'
 import Link from 'next/link'
-import MainHeader from '../../components/MainHeader'
-import DemoFooter from '../../components/DemoFooter'
+import PublicPageShell from '../../components/landing/PublicPageShell'
 import SchemaMarkup from '../../components/SEO/SchemaMarkup'
 import Breadcrumbs from '../../components/SEO/Breadcrumbs'
 import { generateArticleSchema } from '../../lib/seo/schema'
@@ -31,7 +30,7 @@ export default function RecursoPage({ article }: RecursoPageProps) {
   ]
 
   return (
-    <div className="min-h-screen bg-app text-white flex flex-col pt-16 sm:pt-20 md:pt-24">
+    <PublicPageShell>
       <Head>
         <title>{article.title} | Humano SISU</title>
         <meta name="description" content={article.description} />
@@ -47,9 +46,7 @@ export default function RecursoPage({ article }: RecursoPageProps) {
       </Head>
       <SchemaMarkup schema={articleSchema} />
 
-      <MainHeader enableScrollEffect={true} fixed={true} />
-
-      <main className="flex-1 max-w-3xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-12">
+      <div className="flex-1 max-w-3xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-12">
         <Breadcrumbs items={breadcrumbItems} />
 
         <article>
@@ -72,7 +69,7 @@ export default function RecursoPage({ article }: RecursoPageProps) {
           />
         </article>
 
-        <div className="mt-12 text-center glass-strong rounded-2xl p-6 sm:p-8 border border-white/10">
+        <div className="mt-12 text-center glass-modern rounded-2xl p-6 sm:p-8 border border-white/10">
           <h2 className="text-xl sm:text-2xl font-bold text-white mb-3">Automatiza esto con Humano SISU</h2>
           <p className="text-brand-200/90 mb-6 max-w-2xl mx-auto">
             Asistencia biométrica y nómina con deducciones de ley, en un solo lugar.
@@ -92,10 +89,8 @@ export default function RecursoPage({ article }: RecursoPageProps) {
             </Link>
           </div>
         </div>
-      </main>
-
-      <DemoFooter />
-    </div>
+      </div>
+    </PublicPageShell>
   )
 }
 

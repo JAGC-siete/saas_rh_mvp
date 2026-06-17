@@ -2,11 +2,9 @@ import Head from 'next/head'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
 import { useEffect, useState } from 'react'
-import MainHeader from '../../components/MainHeader'
+import PublicPageShell from '../../components/landing/PublicPageShell'
+import { Card, CardContent } from '../../components/ui/card'
 import MailListSubscription from '../../components/MailListSubscription'
-import dynamic from 'next/dynamic'
-
-const CloudBackground = dynamic(() => import('../../components/CloudBackground'), { ssr: false })
 
 export default function MailListUnsubscribePage() {
   const router = useRouter()
@@ -39,21 +37,16 @@ export default function MailListUnsubscribePage() {
   }, [router.query])
 
   return (
-    <>
+    <PublicPageShell centered>
       <Head>
         <title>Darse de Baja - Humano SISU</title>
         <meta name="description" content="Darse de baja de la lista de correo de Humano SISU" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </Head>
-      <div className="min-h-screen bg-app relative">
-        <CloudBackground />
-        
-        {/* Header */}
-        <MainHeader enableScrollEffect={false} fixed={false} />
 
-        {/* Main Content */}
-        <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 md:py-20">
-          <div className="glass-strong rounded-2xl sm:rounded-3xl p-6 sm:p-8 md:p-12 backdrop-blur-sm border border-white/20 shadow-2xl">
+      <div className="w-full max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <Card variant="liquid">
+          <CardContent className="p-6 sm:p-8 md:p-12">
             {status === 'loading' && (
               <div className="text-center">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
@@ -145,10 +138,9 @@ export default function MailListUnsubscribePage() {
                 </div>
               </div>
             )}
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </div>
-    </>
+    </PublicPageShell>
   )
 }
-

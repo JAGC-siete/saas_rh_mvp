@@ -21,8 +21,54 @@ El landing usa el diseño **Infraestructura Líquida** implementado en `componen
 | `CursorSpotlight.tsx` | Spotlight que sigue el mouse (desktop) |
 | `TrustBar.tsx` | Marquee de clientes pre-footer |
 | `ScrollReveal.tsx` | Animación scroll con Framer Motion |
+| `PublicPageShell.tsx` | Layout compartido para ~40 páginas públicas |
+| `BorderBeam.tsx` | Borde animado opcional en cards de formulario |
 
 **Paleta minimalista:** fondo `slate-950`, texto `slate-400` / `white`, acento números `cyan-400`, CTAs `brand-500` + `btn-shiny`.
+
+---
+
+## PublicPageShell — layout público unificado
+
+Todas las páginas públicas (excepto `/app/*` dashboard y páginas de debug) usan `components/landing/PublicPageShell.tsx`:
+
+```tsx
+<PublicPageShell
+  showSpotlight={false}      // marketing long-form: true
+  showFooter={true}          // forms fullscreen: false
+  showTrustBar={false}       // solo landings largas
+  loginAlwaysVisible={false} // /activar, /ventas: true
+  centered={false}           // auth/simple: true
+  mainClassName=""
+>
+  {children}
+</PublicPageShell>
+```
+
+**Incluye:** `MeshBackground`, `DockNavbar`, `<main>` con `pt-20`, opcional `CursorSpotlight`, `TrustBar`, `DemoFooter variant="minimal"` vía `.landing-footer-bridge`.
+
+**Card pública:** `variant="liquid"` → clase `glass-modern text-white rounded-2xl` (`components/ui/card.tsx`).
+
+**Inputs públicos:** clase `input-glass` (definida en `styles/globals.css`).
+
+### Inventario de páginas migradas
+
+| Oleada | Rutas |
+|---|---|
+| Referencia | `/` |
+| Conversión | `/activar`, `/ventas` |
+| Funnel | `/afiliados`, `/afiliados/confirm`, `/afiliados/questionnaire`, `/gracias`, `/suscripcion`, `/onboarding`, `/demo` |
+| Calculadoras | `/calculadora`, `/calculadora-deducciones*`, `/calculadora-prestaciones` (+ `PublicDeductionCalculator`) |
+| SEO | `/info`, `/implementacion-48-horas`, `/alternativa-odoo-honduras`, `/sistema-biometrico-nomina`, `/deducciones-honduras-ihss-rap-isr` |
+| Contenido / legal | `/recursos`, `/recursos/[slug]`, `/politicadeprivacidad`, `/terminos-de-servicio` |
+| Mail list | `/mail-list/confirm`, `/mail-list/unsubscribe` |
+| Auth | `/auth/*`, `/login`, `/register`, `/app/login`, `/app/forgot-password` |
+| Trial | `/trial-dashboard`, `/trial/*` |
+| Otros | `/attendance/public`, `/employees/*`, `/unauthorized` |
+
+**Excluidas:** `/app/*` (dashboard), debug, `404`/`500`.
+
+**Legacy (solo dashboard interno):** `MainHeader`, `CloudBackground`, `.glass` / `.glass-strong` siguen en el repo para rutas `/app/*` no migradas.
 
 ---
 
@@ -232,83 +278,40 @@ Dos líneas con contraste de color:
 
 ```
 ┌─────────────────────────────────────────────┐
-│  MainHeader (fixed, glass, scroll effect)   │
+│  DockNavbar (cápsula flotante, mesh)        │
 ├─────────────────────────────────────────────┤
-│  HERO                                       │
-│  - Trust badges (3 pills)                   │
-│  - H1 + subtítulo                           │
-│  - LandingHero (carousel + CTAs)            │
+│  HERO (MagneticHero + HeroProductWindow)    │
 ├─────────────────────────────────────────────┤
-│  SOCIAL PROOF (#prueba-social)              │
-│  - 3 testimonios en grid                    │
+│  BENTO SERVICES + HOW IT WORKS              │
 ├─────────────────────────────────────────────┤
-│  HOW IT WORKS (#como-funciona)              │
-│  - 3 pasos numerados                        │
+│  FREE TOOLS + MAIL LIST                     │
 ├─────────────────────────────────────────────┤
-│  FREE TOOLS (#herramientas-gratuitas)       │
-│  - Cards calculadoras (cyan accent)         │
+│  TrustBar (marquee)                         │
 ├─────────────────────────────────────────────┤
-│  SERVICES (#servicios)                      │
-│  - Asistencia biométrica (2 cards)          │
-│  - Nómina cero errores (2 cards)            │
-│  - Countdown timer                          │
-├─────────────────────────────────────────────┤
-│  AWS CERTIFICATIONS                         │
-│  - Badges + trust statement                 │
-├─────────────────────────────────────────────┤
-│  MAIL LIST (bg-gray-800)                    │
-├─────────────────────────────────────────────┤
-│  CloudBackground (fixed, z-0, animado)      │
-├─────────────────────────────────────────────┤
-│  DemoFooter (bg-white — contraste)          │
+│  DemoFooter minimal (landing-footer-bridge) │
 └─────────────────────────────────────────────┘
 ```
 
-Wrapper raíz: `min-h-screen bg-app pt-16 sm:pt-20 md:pt-24 relative`
+Wrapper raíz landing: `PublicPageShell` → `min-h-screen bg-mesh`
+
+Páginas públicas secundarias: mismo shell con props según tipo (ver sección PublicPageShell).
 
 ---
 
 ## 7. Componentes — clases visuales clave
 
-### 7.1 Header (`MainHeader`)
+### 7.1 Navbar pública (`DockNavbar`)
 
 ```html
-<!-- Contenedor: fixed, transición al scroll -->
-<header class="fixed top-0 left-0 right-0 z-50">
-  <div class="w-full transition-all duration-300
-    bg-transparent border-b border-white/10          <!-- sin scroll -->
-    bg-slate-900/90 backdrop-blur-sm border-b border-white/20 shadow-lg  <!-- con scroll -->
-  ">
-    <!-- Logo en caja glass -->
-    <div class="bg-white/10 px-2 py-1 rounded-lg border border-white/20 backdrop-blur-sm">
-      <img class="rounded-lg w-10 h-10" />
-    </div>
-
-    <!-- Nav links -->
-    <a class="text-brand-200 hover:text-white px-3 py-2 rounded-full text-sm font-medium
-              transition-all duration-300 hover:bg-white/10 hover:-translate-y-0.5">
-      Cómo funciona
-    </a>
-
-    <!-- CTA verde -->
-    <button class="bg-green-600 hover:bg-green-700 text-white px-6 py-2.5 rounded-lg text-sm font-medium
-                   shadow-lg shadow-black/20 hover:-translate-y-0.5 min-w-[160px]">
-      Activación inmediata
-    </button>
-
-    <!-- CTA azul -->
-    <a class="bg-brand-600 hover:bg-brand-700 text-white px-6 py-2.5 rounded-lg text-sm font-medium
-             shadow-lg shadow-black/20 hover:-translate-y-0.5 min-w-[140px]">
-      Iniciar sesión
-    </a>
-
-    <!-- Dropdown calculadora -->
-    <div class="glass-strong bg-slate-950/80 rounded-xl shadow-2xl border border-white/15 backdrop-blur-xl">
-      ...
-    </div>
-  </div>
-</header>
+<!-- Cápsula flotante centrada; login visible tras 20% scroll (o siempre con loginAlwaysVisible) -->
+<nav class="fixed top-4 left-1/2 -translate-x-1/2 z-50 ... glass-modern rounded-full">
+  <!-- Logo + enlaces ancla + CTA Activar + Login -->
+</nav>
 ```
+
+*(Legacy `MainHeader` solo en rutas `/app/*` internas.)*
+
+---
 
 ### 7.2 Hero badges
 
@@ -567,4 +570,4 @@ theme: {
 
 ---
 
-*Generado desde el codebase actual. Archivos fuente: `pages/index.tsx`, `styles/globals.css`, `styles/landing.css`, `tailwind.config.js`, componentes en `components/`.*
+*Generado desde el codebase actual. Archivos fuente: `pages/index.tsx`, `components/landing/PublicPageShell.tsx`, `styles/landing-liquid.css`, `styles/globals.css`, `tailwind.config.js`.*

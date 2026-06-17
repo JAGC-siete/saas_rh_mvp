@@ -5,9 +5,14 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { LANDING_NAV_LINKS, CALCULATOR_MENU_ITEMS, CALCULATOR_MOBILE_LINKS } from '../../lib/landing/nav-links'
 import { useScrollThreshold, useScrollY } from '../../lib/hooks/useScrollThreshold'
 
-export default function DockNavbar() {
+interface DockNavbarProps {
+  loginAlwaysVisible?: boolean
+}
+
+export default function DockNavbar({ loginAlwaysVisible = false }: DockNavbarProps) {
   const isScrolled = useScrollY(50)
-  const showLogin = useScrollThreshold(0.2)
+  const showLoginOnScroll = useScrollThreshold(0.2)
+  const showLogin = loginAlwaysVisible || showLoginOnScroll
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isCalculatorMenuOpen, setIsCalculatorMenuOpen] = useState(false)
   const [isCalculatorMobileOpen, setIsCalculatorMobileOpen] = useState(false)

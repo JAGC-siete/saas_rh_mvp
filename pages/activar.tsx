@@ -1,12 +1,12 @@
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
-import { ArrowLeftIcon, CheckCircleIcon, RocketLaunchIcon, CpuChipIcon } from '@heroicons/react/24/outline'
-import dynamic from 'next/dynamic'
+import { ArrowLeftIcon, CheckCircleIcon, RocketLaunchIcon, CpuChipIcon, BoltIcon, UserGroupIcon } from '@heroicons/react/24/outline'
 import { Card, CardContent, CardTitle } from '../components/ui/card'
 import { TRIAL_CONFIG } from '../lib/config/trial'
 import { motion } from 'framer-motion'
-import MainHeader from '../components/MainHeader'
+import PublicPageShell from '../components/landing/PublicPageShell'
+import BorderBeam from '../components/landing/BorderBeam'
 import { trackActivationFormSubmit, initGoogleAdsTracking } from '../lib/analytics/googleAds'
 import {
   buildMetaApiTrackingFields,
@@ -260,14 +260,12 @@ export default function ActivarPage() {
     }
   }
 
-  const CloudBackground = dynamic(() => import('../components/CloudBackground'), { ssr: false })
   const countryLabel = isCountryCode(formData.countryCode) ? COUNTRY_LABEL[formData.countryCode] : ''
   
   if (isSuccess) {
     return (
-      <div className="min-h-screen bg-app relative">
-        <CloudBackground />
-        <div className="container mx-auto px-4 py-8 relative z-10">
+      <PublicPageShell showFooter={false} loginAlwaysVisible>
+        <div className="container mx-auto px-4 py-8">
           <div className="max-w-2xl mx-auto text-center">
             <div className="mb-8">
               <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
@@ -281,7 +279,7 @@ export default function ActivarPage() {
               </p>
             </div>
 
-            <Card variant="glass" className="mb-8">
+            <Card variant="liquid" className="mb-8">
               <CardContent className="p-8">
                 <h2 className="text-2xl font-bold text-white mb-4">
                   ¿Qué sigue ahora?
@@ -319,30 +317,21 @@ export default function ActivarPage() {
               </CardContent>
             </Card>
 
-            <Link href="/landing" className="inline-flex items-center text-brand-300 hover:text-white transition-colors">
+            <Link href="/" className="inline-flex items-center text-brand-300 hover:text-white transition-colors">
               <ArrowLeftIcon className="h-4 w-4 mr-2" />
               Volver a inicio
             </Link>
           </div>
         </div>
-      </div>
+      </PublicPageShell>
     )
   }
 
   return (
-    <div className="min-h-screen bg-app flex flex-col relative overflow-hidden">
-      {/* Animated background elements */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-cyan-500/10 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-purple-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
-      </div>
-
-      {/* Header */}
-      <MainHeader enableScrollEffect={false} fixed={true} />
-      <main className="flex-grow flex items-center justify-center p-4 sm:p-6 lg:p-8 pt-24 relative z-10">
-        <Card className="w-full max-w-6xl bg-slate-800/40 backdrop-blur-xl border-white/20 shadow-2xl relative overflow-hidden">
-          {/* Glowing border effect */}
-          <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/20 via-blue-500/20 to-purple-500/20 opacity-50 blur-xl"></div>
+    <PublicPageShell showFooter={false} loginAlwaysVisible mainClassName="flex flex-col overflow-hidden">
+      <div className="flex-grow flex items-center justify-center p-4 sm:p-6 lg:p-8">
+        <BorderBeam className="w-full max-w-6xl">
+        <Card variant="liquid" className="w-full shadow-2xl relative overflow-hidden">
           <CardContent className="p-6 sm:p-8 lg:p-12 relative z-10">
             <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-start">
               {/* Left Column - Header Content */}
@@ -360,22 +349,26 @@ export default function ActivarPage() {
                 >
                   <CpuChipIcon className="w-16 h-16 lg:w-20 lg:h-20 text-cyan-400 mx-auto lg:mx-0 drop-shadow-lg" />
                 </motion.div>
-                <h1 className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-bold text-white mb-4 lg:mb-6 leading-tight">
-                  El fin del trabajo manual: <span className="text-cyan-300">Crea tu entorno automatizado en segundos.</span>
+                <h1 className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-bold mb-4 lg:mb-6 leading-tight">
+                  <span className="bg-gradient-to-r from-white via-brand-200 to-brand-400 bg-clip-text text-transparent">El fin del trabajo manual:</span>{' '}
+                  <span className="text-brand-300">Crea tu entorno automatizado en segundos.</span>
                 </h1>
-                <p className="text-lg md:text-xl text-cyan-100/90 mb-6 lg:mb-8">
+                <p className="text-lg md:text-xl text-slate-400 mb-6 lg:mb-8 landing-dark-text">
                   Comprueba cómo se siente cruzar tu biometría directamente con la nómina sin abrir Excel. Activa tu cuenta y explora el sistema con leyes locales ya parametrizadas. Cero fricción, sin tarjeta de crédito.
                 </p>
                 {/* Feature pills - alineados con mensajes ganadores de Google Ads */}
                 <div className="flex flex-wrap justify-center lg:justify-start gap-2 mb-6 lg:mb-8">
-                  <span className="px-3 py-1 bg-green-500/20 text-green-300 text-xs sm:text-sm rounded-full border border-green-500/30">
-                    ✅ <strong>Nómina Cero Errores:</strong> Deducciones de ley locales automáticas.
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-green-500/15 text-green-300 text-xs sm:text-sm rounded-full border border-green-500/25 font-medium">
+                    <CheckCircleIcon className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                    <strong>Nómina Cero Errores:</strong> Deducciones de ley locales automáticas.
                   </span>
-                  <span className="px-3 py-1 bg-blue-500/20 text-blue-300 text-xs sm:text-sm rounded-full border border-blue-500/30">
-                    ✅ <strong>Cero “Pasa-datos”:</strong> Del registro biométrico al comprobante PDF.
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-500/15 text-blue-300 text-xs sm:text-sm rounded-full border border-blue-500/25 font-medium">
+                    <BoltIcon className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                    <strong>Cero “Pasa-datos”:</strong> Del registro biométrico al comprobante PDF.
                   </span>
-                  <span className="px-3 py-1 bg-purple-500/20 text-purple-300 text-xs sm:text-sm rounded-full border border-purple-500/30">
-                    ✅ <strong>Data de prueba lista:</strong> Empleados y horarios autogenerados.
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-purple-500/15 text-purple-300 text-xs sm:text-sm rounded-full border border-purple-500/25 font-medium">
+                    <UserGroupIcon className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                    <strong>Data de prueba lista:</strong> Empleados y horarios autogenerados.
                   </span>
                 </div>
               </motion.div>
@@ -630,7 +623,7 @@ export default function ActivarPage() {
                 <button
                   onClick={handleSubmit}
                   disabled={!formData.contactoEmail || !formData.empresa || formData.departamentos < 1 || isLoading || Object.keys(errors).length > 0}
-                  className="w-full bg-brand-600 hover:bg-brand-700 text-white px-8 py-4 rounded-xl font-semibold inline-flex items-center justify-center transition-all shadow-lg shadow-black/20 disabled:opacity-50 disabled:cursor-not-allowed text-lg hover:scale-[1.02] active:scale-[0.98]"
+                  className="w-full btn-shiny bg-brand-500 hover:bg-brand-600 text-white px-8 py-4 rounded-xl font-semibold inline-flex items-center justify-center transition-all shadow-[0_8px_30px_rgb(0,0,0,0.12)] disabled:opacity-50 disabled:cursor-not-allowed text-lg hover:scale-[1.02] active:scale-[0.98]"
                 >
                   {isLoading ? (
                     <>
@@ -663,7 +656,8 @@ export default function ActivarPage() {
             </div>
           </CardContent>
         </Card>
-      </main>
-    </div>
+        </BorderBeam>
+      </div>
+    </PublicPageShell>
   )
 }

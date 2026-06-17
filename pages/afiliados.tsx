@@ -3,8 +3,7 @@ import { useState } from 'react'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
-import MainHeader from '../components/MainHeader'
-import DemoFooter from '../components/DemoFooter'
+import PublicPageShell from '../components/landing/PublicPageShell'
 import { getPageTitle } from '../lib/seo/title'
 import { getPageDescription } from '../lib/seo/description'
 import SchemaMarkup from '../components/SEO/SchemaMarkup'
@@ -56,7 +55,7 @@ export default function AfiliadosPage() {
   })
 
   return (
-    <div className="min-h-screen bg-app text-white flex flex-col pt-24 relative">
+    <PublicPageShell>
       <Head>
         <title>{pageTitle}</title>
         <meta name="description" content={pageDescription} />
@@ -67,10 +66,7 @@ export default function AfiliadosPage() {
       </Head>
       <SchemaMarkup schema={webPageSchema} />
 
-      {/* Header */}
-      <MainHeader enableScrollEffect={false} fixed={true} />
-
-      <main className="flex-grow container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-8">
         <section className="text-center mb-12">
           <h1 className="text-4xl md:text-5xl font-bold mb-4">
             Conviértete en Afiliado de Humano SISU
@@ -107,7 +103,7 @@ export default function AfiliadosPage() {
             </div>
           </div>
           <div>
-            <Card className="glass-strong sticky top-24">
+            <Card variant="liquid" className="sticky top-24">
               <CardHeader>
                 <CardTitle>Regístrate Ahora</CardTitle>
                 <CardDescription>Completa el formulario para empezar.</CardDescription>
@@ -143,7 +139,7 @@ export default function AfiliadosPage() {
                       </p>
                     </div>
                     {error && <p className="text-red-500 text-sm">{error}</p>}
-                    <Button type="submit" disabled={loading} className="w-full bg-blue-600 hover:bg-blue-700">
+                    <Button type="submit" disabled={loading} className="w-full btn-shiny bg-brand-500 hover:bg-brand-600">
                       {loading ? 'Enviando...' : 'Solicitar Afiliación'}
                     </Button>
                   </form>
@@ -152,9 +148,7 @@ export default function AfiliadosPage() {
             </Card>
           </div>
         </section>
-      </main>
-
-      <DemoFooter />
-    </div>
+      </div>
+    </PublicPageShell>
   )
 }

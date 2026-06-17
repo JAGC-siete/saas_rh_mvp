@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/router'
 import Head from 'next/head'
-import dynamic from 'next/dynamic'
-const CloudBackground = dynamic(() => import('../../components/CloudBackground'), { ssr: false })
+import PublicPageShell from '../../components/landing/PublicPageShell'
 import { createClient as createSupabaseBrowserClient } from '../../lib/supabase/client'
 
 export default function AuthConfirm() {
@@ -28,7 +27,6 @@ export default function AuthConfirm() {
           return
         }
 
-        // Verificar el token hash del Magic Link
         const { data, error } = await supabase.auth.verifyOtp({
           token_hash: token_hash as string,
           type: 'email'
@@ -52,7 +50,6 @@ export default function AuthConfirm() {
           setStatus('success')
           setMessage('¡Acceso verificado! Te estamos redirigiendo...')
           
-          // Redirigir después de un breve delay
           setTimeout(() => {
             const next = router.query.next as string || '/onboarding'
             router.push(next)
@@ -69,7 +66,6 @@ export default function AuthConfirm() {
       }
     }
 
-    // Solo ejecutar si tenemos los query parameters
     if (router.isReady && router.query.token_hash) {
       handleMagicLink()
     }
@@ -118,11 +114,8 @@ export default function AuthConfirm() {
         <meta name="description" content="Verificando tu acceso seguro" />
       </Head>
 
-      <div className="min-h-screen bg-app flex items-center justify-center p-4 relative">
-        <CloudBackground />
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiMxZTI5M2IiIGZpbGwtb3BhY2l0eT0iMC4xIj48Y2lyY2xlIGN4PSIzMCIgY3k9IjMwIiByPSI0Ii8+PC9nPjwvZz48L3N2Zz4=')] opacity-20"></div>
-        
-        <div className="relative w-full max-w-md space-y-8 z-10">
+      <PublicPageShell centered showFooter={false}>
+        <div className="w-full max-w-md space-y-8 p-4">
           <div className="text-center">
             <div className="mx-auto h-20 w-20 bg-white rounded-full flex items-center justify-center mb-6 shadow-xl">
               {getStatusIcon()}
@@ -154,7 +147,7 @@ export default function AuthConfirm() {
             )}
           </div>
         </div>
-      </div>
+      </PublicPageShell>
     </>
   )
 }

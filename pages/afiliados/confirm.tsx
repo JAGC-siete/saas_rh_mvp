@@ -3,23 +3,21 @@ import { useRouter } from 'next/router'
 import Link from 'next/link'
 import { Card, CardContent } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
-import MainHeader from '../../components/MainHeader'
+import PublicPageShell from '../../components/landing/PublicPageShell'
 
 export default function AffiliateConfirmPage() {
   const router = useRouter()
   const { success } = router.query
 
   return (
-    <div className="min-h-screen bg-app text-white flex flex-col pt-24 relative">
+    <PublicPageShell centered>
       <Head>
         <title>Confirmación de Solicitud - Humano SISU</title>
         <meta name="description" content="Confirmación de solicitud de afiliación." />
       </Head>
 
-      <MainHeader enableScrollEffect={false} fixed={true} />
-
-      <main className="flex-grow container mx-auto px-4 py-8">
-        <Card className="glass-strong max-w-2xl mx-auto">
+      <div className="container mx-auto px-4 py-8 w-full max-w-2xl">
+        <Card variant="liquid" className="mx-auto">
           <CardContent className="pt-6">
             {success === 'true' ? (
               <div className="text-center space-y-6">
@@ -74,18 +72,8 @@ export default function AffiliateConfirmPage() {
             )}
           </CardContent>
         </Card>
-      </main>
-
-      <footer className="border-t border-white/10 mt-20">
-        <div className="max-w-6xl mx-auto px-4 py-12">
-          <div className="text-center">
-            <p className="text-slate-400 mb-4">
-              &copy; {new Date().getFullYear()} Humano SISU. Todos los derechos reservados.
-            </p>
-          </div>
-        </div>
-      </footer>
-    </div>
+      </div>
+    </PublicPageShell>
   )
 }
 

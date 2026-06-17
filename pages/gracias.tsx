@@ -1,14 +1,13 @@
 import Head from 'next/head'
-import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import TrackedWhatsAppLink from '../components/TrackedWhatsAppLink'
+import PublicPageShell from '../components/landing/PublicPageShell'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
 import { CheckCircle, Clock, MessageCircle, ArrowRight } from 'lucide-react'
 
 export default function GraciasPage() {
-  const CloudBackground = dynamic(() => import('../components/CloudBackground'), { ssr: false })
   return (
-    <div className="min-h-screen bg-app flex items-center justify-center p-4 relative">
+    <PublicPageShell centered showFooter={false}>
       <Head>
         <title>¡Gracias! - HUMANO SISU</title>
         <meta
@@ -16,23 +15,22 @@ export default function GraciasPage() {
           content="Tu sistema de RH será activado en 24 horas"
         />
       </Head>
-      <CloudBackground />
-      <div className="w-full max-w-2xl space-y-8 relative z-10">
+      <div className="w-full max-w-2xl space-y-8 p-4">
         <div className="text-center">
           <div className="mx-auto h-24 w-24 bg-green-500/20 rounded-full flex items-center justify-center mb-6 shadow-lg">
             <CheckCircle className="h-16 w-16 text-green-400" />
           </div>
-          
+
           <h1 className="text-4xl font-bold text-white mb-4">
             ¡Listo! Tu sistema está en camino
           </h1>
-          
+
           <p className="text-xl text-brand-200 mb-8">
             Hemos recibido tu solicitud y comprobante de pago.
           </p>
         </div>
 
-        <Card variant="glass">
+        <Card variant="liquid">
           <CardHeader className="text-center pb-6">
             <CardTitle className="text-2xl font-bold text-white mb-2">
               ¿Qué sigue ahora?
@@ -89,8 +87,7 @@ export default function GraciasPage() {
           </CardContent>
         </Card>
 
-        {/* Contact Info */}
-        <Card variant="glass">
+        <Card variant="liquid">
           <CardHeader className="text-center pb-4">
             <CardTitle className="text-white font-bold">
               ¿Preguntas mientras esperas?
@@ -104,20 +101,19 @@ export default function GraciasPage() {
           </CardContent>
         </Card>
 
-        {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Link
             href="/"
-            className="glass text-brand-200 hover:text-white px-6 py-3 rounded-lg font-medium transition-colors border border-brand-600/30 hover:border-brand-500 inline-flex items-center justify-center"
+            className="glass-modern text-brand-200 hover:text-white px-6 py-3 rounded-lg font-medium transition-colors border border-brand-600/30 hover:border-brand-500 inline-flex items-center justify-center"
           >
             Volver a inicio
           </Link>
-          
+
           <TrackedWhatsAppLink
             href="https://wa.me/50432226773?text=Hola, acabo de activar mi sistema HUMANO SISU"
             target="_blank"
             rel="noopener noreferrer"
-            className="bg-brand-600 hover:bg-brand-700 text-white px-6 py-3 rounded-lg font-medium transition-colors inline-flex items-center justify-center gap-2"
+            className="btn-shiny bg-brand-500 hover:bg-brand-600 text-white px-6 py-3 rounded-lg font-medium transition-colors inline-flex items-center justify-center gap-2"
             trackingContext="gracias_post_pago_whatsapp"
           >
             Escribir por WhatsApp
@@ -125,7 +121,6 @@ export default function GraciasPage() {
           </TrackedWhatsAppLink>
         </div>
 
-        {/* Social Proof */}
         <div className="text-center">
           <p className="text-brand-200 text-sm mb-4">
             Te unes a más de 150+ empresas que ya automatizaron su RH
@@ -137,6 +132,6 @@ export default function GraciasPage() {
           </div>
         </div>
       </div>
-    </div>
+    </PublicPageShell>
   )
 }

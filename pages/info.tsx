@@ -1,16 +1,12 @@
 import Head from 'next/head'
-import dynamic from 'next/dynamic'
 import { useState } from 'react'
-import MainHeader from '../components/MainHeader'
-import DemoFooter from '../components/DemoFooter'
+import PublicPageShell from '../components/landing/PublicPageShell'
 import { Button } from '../components/ui/button'
 import {
   buildMetaApiTrackingFields,
   createMetaEventId,
   trackInfoLeadSubmit,
 } from '../lib/analytics/metaPixel'
-
-const CloudBackground = dynamic(() => import('../components/CloudBackground'), { ssr: false })
 
 interface ValidationErrors {
   nombre?: string
@@ -112,7 +108,7 @@ export default function InfoPage() {
   }
 
   return (
-    <div className="min-h-screen bg-app pt-16 sm:pt-20 md:pt-24 relative">
+    <PublicPageShell showSpotlight loginAlwaysVisible>
       <Head>
         <title>Más información | Humano SISU</title>
         <link rel="icon" href="/logo-humano-sisu.png" />
@@ -124,9 +120,7 @@ export default function InfoPage() {
         <link rel="canonical" href="https://humanosisu.net/info" />
       </Head>
 
-      <MainHeader enableScrollEffect={true} fixed={true} />
-
-      <section id="info-lead" className="py-12 sm:py-16 md:py-20 bg-gray-800">
+      <section id="info-lead" className="py-12 sm:py-16 md:py-20">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4 sm:mb-6 px-2">
             Conoce Humano SISU
@@ -220,9 +214,6 @@ export default function InfoPage() {
           </div>
         </div>
       </section>
-
-      <CloudBackground />
-      <DemoFooter />
-    </div>
+    </PublicPageShell>
   )
 }

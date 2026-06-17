@@ -1,7 +1,7 @@
 import { useEffect, useState, FormEvent } from 'react'
 import { useRouter } from 'next/router'
 import Head from 'next/head'
-import dynamic from 'next/dynamic'
+import PublicPageShell from '../../components/landing/PublicPageShell'
 import { createCallbackClient } from '../../lib/supabase/client'
 import {
   ADMIN_PASSWORD_POLICY_MESSAGE_ES,
@@ -10,8 +10,6 @@ import {
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
 import { Card, CardContent } from '../../components/ui/card'
-
-const CloudBackground = dynamic(() => import('../../components/CloudBackground'), { ssr: false })
 
 /**
  * Destino de invite / recovery / reset desde Supabase (Redirect URLs en el dashboard).
@@ -105,10 +103,8 @@ export default function AuthUpdatePasswordPage() {
         <title>Definir contraseña - Humano SISU</title>
         <meta name="robots" content="noindex,nofollow" />
       </Head>
-      <div className="min-h-screen bg-app text-white flex flex-col relative">
-        <CloudBackground />
-        <main className="flex-grow flex items-center justify-center p-4 pt-16">
-          <Card variant="glass" className="w-full max-w-md shadow-xl border-white/10">
+      <PublicPageShell centered showFooter={false}>
+        <Card variant="liquid" className="w-full max-w-md shadow-xl border-white/10">
             <CardContent className="p-8 space-y-4">
               <h1 className="text-2xl font-semibold text-white text-center">
                 {done ? 'Contraseña actualizada' : 'Definir contraseña'}
@@ -174,8 +170,7 @@ export default function AuthUpdatePasswordPage() {
               )}
             </CardContent>
           </Card>
-        </main>
-      </div>
+      </PublicPageShell>
     </>
   )
 }

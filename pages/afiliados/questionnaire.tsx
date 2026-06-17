@@ -4,7 +4,7 @@ import { useRouter } from 'next/router'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card'
-import MainHeader from '../../components/MainHeader'
+import PublicPageShell from '../../components/landing/PublicPageShell'
 
 export default function AffiliateQuestionnairePage() {
   const router = useRouter()
@@ -94,25 +94,23 @@ export default function AffiliateQuestionnairePage() {
 
   if (!token) {
     return (
-      <div className="min-h-screen bg-app text-white flex flex-col pt-24">
-        <MainHeader enableScrollEffect={false} fixed={true} />
-        <main className="flex-grow container mx-auto px-4 py-8">
-          <Card className="glass-strong max-w-2xl mx-auto">
+      <PublicPageShell centered showFooter={false}>
+        <div className="container mx-auto px-4 py-8 w-full max-w-2xl">
+          <Card variant="liquid" className="mx-auto">
             <CardContent className="pt-6">
               <p className="text-red-500">Token inválido o faltante.</p>
             </CardContent>
           </Card>
-        </main>
-      </div>
+        </div>
+      </PublicPageShell>
     )
   }
 
   if (requestStatus === 'pending_approval') {
     return (
-      <div className="min-h-screen bg-app text-white flex flex-col pt-24">
-        <MainHeader enableScrollEffect={false} fixed={true} />
-        <main className="flex-grow container mx-auto px-4 py-8">
-          <Card className="glass-strong max-w-2xl mx-auto">
+      <PublicPageShell centered showFooter={false}>
+        <div className="container mx-auto px-4 py-8 w-full max-w-2xl">
+          <Card variant="liquid" className="mx-auto">
             <CardContent className="pt-6">
               <div className="text-center">
                 <p className="text-lg font-semibold mb-2">Solicitud Pendiente</p>
@@ -122,17 +120,16 @@ export default function AffiliateQuestionnairePage() {
               </div>
             </CardContent>
           </Card>
-        </main>
-      </div>
+        </div>
+      </PublicPageShell>
     )
   }
 
   if (requestStatus === 'approved') {
     return (
-      <div className="min-h-screen bg-app text-white flex flex-col pt-24">
-        <MainHeader enableScrollEffect={false} fixed={true} />
-        <main className="flex-grow container mx-auto px-4 py-8">
-          <Card className="glass-strong max-w-2xl mx-auto">
+      <PublicPageShell centered showFooter={false}>
+        <div className="container mx-auto px-4 py-8 w-full max-w-2xl">
+          <Card variant="liquid" className="mx-auto">
             <CardContent className="pt-6">
               <div className="text-center">
                 <p className="text-lg font-semibold mb-2 text-green-400">¡Solicitud Aprobada!</p>
@@ -142,17 +139,16 @@ export default function AffiliateQuestionnairePage() {
               </div>
             </CardContent>
           </Card>
-        </main>
-      </div>
+        </div>
+      </PublicPageShell>
     )
   }
 
   if (requestStatus === 'rejected') {
     return (
-      <div className="min-h-screen bg-app text-white flex flex-col pt-24">
-        <MainHeader enableScrollEffect={false} fixed={true} />
-        <main className="flex-grow container mx-auto px-4 py-8">
-          <Card className="glass-strong max-w-2xl mx-auto">
+      <PublicPageShell centered showFooter={false}>
+        <div className="container mx-auto px-4 py-8 w-full max-w-2xl">
+          <Card variant="liquid" className="mx-auto">
             <CardContent className="pt-6">
               <div className="text-center">
                 <p className="text-lg font-semibold mb-2 text-red-400">Solicitud Rechazada</p>
@@ -162,21 +158,19 @@ export default function AffiliateQuestionnairePage() {
               </div>
             </CardContent>
           </Card>
-        </main>
-      </div>
+        </div>
+      </PublicPageShell>
     )
   }
 
   return (
-    <div className="min-h-screen bg-app text-white flex flex-col pt-24 relative">
+    <PublicPageShell showFooter={false}>
       <Head>
         <title>Cuestionario de Afiliación - Humano SISU</title>
         <meta name="description" content="Completa el cuestionario para unirte al programa de afiliados." />
       </Head>
 
-      <MainHeader enableScrollEffect={false} fixed={true} />
-
-      <main className="flex-grow container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-8">
         <section className="text-center mb-8">
           <h1 className="text-4xl md:text-5xl font-bold mb-4">
             Cuestionario de Afiliación
@@ -186,7 +180,7 @@ export default function AffiliateQuestionnairePage() {
           </p>
         </section>
 
-        <Card className="glass-strong max-w-3xl mx-auto">
+        <Card variant="liquid" className="max-w-3xl mx-auto">
           <CardHeader>
             <CardTitle>Información del Afiliado</CardTitle>
             <CardDescription>
@@ -290,25 +284,15 @@ export default function AffiliateQuestionnairePage() {
               <Button
                 type="submit"
                 disabled={loading || !termsAccepted}
-                className="w-full bg-blue-600 hover:bg-blue-700"
+                className="w-full btn-shiny bg-brand-500 hover:bg-brand-600"
               >
                 {loading ? 'Enviando...' : 'Enviar Solicitud'}
               </Button>
             </form>
           </CardContent>
         </Card>
-      </main>
-
-      <footer className="border-t border-white/10 mt-20">
-        <div className="max-w-6xl mx-auto px-4 py-12">
-          <div className="text-center">
-            <p className="text-slate-400 mb-4">
-              &copy; {new Date().getFullYear()} Humano SISU. Todos los derechos reservados.
-            </p>
-          </div>
-        </div>
-      </footer>
-    </div>
+      </div>
+    </PublicPageShell>
   )
 }
 

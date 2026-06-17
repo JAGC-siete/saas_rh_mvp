@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../co
 import { Button } from '../components/ui/button'
 import TrialEmployeeManager from '../components/TrialEmployeeManager'
 import PayrollUploadStorage from '../components/PayrollUploadStorage'
+import PublicPageShell from '../components/landing/PublicPageShell'
 
 interface TrialData {
   empresa: string
@@ -103,18 +104,18 @@ export default function TrialDashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 flex items-center justify-center">
-        <div className="text-center">
+      <PublicPageShell centered showFooter={false}>
+        <div className="text-center p-4">
           <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-white mx-auto"></div>
           <p className="text-white">Cargando tu trial...</p>
         </div>
-      </div>
+      </PublicPageShell>
     )
   }
 
   if (error || !trialData) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 flex items-center justify-center">
+      <PublicPageShell centered showFooter={false}>
         <div className="text-center max-w-md mx-auto p-6">
           <div className="text-red-400 text-6xl mb-4">⚠️</div>
           <h1 className="text-2xl font-bold text-white mb-4">Error en el Trial</h1>
@@ -123,7 +124,7 @@ export default function TrialDashboard() {
             Volver a activar
           </Button>
         </div>
-      </div>
+      </PublicPageShell>
     )
   }
 
@@ -136,9 +137,8 @@ export default function TrialDashboard() {
           <meta name="description" content="Gestión de empleados para entorno de prueba SISU" />
         </Head>
 
-        <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900">
-          {/* Header */}
-          <header className="glass-strong border-b border-white/10 shadow-lg">
+        <PublicPageShell showFooter={false}>
+          <header className="glass-modern border-b border-white/10 shadow-lg">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
               <div className="flex justify-between items-center">
                 <div>
@@ -164,10 +164,10 @@ export default function TrialDashboard() {
           </header>
 
           {/* Main Content */}
-          <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <TrialEmployeeManager tenant={getTenantFromUrl()} />
-          </main>
-        </div>
+          </div>
+        </PublicPageShell>
       </>
     )
   }
@@ -181,9 +181,8 @@ export default function TrialDashboard() {
           <meta name="description" content="Sube tu planilla para automatizar tu entorno de producción" />
         </Head>
 
-        <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900">
-          {/* Header */}
-          <header className="glass-strong border-b border-white/10 shadow-lg">
+        <PublicPageShell showFooter={false}>
+          <header className="glass-modern border-b border-white/10 shadow-lg">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
               <div className="flex justify-between items-center">
                 <div>
@@ -209,7 +208,7 @@ export default function TrialDashboard() {
           </header>
 
           {/* Main Content */}
-          <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <PayrollUploadStorage 
               tenantId={getTenantFromUrl()} 
               onUploadComplete={(uploadId) => {
@@ -217,8 +216,8 @@ export default function TrialDashboard() {
                 // Optionally redirect or show success message
               }}
             />
-          </main>
-        </div>
+          </div>
+        </PublicPageShell>
       </>
     )
   }
@@ -230,9 +229,8 @@ export default function TrialDashboard() {
         <meta name="description" content="Dashboard de prueba para SISU - Sistema de Gestión de Recursos Humanos" />
       </Head>
 
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900">
-        {/* Header */}
-        <header className="glass-strong border-b border-white/10 shadow-lg">
+      <PublicPageShell showFooter={false}>
+        <header className="glass-modern border-b border-white/10 shadow-lg">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
             <div className="flex justify-between items-center">
               <div>
@@ -248,9 +246,9 @@ export default function TrialDashboard() {
         </header>
 
         {/* Main Content */}
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {/* Trial Status */}
-          <Card variant="glass" className="mb-8">
+          <Card variant="liquid" className="mb-8">
             <CardHeader>
               <CardTitle className="text-white">⏳ Tu demo ya está activa</CardTitle>
               <CardDescription className="text-gray-300">
@@ -281,7 +279,7 @@ export default function TrialDashboard() {
 
           {/* Features Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-            <Card variant="glass" className="hover:shadow-lg transition-shadow">
+            <Card variant="liquid" className="hover:shadow-lg transition-shadow">
               <CardHeader>
                 <CardTitle className="flex items-center text-white">
                   👩‍💼 Gestión de Empleados
@@ -306,7 +304,7 @@ export default function TrialDashboard() {
               </CardContent>
             </Card>
 
-            <Card variant="glass" className="hover:shadow-lg transition-shadow">
+            <Card variant="liquid" className="hover:shadow-lg transition-shadow">
               <CardHeader>
                 <CardTitle className="flex items-center text-white">
                   🕒 Control de Asistencia
@@ -333,7 +331,7 @@ export default function TrialDashboard() {
               </CardContent>
             </Card>
 
-            <Card variant="glass" className="hover:shadow-lg transition-shadow">
+            <Card variant="liquid" className="hover:shadow-lg transition-shadow">
               <CardHeader>
                 <CardTitle className="flex items-center text-white">
                   💸 Gestión de Nómina
@@ -361,7 +359,7 @@ export default function TrialDashboard() {
             </Card>
 
             {/* Gamificación Card */}
-            <Card variant="glass" className="hover:shadow-lg transition-shadow">
+            <Card variant="liquid" className="hover:shadow-lg transition-shadow">
               <CardHeader>
                 <CardTitle className="flex items-center text-white">
                   🏆 Gamificación
@@ -390,7 +388,7 @@ export default function TrialDashboard() {
           </div>
 
           {/* Next Steps */}
-          <Card variant="glass" className="mb-8">
+          <Card variant="liquid" className="mb-8">
             <CardHeader>
               <CardTitle className="text-white">⚡ Próximos pasos para automatizar tu RH (en menos de 24 h)</CardTitle>
               <CardDescription className="text-gray-300">
@@ -425,7 +423,7 @@ export default function TrialDashboard() {
           </Card>
 
           {/* Contact Info + Direct Upload CTA */}
-          <Card variant="glass">
+          <Card variant="liquid">
             <CardHeader>
               <CardTitle className="text-white">🔑 ¿Listo para dejar de hacer planillas manuales?</CardTitle>
               <CardDescription className="text-gray-300">
@@ -492,8 +490,8 @@ export default function TrialDashboard() {
               </div>
             </CardContent>
           </Card>
-        </main>
-      </div>
+        </div>
+      </PublicPageShell>
     </>
   )
 }

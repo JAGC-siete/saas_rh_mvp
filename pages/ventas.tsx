@@ -1,6 +1,5 @@
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
-import dynamic from 'next/dynamic'
 import {
   CheckCircleIcon,
   ArrowLeftIcon,
@@ -11,7 +10,8 @@ import {
   ChartBarIcon,
 } from '@heroicons/react/24/outline'
 import { Card, CardContent, CardTitle } from '../components/ui/card'
-import MainHeader from '../components/MainHeader'
+import PublicPageShell from '../components/landing/PublicPageShell'
+import BorderBeam from '../components/landing/BorderBeam'
 import type { QuotationQuote, QuotationRequest, QuotationResponse, QuotationUrgencyOffer } from '../lib/ventas/types'
 import { buildQuotationPlanSummary } from '../lib/ventas/quote-display'
 import { formatUrgencyOfferExpiry, urgencyOfferCtaText } from '../lib/ventas/urgency-offer'
@@ -74,11 +74,6 @@ function computeVentasErrors(fd: QuotationRequest): ValidationErrors {
 }
 
 export default function VentasPage() {
-  const CloudBackground = useMemo(
-    () => dynamic(() => import('../components/CloudBackground'), { ssr: false }),
-    []
-  )
-
   const [isLoading, setIsLoading] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
   const [errors, setErrors] = useState<ValidationErrors>({})
@@ -213,10 +208,9 @@ export default function VentasPage() {
 
   if (isSuccess) {
     return (
-      <div className="min-h-screen bg-app relative">
-        <CloudBackground />
-        <div className="container mx-auto px-4 py-8 relative z-10">
-          <div className="max-w-2xl mx-auto text-center pt-20">
+      <PublicPageShell showFooter={false} loginAlwaysVisible>
+        <div className="container mx-auto px-4 py-8">
+          <div className="max-w-2xl mx-auto text-center">
             <div className="mb-8">
               <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
                 <CheckCircleIcon className="h-12 w-12 text-green-400" />
@@ -235,7 +229,7 @@ export default function VentasPage() {
             </div>
 
             {quote && (
-              <Card variant="glass" className="mb-8">
+              <Card variant="liquid" className="mb-8">
                 <CardContent className="p-8">
                   {urgencyOffer?.is_active && (
                     <div className="mb-6 rounded-xl border border-amber-400/30 bg-amber-500/10 p-4 text-left">
@@ -307,7 +301,7 @@ export default function VentasPage() {
             )}
 
             {whatsappUrl && (
-              <Card variant="glass" className="mb-8 border-emerald-400/20">
+              <Card variant="liquid" className="mb-8 border-emerald-400/20">
                 <CardContent className="p-8">
                   <h2 className="text-2xl font-bold text-white mb-2">¿Listo para formalizar la contratación?</h2>
                   <p className="text-sm text-cyan-100/80 mb-6">
@@ -334,21 +328,15 @@ export default function VentasPage() {
             </Link>
           </div>
         </div>
-      </div>
+      </PublicPageShell>
     )
   }
 
   return (
-    <div className="min-h-screen bg-app flex flex-col relative overflow-hidden">
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-cyan-500/10 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-purple-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
-      </div>
-
-      <MainHeader enableScrollEffect={false} fixed={true} />
-      <main className="flex-grow flex items-center justify-center p-4 sm:p-6 lg:p-8 pt-24 relative z-10">
-        <Card className="w-full max-w-7xl bg-slate-800/40 backdrop-blur-xl border-white/20 shadow-2xl relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/20 via-blue-500/20 to-purple-500/20 opacity-50 blur-xl"></div>
+    <PublicPageShell showFooter={false} loginAlwaysVisible mainClassName="flex flex-col overflow-hidden">
+      <div className="flex-grow flex items-center justify-center p-4 sm:p-6 lg:p-8">
+        <BorderBeam className="w-full max-w-7xl">
+        <Card variant="liquid" className="w-full shadow-2xl relative overflow-hidden">
           <CardContent className="p-6 sm:p-8 lg:p-12 relative z-10">
             <div className="grid lg:grid-cols-12 gap-8 lg:gap-16 items-start">
               <div className="lg:col-span-6 text-center lg:text-left">
@@ -357,8 +345,12 @@ export default function VentasPage() {
                   Normativa Local: Honduras · El Salvador · Guatemala
                 </div>
 
-                <h1 className="text-4xl sm:text-5xl font-bold text-white mb-6 leading-tight">
-                  El fin del <span className="text-emerald-400">trabajo manual</span> empieza aquí
+                <h1 className="text-4xl sm:text-5xl font-bold mb-6 leading-tight">
+                  El fin del{' '}
+                  <span className="bg-gradient-to-r from-white via-emerald-200 to-emerald-400 bg-clip-text text-transparent">
+                    trabajo manual
+                  </span>{' '}
+                  empieza aquí
                 </h1>
 
                 <p className="text-lg text-cyan-100/90 mb-8 leading-relaxed">
@@ -614,7 +606,7 @@ export default function VentasPage() {
                     type="button"
                     onClick={handleSubmit}
                     disabled={isLoading || Object.keys(errors).length > 0}
-                    className="w-full mt-2 bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-4 rounded-xl font-bold inline-flex items-center justify-center transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed text-lg"
+                    className="w-full mt-2 btn-shiny bg-brand-500 hover:bg-brand-600 text-white px-8 py-4 rounded-xl font-bold inline-flex items-center justify-center transition-all shadow-[0_8px_30px_rgb(0,0,0,0.12)] disabled:opacity-50 disabled:cursor-not-allowed text-lg"
                   >
                     {isLoading ? (
                       <>
@@ -645,7 +637,8 @@ export default function VentasPage() {
             </div>
           </CardContent>
         </Card>
-      </main>
-    </div>
+        </BorderBeam>
+      </div>
+    </PublicPageShell>
   )
 }

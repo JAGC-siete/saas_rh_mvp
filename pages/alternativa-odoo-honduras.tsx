@@ -1,8 +1,7 @@
 import Head from 'next/head'
 import Link from 'next/link'
 import { useEffect } from 'react'
-import MainHeader from '../components/MainHeader'
-import DemoFooter from '../components/DemoFooter'
+import PublicPageShell from '../components/landing/PublicPageShell'
 import TrackedWhatsAppLink from '../components/TrackedWhatsAppLink'
 import { trackComparisonView } from '../lib/analytics/googleAds'
 import { getPageTitle } from '../lib/seo/title'
@@ -11,9 +10,6 @@ import SchemaMarkup from '../components/SEO/SchemaMarkup'
 import RelatedGuides from '../components/SEO/RelatedGuides'
 import { generateWebPageSchema } from '../lib/seo/schema'
 import { CheckCircleIcon, XMarkIcon } from '@heroicons/react/24/outline'
-import dynamic from 'next/dynamic'
-
-const CloudBackground = dynamic(() => import('../components/CloudBackground'), { ssr: false })
 
 export default function AlternativaOdooPage() {
   useEffect(() => {
@@ -74,7 +70,7 @@ export default function AlternativaOdooPage() {
   ]
 
   return (
-    <div className="min-h-screen bg-app text-white flex flex-col pt-16 sm:pt-20 md:pt-24 relative">
+    <PublicPageShell showSpotlight>
       <Head>
         <title>{pageTitle}</title>
         <meta name="description" content={pageDescription} />
@@ -85,8 +81,6 @@ export default function AlternativaOdooPage() {
         <meta name="keywords" content="alternativa a Odoo El Salvador Guatemala Honduras, Odoo vs nómina regional, MIPYMES Centroamérica, sistema nómina local" />
       </Head>
       <SchemaMarkup schema={webPageSchema} />
-
-      <MainHeader enableScrollEffect={true} fixed={true} />
 
       {/* Hero Section */}
       <section className="py-4 sm:py-6 md:py-8 relative overflow-hidden">
@@ -139,14 +133,14 @@ export default function AlternativaOdooPage() {
         </div>
       </section>
 
-      <main className="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 relative z-10">
+      <div className="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 relative z-10">
 
         {/* Comparison Table */}
         <section className="mb-12 sm:mb-16 md:mb-20">
           <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-6 sm:mb-8 text-center text-white">
             Odoo vs Humano SISU: Comparación Directa
           </h2>
-          <div className="glass-strong rounded-xl sm:rounded-2xl p-4 sm:p-6 md:p-8 overflow-x-auto border border-white/10">
+          <div className="glass-modern rounded-xl sm:rounded-2xl p-4 sm:p-6 md:p-8 overflow-x-auto border border-white/10">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-white/20">
@@ -193,21 +187,21 @@ export default function AlternativaOdooPage() {
             ¿Por qué elegir Humano SISU sobre Odoo?
           </h2>
           <div className="grid md:grid-cols-3 gap-4 sm:gap-6">
-            <div className="glass-strong rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-white/10 transition-all duration-300 hover:border-brand-400/40 hover:shadow-xl hover:shadow-brand-900/30">
+            <div className="glass-modern rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-white/10 transition-all duration-300 hover:border-brand-400/40 hover:shadow-xl hover:shadow-brand-900/30">
               <div className="text-4xl mb-4">🔐</div>
               <h3 className="text-lg sm:text-xl font-bold mb-2 text-white">Biométrico Integrado</h3>
               <p className="text-brand-200/90 text-sm sm:text-base">
                 Odoo no tiene integración biométrica nativa. Humano SISU incluye control de asistencia biométrico integrado con nómina en un solo sistema.
               </p>
             </div>
-            <div className="glass-strong rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-white/10 transition-all duration-300 hover:border-brand-400/40 hover:shadow-xl hover:shadow-brand-900/30">
+            <div className="glass-modern rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-white/10 transition-all duration-300 hover:border-brand-400/40 hover:shadow-xl hover:shadow-brand-900/30">
               <div className="text-4xl mb-4">🇭🇳</div>
               <h3 className="text-lg sm:text-xl font-bold mb-2 text-white">Localización profunda</h3>
               <p className="text-brand-200/90 text-sm sm:text-base">
                 Odoo es genérico y requiere configuración compleja. Humano SISU viene preconfigurado con deducciones y reglas nacionales para El Salvador, Guatemala y Honduras.
               </p>
             </div>
-            <div className="glass-strong rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-white/10 transition-all duration-300 hover:border-brand-400/40 hover:shadow-xl hover:shadow-brand-900/30">
+            <div className="glass-modern rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-white/10 transition-all duration-300 hover:border-brand-400/40 hover:shadow-xl hover:shadow-brand-900/30">
               <div className="text-4xl mb-4">⚡</div>
               <h3 className="text-lg sm:text-xl font-bold mb-2 text-white">Puesta en marcha express vs semanas</h3>
               <p className="text-brand-200/90 text-sm sm:text-base">
@@ -218,7 +212,7 @@ export default function AlternativaOdooPage() {
         </section>
 
         {/* CTA Section */}
-        <section className="text-center glass-strong rounded-xl sm:rounded-2xl p-6 sm:p-8 md:p-12 mb-12 sm:mb-16 border border-white/10">
+        <section className="text-center glass-modern rounded-xl sm:rounded-2xl p-6 sm:p-8 md:p-12 mb-12 sm:mb-16 border border-white/10">
           <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-4 text-white">
             ¿Listo para hacer el cambio?
           </h2>
@@ -249,7 +243,7 @@ export default function AlternativaOdooPage() {
           <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-6 sm:mb-8 text-center text-white">
             Migración desde Odoo
           </h2>
-          <div className="glass-strong rounded-xl sm:rounded-2xl p-4 sm:p-6 md:p-8 border border-white/10">
+          <div className="glass-modern rounded-xl sm:rounded-2xl p-4 sm:p-6 md:p-8 border border-white/10">
             <p className="text-base sm:text-lg text-brand-200/90 mb-4 sm:mb-6">
               Si actualmente usas Odoo y buscas una solución más simple, rápida y específica para tu país en la región, 
               podemos ayudarte a migrar tus datos.
@@ -273,11 +267,8 @@ export default function AlternativaOdooPage() {
         </section>
 
         <RelatedGuides currentPath="/alternativa-odoo-honduras" />
-      </main>
-
-      <CloudBackground />
-      <DemoFooter />
-    </div>
+      </div>
+    </PublicPageShell>
   )
 }
 

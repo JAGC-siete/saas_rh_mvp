@@ -1,7 +1,6 @@
 import Head from 'next/head'
 import Link from 'next/link'
-import MainHeader from '../components/MainHeader'
-import DemoFooter from '../components/DemoFooter'
+import PublicPageShell from '../components/landing/PublicPageShell'
 import TrackedWhatsAppLink from '../components/TrackedWhatsAppLink'
 import { getPageTitle } from '../lib/seo/title'
 import { getPageDescription } from '../lib/seo/description'
@@ -9,9 +8,6 @@ import SchemaMarkup from '../components/SEO/SchemaMarkup'
 import RelatedGuides from '../components/SEO/RelatedGuides'
 import { generateWebPageSchema } from '../lib/seo/schema'
 import { ClockIcon, CheckCircleIcon } from '@heroicons/react/24/outline'
-import dynamic from 'next/dynamic'
-
-const CloudBackground = dynamic(() => import('../components/CloudBackground'), { ssr: false })
 
 export default function Implementacion48HorasPage() {
   const pageTitle = getPageTitle('implementacion48h')
@@ -90,7 +86,7 @@ export default function Implementacion48HorasPage() {
   ]
 
   return (
-    <div className="min-h-screen bg-app text-white flex flex-col pt-16 sm:pt-20 md:pt-24 relative">
+    <PublicPageShell showSpotlight>
       <Head>
         <title>{pageTitle}</title>
         <meta name="description" content={pageDescription} />
@@ -101,8 +97,6 @@ export default function Implementacion48HorasPage() {
         <meta name="keywords" content="implementación nómina express, sistema nómina rápido regional, implementación rápida nómina, setup nómina El Salvador Guatemala Honduras" />
       </Head>
       <SchemaMarkup schema={webPageSchema} />
-
-      <MainHeader enableScrollEffect={true} fixed={true} />
 
       {/* Hero Section */}
       <section className="py-4 sm:py-6 md:py-8 relative overflow-hidden">
@@ -149,11 +143,11 @@ export default function Implementacion48HorasPage() {
         </div>
       </section>
 
-      <main className="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 relative z-10">
+      <div className="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 relative z-10">
 
         {/* Comparison */}
         <section className="mb-12 sm:mb-16 md:mb-20 grid md:grid-cols-2 gap-4 sm:gap-6">
-          <div className="glass-strong rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-red-500/20">
+          <div className="glass-modern rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-red-500/20">
             <h2 className="text-xl sm:text-2xl font-bold mb-4 text-red-400">❌ Otros Sistemas</h2>
             <ul className="space-y-3 text-gray-300">
               <li className="flex items-start gap-2">
@@ -174,7 +168,7 @@ export default function Implementacion48HorasPage() {
               </li>
             </ul>
           </div>
-          <div className="glass-strong rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-green-500/20">
+          <div className="glass-modern rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-green-500/20">
             <h2 className="text-xl sm:text-2xl font-bold mb-4 text-green-400">✅ Humano SISU</h2>
             <ul className="space-y-3 text-gray-300">
               <li className="flex items-start gap-2">
@@ -204,7 +198,7 @@ export default function Implementacion48HorasPage() {
           </h2>
           <div className="space-y-4 sm:space-y-6">
             {steps.map((step, index) => (
-              <div key={index} className="glass-strong rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-white/10">
+              <div key={index} className="glass-modern rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-white/10">
                 <div className="flex items-start gap-4">
                   <div className="flex-shrink-0 text-4xl">{step.icon}</div>
                   <div className="flex-1">
@@ -229,7 +223,7 @@ export default function Implementacion48HorasPage() {
           </h2>
           <div className="grid md:grid-cols-3 gap-4 sm:gap-6">
             {guarantees.map((guarantee, index) => (
-              <div key={index} className="glass-strong rounded-xl sm:rounded-2xl p-4 sm:p-6 text-center border border-white/10 transition-all duration-300 hover:border-brand-400/40 hover:shadow-xl hover:shadow-brand-900/30">
+              <div key={index} className="glass-modern rounded-xl sm:rounded-2xl p-4 sm:p-6 text-center border border-white/10 transition-all duration-300 hover:border-brand-400/40 hover:shadow-xl hover:shadow-brand-900/30">
                 <div className="text-4xl mb-4">{guarantee.icon}</div>
                 <h3 className="text-xl font-bold mb-2">{guarantee.title}</h3>
                 <p className="text-gray-300">{guarantee.description}</p>
@@ -245,7 +239,7 @@ export default function Implementacion48HorasPage() {
           </h2>
           <div className="grid md:grid-cols-2 gap-4 sm:gap-6">
             {testimonials.map((testimonial, index) => (
-              <div key={index} className="glass-strong rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-white/10">
+              <div key={index} className="glass-modern rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-white/10">
                 <p className="text-gray-300 italic mb-4">&ldquo;{testimonial.quote}&rdquo;</p>
                 <div className="flex items-center justify-between">
                   <div>
@@ -262,7 +256,7 @@ export default function Implementacion48HorasPage() {
         </section>
 
         {/* CTA Section */}
-        <section className="text-center glass-strong rounded-xl sm:rounded-2xl p-6 sm:p-8 md:p-12 mb-12 sm:mb-16 border border-white/10">
+        <section className="text-center glass-modern rounded-xl sm:rounded-2xl p-6 sm:p-8 md:p-12 mb-12 sm:mb-16 border border-white/10">
           <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-4 text-white">
             ¿Listo para una puesta en marcha express?
           </h2>
@@ -289,11 +283,8 @@ export default function Implementacion48HorasPage() {
         </section>
 
         <RelatedGuides currentPath="/implementacion-48-horas" />
-      </main>
-
-      <CloudBackground />
-      <DemoFooter />
-    </div>
+      </div>
+    </PublicPageShell>
   )
 }
 

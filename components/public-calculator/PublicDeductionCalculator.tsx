@@ -1,17 +1,13 @@
 import { useEffect, useState } from 'react'
 import Head from 'next/head'
 import Link from 'next/link'
-import dynamic from 'next/dynamic'
-import MainHeader from '../MainHeader'
-import DemoFooter from '../DemoFooter'
+import PublicPageShell from '../landing/PublicPageShell'
 import TrackedWhatsAppLink from '../TrackedWhatsAppLink'
 import { appendUtmParams, buildDemoWhatsAppUrl } from '../../lib/public-calculator/utm'
 import SchemaMarkup from '../SEO/SchemaMarkup'
 import { validateFormInputs } from '../../lib/deduction-validator/client-validation'
 import type { PublicCalculatorConfig, PublicCalculatorDeductionKey } from '../../lib/public-calculator/config'
 import { generateFAQPageSchema, generateWebPageSchema, generateBreadcrumbListSchema } from '../../lib/seo/schema'
-
-const CloudBackground = dynamic(() => import('../CloudBackground'), { ssr: false })
 
 interface DeductionResult {
   grossSalary: number
@@ -308,7 +304,7 @@ export default function PublicDeductionCalculator({ config }: { config: PublicCa
   }
 
   return (
-    <div className="min-h-screen bg-app pt-16 sm:pt-20 md:pt-24 relative">
+    <PublicPageShell mainClassName={result ? 'pb-28 sm:pb-24' : ''}>
       <Head>
         <title>{config.seo.title}</title>
         <meta name="description" content={config.seo.description} />
@@ -320,9 +316,7 @@ export default function PublicDeductionCalculator({ config }: { config: PublicCa
       </Head>
       <SchemaMarkup schema={[webPageSchema, faqSchema, breadcrumbSchema]} />
 
-      <MainHeader enableScrollEffect fixed />
-
-      <main className={`max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 relative z-10 ${result ? 'pb-28 sm:pb-24' : ''}`}>
+      <div className={`max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 relative z-10 ${result ? 'pb-28 sm:pb-24' : ''}`}>
         <div className="text-center mb-8 sm:mb-12">
           <div className="flex flex-wrap justify-center gap-2 sm:gap-3 md:gap-4 mb-6 animate-fade-up-subtle">
             {config.hero.badges.map((badge) => (
@@ -674,7 +668,7 @@ export default function PublicDeductionCalculator({ config }: { config: PublicCa
             </div>
           )}
         </div>
-      </main>
+      </div>
 
       {result && (
         <div className="fixed bottom-0 inset-x-0 z-40 p-3 sm:p-4 bg-slate-900/95 border-t border-white/10 backdrop-blur-md shadow-2xl">
@@ -687,9 +681,6 @@ export default function PublicDeductionCalculator({ config }: { config: PublicCa
           </div>
         </div>
       )}
-
-      <CloudBackground />
-      <DemoFooter />
-    </div>
+    </PublicPageShell>
   )
 }

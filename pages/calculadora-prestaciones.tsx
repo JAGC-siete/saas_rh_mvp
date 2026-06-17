@@ -1,16 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import Head from 'next/head'
 import Link from 'next/link'
-import dynamic from 'next/dynamic'
-import MainHeader from '../components/MainHeader'
-import DemoFooter from '../components/DemoFooter'
+import PublicPageShell from '../components/landing/PublicPageShell'
 import SchemaMarkup from '../components/SEO/SchemaMarkup'
 import { generateWebPageSchema } from '../lib/seo/schema'
 import { generateTitle } from '../lib/seo/title'
 import { generateDescription } from '../lib/seo/description'
 import type { MotivoSalida } from '../lib/payroll/cesantias'
-
-const CloudBackground = dynamic(() => import('../components/CloudBackground'), { ssr: false })
 
 type LiquidacionResponse = import('../lib/payroll/cesantias').LiquidacionResult
 
@@ -566,7 +562,7 @@ export default function CalculadoraPrestacionesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-app pt-16 sm:pt-20 md:pt-24 relative">
+    <PublicPageShell>
       <Head>
         <title>{pageTitle}</title>
         <meta name="description" content={pageDescription} />
@@ -581,9 +577,7 @@ export default function CalculadoraPrestacionesPage() {
       </Head>
       <SchemaMarkup schema={webPageSchema} />
 
-      <MainHeader enableScrollEffect={true} fixed={true} />
-
-      <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 relative z-10">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 relative z-10">
         <div className="text-center mb-8 sm:mb-12">
           <div className="flex flex-wrap justify-center gap-2 sm:gap-3 md:gap-4 mb-6 animate-fade-up-subtle">
             <span className="px-3 py-1 bg-green-500/20 text-green-300 text-xs rounded-full border border-green-500/30">
@@ -1158,11 +1152,8 @@ export default function CalculadoraPrestacionesPage() {
             Ver todas las calculadoras →
           </Link>
         </div>
-      </main>
-
-      <CloudBackground />
-      <DemoFooter />
-    </div>
+      </div>
+    </PublicPageShell>
   )
 }
 
