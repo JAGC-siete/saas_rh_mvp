@@ -38,7 +38,7 @@ describe('lead registro notification', () => {
     assert.equal(normalizeWhatsAppForWaMe('50298765432', 'GTM'), '50298765432')
   })
 
-  it('buildLeadRegistroNotificationHtml uses institutional ventas styling', () => {
+  it('buildLeadRegistroNotificationHtml uses liquid brand styling', () => {
     const html = buildLeadRegistroNotificationHtml(
       {
         source: 'info',
@@ -51,7 +51,7 @@ describe('lead registro notification', () => {
     )
 
     assert.ok(html.includes('linear-gradient'))
-    assert.ok(html.includes('#0b4fa1'))
+    assert.ok(html.includes('#1e3a8a'))
     assert.ok(html.includes('Victor Obed Torres Paz'))
     assert.ok(html.includes('9269-5154'))
     assert.ok(html.includes('Contactar vía WhatsApp'))

@@ -10,6 +10,7 @@ import {
   groupKeyForRow,
   groupPlanillaLikeRows
 } from './pdf-layout'
+import { defaultPdfPrimaryColor, PDF } from '../pdf/liquid-theme'
 
 export interface PlanillaItem {
   id: string
@@ -95,9 +96,7 @@ export async function generateConsolidatedPayrollPDF(
       const pdfGroupBy: PayrollPdfGroupBy = layout?.groupBy ?? 'none'
 
       const headerPrimary =
-        reportVisual?.primaryColor && /^#[0-9A-Fa-f]{6}$/.test(reportVisual.primaryColor)
-          ? reportVisual.primaryColor
-          : '#0b4fa1'
+        defaultPdfPrimaryColor(reportVisual?.primaryColor)
       
       // Configuración de payroll con valores por defecto
       const currency = payrollConfig?.currency || 'HNL'

@@ -1,4 +1,5 @@
 import { Buffer } from 'buffer'
+import { PDF, drawLiquidPdfHeader } from '../pdf/liquid-theme'
 
 export interface DeductionReportData {
   salary: number
@@ -56,24 +57,19 @@ export async function generateDeductionReportPDF(
         }
       })
 
-      // Header
-      const pageWidth = doc.page.width
-      const pageHeight = doc.page.height
-      doc.rect(0, 0, pageWidth, 80).fill('#0b4fa1')
-      doc.fillColor('white')
-      doc.fontSize(20).text('HUMANO SISU', 30, 15, { align: 'center', width: 535 })
-      doc.fontSize(14).text('Sistema Hondureño de Recursos Humanos', 30, 40, { align: 'center', width: 535 })
-      doc.fontSize(12).text('Reporte de Validación de Deducciones de Nómina', 30, 60, { align: 'center', width: 535 })
-      doc.fillColor('#000000')
-
-      let yPos = 100
+      let yPos = drawLiquidPdfHeader(doc, {
+        title: 'Reporte de Validación de Deducciones de Nómina',
+        subtitle: 'Sistema de Recursos Humanos — Honduras',
+      })
 
       // Información del cálculo
-      doc.fontSize(12).fillColor('#000000').text('INFORMACIÓN DEL CÁLCULO:', 30, yPos)
+      const pageWidth = doc.page.width
+      const pageHeight = doc.page.height
+      doc.fontSize(12).fillColor(PDF.bodyText).text('INFORMACIÓN DEL CÁLCULO:', 30, yPos)
       yPos += 20
-      doc.rect(30, yPos, pageWidth - 60, 70).stroke('#000000')
+      doc.rect(30, yPos, pageWidth - 60, 70).stroke(PDF.panelBorder)
       
-      doc.fontSize(10).fillColor('#000000')
+      doc.fontSize(10).fillColor(PDF.bodyText)
       doc.text('Modalidad de Pago:', 40, yPos + 8)
       doc.text(data.paymentModality === 'quincenal' ? 'Quincenal' : 'Mensual', 180, yPos + 8)
       
@@ -90,23 +86,23 @@ export async function generateDeductionReportPDF(
 
       // Constantes fiscales
       yPos += 85
-      doc.fontSize(10).fillColor('#666666')
+      doc.fontSize(10).fillColor(PDF.bodyMuted)
       doc.text(`Salario Mínimo (${data.year}): ${formatHNL(data.constants.minimumWage)}`, 40, yPos)
       doc.text(`Tope IHSS (${data.year}): ${formatHNL(data.constants.ihssCeiling)}`, 300, yPos)
 
       // Resumen de resultados
       yPos += 25
-      doc.fontSize(12).fillColor('#000000').text('RESUMEN DE RESULTADOS:', 30, yPos)
+      doc.fontSize(12).fillColor(PDF.bodyText).text('RESUMEN DE RESULTADOS:', 30, yPos)
       yPos += 20
 
       // Salario neto destacado
-      doc.rect(30, yPos, pageWidth - 60, 35).fill('#e8f5e9').stroke('#4caf50')
-      doc.fontSize(11).fillColor('#2e7d32').text('SALARIO NETO', 40, yPos + 8)
-      doc.fontSize(16).fillColor('#1b5e20').text(formatHNL(data.netSalary), 40, yPos + 20)
+      doc.rect(30, yPos, pageWidth - 60, 35).fill(PDF.successBg).stroke(PDF.successBorder)
+      doc.fontSize(11).fillColor(PDF.successText).text('SALARIO NETO', 40, yPos + 8)
+      doc.fontSize(16).fillColor(PDF.success).text(formatHNL(data.netSalary), 40, yPos + 20)
 
       // Desglose de deducciones
       yPos += 50
-      doc.fontSize(12).fillColor('#000000').text('DESGLOSE DE DEDUCCIONES:', 30, yPos)
+      doc.fontSize(12).fillColor(PDF.bodyText).text('DESGLOSE DE DEDUCCIONES:', 30, yPos)
       yPos += 20
 
       // Tabla de deducciones
@@ -122,12 +118,12 @@ export async function generateDeductionReportPDF(
           yPos = 30
         }
 
-        doc.rect(30, yPos, pageWidth - 60, 35).stroke('#000000')
-        doc.fontSize(10).fillColor('#000000')
+        doc.rect(30, yPos, pageWidth - 60, 35).stroke(PDF.panelBorder)
+        doc.fontSize(10).fillColor(PDF.bodyText)
         doc.text(ded.label, 40, yPos + 8)
-        doc.fontSize(8).fillColor('#666666').text(ded.description, 40, yPos + 18)
-        doc.fontSize(11).fillColor('#000000').text(formatHNL(ded.amount), 450, yPos + 8, { align: 'right', width: 80 })
-        doc.fontSize(9).fillColor('#666666').text(`${ded.percentage.toFixed(2)}%`, 450, yPos + 18, { align: 'right', width: 80 })
+        doc.fontSize(8).fillColor(PDF.bodyMuted).text(ded.description, 40, yPos + 18)
+        doc.fontSize(11).fillColor(PDF.bodyText).text(formatHNL(ded.amount), 450, yPos + 8, { align: 'right', width: 80 })
+        doc.fontSize(9).fillColor(PDF.bodyMuted).text(`${ded.percentage.toFixed(2)}%`, 450, yPos + 18, { align: 'right', width: 80 })
         yPos += 40
       })
 
@@ -156,7 +152,7 @@ export async function generateDeductionReportPDF(
         footerY + 8,
         { align: 'center', width: 535 }
       )
-      doc.fontSize(10).fillColor('#0b4fa1').text(
+      doc.fontSize(10).fillColor(PDF.accent).text(
         'Deja de calcular en Excel. Automatiza IHSS, RAP e ISR sin errores.',
         30,
         footerY + 24,

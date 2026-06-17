@@ -16,6 +16,7 @@ import {
 } from './email-template-parts'
 import { VENTAS_BRAND as B, buildTerminalsDisplayLabel } from './brand-styles'
 import { getVentasModalityDefinition } from './modality-includes'
+import { wrapLiquidEmailFragment } from '../emails/liquid-layout'
 
 function firstNameFromContact(contactName?: string): string {
   const trimmed = contactName?.trim()
@@ -79,11 +80,10 @@ export function generateVentasQuotationEmailHTML(params: {
   const refLabel = buildVentasRefLabel(companyName, contactName)
 
   const urgencyPitch = summary.urgency.isActive
-    ? `<p style="margin: 0 0 16px 0; line-height: 1.55; color: ${B.textBody}; font-size: 15px; font-family: Arial, Helvetica, sans-serif;">${escapeVentasHtml(buildUrgencyOfferPitchText(quote.billing_modality))}</p>`
+    ? `<p style="margin: 0 0 16px 0; line-height: 1.55; color: ${B.emailTextSoft}; font-size: 15px; font-family: Montserrat, Arial, Helvetica, sans-serif;">${escapeVentasHtml(buildUrgencyOfferPitchText(quote.billing_modality))}</p>`
     : ''
 
-  return `
-    <div style="font-family: Arial, Helvetica, sans-serif; max-width: 560px; margin: 0 auto; padding: 20px; color: ${B.text}; background: #ffffff;">
+  const body = `
       ${buildEmailHeaderBlock(quoteLabel, refLabel)}
       ${buildClientFichaHtml({
         companyName: companyLabel,
@@ -93,14 +93,15 @@ export function generateVentasQuotationEmailHTML(params: {
         terminalsCount: quote.terminals_count,
         isAnnual,
       })}
-      <p style="margin: 0 0 14px 0; font-size: 18px; line-height: 1.4; font-weight: bold; color: ${B.text};">${opening}</p>
+      <p style="margin: 0 0 14px 0; font-size: 18px; line-height: 1.4; font-weight: bold; color: ${B.emailText};">${opening}</p>
       ${urgencyPitch}
       ${buildPriceCardHtml({ quote, sentAt, now })}
       <div style="text-align: center; margin: 8px 0 0 0;">
-        <a href="${supportWhatsAppUrl}" style="display: inline-block; padding: 14px 28px; background-color: ${B.accent}; color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 15px; font-family: Arial, Helvetica, sans-serif;">Continuar por WhatsApp</a>
+        <a href="${supportWhatsAppUrl}" style="display: inline-block; padding: 14px 28px; background-color: ${B.accent}; color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 15px; font-family: Montserrat, Arial, Helvetica, sans-serif;">Continuar por WhatsApp</a>
       </div>
-    </div>
   `
+
+  return wrapLiquidEmailFragment(body)
 }
 
 export function generateVentasQuotationEmailText(params: {

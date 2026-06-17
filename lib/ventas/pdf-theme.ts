@@ -1,10 +1,12 @@
+import { LIQUID } from '../brand/liquid-tokens'
 import { VENTAS_BRAND } from './brand-styles'
 
-/** PDF palette — mirrors institutional email blocks. */
+/** PDF palette — mirrors liquid / ventas email blocks. */
 export const VENTAS_PDF_THEME = {
   ...VENTAS_BRAND,
-  textLight: '#94a3b8',
+  textLight: LIQUID.textMuted,
   white: '#ffffff',
+  headerBg: LIQUID.brand900,
 } as const
 
 /** Unified PDF type scale (Helvetica family only). */

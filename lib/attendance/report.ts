@@ -1,4 +1,5 @@
 import { Buffer } from 'buffer'
+import { LIQUID } from '../brand/liquid-tokens'
 import { formatDateForHonduras, nowInHonduras, formatDateTimeForHonduras, formatTimeDisplay, formatDateOnlyForHonduras } from '../timezone'
 
 export interface AttendanceItem {
@@ -72,7 +73,7 @@ export async function generateConsolidatedAttendancePDF(
       const PDFDocument = require('pdfkit')
       const headerColor = options?.primaryColor && /^#[0-9A-Fa-f]{6}$/.test(options.primaryColor)
         ? options.primaryColor
-        : '#1e40af'
+        : LIQUID.brand900
       const companyName = (options?.companyDisplayName || 'Empresa').trim()
       const companyLabel = companyName.toUpperCase()
 

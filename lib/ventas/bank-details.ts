@@ -1,3 +1,5 @@
+import { VENTAS_BRAND as B } from './brand-styles'
+
 export type VentasBankDetails = {
   clientName?: string
   clientDni?: string
@@ -72,8 +74,8 @@ function bankRow(label: string, value?: string): string {
   if (!value?.trim()) return ''
   return `
     <tr>
-      <td style="padding: 8px 0; color: #5c6570; font-size: 14px;">${escapeHtml(label)}</td>
-      <td style="padding: 8px 0; text-align: right; color: #1a1a1a; font-family: monospace;">${escapeHtml(value.trim())}</td>
+      <td style="padding: 8px 0; color: ${B.emailTextMuted}; font-size: 14px;">${escapeHtml(label)}</td>
+      <td style="padding: 8px 0; text-align: right; color: ${B.emailText}; font-family: monospace;">${escapeHtml(value.trim())}</td>
     </tr>
   `
 }
@@ -81,13 +83,13 @@ function bankRow(label: string, value?: string): string {
 /** Bloque HTML para incrustar en cotización u otros correos comerciales. */
 export function buildBankDetailsInlineHtml(bank: VentasBankDetails, _contactName?: string): string {
   return `
-    <div style="background: #f8fafc; padding: 18px 20px; border-radius: 8px; margin: 22px 0; border-left: 4px solid #0b4fa1;">
-      <p style="margin: 0 0 10px 0; font-size: 15px; font-weight: bold; color: #111;">Condiciones de Implementación y Pago</p>
-      <p style="margin: 0 0 16px 0; font-size: 14px; line-height: 1.6; color: #333;">
+    <div style="background: ${B.emailGlassBg}; padding: 18px 20px; border-radius: 16px; margin: 22px 0; border: 1px solid ${B.emailGlassBorder}; border-left: 4px solid ${B.emailAccent};">
+      <p style="margin: 0 0 10px 0; font-size: 15px; font-weight: bold; color: ${B.emailText};">Condiciones de Implementación y Pago</p>
+      <p style="margin: 0 0 16px 0; font-size: 14px; line-height: 1.6; color: ${B.emailTextSoft};">
         El tiempo de implementación máximo es de <strong>3 a 5 días hábiles</strong> una vez recibido el depósito. Al confirmar la decisión, el siguiente paso es realizar el depósito del <strong>adelanto del 50%</strong> sobre la primera cuota/suscripción inicial.
       </p>
-      <p style="margin: 0 0 10px 0; font-size: 15px; font-weight: bold; color: #111;">Datos Bancarios para el Depósito</p>
-      <ul style="margin: 0 0 16px 0; padding: 0 0 0 18px; color: #333; font-size: 14px; line-height: 1.7;">
+      <p style="margin: 0 0 10px 0; font-size: 15px; font-weight: bold; color: ${B.emailText};">Datos Bancarios para el Depósito</p>
+      <ul style="margin: 0 0 16px 0; padding: 0 0 0 18px; color: ${B.emailTextSoft}; font-size: 14px; line-height: 1.7;">
         ${bank.bacAccount ? `<li style="margin-bottom: 6px;"><strong>Banco:</strong> BAC Credomatic</li>` : ''}
         ${bank.clientName ? `<li style="margin-bottom: 6px;"><strong>Cliente:</strong> ${escapeHtml(bank.clientName)}</li>` : ''}
         ${bank.clientDni ? `<li style="margin-bottom: 6px;"><strong>DNI:</strong> ${escapeHtml(bank.clientDni)}</li>` : ''}
@@ -95,9 +97,9 @@ export function buildBankDetailsInlineHtml(bank: VentasBankDetails, _contactName
         ${bank.banpaisAccount ? `<li style="margin-bottom: 6px;"><strong>Número de cuenta Banpais:</strong> <span style="font-family: monospace;">${escapeHtml(bank.banpaisAccount)}</span></li>` : ''}
         ${bank.atlantidaAccount ? `<li style="margin-bottom: 6px;"><strong>Número de cuenta Atlántida:</strong> <span style="font-family: monospace;">${escapeHtml(bank.atlantidaAccount)}</span></li>` : ''}
       </ul>
-      <p style="margin: 0 0 8px 0; font-size: 15px; font-weight: bold; color: #111;">¿Cómo reportar tu pago para agendar la instalación?</p>
-      <p style="margin: 0 0 8px 0; font-size: 14px; line-height: 1.6; color: #333;">Puedes hacerlo de dos formas sumamente sencillas:</p>
-      <ol style="margin: 0; padding: 0 0 0 18px; color: #333; font-size: 14px; line-height: 1.7;">
+      <p style="margin: 0 0 8px 0; font-size: 15px; font-weight: bold; color: ${B.emailText};">¿Cómo reportar tu pago para agendar la instalación?</p>
+      <p style="margin: 0 0 8px 0; font-size: 14px; line-height: 1.6; color: ${B.emailTextSoft};">Puedes hacerlo de dos formas sumamente sencillas:</p>
+      <ol style="margin: 0; padding: 0 0 0 18px; color: ${B.emailTextSoft}; font-size: 14px; line-height: 1.7;">
         <li style="margin-bottom: 6px;">Responde directamente a este correo adjuntando la foto o PDF de tu comprobante de depósito.</li>
         <li style="margin-bottom: 6px;">Envía el comprobante directamente a tu asesor asignado por WhatsApp haciendo clic en el botón de abajo.</li>
       </ol>

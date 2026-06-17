@@ -15,13 +15,13 @@ export function escapeVentasHtml(v: string): string {
 
 export function buildEmailHeaderBlock(quoteLabel: string, refLabel: string): string {
   return `
-    <div style="border-bottom: 3px solid ${B.primary}; padding-bottom: 14px; margin-bottom: 18px;">
+    <div style="border-bottom: 2px solid ${B.emailGlassBorder}; padding-bottom: 14px; margin-bottom: 18px;">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse;">
         <tr>
-          <td style="font-family: Arial, Helvetica, sans-serif; font-size: 22px; font-weight: bold; color: ${B.primary}; vertical-align: bottom;">
+          <td style="font-family: Montserrat, Arial, Helvetica, sans-serif; font-size: 22px; font-weight: bold; color: ${B.emailText}; vertical-align: bottom;">
             Humano SISU
           </td>
-          <td style="font-family: Arial, Helvetica, sans-serif; font-size: 11px; color: ${B.textMuted}; text-align: right; vertical-align: bottom; letter-spacing: 0.03em;">
+          <td style="font-family: Montserrat, Arial, Helvetica, sans-serif; font-size: 11px; color: ${B.emailTextMuted}; text-align: right; vertical-align: bottom; letter-spacing: 0.03em;">
             ${escapeVentasHtml(quoteLabel)}&nbsp;&nbsp;//&nbsp;&nbsp;REF: ${escapeVentasHtml(refLabel)}
           </td>
         </tr>
@@ -44,26 +44,26 @@ export function buildClientFichaHtml(params: {
   })
 
   return `
-    <div style="background: ${B.panelBgAlt}; border: 1px solid ${B.panelBorder}; border-radius: 8px; padding: 14px 16px; margin: 0 0 18px 0; font-family: Arial, Helvetica, sans-serif;">
-      <p style="margin: 0 0 12px 0; font-size: 11px; color: ${B.textMuted}; text-transform: uppercase; letter-spacing: 0.04em;">
+    <div style="background: ${B.emailGlassBg}; border: 1px solid ${B.emailGlassBorder}; border-radius: 16px; padding: 14px 16px; margin: 0 0 18px 0; font-family: Montserrat, Arial, Helvetica, sans-serif;">
+      <p style="margin: 0 0 12px 0; font-size: 11px; color: ${B.emailTextMuted}; text-transform: uppercase; letter-spacing: 0.04em;">
         Atención: ${escapeVentasHtml(params.contactName)}
       </p>
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse;">
         <tr>
-          <td width="50%" style="padding: 0 8px 4px 0; font-size: 10px; color: ${B.textMuted}; text-transform: uppercase; letter-spacing: 0.04em;">Empresa</td>
-          <td width="50%" style="padding: 0 0 4px 0; font-size: 10px; color: ${B.textMuted}; text-transform: uppercase; letter-spacing: 0.04em;">Alcance</td>
+          <td width="50%" style="padding: 0 8px 4px 0; font-size: 10px; color: ${B.emailTextMuted}; text-transform: uppercase; letter-spacing: 0.04em;">Empresa</td>
+          <td width="50%" style="padding: 0 0 4px 0; font-size: 10px; color: ${B.emailTextMuted}; text-transform: uppercase; letter-spacing: 0.04em;">Alcance</td>
         </tr>
         <tr>
-          <td style="padding: 0 8px 10px 0; font-size: 14px; font-weight: bold; color: ${B.text}; vertical-align: top;">${escapeVentasHtml(params.companyName)}</td>
-          <td style="padding: 0 0 10px 0; font-size: 14px; font-weight: bold; color: ${B.text}; vertical-align: top;">${escapeVentasHtml(params.tierLabel)}</td>
+          <td style="padding: 0 8px 10px 0; font-size: 14px; font-weight: bold; color: ${B.emailText}; vertical-align: top;">${escapeVentasHtml(params.companyName)}</td>
+          <td style="padding: 0 0 10px 0; font-size: 14px; font-weight: bold; color: ${B.emailText}; vertical-align: top;">${escapeVentasHtml(params.tierLabel)}</td>
         </tr>
         <tr>
-          <td style="padding: 0 8px 4px 0; font-size: 10px; color: ${B.textMuted}; text-transform: uppercase; letter-spacing: 0.04em;">País</td>
-          <td style="padding: 0 0 4px 0; font-size: 10px; color: ${B.textMuted}; text-transform: uppercase; letter-spacing: 0.04em;"># de terminales</td>
+          <td style="padding: 0 8px 4px 0; font-size: 10px; color: ${B.emailTextMuted}; text-transform: uppercase; letter-spacing: 0.04em;">País</td>
+          <td style="padding: 0 0 4px 0; font-size: 10px; color: ${B.emailTextMuted}; text-transform: uppercase; letter-spacing: 0.04em;"># de terminales</td>
         </tr>
         <tr>
-          <td style="padding: 0 8px 0 0; font-size: 14px; color: ${B.textBody}; vertical-align: top;">${escapeVentasHtml(params.countryLabel)}</td>
-          <td style="padding: 0; font-size: 14px; color: ${B.textBody}; vertical-align: top;">${escapeVentasHtml(terminals)}</td>
+          <td style="padding: 0 8px 0 0; font-size: 14px; color: ${B.emailTextSoft}; vertical-align: top;">${escapeVentasHtml(params.countryLabel)}</td>
+          <td style="padding: 0; font-size: 14px; color: ${B.emailTextSoft}; vertical-align: top;">${escapeVentasHtml(terminals)}</td>
         </tr>
       </table>
     </div>
@@ -85,32 +85,32 @@ export function buildPriceCardHtml(params: {
     const priceDisplay = buildUrgencyPriceDisplay({ quote: params.quote, summary })
 
     if (priceDisplay) {
-      inner += `<p style="margin: 0 0 4px 0; font-size: 12px; color: ${B.textMuted};">${escapeVentasHtml(priceDisplay.listPriceLabel)}</p>`
-      inner += `<p style="margin: 0 0 12px 0; font-size: 14px; color: ${B.textMuted}; text-decoration: line-through;">${escapeVentasHtml(priceDisplay.listPriceValue)}</p>`
-      inner += `<p style="margin: 0 0 8px 0; font-size: 13px; font-weight: bold; color: ${B.textBody};">${escapeVentasHtml(priceDisplay.investmentLabel)}</p>`
+      inner += `<p style="margin: 0 0 4px 0; font-size: 12px; color: ${B.emailTextMuted};">${escapeVentasHtml(priceDisplay.listPriceLabel)}</p>`
+      inner += `<p style="margin: 0 0 12px 0; font-size: 14px; color: ${B.emailTextMuted}; text-decoration: line-through;">${escapeVentasHtml(priceDisplay.listPriceValue)}</p>`
+      inner += `<p style="margin: 0 0 8px 0; font-size: 13px; font-weight: bold; color: ${B.emailTextSoft};">${escapeVentasHtml(priceDisplay.investmentLabel)}</p>`
       inner += `<p style="margin: 0 0 8px 0; font-size: 26px; font-weight: bold; color: ${B.accent}; line-height: 1.2;">${escapeVentasHtml(priceDisplay.totalValue)}</p>`
       inner += `<p style="margin: 0; font-size: 13px; color: ${B.accentDark};">${escapeVentasHtml(priceDisplay.savingsText)}</p>`
     }
   } else {
     for (const line of summary.lines) {
-      inner += `<p style="margin: 0 0 6px 0; font-size: 13px; color: ${B.textBody};">${escapeVentasHtml(line.label)}: ${escapeVentasHtml(line.value)}</p>`
+      inner += `<p style="margin: 0 0 6px 0; font-size: 13px; color: ${B.emailTextSoft};">${escapeVentasHtml(line.label)}: ${escapeVentasHtml(line.value)}</p>`
     }
     inner += `<p style="margin: 8px 0 4px 0; font-size: 24px; font-weight: bold; color: ${B.accent};">${escapeVentasHtml(summary.totalValue)}</p>`
-    inner += `<p style="margin: 0; font-size: 13px; font-weight: bold; color: ${B.text};">${escapeVentasHtml(summary.totalLabel)}</p>`
+    inner += `<p style="margin: 0; font-size: 13px; font-weight: bold; color: ${B.emailText};">${escapeVentasHtml(summary.totalLabel)}</p>`
   }
 
   const expiryBlock = summary.expiryText
-    ? `<div style="background: ${B.urgencyBg}; border: 1px solid ${B.urgencyBorder}; border-radius: 6px; padding: 10px 12px; margin: 14px 0 0 0; text-align: center; font-size: 12px; color: ${B.urgencyText}; font-weight: bold;">⏳ Oferta vigente hasta el ${escapeVentasHtml(formatUrgencyOfferExpiryFriendly(summary.urgency.expiresAt))} (hora Honduras)</div>`
+    ? `<div style="background: ${B.urgencyBg}; border: 1px solid ${B.urgencyBorder}; border-radius: 8px; padding: 10px 12px; margin: 14px 0 0 0; text-align: center; font-size: 12px; color: ${B.urgencyText}; font-weight: bold;">⏳ Oferta vigente hasta el ${escapeVentasHtml(formatUrgencyOfferExpiryFriendly(summary.urgency.expiresAt))} (hora Honduras)</div>`
     : ''
 
   const pdfNote = showPdfNote
-    ? `<p style="margin: 14px 0 0 0; font-size: 12px; color: ${B.textMuted};">Comparativa de modalidades, condiciones y datos bancarios: PDF adjunto.</p>`
+    ? `<p style="margin: 14px 0 0 0; font-size: 12px; color: ${B.emailTextMuted};">Comparativa de modalidades, condiciones y datos bancarios: PDF adjunto.</p>`
     : ''
 
   return `
-    <div style="background: ${B.panelBg}; border: 1px solid ${B.panelBorder}; border-left: 4px solid ${B.primary}; border-radius: 8px; padding: 18px 20px; margin: 0 0 16px 0; font-family: Arial, Helvetica, sans-serif;">
-      <p style="margin: 0 0 4px 0; font-size: 11px; font-weight: bold; color: ${B.primary}; text-transform: uppercase; letter-spacing: 0.05em;">Inversión</p>
-      <p style="margin: 0 0 14px 0; font-size: 12px; color: ${B.textMuted};">${escapeVentasHtml(modalityLabel)}</p>
+    <div style="background: ${B.emailGlassBg}; border: 1px solid ${B.emailGlassBorder}; border-left: 4px solid ${B.emailAccent}; border-radius: 16px; padding: 18px 20px; margin: 0 0 16px 0; font-family: Montserrat, Arial, Helvetica, sans-serif;">
+      <p style="margin: 0 0 4px 0; font-size: 11px; font-weight: bold; color: ${B.emailAccent}; text-transform: uppercase; letter-spacing: 0.05em;">Inversión</p>
+      <p style="margin: 0 0 14px 0; font-size: 12px; color: ${B.emailTextMuted};">${escapeVentasHtml(modalityLabel)}</p>
       ${inner}
       ${expiryBlock}
       ${pdfNote}

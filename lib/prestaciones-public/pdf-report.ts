@@ -1,4 +1,5 @@
 import { Buffer } from 'buffer'
+import { PDF, drawLiquidPdfHeader } from '../pdf/liquid-theme'
 
 export interface PrestacionesReportData {
   salarioBaseMensual: number
@@ -55,18 +56,14 @@ export async function generatePrestacionesReportPDF(
       const pageWidth = doc.page.width
       const pageHeight = doc.page.height
 
-      // Header
-      doc.rect(0, 0, pageWidth, 80).fill('#0b4fa1')
-      doc.fillColor('white')
-      doc.fontSize(20).text('HUMANO SISU', 30, 16, { align: 'center', width: pageWidth - 60 })
-      doc.fontSize(12).text('Reporte de cálculo de prestaciones (Honduras)', 30, 44, { align: 'center', width: pageWidth - 60 })
-      doc.fillColor('#000000')
+      let y = drawLiquidPdfHeader(doc, {
+        title: 'Reporte de cálculo de prestaciones (Honduras)',
+        subtitle: 'Estimación orientativa',
+      })
 
-      let y = 105
-
-      doc.fontSize(12).text('DATOS DEL CÁLCULO:', 30, y)
+      doc.fontSize(12).fillColor(PDF.bodyText).text('DATOS DEL CÁLCULO:', 30, y)
       y += 16
-      doc.rect(30, y, pageWidth - 60, 92).stroke('#000000')
+      doc.rect(30, y, pageWidth - 60, 92).stroke(PDF.panelBorder)
       doc.fontSize(10)
       doc.text('Fecha de ingreso:', 40, y + 10)
       doc.text(data.fechaIngreso, 160, y + 10)
@@ -88,10 +85,10 @@ export async function generatePrestacionesReportPDF(
       y += 24
       doc.fontSize(12).text('RESUMEN:', 30, y)
       y += 18
-      doc.rect(30, y, pageWidth - 60, 34).fill('#e8f5e9').stroke('#4caf50')
-      doc.fontSize(11).fillColor('#2e7d32').text('TOTAL ESTIMADO A RECIBIR', 40, y + 9)
-      doc.fontSize(16).fillColor('#1b5e20').text(formatHNL(data.rubros.totalPagar), 40, y + 22)
-      doc.fillColor('#000000')
+      doc.rect(30, y, pageWidth - 60, 34).fill(PDF.successBg).stroke(PDF.successBorder)
+      doc.fontSize(11).fillColor(PDF.successText).text('TOTAL ESTIMADO A RECIBIR', 40, y + 9)
+      doc.fontSize(16).fillColor(PDF.success).text(formatHNL(data.rubros.totalPagar), 40, y + 22)
+      doc.fillColor(PDF.bodyText)
 
       y += 55
       doc.fontSize(12).text('DESGLOSE POR CONCEPTO:', 30, y)

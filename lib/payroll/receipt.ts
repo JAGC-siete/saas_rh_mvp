@@ -5,6 +5,7 @@ import {
   formatVoucherCompanyName,
   type VoucherPdfOptions,
 } from './voucher-pdf-options'
+import { defaultPdfPrimaryColor, PDF } from '../pdf/liquid-theme'
 
 export type { VoucherPdfOptions }
 
@@ -57,7 +58,7 @@ export async function generateEmployeeReceiptPDF(
   periodLabel?: string,
   options?: VoucherPdfOptions
 ): Promise<Buffer> {
-  const primaryColor = options?.branding?.primaryColor ?? '#0b4fa1'
+  const primaryColor = defaultPdfPrimaryColor(options?.branding?.primaryColor)
   const displayName = formatVoucherCompanyName(options?.branding, companyName || 'SISTEMA HONDUREÑO DE RECURSOS HUMANOS')
   const logoBuffer = options?.branding?.logoUrl
     ? await fetchLogoBuffer(options.branding.logoUrl)
@@ -136,7 +137,7 @@ export async function generateEmployeeReceiptPDF(
       doc.fillColor('#000000')
 
       const footerY = pageHeight - 20
-      doc.fontSize(7).fillColor('#666666').text('SISU: Sistema Hondureño de Recursos Humanos', 30, footerY, {
+      doc.fontSize(7).fillColor(PDF.footerMuted).text('SISU: Sistema Hondureño de Recursos Humanos', 30, footerY, {
         align: 'center',
         width: pageWidth - 60,
       })

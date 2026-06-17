@@ -4,6 +4,7 @@ import { getHondurasTimestamp, formatDateForHonduras, nowInHonduras, parseDateOn
 import { createAdminClient } from '../../../lib/supabase/server'
 import { assertEmployeePortalEnabled } from '../../../lib/employee-portal/company-settings'
 import { canExportReports, EXPORT_REPORTS_FORBIDDEN } from '../../../lib/security/permissions'
+import { PDF } from '../../../lib/pdf/liquid-theme'
 import {
   calculateIHSS,
   calculateRAP,
@@ -330,8 +331,8 @@ function generateWorkCertificatePDF(
     // ==== Branding consistente (header y colores) ====
     const pageWidth = doc.page.width
     const pageHeight = doc.page.height
-    const primary = '#0b4fa1'
-    const textColor = '#0f172a'
+    const primary = PDF.primaryDefault
+    const textColor = PDF.bodyText
 
     // Header bar
     doc.rect(0, 0, pageWidth, 80).fill(primary)
