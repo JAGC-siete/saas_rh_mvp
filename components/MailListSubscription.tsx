@@ -83,7 +83,7 @@ export default function MailListSubscription({ source = 'landing', className = '
   return (
     <div className={className}>
       <form onSubmit={handleSubmit} className="space-y-3">
-        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 max-w-md mx-auto">
+        <div className="flex flex-col sm:flex-row gap-3 max-w-lg mx-auto">
           <input
             type="email"
             value={email}
@@ -94,19 +94,19 @@ export default function MailListSubscription({ source = 'landing', className = '
                 setMessage('')
               }
             }}
-            placeholder="Tu email"
+            placeholder="tu@correo.com"
             disabled={loading}
-            className="flex-1 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-brand-200/70 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-transparent text-sm sm:text-base disabled:opacity-50 disabled:cursor-not-allowed"
+            className="input-glass flex-1 min-h-[48px] outline-none focus:ring-2 focus:ring-brand-400 text-sm sm:text-base disabled:opacity-50 disabled:cursor-not-allowed"
             required
             aria-label="Email para suscripción"
           />
           <Button
             type="submit"
             disabled={loading || !email.trim()}
-            className="whitespace-nowrap"
+            className="whitespace-nowrap min-h-[48px] rounded-xl px-8 shadow-[0_8px_30px_rgb(0,0,0,0.12)]"
             variant="modern"
           >
-            {loading ? 'Enviando...' : 'Suscribirse'}
+            {loading ? 'Enviando...' : 'Suscribirme'}
           </Button>
         </div>
 
@@ -129,7 +129,7 @@ export default function MailListSubscription({ source = 'landing', className = '
 
         {status === 'idle' && (
           <div className="text-center">
-            <p className="text-xs sm:text-sm text-brand-200/60">
+            <p className="text-xs sm:text-sm text-brand-200/90 font-medium">
               No apto para sensibles.
             </p>
           </div>

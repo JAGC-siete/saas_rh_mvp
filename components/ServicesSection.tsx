@@ -7,6 +7,7 @@ import { GUIDE_LINKS } from '../lib/seo/internal-links'
 export default function ServicesSection() {
   return (
     <section id="servicios" className="relative py-12 sm:py-16 md:py-20 px-4 sm:px-6 max-w-7xl mx-auto">
+      <div className="landing-section-glow left-1/4 bottom-0 -translate-x-1/2" aria-hidden />
       {/* sutil glow de fondo */}
       <div className="pointer-events-none absolute inset-0 -z-10">
         <div className="mx-auto h-72 w-72 blur-3xl rounded-full opacity-20 bg-brand-600/40 translate-y-8" />
@@ -15,26 +16,26 @@ export default function ServicesSection() {
       {/* Cómo funciona section */}
 
       <header className="max-w-3xl mb-8 sm:mb-10 mx-auto text-center px-2">
-        <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-white leading-tight">
+        <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-5xl font-bold text-white leading-tight">
           <span className="text-white block sm:inline">Tu nuevo ecosistema de RRHH:</span>
           <span className="hidden sm:inline"> </span>
           <span className="text-brand-300 block sm:inline mt-1 sm:mt-0">diseñado para escalar sin burocracia.</span>
         </h2>
-        <p className="mt-3 text-sm sm:text-base text-brand-200 px-2">
+        <p className="mt-3 text-sm sm:text-base text-brand-200/90 px-2 font-medium landing-dark-text">
           Dejá de contratar personal solo para pasar datos. Centralizá tu operación con tecnología y <span className="text-brand-400">trazabilidad</span>.
         </p>
       </header>
 
       {/* El Libro Rojo - Asistencia */}
       <div id="libro-rojo" className="mb-12 sm:mb-16">
-        <h3 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-white leading-tight mb-4 sm:mb-6 text-center px-2">
+        <h3 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-5xl font-bold text-white leading-tight mb-4 sm:mb-6 text-center px-2">
           <span className="text-white block sm:inline">Control de Asistencia</span>
           <span className="hidden sm:inline"> </span>
           <span className="text-brand-300 block sm:inline mt-1 sm:mt-0">Biométrico</span>
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+        <div className="group/cards grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
           {/* SOPORTE: Asistencia */}
-          <article className="group relative overflow-hidden rounded-xl sm:rounded-2xl glass border border-white/15 p-4 sm:p-6 transition-all duration-300 hover:border-brand-400/40 hover:shadow-xl hover:shadow-brand-900/30">
+          <article className="group relative overflow-hidden rounded-2xl glass border border-white/15 p-4 sm:p-6 transition-all duration-300 hover:border-brand-400/40 hover:shadow-[0_8px_30px_rgb(0,0,0,0.12)] hover:shadow-brand-900/30 hover:scale-[1.02] group-hover/cards:opacity-50 hover:!opacity-100">
             <div className="flex items-center gap-2 sm:gap-3">
               <div className="h-8 w-8 sm:h-10 sm:w-10 grid place-items-center rounded-lg bg-white/10 border border-white/15 flex-shrink-0">
                 <ClockIcon className="h-4 w-4 sm:h-5 sm:w-5 text-brand-300" />
@@ -54,7 +55,7 @@ export default function ServicesSection() {
           </article>
 
           {/* SOPORTE: Reportes ejecutivos */}
-          <article className="group relative overflow-hidden rounded-xl sm:rounded-2xl glass border border-white/15 p-4 sm:p-6 transition-all duration-300 hover:border-brand-400/40 hover:shadow-xl hover:shadow-brand-900/30">
+          <article className="group relative overflow-hidden rounded-2xl glass border border-white/15 p-4 sm:p-6 transition-all duration-300 hover:border-brand-400/40 hover:shadow-[0_8px_30px_rgb(0,0,0,0.12)] hover:shadow-brand-900/30 hover:scale-[1.02] group-hover/cards:opacity-50 hover:!opacity-100">
             <div className="flex items-center gap-2 sm:gap-3">
               <div className="h-8 w-8 sm:h-10 sm:w-10 grid place-items-center rounded-lg bg-white/10 border border-white/15 flex-shrink-0">
                 <CheckCircleIcon className="h-4 w-4 sm:h-5 sm:w-5 text-brand-300" />
@@ -87,14 +88,14 @@ export default function ServicesSection() {
 
       {/* El Planillero - Nómina */}
       <div id="planillero" className="mb-12 sm:mb-16">
-        <h3 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-white leading-tight mb-4 sm:mb-6 text-center px-2">
+        <h3 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-5xl font-bold text-white leading-tight mb-4 sm:mb-6 text-center px-2">
           <span className="text-white block sm:inline">Nómina</span>
           <span className="hidden sm:inline"> </span>
           <span className="text-brand-300 block sm:inline mt-1 sm:mt-0">“Cero Errores”</span>
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+        <div className="group/cards grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
           {/* SOPORTE: Nómina sin errores */}
-          <article className="group relative overflow-hidden rounded-xl sm:rounded-2xl glass border border-white/15 p-4 sm:p-6 transition-all duration-300 hover:border-brand-400/40 hover:shadow-xl hover:shadow-brand-900/30">
+          <article className="group relative overflow-hidden rounded-2xl glass border border-white/15 p-4 sm:p-6 transition-all duration-300 hover:border-brand-400/40 hover:shadow-[0_8px_30px_rgb(0,0,0,0.12)] hover:shadow-brand-900/30 hover:scale-[1.02] group-hover/cards:opacity-50 hover:!opacity-100">
             <div className="flex items-center gap-2 sm:gap-3">
               <div className="h-8 w-8 sm:h-10 sm:w-10 grid place-items-center rounded-lg bg-white/10 border border-white/15 flex-shrink-0">
                 <CurrencyDollarIcon className="h-4 w-4 sm:h-5 sm:w-5 text-brand-300" />
@@ -114,7 +115,7 @@ export default function ServicesSection() {
           </article>
 
           {/* SOPORTE: Cálculo automático */}
-          <article className="group relative overflow-hidden rounded-xl sm:rounded-2xl glass border border-white/15 p-4 sm:p-6 transition-all duration-300 hover:border-brand-400/40 hover:shadow-xl hover:shadow-brand-900/30">
+          <article className="group relative overflow-hidden rounded-2xl glass border border-white/15 p-4 sm:p-6 transition-all duration-300 hover:border-brand-400/40 hover:shadow-[0_8px_30px_rgb(0,0,0,0.12)] hover:shadow-brand-900/30 hover:scale-[1.02] group-hover/cards:opacity-50 hover:!opacity-100">
             <div className="flex items-center gap-2 sm:gap-3">
               <div className="h-8 w-8 sm:h-10 sm:w-10 grid place-items-center rounded-lg bg-white/10 border border-white/15 flex-shrink-0">
                 <CurrencyDollarIcon className="h-4 w-4 sm:h-5 sm:w-5 text-brand-300" />

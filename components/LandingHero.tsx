@@ -33,7 +33,7 @@ export default function LandingHero() {
                 <Link
                   href="/ventas"
                   onClick={() => trackCTAClick('solicitar_cotizacion', 'landing_hero_primary')}
-                  className="inline-flex items-center justify-center rounded-xl px-6 py-3 text-base sm:text-lg font-semibold bg-sky-600 text-white hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-400 transition-colors text-center"
+                  className="inline-flex items-center justify-center rounded-xl px-6 py-3 min-h-[48px] text-base sm:text-lg font-semibold bg-brand-500 text-white hover:bg-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-400 shadow-[0_8px_30px_rgb(0,0,0,0.12)] animate-pulse-glow transition-colors text-center"
                   data-analytics="cta_hero_ventas"
                 >
                   Solicitar cotización
@@ -41,20 +41,20 @@ export default function LandingHero() {
                 <Link
                   href="/activar"
                   onClick={() => trackCTAClick('activar_trial', 'landing_hero_secondary')}
-                  className="inline-flex items-center justify-center rounded-xl px-6 py-3 text-base font-medium border border-white/25 text-white hover:bg-white/10 transition-colors text-center"
+                  className="inline-flex items-center justify-center rounded-xl px-6 py-3 min-h-[48px] text-base font-medium border border-white/25 text-white hover:bg-white/10 transition-colors text-center"
                   data-analytics="cta_hero_activar"
                 >
                   Probar gratis
                 </Link>
               </div>
-              <p className="text-xs sm:text-sm text-brand-200/70">
+              <p className="text-xs sm:text-sm text-brand-200/90 font-medium">
                 Cotización sin costo. Prueba con límites del trial según política vigente.
               </p>
             </div>
           </div>
 
           <div className="text-center mt-8 sm:mt-10 md:mt-12 px-2">
-            <p className="text-sm sm:text-base text-brand-200/80">
+            <p className="text-sm sm:text-base text-brand-200/90">
               Próximo cierre de planilla (referencia):{' '}
               <span className="text-brand-100 font-medium">{nextPayday.toLocaleDateString()}</span>
             </p>

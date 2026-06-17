@@ -6,7 +6,8 @@ const RELATED_GUIDE_CARDS = [GUIDE_LINKS.deduccionesHonduras, GUIDE_LINKS.recurs
 
 export default function FreeToolsSection() {
   return (
-    <section id="herramientas-gratuitas" className="py-12 sm:py-16 md:py-20 px-4 sm:px-6 max-w-7xl mx-auto relative z-10">
+    <section id="herramientas-gratuitas" className="relative py-12 sm:py-16 md:py-20 px-4 sm:px-6 max-w-7xl mx-auto z-10">
+      <div className="landing-section-glow right-1/4 top-0 translate-x-1/2" aria-hidden />
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-8 sm:mb-10">
           <span className="inline-block px-3 py-1 mb-4 text-xs rounded-full bg-cyan-500/20 text-cyan-200 border border-cyan-500/30">
@@ -15,7 +16,7 @@ export default function FreeToolsSection() {
           <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-4">
             Valida deducciones antes de automatizar tu planilla
           </h2>
-          <p className="text-brand-200/90 max-w-3xl mx-auto">
+          <p className="text-brand-200/90 max-w-3xl mx-auto font-medium landing-dark-text">
             Miles de búsquedas empiezan preguntando cuánto descuentan de sueldo. Usa nuestras calculadoras
             gratuitas — las mismas reglas legales que Humano SISU — y cuando estés listo, activa la nómina completa.
           </p>
@@ -26,7 +27,7 @@ export default function FreeToolsSection() {
             <Link
               key={item.href}
               href={item.href}
-              className="glass-strong rounded-xl p-5 border border-white/15 hover:border-cyan-400/40 transition-all hover:-translate-y-0.5 text-left group"
+              className="glass-strong rounded-2xl p-5 min-h-[120px] border border-white/15 hover:border-cyan-400/40 transition-all hover:-translate-y-0.5 hover:shadow-[0_12px_40px_rgb(0,0,0,0.25)] text-left group block"
             >
               <div className="text-xs text-brand-300 mb-1">{item.country}</div>
               <div className="text-lg font-semibold text-white group-hover:text-brand-200">{item.title}</div>
@@ -55,7 +56,7 @@ export default function FreeToolsSection() {
               <Link
                 key={guide.href}
                 href={guide.href}
-                className="glass-strong rounded-xl p-5 border border-white/15 hover:border-cyan-400/40 transition-all hover:-translate-y-0.5 text-left group"
+                className="glass-strong rounded-2xl p-5 min-h-[88px] border border-white/15 hover:border-cyan-400/40 transition-all hover:-translate-y-0.5 hover:shadow-[0_12px_40px_rgb(0,0,0,0.25)] text-left group block"
               >
                 <div className="text-lg font-semibold text-white group-hover:text-brand-200">{guide.label}</div>
                 {guide.description && (

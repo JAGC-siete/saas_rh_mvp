@@ -32,7 +32,7 @@ export default function AWSCertificationsSection() {
             Desarrollado por ingenieros certificados en AWS
           </h2>
           
-          <p className="text-brand-200/90 max-w-4xl mx-auto mb-8 text-lg">
+          <p className="text-brand-200/90 max-w-4xl mx-auto mb-4 text-lg font-medium landing-dark-text">
             Hecho con la misma tecnología que usan Netflix y Airbnb, ahora para tu MIPYME local
             <br />
             <span className="text-brand-400 font-medium">
@@ -42,6 +42,9 @@ export default function AWSCertificationsSection() {
             <span className="text-white font-semibold">
               Tecnología global. Precio local.
             </span>
+          </p>
+          <p className="text-sm text-brand-200/90 max-w-2xl mx-auto mb-8 font-medium">
+            Tus datos están encriptados bajo estándares bancarios en servidores regionales de AWS.
           </p>
 
           {/* AWS Certification Badges - EXACTAMENTE como en la barra superior */}

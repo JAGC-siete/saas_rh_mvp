@@ -214,18 +214,23 @@ export default function MainHeader({ enableScrollEffect = false, fixed = true }:
                     </div>
                   )}
                 </div>
-                <button
-                  onClick={() => {
-                    window.location.href = '/activar'
-                    setIsMobileMenuOpen(false)
-                  }}
-                  className="bg-green-600 hover:bg-green-700 text-white px-6 py-2.5 rounded-lg text-sm font-medium transition-all duration-300 shadow-lg shadow-black/20 hover:-translate-y-0.5 active:translate-y-0 whitespace-nowrap min-w-[160px] text-center"
-                >
-                  Activación inmediata
-                </button>
+                <div className="flex flex-col items-end">
+                  <button
+                    onClick={() => {
+                      window.location.href = '/activar'
+                      setIsMobileMenuOpen(false)
+                    }}
+                    className="bg-green-600 hover:bg-green-700 text-white px-6 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 shadow-[0_8px_30px_rgb(0,0,0,0.12)] hover:-translate-y-0.5 active:translate-y-0 whitespace-nowrap min-w-[160px] text-center min-h-[48px]"
+                  >
+                    Activación inmediata
+                  </button>
+                  <span className="mt-1 text-[10px] sm:text-xs text-brand-200/90 font-medium whitespace-nowrap">
+                    Soporte humano en español, horario regional
+                  </span>
+                </div>
                 <Link
                   href="/app/login"
-                  className="bg-brand-600 hover:bg-brand-700 text-white px-6 py-2.5 rounded-lg text-sm font-medium transition-all duration-300 shadow-lg shadow-black/20 hover:-translate-y-0.5 active:translate-y-0 whitespace-nowrap min-w-[140px] text-center"
+                  className="bg-brand-600 hover:bg-brand-700 text-white px-6 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 shadow-[0_8px_30px_rgb(0,0,0,0.12)] hover:-translate-y-0.5 active:translate-y-0 whitespace-nowrap min-w-[140px] text-center min-h-[48px] inline-flex items-center justify-center"
                 >
                   Iniciar sesión
                 </Link>
@@ -360,10 +365,13 @@ export default function MainHeader({ enableScrollEffect = false, fixed = true }:
                   setIsMobileMenuOpen(false)
                   window.location.href = '/activar'
                 }}
-                className="bg-green-600 hover:bg-green-700 text-white w-full text-center block py-2 px-4 rounded-lg transition-colors mb-2"
+                className="bg-green-600 hover:bg-green-700 text-white w-full text-center block py-3 px-4 rounded-xl transition-colors mb-1 min-h-[48px]"
               >
                 Activación inmediata
               </button>
+              <p className="text-center text-[10px] text-brand-200/90 font-medium mb-2">
+                Soporte humano en español, horario regional
+              </p>
               <Link
                 href="/app/login"
                 className="bg-brand-900 hover:bg-brand-800 text-white w-full text-center block py-2 px-4 rounded-lg transition-colors"

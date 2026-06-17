@@ -290,6 +290,31 @@ html, body, #__next, #root {
   }
 }
 
+/* Landing: mejor legibilidad sobre fondos oscuros */
+.landing-dark-text {
+  font-weight: 500;
+}
+
+/* Mobile: más opacidad en glass si blur es lento o no disponible */
+@media (max-width: 768px) {
+  .glass,
+  .glass-strong {
+    background: rgba(255, 255, 255, 0.18);
+  }
+}
+
+/* Separador visual entre secciones del landing */
+.landing-section-glow {
+  pointer-events: none;
+  position: absolute;
+  width: 280px;
+  height: 280px;
+  border-radius: 9999px;
+  filter: blur(80px);
+  opacity: 0.15;
+  background: rgb(37, 99, 235);
+}
+
 /* Landing page conversion animations */
 @layer utilities {
   @keyframes slide-up {
