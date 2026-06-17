@@ -85,6 +85,16 @@ module.exports = {
         '2xl': '24px',
         '3xl': '40px',
       },
+      animation: {
+        'mesh-flow': 'mesh-flow 15s ease infinite',
+      },
+      keyframes: {
+        'mesh-flow': {
+          '0%': { backgroundPosition: '0% 0%' },
+          '50%': { backgroundPosition: '100% 100%' },
+          '100%': { backgroundPosition: '0% 0%' },
+        },
+      },
       fontFamily: {
         'montserrat': ['Montserrat', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
       },

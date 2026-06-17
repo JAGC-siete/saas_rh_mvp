@@ -5,6 +5,27 @@
 
 ---
 
+## Sistema actual: Infraestructura Líquida (2026)
+
+El landing usa el diseño **Infraestructura Líquida** implementado en `components/landing/`:
+
+| Archivo | Rol |
+|---|---|
+| `styles/landing-liquid.css` | `.bg-mesh`, `.glass-modern`, `.btn-shiny`, `.border-beam` |
+| `MeshBackground.tsx` | Fondo mesh animado (reemplaza CloudBackground) |
+| `DockNavbar.tsx` | Navbar cápsula flotante; login tras 20% scroll |
+| `MagneticHero.tsx` | Hero 70/30 con H1 gradiente + parallax |
+| `HeroProductWindow.tsx` | Carousel con progress bar y parallax |
+| `BentoServicesGrid.tsx` | Servicios en grid asimétrico |
+| `HowItWorksBento.tsx` | 3 pasos en celdas glass |
+| `CursorSpotlight.tsx` | Spotlight que sigue el mouse (desktop) |
+| `TrustBar.tsx` | Marquee de clientes pre-footer |
+| `ScrollReveal.tsx` | Animación scroll con Framer Motion |
+
+**Paleta minimalista:** fondo `slate-950`, texto `slate-400` / `white`, acento números `cyan-400`, CTAs `brand-500` + `btn-shiny`.
+
+---
+
 ## Prompt sugerido para AI Studio
 
 ```

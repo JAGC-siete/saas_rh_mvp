@@ -3,18 +3,23 @@ import Link from 'next/link'
 import TrackedWhatsAppLink from './TrackedWhatsAppLink'
 import { FOOTER_GUIDE_KEYS, GUIDE_LINKS } from '../lib/seo/internal-links'
 
-const DemoFooter: React.FC = () => {
+interface DemoFooterProps {
+  variant?: 'default' | 'minimal'
+}
+
+const DemoFooter: React.FC<DemoFooterProps> = ({ variant = 'default' }) => {
+  const isMinimal = variant === 'minimal'
+
   return (
-    <footer className="bg-slate-50 border-t border-slate-200 mt-auto">
-      <div className="max-w-6xl mx-auto px-4 py-8">
-        {/* Main Footer Content */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-          
-          {/* Contact Info */}
+    <footer className={`bg-slate-50 border-t border-slate-200 mt-auto ${isMinimal ? 'py-20' : ''}`}>
+      <div className={`max-w-6xl mx-auto px-4 ${isMinimal ? 'py-4' : 'py-8'}`}>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12">
           <div>
-            <h3 className="text-lg font-semibold text-brand-900 mb-4">Contacto</h3>
+            <h3 className={`font-semibold text-brand-900 mb-4 ${isMinimal ? 'text-xs uppercase tracking-widest' : 'text-lg'}`}>
+              Contacto
+            </h3>
             <div className="space-y-2">
-              <div className="flex items-center text-gray-600">
+              <div className={`flex items-center text-gray-600 ${isMinimal ? 'text-sm' : ''}`}>
                 <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                 </svg>
@@ -41,8 +46,10 @@ const DemoFooter: React.FC = () => {
 
           {/* Join Community */}
           <div>
-            <h3 className="text-lg font-semibold text-brand-900 mb-4">Únete a la Comunidad</h3>
-            <p className="text-gray-600 text-sm mb-4">
+            <h3 className={`font-semibold text-brand-900 mb-4 ${isMinimal ? 'text-xs uppercase tracking-widest' : 'text-lg'}`}>
+              Únete a la Comunidad
+            </h3>
+            <p className={`text-gray-600 mb-4 ${isMinimal ? 'text-xs' : 'text-sm'}`}>
               Síguenos en nuestras redes sociales para conocer las últimas actualizaciones
             </p>
             <div className="flex space-x-4">
@@ -104,13 +111,15 @@ const DemoFooter: React.FC = () => {
 
           {/* Guides & Resources */}
           <div>
-            <h3 className="text-lg font-semibold text-brand-900 mb-4">Guías y recursos</h3>
+            <h3 className={`font-semibold text-brand-900 mb-4 ${isMinimal ? 'text-xs uppercase tracking-widest' : 'text-lg'}`}>
+              Guías y recursos
+            </h3>
             <ul className="space-y-2">
               {FOOTER_GUIDE_KEYS.map((key) => (
                 <li key={GUIDE_LINKS[key].href}>
                   <Link
                     href={GUIDE_LINKS[key].href}
-                    className="text-gray-600 text-sm hover:text-blue-600 transition-colors"
+                    className={`text-gray-600 hover:text-blue-600 transition-colors ${isMinimal ? 'text-xs uppercase tracking-wider' : 'text-sm'}`}
                   >
                     {GUIDE_LINKS[key].label}
                   </Link>
@@ -121,8 +130,10 @@ const DemoFooter: React.FC = () => {
 
           {/* About */}
           <div>
-            <h3 className="text-lg font-semibold text-brand-900 mb-4">SISU</h3>
-            <p className="text-gray-600 text-sm mb-4">
+            <h3 className={`font-semibold text-brand-900 mb-4 ${isMinimal ? 'text-xs uppercase tracking-widest' : 'text-lg'}`}>
+              SISU
+            </h3>
+            <p className={`text-gray-600 mb-4 ${isMinimal ? 'text-xs' : 'text-sm'}`}>
               Gestión de Recursos Humanos 100% digital, legal y automatizada. Diseñada para que las PyMEs de la región operen sin fricción.
             </p>
             <div className="text-sm text-gray-500">
@@ -132,7 +143,7 @@ const DemoFooter: React.FC = () => {
         </div>
 
         {/* Privacy Notice */}
-        <div className="border-t border-slate-200 mt-8 pt-8">
+        <div className={`border-t border-slate-200 mt-8 ${isMinimal ? 'pt-12' : 'pt-8'}`}>
           <div className="text-center">
             <p className="text-sm text-gray-600 mb-3">
               Protegemos tu información. <strong>Solo será utilizada para contactarte</strong>.

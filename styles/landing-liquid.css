@@ -1,0 +1,171 @@
+/* Infraestructura Líquida — landing only */
+
+@keyframes mesh-flow {
+  0% { background-position: 0% 0%; }
+  50% { background-position: 100% 100%; }
+  100% { background-position: 0% 0%; }
+}
+
+@keyframes border-beam-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes radar-pulse {
+  0% { transform: scale(0.6); opacity: 0.6; }
+  100% { transform: scale(2); opacity: 0; }
+}
+
+@keyframes marquee-scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+@keyframes flags-scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-33.333%); }
+}
+
+.bg-mesh {
+  background-color: #020617;
+  background-image:
+    radial-gradient(at 0% 0%, rgba(59, 130, 246, 0.15) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(49, 46, 129, 0.2) 0px, transparent 50%),
+    radial-gradient(at 50% 50%, rgba(30, 58, 138, 0.1) 0px, transparent 50%);
+  background-size: 200% 200%;
+  animation: mesh-flow 15s ease infinite;
+}
+
+.glass-modern {
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+}
+
+.btn-shiny {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.btn-shiny::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+  transform: rotate(45deg);
+  transition: 0.5s;
+  pointer-events: none;
+}
+
+.btn-shiny:hover::after {
+  left: 120%;
+}
+
+.border-beam {
+  position: relative;
+  overflow: hidden;
+}
+
+.border-beam::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    rgba(59, 130, 246, 0.5) 60deg,
+    rgba(147, 197, 253, 0.8) 120deg,
+    transparent 180deg
+  );
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.border-beam:hover::before {
+  opacity: 1;
+  animation: border-beam-spin 3s linear infinite;
+}
+
+.radar-pulse {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.radar-pulse::before,
+.radar-pulse::after {
+  content: '';
+  position: absolute;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  animation: radar-pulse 3s ease-out infinite;
+}
+
+.radar-pulse::after {
+  animation-delay: 1.5s;
+}
+
+.flags-marquee {
+  display: flex;
+  gap: 1.5rem;
+  animation: flags-scroll 20s linear infinite;
+  width: max-content;
+}
+
+.trust-marquee {
+  display: flex;
+  gap: 3rem;
+  animation: marquee-scroll 30s linear infinite;
+  width: max-content;
+}
+
+.landing-footer-bridge {
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgba(15, 23, 42, 0.2) 40%,
+    rgb(248, 250, 252) 100%
+  );
+}
+
+@media (max-width: 768px) {
+  .glass-modern {
+    background: rgba(15, 23, 42, 0.75);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bg-mesh {
+    animation: none;
+  }
+
+  .border-beam:hover::before {
+    animation: none;
+  }
+
+  .radar-pulse::before,
+  .radar-pulse::after,
+  .flags-marquee,
+  .trust-marquee {
+    animation: none;
+  }
+}
