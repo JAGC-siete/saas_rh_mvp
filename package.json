@@ -15,7 +15,7 @@
     "start": "next start",
     "start:trace": "node -r ./lib/tracing.js node_modules/.bin/next start",
     "dev:trace": "node -r ./lib/tracing.js node_modules/.bin/next dev",
-    "test": "npx tsx --test tests/country-supported.test.ts tests/public-calculator-parity.test.ts tests/multipay-statutory.test.ts tests/deduction-validator.test.ts",
+    "test": "npx tsx --test tests/country-supported.test.ts tests/public-calculator-parity.test.ts tests/multipay-statutory.test.ts tests/deduction-validator.test.ts tests/punch-mapping.test.ts",
     "test:security": "npx tsx --test tests/shape-employee.test.ts tests/field-level-security.test.ts tests/field-level-security-phase2.test.ts tests/settings-access.test.ts",
     "audit": "./scripts/run-complete-audit.sh",
     "audit:system": "node scripts/audit-system.js",

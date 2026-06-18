@@ -1,3 +1,5 @@
+import { formatPunchAnomalyLabel } from '../../lib/attendance/punch-mapping'
+
 export type AttendanceListFlags = {
   horario_no_detectado?: boolean
   razon?: string
@@ -22,7 +24,7 @@ export function AttendanceRecordFlagsBadges({ flags }: { flags?: AttendanceListF
 
   if (flags.has_anomaly || (flags.anomaly_types && flags.anomaly_types.length > 0)) {
     const t = flags.anomaly_types?.length
-      ? flags.anomaly_types.slice(0, 2).join(', ')
+      ? flags.anomaly_types.slice(0, 2).map(formatPunchAnomalyLabel).join(', ')
       : 'Anomalía'
     chips.push({ key: 'anom', label: t, className: 'bg-amber-500/20 text-amber-200 border-amber-500/30' })
   }

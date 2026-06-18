@@ -1,5 +1,10 @@
 import type { BiometricMode } from './attendance-metadata'
 import { getResolvedAttendanceConfig } from './attendance-metadata'
+import { mapPunchesToDay } from './punch-mapping'
+
+export { mapPunchesToDay } from './punch-mapping'
+export { PUNCH_ANOMALY_TYPES, formatPunchAnomalyLabel } from './punch-mapping'
+export type { MappedPunchDay, PunchAnomalyType } from './punch-mapping'
 import { DateTime } from 'luxon'
 import { getScheduleTimesForDate } from './schedule-times'
 import type { LegacyScheduleColumns } from './shift-config'
@@ -83,156 +88,8 @@ function mergeFlags(
   return merged
 }
 
-interface MappedDay {
-  check_in: string | null
-  check_out: string | null
-  lunch_start: string | null
-  lunch_end: string | null
-  anomalyTypes: string[]
-  status: string
-}
-
 function tsFromEvent(e: AttendanceEventRow): string {
   return e.ts_utc
-}
-
-/**
- * Map ordered punch timestamps to attendance fields + anomaly list.
- */
-export function mapPunchesToDay(
-  punches: string[],
-  mode: BiometricMode
-): MappedDay {
-  const n = punches.length
-  const empty = (): MappedDay => ({
-    check_in: null,
-    check_out: null,
-    lunch_start: null,
-    lunch_end: null,
-    anomalyTypes: [],
-    status: 'present',
-  })
-
-  if (n === 0) {
-    return { ...empty(), status: 'absent', anomalyTypes: ['absent_no_punch'] }
-  }
-
-  if (mode === 'STRICT_2') {
-    if (n === 1) {
-      return {
-        check_in: punches[0],
-        check_out: null,
-        lunch_start: null,
-        lunch_end: null,
-        anomalyTypes: ['missing_punch'],
-        status: 'partial',
-      }
-    }
-    if (n === 2) {
-      return {
-        check_in: punches[0],
-        check_out: punches[1],
-        lunch_start: null,
-        lunch_end: null,
-        anomalyTypes: [],
-        status: 'present',
-      }
-    }
-    return {
-      check_in: punches[0],
-      check_out: punches[n - 1],
-      lunch_start: null,
-      lunch_end: null,
-      anomalyTypes: ['extra_punches'],
-      status: 'present',
-    }
-  }
-
-  if (mode === 'STRICT_4') {
-    if (n === 4) {
-      return {
-        check_in: punches[0],
-        lunch_start: punches[1],
-        lunch_end: punches[2],
-        check_out: punches[3],
-        anomalyTypes: [],
-        status: 'present',
-      }
-    }
-    if (n < 4) {
-      const types: string[] = ['missing_punch']
-      return {
-        check_in: n >= 1 ? punches[0] : null,
-        lunch_start: n >= 2 ? punches[1] : null,
-        lunch_end: n >= 3 ? punches[2] : null,
-        check_out: n >= 4 ? punches[3] : null,
-        anomalyTypes: types,
-        status: 'partial',
-      }
-    }
-    return {
-      check_in: punches[0],
-      lunch_start: punches[1],
-      lunch_end: punches[2],
-      check_out: punches[3],
-      anomalyTypes: ['extra_punches'],
-      status: 'present',
-    }
-  }
-
-  // FLEXIBLE
-  if (n === 2) {
-    return {
-      check_in: punches[0],
-      check_out: punches[1],
-      lunch_start: null,
-      lunch_end: null,
-      anomalyTypes: [],
-      status: 'present',
-    }
-  }
-  if (n === 4) {
-    return {
-      check_in: punches[0],
-      lunch_start: punches[1],
-      lunch_end: punches[2],
-      check_out: punches[3],
-      anomalyTypes: [],
-      status: 'present',
-    }
-  }
-  if (n === 1) {
-    return {
-      check_in: punches[0],
-      check_out: null,
-      lunch_start: null,
-      lunch_end: null,
-      anomalyTypes: ['missing_punch'],
-      status: 'partial',
-    }
-  }
-  if (n === 3) {
-    return {
-      check_in: punches[0],
-      lunch_start: punches[1],
-      lunch_end: null,
-      check_out: punches[2],
-      anomalyTypes: ['odd_punch_count', 'missing_punch'],
-      status: 'partial',
-    }
-  }
-  if (n > 4) {
-    return {
-      check_in: punches[0],
-      lunch_start: punches[1],
-      lunch_end: punches[2],
-      check_out: punches[3],
-      anomalyTypes: ['extra_punches'],
-      status: 'present',
-    }
-  }
-
-  return empty()
 }
 
 /**

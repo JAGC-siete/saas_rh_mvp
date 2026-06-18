@@ -427,7 +427,10 @@ export default function CompanySettings() {
             <h4 className="text-md font-medium text-white mb-1">Modalidad de marcas biométricas</h4>
             <p className="text-xs text-gray-400 mb-3">
               Define cómo se interpretan las marcas del reloj al consolidar el día (cierre diario). STRICT_2: entrada y
-              salida; STRICT_4: entrada, almuerzo y salida; FLEXIBLE: acepta 2 o 4 marcas según cantidad recibida.
+              salida (si llegan 4 marcas, las intermedias se usan como almuerzo con aviso). STRICT_4: entrada, almuerzo
+              y salida (si solo hay 2 marcas, se toman como entrada/salida con aviso). FLEXIBLE: acepta 2 o 4 marcas
+              según cantidad recibida. Tras cambiar modalidad, ejecute &quot;Consolidar marcas&quot; en los días afectados
+              (registros ya cerrados no se re-mapean automáticamente).
             </p>
             <div className="flex flex-wrap items-end gap-3">
               <div className="min-w-[200px]">
