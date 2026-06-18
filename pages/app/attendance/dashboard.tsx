@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
+import { motion } from 'framer-motion'
 import {
   ArrowTrendingUpIcon,
   CalendarDaysIcon,
@@ -19,7 +20,7 @@ import { Card } from '../../../components/ui/card'
 import { useCompanyContext } from '../../../lib/useCompanyContext'
 import { getTodayInHonduras } from '../../../lib/timezone'
 import EmployeeDrawer, { type EmployeeDrawerRawPunch } from '../../../components/attendance/EmployeeDrawer'
-import { useAttendanceData, calculateAttendanceRates } from '../../../lib/hooks/useAttendanceData'
+import { useAttendanceData } from '../../../lib/hooks/useAttendanceData'
 import { mapAttendanceError } from '../../../lib/attendance-api'
 import { getDateRange } from '../../../lib/attendance'
 import { useNotificationContext } from '../../../components/NotificationProvider'
@@ -30,6 +31,7 @@ import type {
   AttendanceEmployeeDrawerSchedule,
   AttendanceEmployeeDetail,
 } from '../../../lib/attendance/dashboard-types'
+import type { KpiFilter } from '../../../lib/attendance/kpi-filter'
 
 function getPresetLabel(preset: string) {
   switch (preset) {
@@ -133,6 +135,7 @@ export default function AttendanceDashboardApp() {
     anomalies: number
     finalized: number
   } | null>(null)
+  const [kpiFilter, setKpiFilter] = useState<KpiFilter>('all')
 
   useEffect(() => {
     if (!router.isReady || urlSynced) return
@@ -200,15 +203,6 @@ export default function AttendanceDashboardApp() {
     selectedDepartmentId,
     refreshTick
   )
-
-  const {
-    total,
-    llegadas,
-    asistenciaPct,
-    puntualidadSobreLlegadasPct,
-    tempranosSobreLlegadasPct,
-    tardesSobreLlegadasPct,
-  } = calculateAttendanceRates(kpis)
 
   useEffect(() => {
     if (!companyId) {
@@ -463,7 +457,14 @@ export default function AttendanceDashboardApp() {
   return (
     <ProtectedRoute>
       <DashboardLayout>
-        <div className="space-y-6">
+        <motion.div
+          className="space-y-6 origin-center"
+          animate={{
+            scale: drawer.open ? 0.97 : 1,
+            filter: drawer.open ? 'blur(3px)' : 'blur(0px)',
+          }}
+          transition={{ duration: 0.35, ease: [0.32, 0.72, 0, 1] }}
+        >
           {error && (
             <div className="rounded-lg bg-red-500/10 border border-red-500/30 text-red-200 px-4 py-3 text-sm">
               {error}
@@ -540,13 +541,9 @@ export default function AttendanceDashboardApp() {
               temprano={kpis?.tempranos ?? 0}
               tarde={kpis?.tardes ?? 0}
               presetLabel={` ${getPresetLabel(preset)}`}
-              asistenciaPct={asistenciaPct}
-              puntualidadSobreLlegadasPct={puntualidadSobreLlegadasPct}
-              tempranosSobreLlegadasPct={tempranosSobreLlegadasPct}
-              tardesSobreLlegadasPct={tardesSobreLlegadasPct}
-              total={total}
-              llegadas={llegadas}
               loading={loading}
+              activeFilter={kpiFilter}
+              onFilterChange={setKpiFilter}
             />
 
             <Card variant="liquid" className="border border-white/10">
@@ -615,6 +612,7 @@ export default function AttendanceDashboardApp() {
             outsideSchedule={outsideSchedule}
             presetLabel={getPresetLabel(preset)}
             onSelectEmployee={handleEmployeeClick}
+            kpiFilter={kpiFilter}
           />
 
           <Card variant="liquid" className="border border-white/10">
@@ -663,7 +661,7 @@ export default function AttendanceDashboardApp() {
               )}
             </div>
           </Card>
-        </div>
+        </motion.div>
         <EmployeeDrawer
           open={drawer.open}
           onClose={closeDrawer}

@@ -999,7 +999,7 @@ export default function EmployeePortal() {
   return (
     <EmployeePortalShell showAppBar={false}>
       {/* Header */}
-      <div className="bg-black/20 border-b border-white/10">
+      <div className="glass-modern border-b border-white/10 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-4">
@@ -1008,15 +1008,15 @@ export default function EmployeePortal() {
               </div>
               <div>
                 <h1 className="text-lg font-semibold text-white">Portal de Empleados</h1>
-                <p className="text-sm text-gray-300">Humano SISU</p>
+                <p className="text-sm text-white/70">Humano SISU</p>
               </div>
             </div>
-            
+
             <div className="flex items-center space-x-4">
               <NotificationBell className="hidden sm:block" />
               <div className="text-right">
                 <p className="text-sm font-medium text-white">{user?.user_metadata?.full_name || 'Empleado'}</p>
-                <p className="text-xs text-gray-300">{user?.user_metadata?.role || 'employee'}</p>
+                <p className="text-xs text-white/70">{user?.user_metadata?.role || 'employee'}</p>
               </div>
               <Button
                 onClick={handleLogout}
@@ -1039,7 +1039,7 @@ export default function EmployeePortal() {
           <h2 className="text-2xl font-bold text-white mb-2">
             Bienvenido, {user?.user_metadata?.full_name?.split(' ')[0] || 'Empleado'}
           </h2>
-          <p className="text-gray-300">
+          <p className="text-white/70">
             Acceda a su información personal, asistencia y más.
           </p>
         </div>
@@ -1522,7 +1522,7 @@ export default function EmployeePortal() {
                         </div>
                         <div className="mt-3 space-y-2">
                           {(ev.items || []).slice(0, 10).map((it: any) => (
-                            <div key={it.id} className="rounded-md bg-black/20 p-3">
+                            <div key={it.id} className="rounded-md bg-white/5 border border-white/10 p-3">
                               <div className="text-sm text-white">{it.function || '—'}</div>
                               <div className="mt-1 text-xs text-gray-300">KR: {it.indicator || '—'}</div>
                               <div className="mt-1 text-xs text-gray-300">

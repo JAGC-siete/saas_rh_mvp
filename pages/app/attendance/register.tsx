@@ -1,24 +1,25 @@
 import { useState, useEffect } from 'react'
 import Head from 'next/head'
 import Link from 'next/link'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../components/ui/card'
-import { Clock, User, ArrowLeft } from 'lucide-react'
+import { Shield, User, ArrowLeft } from 'lucide-react'
 import AttendanceManager from '../../../components/AttendanceManager'
+import PublicPageShell from '../../../components/landing/PublicPageShell'
 
 export default function AttendanceRegisterPage() {
   const [currentTime, setCurrentTime] = useState('')
 
-  // Update time
   useEffect(() => {
     const timer = setInterval(() => {
       const now = new Date()
-      const tegucigalpaTime = new Date(now.toLocaleString("en-US", {timeZone: "America/Tegucigalpa"}))
-      setCurrentTime(tegucigalpaTime.toLocaleTimeString('es-HN', {
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        hour12: false
-      }))
+      const tegucigalpaTime = new Date(now.toLocaleString('en-US', { timeZone: 'America/Tegucigalpa' }))
+      setCurrentTime(
+        tegucigalpaTime.toLocaleTimeString('es-HN', {
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: false,
+        })
+      )
     }, 1000)
     return () => clearInterval(timer)
   }, [])
@@ -26,58 +27,47 @@ export default function AttendanceRegisterPage() {
   return (
     <>
       <Head>
-        <title>Registro de Asistencia - Sistema HR</title>
+        <title>Registro de Asistencia | Humano SISU</title>
         <meta name="description" content="Registro de entrada y salida para empleados" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </Head>
 
-      <div className="flex items-center justify-center p-4">
-        <div className="relative w-full max-w-md space-y-8">
-          {/* Header */}
+      <PublicPageShell centered showFooter={false} loginAlwaysVisible>
+        <div className="w-full max-w-2xl space-y-8 p-4">
           <div className="text-center">
-            <div className="mx-auto h-20 w-20 bg-white rounded-full flex items-center justify-center mb-6 shadow-lg">
-              <Clock className="h-10 w-10 text-brand-600" />
+            <div className="mx-auto w-24 h-24 rounded-2xl flex items-center justify-center mb-6 shadow-2xl bg-gradient-to-br from-brand-800 to-brand-500">
+              <Shield className="h-12 w-12 text-white" strokeWidth={2.5} />
             </div>
-            <h1 className="text-3xl font-bold text-white mb-2">
-              Registro de Asistencia
-            </h1>
-            <p className="text-brand-200">
-              Sistema de entrada y salida
-            </p>
-            <div className="mt-4 text-lg font-mono text-brand-300">
+            <h2 className="text-3xl font-bold text-white mb-3 tracking-tight">Registro de asistencia</h2>
+            <div className="mt-6 text-5xl sm:text-6xl font-mono font-bold text-white drop-shadow-clock-glow tracking-tight tabular-nums">
               {currentTime}
             </div>
           </div>
 
-          {/* Attendance Form */}
-          <Card variant="liquid">
-            <CardHeader className="text-center pb-6">
-              <CardTitle className="flex items-center justify-center gap-2 text-white">
-                <User className="h-5 w-5" />
+          <div className="glass-modern rounded-3xl p-8 relative overflow-hidden">
+            <div className="text-center mb-8">
+              <h3 className="text-2xl font-bold text-white mb-2 flex items-center justify-center gap-3">
+                <User className="h-7 w-7" strokeWidth={2.5} />
                 Marcar Asistencia
-              </CardTitle>
-              <CardDescription className="text-brand-200/90">
-                Ingrese los últimos 5 dígitos de su DNI
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <AttendanceManager />
-            </CardContent>
-          </Card>
-
-          {/* Admin Access Link */}
-          <div className="text-center">
-            <p className="text-brand-200 text-sm mb-3">¿Eres administrador?</p>
-            <Link 
-              href="/app/login" 
-              className="inline-flex items-center gap-2 text-brand-300 hover:text-white transition-colors text-sm font-medium"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Acceso Administrativo
-            </Link>
+              </h3>
+              <p className="text-white/70 text-base font-medium">
+                Ingrese su DNI completo o últimos 5 dígitos
+              </p>
+            </div>
+            <AttendanceManager />
+            <div className="mt-8 pt-6 border-t border-white/10">
+              <p className="text-white/70 text-sm mb-4 text-center">¿Eres administrador?</p>
+              <Link
+                href="/app/login"
+                className="inline-flex items-center gap-2 text-white hover:text-brand-200 transition-colors text-sm font-semibold mx-auto block w-fit px-4 py-2 rounded-lg hover:bg-white/10"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Acceso Administrativo
+              </Link>
+            </div>
           </div>
         </div>
-      </div>
+      </PublicPageShell>
     </>
   )
-} 
+}

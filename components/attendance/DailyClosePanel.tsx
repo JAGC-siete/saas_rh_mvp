@@ -8,6 +8,7 @@ import { useAuth } from '../../lib/auth'
 import { useCompanyContext } from '../../lib/useCompanyContext'
 import { formatDateTimeForHonduras, getTodayInHonduras } from '../../lib/timezone'
 import type { BiometricMode } from '../../lib/attendance/attendance-metadata'
+import DailyCloseWizard, { type DailyCloseWizardStep } from './DailyCloseWizard'
 
 export type DailyCloseItem = {
   employee: {
@@ -112,6 +113,8 @@ export default function DailyClosePanel({
   const [bulkLunchStart, setBulkLunchStart] = useState('')
   const [bulkLunchEnd, setBulkLunchEnd] = useState('')
 
+  const [wizardStep, setWizardStep] = useState<DailyCloseWizardStep>(1)
+
   const queryCompany = useMemo(() => {
     if (isSuper) return superCompanyId.trim() || undefined
     return undefined
@@ -208,6 +211,29 @@ export default function DailyClosePanel({
   }, [date, queryCompany])
 
   const selectedRecordIds = useMemo(() => Object.keys(selectedIds).filter((id) => selectedIds[id]), [selectedIds])
+
+  const anomalyItems = useMemo(
+    () => data?.items.filter((i) => i.bucket === 'anomaly') ?? [],
+    [data]
+  )
+
+  const resolvedAnomalies = useMemo(
+    () =>
+      anomalyItems.filter((i) => {
+        const f = recordFlags(i.record)
+        return f.close_state === 'finalized'
+      }).length,
+    [anomalyItems]
+  )
+
+  const focusAnomalies = useMemo(() => anomalyItems.slice(0, 3), [anomalyItems])
+
+  const wizardVisibleItems = useMemo(() => {
+    if (!data?.items) return []
+    if (wizardStep === 1) return anomalyItems
+    if (wizardStep === 2) return data.items.filter((i) => i.bucket === 'anomaly' || i.record)
+    return data.items
+  }, [data, wizardStep, anomalyItems])
 
   const toggleAllVisible = (checked: boolean) => {
     if (!data?.items) return
@@ -458,6 +484,20 @@ export default function DailyClosePanel({
     <>
       <div className="space-y-6">
         {headerBlock}
+
+        {data && (
+          <DailyCloseWizard
+            step={wizardStep}
+            onStepChange={setWizardStep}
+            totalAnomalies={data.summary.total_anomalies}
+            resolvedAnomalies={resolvedAnomalies}
+            focusItems={focusAnomalies}
+            onFocusEdit={(item) => {
+              setWizardStep(2)
+              openEdit(item)
+            }}
+          />
+        )}
 
         {isSuper && (
           <Card variant="liquid" className="border border-amber-500/20">
@@ -722,7 +762,7 @@ export default function DailyClosePanel({
                     </tr>
                   </thead>
                   <tbody>
-                    {data.items.map((row) => {
+                    {wizardVisibleItems.map((row) => {
                       const rec = row.record as {
                         id?: string
                         check_in?: string

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card'
+import { motion, AnimatePresence, LayoutGroup } from 'framer-motion'
 import { formatTimeDisplay } from '../../lib/timezone'
 import { UserCircleIcon } from '@heroicons/react/24/outline'
 import { AttendanceRecordFlagsBadges, type AttendanceListFlags } from './AttendanceRecordFlagsBadges'
@@ -26,68 +26,82 @@ export default function AbsenceTable({ data, title, onSelect, pageSize = 10 }: A
     const start = (page - 1) * pageSize
     return data.slice(start, start + pageSize)
   }, [data, page, pageSize])
-  const canPrev = page > 1
-  const canNext = page < totalPages
-  const goPrev = () => setPage((p) => (p > 1 ? p - 1 : p))
-  const goNext = () => setPage((p) => (p < totalPages ? p + 1 : p))
+
   return (
-    <Card variant="liquid" className="border border-white/10">
-      <CardHeader className="pb-3 border-b border-white/10">
-        <CardTitle className="text-base font-semibold text-white flex items-center gap-2">
-          <span className="text-xl">❌</span>
-          {title}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="pt-4">
-        {data.length === 0 ? (
-          <div className="text-center py-12">
-            <UserCircleIcon className="h-12 w-12 mx-auto text-gray-600 mb-3" />
-            <p className="text-gray-400 text-sm">No hay ausentes</p>
+    <div className="space-y-4">
+      <h3 className="text-base font-semibold text-white">{title}</h3>
+
+      {data.length === 0 ? (
+        <div className="text-center py-12 text-gray-400 text-sm">No hay ausentes</div>
+      ) : (
+        <LayoutGroup>
+          <motion.div layout className="space-y-1.5">
+            <AnimatePresence mode="popLayout">
+              {paged.map((row) => (
+                <motion.button
+                  key={row.id}
+                  type="button"
+                  layout
+                  initial={{ opacity: 0, x: -8 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, scale: 0.98 }}
+                  transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                  onClick={() => onSelect?.(row.id, row.name)}
+                  className="w-full relative flex rounded-xl hover:bg-white/5 transition-colors duration-200 text-left group"
+                >
+                  <div
+                    className="w-[3px] flex-shrink-0 rounded-full bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.4)] animate-critical-pulse"
+                    aria-hidden
+                  />
+                  <div className="flex-1 flex items-center justify-between gap-3 p-3 min-w-0">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <UserCircleIcon className="h-8 w-8 text-red-400/70 flex-shrink-0" />
+                      <div className="min-w-0">
+                        <div className="font-medium text-white truncate">{row.name}</div>
+                        {row.team && <div className="text-xs text-gray-500 truncate">{row.team}</div>}
+                        <AttendanceRecordFlagsBadges flags={row.flags} />
+                      </div>
+                    </div>
+                    {row.check_in_time ? (
+                      <span className="text-sm text-gray-400 flex-shrink-0 tabular-nums">
+                        {formatTimeDisplay(row.check_in_time)}
+                      </span>
+                    ) : (
+                      <span className="text-sm text-rose-400 font-medium flex-shrink-0">Ausente</span>
+                    )}
+                  </div>
+                </motion.button>
+              ))}
+            </AnimatePresence>
+          </motion.div>
+        </LayoutGroup>
+      )}
+
+      {data.length > pageSize && (
+        <div className="flex items-center justify-between pt-2">
+          <span className="text-xs text-gray-500">
+            Página {page} de {totalPages}
+          </span>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page <= 1}
+              className="px-3 py-1 rounded-lg bg-white/5 text-xs text-gray-300 hover:bg-white/10 disabled:opacity-40"
+            >
+              Anterior
+            </button>
+            <button
+              type="button"
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page >= totalPages}
+              className="px-3 py-1 rounded-lg bg-white/5 text-xs text-gray-300 hover:bg-white/10 disabled:opacity-40"
+            >
+              Siguiente
+            </button>
           </div>
-        ) : (
-          <div className="space-y-2">
-            {paged.map((row) => (
-              <button
-                key={row.id}
-                onClick={() => onSelect && onSelect(row.id, row.name)}
-                className="w-full p-3 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 hover:border-brand-500/30 transition-all text-left group"
-              >
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3 flex-1 min-w-0">
-                <div className="flex-shrink-0 w-8 h-8 bg-red-500/20 rounded-full flex items-center justify-center">
-                  <UserCircleIcon className="h-5 w-5 text-red-400" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="font-medium text-white truncate">{row.name}</div>
-                  {row.team && (
-                    <div className="text-xs text-gray-400 truncate">{row.team}</div>
-                  )}
-                  <AttendanceRecordFlagsBadges flags={row.flags} />
-                </div>
-              </div>
-              {row.check_in_time ? (
-                <div className="text-sm text-gray-400 flex-shrink-0">
-                  {formatTimeDisplay(row.check_in_time)}
-                </div>
-              ) : (
-                <div className="text-sm text-red-400 font-medium flex-shrink-0 whitespace-nowrap">
-                  Ausente
-                </div>
-              )}
-            </div>
-              </button>
-            ))}
-            {/* Pagination */}
-            <div className="flex items-center justify-between pt-3">
-              <span className="text-xs text-gray-400">Página {page} de {totalPages}</span>
-              <div className="flex gap-2">
-                <button onClick={goPrev} disabled={!canPrev} className={`px-3 py-1 rounded bg-white/10 text-xs ${canPrev ? 'hover:bg-white/20' : 'opacity-40 cursor-not-allowed'}`}>Anterior</button>
-                <button onClick={goNext} disabled={!canNext} className={`px-3 py-1 rounded bg-white/10 text-xs ${canNext ? 'hover:bg-white/20' : 'opacity-40 cursor-not-allowed'}`}>Siguiente</button>
-              </div>
-            </div>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+        </div>
+      )}
+    </div>
   )
 }

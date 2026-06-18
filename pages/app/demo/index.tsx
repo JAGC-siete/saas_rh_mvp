@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import Head from 'next/head'
 import DemoFooter from '../../../components/DemoFooter'
+import AppMeshShell from '../../../components/landing/AppMeshShell'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../components/ui/card'
 import { Button } from '../../../components/ui/button'
 import EmployeeManager from '../../../components/EmployeeManager'
@@ -98,12 +99,12 @@ export default function Demo() {
 
   if (!mswReady) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 flex items-center justify-center">
-        <div className="text-center">
+      <AppMeshShell className="items-center justify-center">
+        <div className="text-center relative z-10">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
           <p className="text-white">Iniciando demo...</p>
         </div>
-      </div>
+      </AppMeshShell>
     )
   }
 
@@ -280,29 +281,30 @@ export default function Demo() {
         <meta name="robots" content="noindex, nofollow" />
       </Head>
 
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900">
+      <AppMeshShell className="flex-col">
         <DemoBanner />
-        
-        <div className="flex">
+
+        <div className="flex flex-1 min-h-0 relative z-10">
           {/* Demo Sidebar */}
-          <div className="w-64 glass-modern border-r border-white/10">
-            <nav className="mt-8 space-y-1">
+          <div className="w-64 glass-modern border-r border-white/10 shrink-0">
+            <nav className="mt-8 space-y-1 px-2">
               {[
                 { id: 'dashboard', name: 'Dashboard', icon: ChartBarIcon },
                 { id: 'employees', name: 'Empleados', icon: UsersIcon },
                 { id: 'attendance', name: 'Asistencia', icon: ClockIcon },
                 { id: 'payroll', name: 'Nómina', icon: CurrencyDollarIcon },
-                { id: 'reports', name: 'Reportes', icon: DocumentTextIcon }
+                { id: 'reports', name: 'Reportes', icon: DocumentTextIcon },
               ].map((item) => {
                 const Icon = item.icon
+                const isActive = activeTab === item.id
                 return (
                   <button
                     key={item.id}
                     onClick={() => setActiveTab(item.id)}
-                    className={`w-full flex items-center px-4 py-2 text-left text-sm font-medium ${
-                      activeTab === item.id
-                        ? 'bg-white/20 text-white border-r-2 border-white'
-                        : 'text-gray-300 hover:bg-white/10 hover:text-white'
+                    className={`w-full flex items-center px-4 py-2 text-left text-sm font-medium rounded-lg border transition-colors ${
+                      isActive
+                        ? 'bg-brand-600/20 text-white border-brand-400/30 shadow-sm'
+                        : 'text-white/70 border-transparent hover:bg-white/10 hover:text-white'
                     }`}
                   >
                     <Icon className="mr-3 h-5 w-5" />
@@ -312,15 +314,13 @@ export default function Demo() {
               })}
             </nav>
           </div>
-          
+
           {/* Main Content */}
-          <div className="flex-1 p-8">
-            {renderContent()}
-          </div>
+          <div className="flex-1 overflow-auto p-8">{renderContent()}</div>
         </div>
-        
+
         <DemoFooter />
-      </div>
+      </AppMeshShell>
     </>
   )
 }

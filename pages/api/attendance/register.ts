@@ -505,6 +505,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         emoji: contextualMessage.emoji,
         action: 'check_in',
         currentTime: nowLocal.time,
+        employeeName: employee.name,
         data: record
       })
 
@@ -622,6 +623,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         message: '✅ Salida registrada exitosamente',
         action: 'check_out',
         currentTime: nowLocal.time,
+        employeeName: employee.name,
         data: record,
         success: true
       });

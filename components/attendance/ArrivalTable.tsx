@@ -1,10 +1,11 @@
-import { useState, useMemo } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card'
+import { useState, useMemo, useEffect } from 'react'
+import { motion, AnimatePresence, LayoutGroup } from 'framer-motion'
 import { formatTimeDisplay } from '../../lib/timezone'
 import { getSeverityFromDelta } from '../../lib/hooks/useAttendanceData'
-import { UserCircleIcon, ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline'
+import { ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline'
 import { AttendanceRecordFlagsBadges, type AttendanceListFlags } from './AttendanceRecordFlagsBadges'
 import EmployeeCell from '../common/EmployeeCell'
+import { getSeverityPulseClass, type SeverityTone } from '../../lib/attendance/severity-styles'
 
 interface ArrivalRow {
   id: string
@@ -28,6 +29,7 @@ interface ArrivalTableProps {
   title: string
   onSelect?: (id: string, name: string) => void
   pageSize?: number
+  externalSeverityFilter?: 'all' | 'early' | 'on_time' | 'warn' | 'alert' | 'danger' | 'late'
 }
 
 type SeverityFilter = 'all' | 'early' | 'on_time' | 'warn' | 'alert' | 'danger'
@@ -37,196 +39,254 @@ function timeOrDash(value: string | null | undefined): string {
   return formatTimeDisplay(value)
 }
 
-export default function ArrivalTable({ earlyData, lateData, title, onSelect, pageSize = 10 }: ArrivalTableProps) {
+export default function ArrivalTable({
+  earlyData,
+  lateData,
+  title,
+  onSelect,
+  pageSize = 10,
+  externalSeverityFilter = 'all',
+}: ArrivalTableProps) {
   const [severityFilter, setSeverityFilter] = useState<SeverityFilter>('all')
   const [page, setPage] = useState(1)
   const [expandedId, setExpandedId] = useState<string | null>(null)
 
-  // Unificar y procesar datos con severidad
+  useEffect(() => {
+    if (externalSeverityFilter === 'all') return
+    if (externalSeverityFilter === 'late') {
+      setSeverityFilter('warn')
+    } else if (
+      externalSeverityFilter === 'early' ||
+      externalSeverityFilter === 'on_time' ||
+      externalSeverityFilter === 'warn' ||
+      externalSeverityFilter === 'alert' ||
+      externalSeverityFilter === 'danger'
+    ) {
+      setSeverityFilter(externalSeverityFilter)
+    }
+    setPage(1)
+  }, [externalSeverityFilter])
+
   const unifiedRows = useMemo(() => {
     const mapRow = (r: ArrivalRow) => {
       const delta = r.delta_min ?? r.late_minutes ?? 0
       const severity = getSeverityFromDelta(delta)
-      return { 
-        ...r, 
+      return {
+        ...r,
         delta,
         severity: severity.label,
-        tone: severity.tone,
+        tone: severity.tone as SeverityTone,
         color: severity.color,
-        bgColor: severity.bgColor
       }
     }
-    
-    return [...earlyData.map(mapRow), ...lateData.map(mapRow)]
-      .sort((a, b) => (b.delta ?? 0) - (a.delta ?? 0))
+
+    return [...earlyData.map(mapRow), ...lateData.map(mapRow)].sort(
+      (a, b) => (b.delta ?? 0) - (a.delta ?? 0)
+    )
   }, [earlyData, lateData])
 
-  // Filtrar por severidad
   const filteredRows = useMemo(() => {
-    if (severityFilter === 'all') return unifiedRows
-    
-    return unifiedRows.filter(row => {
-      switch (severityFilter) {
-        case 'early': return row.tone === 'info'
-        case 'on_time': return row.tone === 'ok'
-        case 'warn': return row.tone === 'warn'
-        case 'alert': return row.tone === 'alert'
-        case 'danger': return row.tone === 'danger'
-        default: return true
-      }
-    })
-  }, [unifiedRows, severityFilter])
+    let rows = unifiedRows
+
+    if (externalSeverityFilter === 'late') {
+      rows = rows.filter((row) => ['warn', 'alert', 'danger'].includes(row.tone))
+    } else if (severityFilter !== 'all') {
+      rows = rows.filter((row) => {
+        switch (severityFilter) {
+          case 'early':
+            return row.tone === 'info'
+          case 'on_time':
+            return row.tone === 'ok'
+          case 'warn':
+            return row.tone === 'warn'
+          case 'alert':
+            return row.tone === 'alert'
+          case 'danger':
+            return row.tone === 'danger'
+          default:
+            return true
+        }
+      })
+    }
+
+    return rows
+  }, [unifiedRows, severityFilter, externalSeverityFilter])
 
   const totalPages = Math.max(1, Math.ceil(filteredRows.length / pageSize))
   const paged = useMemo(() => {
     const start = (page - 1) * pageSize
     return filteredRows.slice(start, start + pageSize)
   }, [filteredRows, page, pageSize])
-  const canPrev = page > 1
-  const canNext = page < totalPages
-  const goPrev = () => setPage((p) => (p > 1 ? p - 1 : p))
-  const goNext = () => setPage((p) => (p < totalPages ? p + 1 : p))
 
   const severityFilters = [
-    { key: 'all' as SeverityFilter, label: 'Todos', count: unifiedRows.length, icon: '🔍' },
-    { key: 'early' as SeverityFilter, label: 'Temprano', count: unifiedRows.filter(r => r.tone === 'info').length, icon: '✅' },
-    { key: 'on_time' as SeverityFilter, label: 'A tiempo', count: unifiedRows.filter(r => r.tone === 'ok').length, icon: '🕐' },
-    { key: 'warn' as SeverityFilter, label: 'Tarde 5–10', count: unifiedRows.filter(r => r.tone === 'warn').length, icon: '⚠️' },
-    { key: 'alert' as SeverityFilter, label: 'Tarde 11–20', count: unifiedRows.filter(r => r.tone === 'alert').length, icon: '🔴' },
-    { key: 'danger' as SeverityFilter, label: 'Tarde >20', count: unifiedRows.filter(r => r.tone === 'danger').length, icon: '🚨' },
+    { key: 'all' as SeverityFilter, label: 'Todos', count: unifiedRows.length },
+    { key: 'early' as SeverityFilter, label: 'Temprano', count: unifiedRows.filter((r) => r.tone === 'info').length },
+    { key: 'on_time' as SeverityFilter, label: 'A tiempo', count: unifiedRows.filter((r) => r.tone === 'ok').length },
+    { key: 'warn' as SeverityFilter, label: 'Tarde 5–10', count: unifiedRows.filter((r) => r.tone === 'warn').length },
+    { key: 'alert' as SeverityFilter, label: 'Tarde 11–20', count: unifiedRows.filter((r) => r.tone === 'alert').length },
+    { key: 'danger' as SeverityFilter, label: 'Tarde >20', count: unifiedRows.filter((r) => r.tone === 'danger').length },
   ]
 
   return (
-    <Card variant="liquid" className="border border-white/10">
-      <CardHeader className="pb-3 border-b border-white/10">
-        <CardTitle className="text-base font-semibold text-white flex items-center gap-2">
-          <span className="text-xl">⏰</span>
-          {title}
-        </CardTitle>
-        
-        {/* Chips de filtro por severidad */}
-        {unifiedRows.length > 0 && (
-          <div className="flex flex-wrap gap-2 mt-3">
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 className="text-base font-semibold text-white">{title}</h3>
+        {unifiedRows.length > 0 && externalSeverityFilter === 'all' && (
+          <div className="flex flex-wrap gap-1.5">
             {severityFilters.map((filter) => (
               <button
                 key={filter.key}
-                onClick={() => setSeverityFilter(filter.key)}
-                className={`px-3 py-1.5 text-xs font-medium rounded-full transition-all ${
+                type="button"
+                onClick={() => {
+                  setSeverityFilter(filter.key)
+                  setPage(1)
+                }}
+                className={`px-2.5 py-1 text-xs font-medium rounded-full transition-all ${
                   severityFilter === filter.key
-                    ? 'bg-brand-600 text-white shadow-lg shadow-brand-600/30'
-                    : 'bg-white/10 text-gray-300 hover:bg-white/20 border border-white/20'
+                    ? 'bg-brand-600/90 text-white'
+                    : 'bg-white/5 text-gray-400 hover:bg-white/10'
                 }`}
               >
-                <span className="mr-1.5">{filter.icon}</span>
-                {filter.label} <span className="ml-1 opacity-75">({filter.count})</span>
+                {filter.label} ({filter.count})
               </button>
             ))}
           </div>
         )}
-      </CardHeader>
-      
-      <CardContent className="pt-4">
-        {filteredRows.length === 0 ? (
-          <div className="text-center py-12">
-            <UserCircleIcon className="h-12 w-12 mx-auto text-gray-600 mb-3" />
-            <p className="text-gray-400 text-sm">No hay registros</p>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {paged.map((row) => {
-              const rowKey = `${row.id}-${row.date ?? 'single'}`
-              const isExpanded = expandedId === rowKey
-              return (
-                <div key={rowKey} className="space-y-0">
-                  <div
-                    className={`w-full p-3 rounded-lg hover:scale-[1.01] transition-all text-left group border ${
-                      row.tone === 'info' ? 'bg-blue-500/10 border-blue-500/30 hover:border-blue-500/50' :
-                      row.tone === 'ok' ? 'bg-emerald-500/10 border-emerald-500/30 hover:border-emerald-500/50' :
-                      row.tone === 'warn' ? 'bg-yellow-500/10 border-yellow-500/30 hover:border-yellow-500/50' :
-                      row.tone === 'alert' ? 'bg-orange-500/10 border-orange-500/30 hover:border-orange-500/50' :
-                      'bg-red-500/10 border-red-500/30 hover:border-red-500/50'
-                    }`}
+      </div>
+
+      {filteredRows.length === 0 ? (
+        <div className="text-center py-12 text-gray-400 text-sm">No hay registros</div>
+      ) : (
+        <LayoutGroup>
+          <motion.div layout className="space-y-1.5">
+            <AnimatePresence mode="popLayout">
+              {paged.map((row) => {
+                const rowKey = `${row.id}-${row.date ?? 'single'}`
+                const isExpanded = expandedId === rowKey
+                return (
+                  <motion.div
+                    key={rowKey}
+                    layout
+                    initial={{ opacity: 0, x: -8 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, scale: 0.98 }}
+                    transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                    className="group"
                   >
-                    <div className="flex items-center justify-between gap-2">
-                      <button
-                        type="button"
-                        onClick={() => onSelect && onSelect(row.id, row.name)}
-                        className="flex items-center gap-3 flex-1 min-w-0 text-left"
-                      >
-                        <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${row.bgColor}`}>
-                          <span className="text-lg">{row.tone === 'info' ? '✅' : row.tone === 'ok' ? '🕐' : row.tone === 'warn' ? '⚠️' : '🔴'}</span>
+                    <div className="relative flex rounded-xl hover:bg-white/5 transition-colors duration-200 overflow-hidden">
+                      {/* Severity pulse line */}
+                      <div
+                        className={`w-[3px] flex-shrink-0 rounded-full ${getSeverityPulseClass(row.tone)}`}
+                        aria-hidden
+                      />
+                      <div className="flex-1 min-w-0 p-3">
+                        <div className="flex items-center justify-between gap-2">
+                          <button
+                            type="button"
+                            onClick={() => onSelect?.(row.id, row.name)}
+                            className="flex items-center gap-3 flex-1 min-w-0 text-left"
+                          >
+                            <div className="flex-1 min-w-0">
+                              <EmployeeCell
+                                name={row.name}
+                                dni={row.dni}
+                                subtitle={row.team}
+                                nameClassName="font-medium text-white truncate"
+                                dniClassName="text-xs text-gray-500 truncate"
+                                subtitleClassName="text-xs text-gray-500 truncate"
+                              />
+                              <AttendanceRecordFlagsBadges flags={row.flags} />
+                            </div>
+                          </button>
+                          <div className="flex items-center gap-3 flex-shrink-0">
+                            <span className={`text-sm font-medium tabular-nums ${row.color}`}>
+                              {row.delta > 0 ? `+${row.delta}m` : row.delta < 0 ? `${row.delta}m` : '0m'}
+                            </span>
+                            <span className="text-sm text-gray-400 tabular-nums">
+                              {formatTimeDisplay(row.check_in_time ?? row.check_in ?? null)}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setExpandedId((id) => (id === rowKey ? null : rowKey))
+                              }}
+                              className="p-1.5 rounded-lg hover:bg-white/10 text-gray-500 hover:text-white transition-colors"
+                              aria-expanded={isExpanded}
+                            >
+                              {isExpanded ? (
+                                <ChevronUpIcon className="h-4 w-4" />
+                              ) : (
+                                <ChevronDownIcon className="h-4 w-4" />
+                              )}
+                            </button>
+                          </div>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <EmployeeCell
-                            name={row.name}
-                            dni={row.dni}
-                            subtitle={row.team}
-                            nameClassName="font-medium text-white truncate"
-                            dniClassName="text-xs text-gray-400 truncate"
-                            subtitleClassName="text-xs text-gray-400 truncate"
-                          />
-                          <AttendanceRecordFlagsBadges flags={row.flags} />
-                        </div>
-                      </button>
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        <span className={`text-sm font-medium ${row.color}`}>
-                          {row.delta > 0 ? `+${row.delta}m` : row.delta < 0 ? `${row.delta}m` : '0m'}
-                        </span>
-                        <span className="text-sm text-gray-400">
-                          {formatTimeDisplay(row.check_in_time ?? row.check_in ?? null)}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            setExpandedId((id) => (id === rowKey ? null : rowKey))
-                          }}
-                          className="p-1.5 rounded hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
-                          title={isExpanded ? 'Ocultar detalle' : 'Ver detalle'}
-                        >
-                          {isExpanded ? (
-                            <ChevronUpIcon className="h-4 w-4" />
-                          ) : (
-                            <ChevronDownIcon className="h-4 w-4" />
+                        <AnimatePresence>
+                          {isExpanded && (
+                            <motion.div
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: 'auto', opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              transition={{ duration: 0.2 }}
+                              className="overflow-hidden"
+                            >
+                              <div className="mt-3 pt-3 border-t border-white/5 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                                <div className="flex justify-between gap-2">
+                                  <span className="text-gray-500">Entrada</span>
+                                  <span className="text-gray-200">{timeOrDash(row.check_in_time ?? row.check_in)}</span>
+                                </div>
+                                <div className="flex justify-between gap-2">
+                                  <span className="text-gray-500">Salida</span>
+                                  <span className="text-gray-200">{timeOrDash(row.check_out)}</span>
+                                </div>
+                                <div className="flex justify-between gap-2">
+                                  <span className="text-gray-500">Almuerzo inicio</span>
+                                  <span className="text-gray-200">{timeOrDash(row.lunch_start)}</span>
+                                </div>
+                                <div className="flex justify-between gap-2">
+                                  <span className="text-gray-500">Almuerzo fin</span>
+                                  <span className="text-gray-200">{timeOrDash(row.lunch_end)}</span>
+                                </div>
+                              </div>
+                            </motion.div>
                           )}
-                        </button>
+                        </AnimatePresence>
                       </div>
                     </div>
-                  </div>
-                  {isExpanded && (
-                    <div className="ml-4 pl-6 py-3 border-l-2 border-white/20 space-y-1.5 text-sm">
-                      <div className="flex justify-between gap-4">
-                        <span className="text-gray-400">Entrada</span>
-                        <span className="text-gray-200">{timeOrDash(row.check_in_time ?? row.check_in)}</span>
-                      </div>
-                      <div className="flex justify-between gap-4">
-                        <span className="text-gray-400">Inicio almuerzo</span>
-                        <span className="text-gray-200">{timeOrDash(row.lunch_start)}</span>
-                      </div>
-                      <div className="flex justify-between gap-4">
-                        <span className="text-gray-400">Fin almuerzo</span>
-                        <span className="text-gray-200">{timeOrDash(row.lunch_end)}</span>
-                      </div>
-                      <div className="flex justify-between gap-4">
-                        <span className="text-gray-400">Salida</span>
-                        <span className="text-gray-200">{timeOrDash(row.check_out)}</span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )
-            })}
-            {/* Pagination */}
-            <div className="flex items-center justify-between pt-3">
-              <span className="text-xs text-gray-400">Página {page} de {totalPages}</span>
-              <div className="flex gap-2">
-                <button onClick={goPrev} disabled={!canPrev} className={`px-3 py-1 rounded bg-white/10 text-xs ${canPrev ? 'hover:bg-white/20' : 'opacity-40 cursor-not-allowed'}`}>Anterior</button>
-                <button onClick={goNext} disabled={!canNext} className={`px-3 py-1 rounded bg-white/10 text-xs ${canNext ? 'hover:bg-white/20' : 'opacity-40 cursor-not-allowed'}`}>Siguiente</button>
-              </div>
-            </div>
+                  </motion.div>
+                )
+              })}
+            </AnimatePresence>
+          </motion.div>
+        </LayoutGroup>
+      )}
+
+      {filteredRows.length > pageSize && (
+        <div className="flex items-center justify-between pt-2">
+          <span className="text-xs text-gray-500">
+            Página {page} de {totalPages}
+          </span>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page <= 1}
+              className="px-3 py-1 rounded-lg bg-white/5 text-xs text-gray-300 hover:bg-white/10 disabled:opacity-40"
+            >
+              Anterior
+            </button>
+            <button
+              type="button"
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page >= totalPages}
+              className="px-3 py-1 rounded-lg bg-white/5 text-xs text-gray-300 hover:bg-white/10 disabled:opacity-40"
+            >
+              Siguiente
+            </button>
           </div>
-        )}
-      </CardContent>
-    </Card>
+        </div>
+      )}
+    </div>
   )
 }

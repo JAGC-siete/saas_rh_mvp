@@ -47,14 +47,16 @@ export default function AttendanceRegisterPage() {
 
             <p className="text-brand-100 text-lg font-medium mb-4">Registro Inteligente de Asistencia</p>
 
-            <div className="mt-6 text-3xl font-mono font-bold text-white drop-shadow-md">{currentTime}</div>
+            <div className="mt-6 text-5xl sm:text-6xl font-mono font-bold text-white drop-shadow-clock-glow tracking-tight tabular-nums">
+              {currentTime}
+            </div>
 
             <p className="text-sm text-white/60 mt-4 font-medium">
               Deducciones y normativa local (SV, GT, HN) — Soporte regional
             </p>
           </div>
 
-          <div className="glass-modern rounded-3xl p-8">
+          <div className="glass-modern rounded-3xl p-8 relative overflow-hidden">
             <div className="text-center mb-8">
               <h3 className="text-2xl font-bold text-white mb-2 flex items-center justify-center gap-3">
                 <User className="h-7 w-7" strokeWidth={2.5} />

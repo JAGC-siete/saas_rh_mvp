@@ -1,13 +1,10 @@
 import { ArrowPathIcon, ArrowTrendingUpIcon } from '@heroicons/react/24/outline'
 import {
   ResponsiveContainer,
-  LineChart,
-  Line,
+  AreaChart,
+  Area,
   XAxis,
-  YAxis,
   Tooltip,
-  CartesianGrid,
-  Legend,
 } from 'recharts'
 import { parseDateOnlyAsHonduras, HONDURAS_TIMEZONE } from '../../lib/timezone'
 
@@ -26,6 +23,36 @@ interface TrendsChartProps {
   onRetry?: () => void
 }
 
+function GlassTooltip({
+  active,
+  payload,
+  label,
+}: {
+  active?: boolean
+  payload?: Array<{ value?: number; dataKey?: string; color?: string }>
+  label?: string
+}) {
+  if (!active || !payload?.length) return null
+  const attendance = payload.find((p) => p.dataKey === 'attendanceRate')
+  const punctuality = payload.find((p) => p.dataKey === 'punctualityRate')
+
+  return (
+    <div className="rounded-xl border border-white/15 bg-slate-900/80 backdrop-blur-xl px-4 py-3 shadow-glass text-sm">
+      <p className="text-gray-400 text-xs mb-2">{label}</p>
+      {attendance != null && (
+        <p className="text-emerald-300 font-medium tabular-nums">
+          Asistencia: {Number(attendance.value).toFixed(1)}%
+        </p>
+      )}
+      {punctuality != null && (
+        <p className="text-brand-300 font-medium tabular-nums mt-0.5">
+          Puntualidad: {Number(punctuality.value).toFixed(1)}%
+        </p>
+      )}
+    </div>
+  )
+}
+
 export default function TrendsChart({
   trends,
   loading = false,
@@ -42,24 +69,20 @@ export default function TrendsChart({
       }),
       attendanceRate: dayTotal ? ((t.present + t.late) / dayTotal) * 100 : 0,
       punctualityRate: dayTotal ? (t.present / dayTotal) * 100 : 0,
-      present: t.present,
-      late: t.late,
-      absent: t.absent,
-      total: dayTotal,
     }
   })
 
   if (loading) {
     return (
-      <div className="h-[260px] bg-gradient-to-br from-white/5 to-white/0 rounded-xl border border-white/10 backdrop-blur-sm animate-pulse flex items-center justify-center">
-        <div className="text-gray-400">Cargando tendencias...</div>
+      <div className="h-[260px] rounded-xl animate-pulse flex items-center justify-center">
+        <div className="text-gray-500 text-sm">Cargando tendencias...</div>
       </div>
     )
   }
 
   if (error) {
     return (
-      <div className="h-[260px] bg-gradient-to-br from-white/5 to-white/0 rounded-xl border border-red-500/20 flex flex-col items-center justify-center gap-3 px-4">
+      <div className="h-[260px] rounded-xl border border-red-500/20 flex flex-col items-center justify-center gap-3 px-4">
         <p className="text-sm text-red-200 text-center">{error}</p>
         {onRetry && (
           <button
@@ -77,72 +100,61 @@ export default function TrendsChart({
 
   if (chartData.length === 0) {
     return (
-      <div className="h-[260px] bg-gradient-to-br from-white/5 to-white/0 rounded-xl border border-white/10 backdrop-blur-sm flex items-center justify-center">
+      <div className="h-[260px] flex items-center justify-center">
         <div className="text-center px-4">
-          <ArrowTrendingUpIcon className="h-12 w-12 mx-auto text-gray-600 mb-3" aria-hidden />
-          <div className="text-gray-400 mb-2 font-medium">Sin datos de tendencias</div>
-          <div className="text-sm text-gray-500">Selecciona un rango de fechas con datos</div>
+          <ArrowTrendingUpIcon className="h-10 w-10 mx-auto text-gray-600 mb-3" aria-hidden />
+          <div className="text-gray-400 text-sm font-medium">Sin datos de tendencias</div>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="h-[260px] w-full bg-gradient-to-br from-white/5 to-white/0 rounded-xl p-4">
-      <ResponsiveContainer width="100%" height={260} minHeight={260}>
-        <LineChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-          <XAxis
-            dataKey="date"
-            stroke="#9CA3AF"
-            fontSize={12}
-            tickLine={false}
-            axisLine={false}
-          />
-          <YAxis
-            domain={[0, 100]}
-            tickFormatter={(v) => `${v}%`}
-            stroke="#9CA3AF"
-            fontSize={12}
-            tickLine={false}
-            axisLine={false}
-          />
-          <Tooltip
-            formatter={(value, name) => {
-              const numValue = typeof value === 'number' ? value : Number(value) || 0
-              const key = String(name)
-              return [
-                `${numValue.toFixed(1)}%`,
-                key === 'attendanceRate' ? 'Asistencia' : 'Puntualidad',
-              ]
-            }}
-            labelFormatter={(label) => `Fecha: ${label}`}
-            contentStyle={{
-              backgroundColor: '#1F2937',
-              border: '1px solid #374151',
-              borderRadius: '8px',
-              color: '#F9FAFB',
-            }}
-          />
-          <Legend wrapperStyle={{ color: '#F9FAFB', fontSize: '12px' }} />
-          <Line
+    <div className="h-[260px] w-full">
+      <ResponsiveContainer width="100%" height={260}>
+        <AreaChart data={chartData} margin={{ top: 12, right: 8, left: 8, bottom: 0 }}>
+          <defs>
+            <linearGradient id="attendanceGlow" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#10B981" stopOpacity={0.35} />
+              <stop offset="100%" stopColor="#10B981" stopOpacity={0} />
+            </linearGradient>
+            <linearGradient id="punctualityGlow" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#3B82F6" stopOpacity={0.25} />
+              <stop offset="100%" stopColor="#3B82F6" stopOpacity={0} />
+            </linearGradient>
+          </defs>
+          <XAxis dataKey="date" hide />
+          <Tooltip content={<GlassTooltip />} cursor={{ stroke: 'rgba(255,255,255,0.08)', strokeWidth: 1 }} />
+          <Area
             type="monotone"
             dataKey="attendanceRate"
             stroke="#10B981"
-            strokeWidth={2}
-            dot={{ fill: '#10B981', strokeWidth: 2, r: 4 }}
-            name="Asistencia"
+            strokeWidth={2.5}
+            fill="url(#attendanceGlow)"
+            dot={false}
+            activeDot={{ r: 5, fill: '#10B981', stroke: '#fff', strokeWidth: 1 }}
           />
-          <Line
+          <Area
             type="monotone"
             dataKey="punctualityRate"
-            stroke="#3B82F6"
+            stroke="#60A5FA"
             strokeWidth={2}
-            dot={{ fill: '#3B82F6', strokeWidth: 2, r: 4 }}
-            name="Puntualidad"
+            fill="url(#punctualityGlow)"
+            dot={false}
+            activeDot={{ r: 4, fill: '#60A5FA', stroke: '#fff', strokeWidth: 1 }}
           />
-        </LineChart>
+        </AreaChart>
       </ResponsiveContainer>
+      <div className="flex justify-center gap-6 mt-2 text-xs text-gray-500">
+        <span className="flex items-center gap-1.5">
+          <span className="w-3 h-0.5 bg-emerald-400 rounded-full shadow-[0_0_6px_rgba(52,211,153,0.6)]" />
+          Asistencia
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="w-3 h-0.5 bg-brand-400 rounded-full shadow-[0_0_6px_rgba(96,165,250,0.5)]" />
+          Puntualidad
+        </span>
+      </div>
     </div>
   )
 }
