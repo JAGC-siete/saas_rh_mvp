@@ -5,6 +5,7 @@ import {
   formatVoucherCompanyName,
   type VoucherPdfOptions,
 } from './voucher-pdf-options'
+import { resolveCompanyLogoBuffer } from '../reports/resolve-company-logo'
 import { defaultPdfPrimaryColor, PDF } from '../pdf/liquid-theme'
 
 export type { VoucherPdfOptions }
@@ -30,16 +31,6 @@ export interface EmployeeReceiptInput {
   septimo_dia?: number
 }
 
-async function fetchLogoBuffer(url: string): Promise<Buffer | null> {
-  try {
-    const response = await fetch(url)
-    if (!response.ok) return null
-    return Buffer.from(await response.arrayBuffer())
-  } catch {
-    return null
-  }
-}
-
 function sectionVisible(id: string, options?: VoucherPdfOptions): boolean {
   if (!options?.visibleSections) return true
   return options.visibleSections.has(id)
@@ -60,9 +51,7 @@ export async function generateEmployeeReceiptPDF(
 ): Promise<Buffer> {
   const primaryColor = defaultPdfPrimaryColor(options?.branding?.primaryColor)
   const displayName = formatVoucherCompanyName(options?.branding, companyName || 'SISTEMA HONDUREÑO DE RECURSOS HUMANOS')
-  const logoBuffer = options?.branding?.logoUrl
-    ? await fetchLogoBuffer(options.branding.logoUrl)
-    : null
+  const logoBuffer = await resolveCompanyLogoBuffer(options?.branding)
 
   const showEmployee =
     sectionVisible('emp_code', options) ||

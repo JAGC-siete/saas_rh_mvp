@@ -16,7 +16,10 @@ export const reportColumnSchema = z.object({
 
 export const brandingSchema = z.object({
   primaryColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
+  /** Legacy external URL (optional). Prefer logoStoragePath for private Storage logos. */
   logoUrl: z.union([z.string().url(), z.literal(''), z.null()]).optional(),
+  /** HR_BUCKET path, e.g. companies/{id}/branding/logo.png */
+  logoStoragePath: z.string().max(500).optional(),
   legalName: z.string().max(200).optional(),
   useLegalSuffix: z.boolean().optional()
 })
