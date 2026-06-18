@@ -160,7 +160,7 @@ export default function MailListPage() {
             <div>
               <h1 className="text-3xl font-bold">Leads de marketing</h1>
               <p className="text-muted-foreground mt-2">
-                Secuencia de email (welcome + pasos 1–4 vía watchman)
+                Secuencia de email (welcome + pasos 1–5 vía watchman)
               </p>
             </div>
             <Button onClick={handleExportCSV} variant="outline" disabled={exporting}>

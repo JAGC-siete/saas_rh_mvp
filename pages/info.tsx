@@ -123,11 +123,10 @@ export default function InfoPage() {
       <section id="info-lead" className="py-12 sm:py-16 md:py-20">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4 sm:mb-6 px-2">
-            Conoce Humano SISU
+            Hay un pequeño truco para que el trabajo más aburrido y pesado se haga prácticamente solo.
           </h1>
           <p className="text-base sm:text-lg md:text-xl text-gray-300 mb-6 sm:mb-8 max-w-2xl mx-auto px-2">
-            Déjanos tus datos y te compartimos cómo automatizar nómina, asistencia y gestión de personal
-            sin activar un trial ni pedir una cotización formal todavía.
+            Organizar los pagos y horarios no tiene por qué ser la peor parte de tu semana. Anota tu correo aquí y te lo enviamos en una nota rápida.
           </p>
 
           <div className="max-w-md mx-auto text-left">

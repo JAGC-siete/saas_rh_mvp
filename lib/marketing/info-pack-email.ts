@@ -3,7 +3,11 @@ import { getResendFromContact } from '../resend-from'
 import { buildInfoPackEmailHtml } from './info-pack-email-html'
 import { appendUnsubscribeFooter, getMarketingSiteUrl } from './unsubscribe'
 
-export const INFO_PACK_SUBJECT_PREFIX = 'La info que pediste sobre nómina y RH para PyMEs'
+export const INFO_PACK_SUBJECT =
+  'Lo prometido: El truco para que el trabajo aburrido se haga solo 🪄'
+
+/** @deprecated Use INFO_PACK_SUBJECT */
+export const INFO_PACK_SUBJECT_PREFIX = INFO_PACK_SUBJECT
 
 /** Hours after info pack before Step 0 (welcome) of the pain-point sequence. */
 export const INFO_SEQUENCE_WELCOME_DELAY_HOURS = 24
@@ -15,10 +19,13 @@ function displayName(raw?: string | null, email?: string): string {
   return local || 'Equipo'
 }
 
-export function buildInfoPackSubject(nombre?: string | null, email?: string): string {
-  const name = displayName(nombre, email)
-  const first = name.split(/\s+/)[0] || name
-  return `${first}, esto es Humano SISU en 3 minutos`
+function firstName(raw?: string | null, email?: string): string {
+  const full = displayName(raw, email)
+  return full.split(/\s+/)[0] || full
+}
+
+export function buildInfoPackSubject(_nombre?: string | null, _email?: string): string {
+  return INFO_PACK_SUBJECT
 }
 
 export function buildInfoPackEmailText(params: {
@@ -26,70 +33,38 @@ export function buildInfoPackEmailText(params: {
   email: string
   unsubscribeToken: string
 }): string {
-  const name = displayName(params.nombre, params.email)
+  const name = firstName(params.nombre, params.email)
   const site = getMarketingSiteUrl().replace(/\/$/, '')
 
   const body = [
     `Hola ${name},`,
     '',
-    'Gracias por pedir más información sobre Humano SISU.',
+    'El "truco" es más simple de lo que parece: Digitaliza el registro de asistencia a la oficina.',
     '',
-    'Te resumo en pocas líneas qué es y si te puede servir — sin activar trial ni cotización todavía.',
+    'Para que el trabajo más aburrido se haga solo, usamos el reloj biométrico SISU. En lugar de que una persona anote las horas a mano a fin de mes, el reloj registra, almacena, opera y presenta el trabajo pesado por ti.',
     '',
-    '---',
+    'En pocas palabras, así es como te quitas el peso de encima:',
     '',
-    '¿QUÉ ES SISU?',
+    '• Asistencia en tiempo real: Se conecta por internet a un reloj inteligente. Puedes ver desde tu celular o computadora quién llegó y a qué hora, sin tener que revisar libretas ni hojas de firmas.',
+    '• Los pagos se calculan solos: Te olvidas de hacer las sumas a mano. El sistema ya sabe cómo calcular todo (incluyendo IHSS, RAP o ISR según las reglas de tu país).',
+    '• Cero registros perdidos: Los permisos, vacaciones y datos importantes de tu equipo quedan guardados en un solo lugar seguro, y no perdidos en un chat de WhatsApp.',
     '',
-    'Humano SISU es un software de Recursos Humanos para PyMEs en Centroamérica.',
-    'Centraliza lo que hoy suele estar repartido en Excel, WhatsApp y carpetas:',
+    '¿Para quién funciona mejor este truco?',
+    'Está pensado para dueños, encargados o contadores de equipos de 5 a 200 personas (en Honduras, El Salvador o Guatemala) que quieren tener todo el control de su gente en una sola pantalla, y que quieren empezar rápido (se configura en días, no en meses).',
     '',
-    '• Nómina (IHSS, RAP, ISR según país)',
-    '• Control de asistencia (incluye integración biométrica)',
-    '• Permisos y vacaciones',
-    '• Expedientes y reportes para gerencia',
+    '¿Qué sigue ahora?',
+    'Como te prometí: cero venta. No tienes que decidir nada hoy ni hablar con ningún vendedor si no quieres.',
     '',
-    'Está pensado para equipos de 5 a 200 empleados que quieren dejar de calcular planilla a mano.',
+    'Pero si te da curiosidad ver si funcionaría en tu empresa o cómo se vería en tu empresa, aquí te dejo los enlaces directos:',
     '',
-    '---',
+    `→ Quiero ver cómo funciona: ${site}/activar`,
+    `→ Ver precios sin compromiso: ${site}/ventas`,
     '',
-    '¿CÓMO FUNCIONA?',
+    'Un saludo,',
     '',
-    'El sistema se conecta por internet con un reloj biométrico inteligente.',
+    'Equipo Humano SISU',
     '',
-    'Esto permite dos cosas:',
-    '',
-    '1. Visualización de asistencia en tiempo real desde cualquier dispositivo (celular, tablet, laptop, Mac, etc.).',
-    '2. Cálculo de nóminas parametrizado y automatizado.',
-    '',
-    'El sistema cuenta además con módulos de ficha de personal, control de permisos y vacaciones, y generación de reportes en distintos formatos (Excel, PDF, TXT, CSV).',
-    '',
-    '---',
-    '',
-    '¿PARA QUIÉN ES?',
-    '',
-    '✓ Empresas en Honduras, El Salvador o Guatemala',
-    '✓ Dueños, gerentes de RRHH o contadores que quieren un solo lugar para el dato del personal',
-    '✓ Equipos que buscan implementación ágil (días, no meses)',
-    '',
-    '---',
-    '',
-    '¿CÓMO SE EMPIEZA? (cuando estés listo)',
-    '',
-    'No tienes que decidir hoy. Cuando quieras profundizar:',
-    '',
-    `→ Probar el sistema: ${site}/activar`,
-    `→ Ver precios / cotización: ${site}/ventas`,
-    '→ Seguir leyendo: en los próximos días te enviaremos ideas prácticas sobre gestión de personal',
-    '',
-    'Si prefieres hablar con alguien, responde a este correo.',
-    '',
-    '---',
-    '',
-    'Humano SISU',
-    'Software de RH para PyMEs en Centroamérica',
-    site,
-    '',
-    'En los próximos días recibirás 4 correos breves sobre errores comunes en la gestión de personal.',
+    'PD: En los próximos días te voy a mandar 5 correos breves. Te voy a contar sobre algunos errores súper comunes (y que cuestan dinero) que casi todo el mundo comete al organizar a su personal. ¡Nos leemos pronto!',
   ].join('\n')
 
   return appendUnsubscribeFooter(body, params.unsubscribeToken)

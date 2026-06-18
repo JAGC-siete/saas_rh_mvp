@@ -10,7 +10,7 @@ import {
   WATCHMAN_FIRST_STEP,
 } from './email-sequence-ledger'
 import { isMarketingExcluded } from './is-marketing-excluded'
-import { sendInfoPackEmail } from './info-pack-email'
+import { sendInfoPackEmail, buildInfoPackSubject } from './info-pack-email'
 import { sendSequenceEmail } from './send-sequence-email'
 import { generateUnsubscribeToken } from './unsubscribe'
 
@@ -221,9 +221,17 @@ export async function enrollMarketingLead(
             .update({
               info_pack_sent_at: now.toISOString(),
               last_mail_sent_at: now.toISOString(),
-              current_step: SEQUENCE_STEP.WELCOME,
+              current_step: WATCHMAN_FIRST_STEP,
             })
             .eq('id', lead.id)
+
+          await client.from('marketing_email_ledger').insert({
+            lead_id: lead.id,
+            step: SEQUENCE_STEP.WELCOME,
+            step_label: welcomeContent.label,
+            subject: buildInfoPackSubject(displayName, trimmedEmail),
+            watch_window_key: getWatchWindowKey(now),
+          })
 
           infoPackSent = true
           welcomeSent = true

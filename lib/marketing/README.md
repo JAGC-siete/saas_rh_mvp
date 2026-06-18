@@ -5,7 +5,7 @@ Single opt-in lead capture via `POST /api/mail-list/subscribe` → `marketing_le
 ## Flow
 
 1. **Subscribe** — welcome (step 0) + ledger entry; `current_step` → 1.
-2. **Watchman** — steps 1–4 on bi-monthly windows (days 12–16, 26–30), triggered by:
+2. **Watchman** — steps 1–5 on bi-monthly windows (days 12–16, 26–30), triggered by:
    - `POST /api/cron/daily` (when today is a watch day)
    - `POST /api/cron/sequence-watchman` (standalone)
 3. **Unsubscribe** — `GET /api/mail-list/unsubscribe?token=` (marketing `unsubscribe_token`; legacy `confirmation_token` fallback).

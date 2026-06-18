@@ -25,7 +25,7 @@ describe('marketing unsubscribe (P1)', () => {
   it('appendUnsubscribeFooter adds baja link', () => {
     const body = appendUnsubscribeFooter('Hola mundo', 'tokentest')
     assert.ok(body.includes('Hola mundo'))
-    assert.ok(body.includes('La serie contiene únicamente 4 correos'))
+    assert.ok(body.includes('La serie contiene únicamente 5 correos'))
     assert.ok(body.includes('dejar de recibirlos aquí'))
     assert.ok(body.includes('tokentest'))
   })

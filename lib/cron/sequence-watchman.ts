@@ -82,7 +82,7 @@ export async function runSequenceWatchman(now: Date = new Date()): Promise<Seque
 
   const { data: leads, error } = await supabaseAdmin
     .from('marketing_leads')
-    .select('id, email, current_step, unsubscribe_token')
+    .select('id, email, current_step, unsubscribe_token, full_name, source')
     .eq('status', 'active')
     .gte('current_step', WATCHMAN_FIRST_STEP)
     .lt('current_step', SEQUENCE_COMPLETE_STEP)
@@ -118,6 +118,8 @@ export async function runSequenceWatchman(now: Date = new Date()): Promise<Seque
         to: lead.email,
         step,
         unsubscribeToken: lead.unsubscribe_token,
+        source: lead.source ?? undefined,
+        recipientName: lead.full_name,
         dryRun,
       })
 

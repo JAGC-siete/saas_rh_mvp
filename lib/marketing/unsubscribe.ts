@@ -13,7 +13,7 @@ export function buildUnsubscribeUrl(token: string): string {
 }
 
 export const MARKETING_UNSUBSCRIBE_FOOTER_TEXT =
-  'La serie contiene únicamente 4 correos, pero podes dejar de recibirlos aquí:'
+  'La serie contiene únicamente 5 correos, pero podes dejar de recibirlos aquí:'
 
 export function appendUnsubscribeFooter(body: string, unsubscribeToken: string): string {
   const url = buildUnsubscribeUrl(unsubscribeToken)
