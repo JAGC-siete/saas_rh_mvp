@@ -13,25 +13,27 @@ describe('lead registro notification', () => {
     const info = buildLeadFollowUpWhatsAppMessage('info')
     const suscripcion = buildLeadFollowUpWhatsAppMessage('suscripcion')
 
-    assert.ok(activar.includes('¡Ya te lo mandé! 🪄'))
-    assert.ok(activar.includes('¿En serio ya tengo acceso?'))
-    assert.ok(activar.includes('trial de SISU'))
-    assert.ok(activar.includes('digitalizar la asistencia'))
-
-    assert.ok(ventas.includes('¡Ya te lo mandé! 🪄'))
-    assert.ok(ventas.includes('¿En serio la cotización era así de clara?'))
-    assert.ok(ventas.includes('propuesta con precios'))
-
     assert.ok(info.includes('¡Ya te lo mandé! 🪄'))
     assert.ok(info.includes('¿En serio era así de fácil?'))
-    assert.ok(info.includes('Es casi absurdo que nadie te lo haya hecho antes'))
+    assert.ok(info.includes('explicado así antes'))
+    assert.ok(info.includes('No te quedes con la intriga'))
 
-    assert.ok(suscripcion.includes('¡Gracias por unirte!'))
-    assert.ok(suscripcion.includes('automatizar tu nómina'))
+    assert.ok(activar.includes('¡Tu entorno ya está listo! 🚀'))
+    assert.ok(activar.includes('credenciales de acceso'))
+    assert.ok(activar.includes('¿Por qué los otros sistemas hacen que esto parezca tan complicado?'))
+    assert.ok(activar.includes('reclámamelo por aquí ya mismo'))
 
-    for (const msg of [activar, ventas, info]) {
+    assert.ok(ventas.includes('¡Números enviados! 🤝'))
+    assert.ok(ventas.includes('sin letras pequeñas'))
+    assert.ok(ventas.includes('también te incluí las llaves del sistema'))
+    assert.ok(ventas.includes('números y tus accesos'))
+
+    assert.ok(suscripcion.includes('Acabo de enviarte algo que la mayoría ignora'))
+    assert.ok(suscripcion.includes('venda en los ojos'))
+    assert.ok(suscripcion.includes('descubrirla'))
+
+    for (const msg of [activar, ventas, info, suscripcion]) {
       assert.ok(msg.includes('jorgearturo@humanosisu.net'))
-      assert.ok(msg.includes('confirmame tu correo'))
     }
   })
 
