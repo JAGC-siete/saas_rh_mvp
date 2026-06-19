@@ -19,8 +19,6 @@ export interface LeadRegistroNotificationData {
   currency?: string | null
 }
 
-const CONTACT_SENDER_HINT = 'jorgearturo@humanosisu.net'
-
 const SOURCE_LABELS: Record<LeadRegistroSource, { title: string; subtitle: string }> = {
   activar: {
     title: 'Nuevo Registro en SISU',
@@ -40,53 +38,57 @@ const SOURCE_LABELS: Record<LeadRegistroSource, { title: string; subtitle: strin
   },
 }
 
-export function buildLeadFollowUpWhatsAppMessage(source: LeadRegistroSource): string {
-  const senderHint = `(Si no ves el correo de bienvenida, búscalo como remitente: ${CONTACT_SENDER_HINT}).`
+const CONTACT_SENDER_HINT = 'jorgearturo@humanosisu.net'
 
+const EMAIL_NOT_RECEIVED_FOOTER = [
+  'Si la tecnología nos traiciona y no lo ves (ni en spam), confirmame tu correo de inmediato para mandártelo de nuevo.',
+].join('\n')
+
+export function buildLeadFollowUpWhatsAppMessage(source: LeadRegistroSource): string {
   if (source === 'activar') {
     return [
-      '¡Ya hiciste lo más difícil, de verdad! 🙌 Tu sistema SISU ya está activo.',
+      '¡Ya te lo mandé! 🪄',
       '',
-      senderHint,
+      'Vas a abrir ese correo en menos de 1 minuto y tu primera reacción va a ser: "¿En serio ya tengo acceso?". Tu trial de SISU ya está activo — credenciales incluidas.',
       '',
-      'El 90% de las empresas se traban en el inicio, pero tú ya diste el primer paso. El siguiente paso para completar tu automatización es digitalizar la asistencia.',
+      'El 90% se queda pensando; tú ya diste el paso. El siguiente paso es entrar y digitalizar la asistencia.',
       '',
-      '¿Te parece si lo dejamos listo hoy? Cuéntame si pudiste revisar el correo. 👇',
+      `Ve a tu correo ahora mismo. Busca ${CONTACT_SENDER_HINT} en tu bandeja.`,
+      '',
+      EMAIL_NOT_RECEIVED_FOOTER,
     ].join('\n')
   }
 
   if (source === 'ventas') {
     return [
-      '¡Ya diste el primer paso con tu cotización! 🙌 Tu acceso a SISU ya está en camino.',
+      '¡Ya te lo mandé! 🪄',
       '',
-      `(Si no ves el correo con tu cotización y acceso, búscalo como remitente: ${CONTACT_SENDER_HINT}).`,
+      'Vas a abrir ese correo en menos de 1 minuto y tu primera reacción va a ser: "¿En serio la cotización era así de clara?". Es casi absurdo que nadie te lo haya explicado tan directo antes.',
       '',
-      'El siguiente paso es revisar la propuesta y activar tu automatización de nómina.',
+      `Ve a tu correo en este instante. Busca ${CONTACT_SENDER_HINT} en tu bandeja — ahí está tu propuesta con precios.`,
       '',
-      '¿Te parece si lo revisamos hoy juntos? Cuéntame si pudiste ver el correo. 👇',
+      EMAIL_NOT_RECEIVED_FOOTER,
     ].join('\n')
   }
 
   if (source === 'info') {
     return [
-      '¡Gracias por tu interés! 🙌',
+      '¡Ya te lo mandé! 🪄',
       '',
-      `Recibimos tu solicitud de más información. (Si no ves el correo en tu bandeja, búscalo el remitente: ${CONTACT_SENDER_HINT}).`,
+      'Vas a leer ese correo en menos de 1 minuto y tu primera reacción va a ser: "¿En serio era así de fácil?". Es casi absurdo que nadie te lo haya hecho antes.',
       '',
-      'Muchos profesionales se quedan con la duda por preguntar — tú ya preguntaste',
+      `Ve a tu correo en este instante. Busca ${CONTACT_SENDER_HINT} en tu bandeja.`,
       '',
-      'Cuéntame si recibiste el correo y si era la información que esperabas . 👇',
+      EMAIL_NOT_RECEIVED_FOOTER,
     ].join('\n')
   }
 
   return [
-    '¡Gracias por unirte! 🙌 Ya estás en la lista de SISU.',
+    '¡Gracias por unirte! 🙌',
     '',
-    senderHint,
+    `Te acabo de mandar el correo de bienvenida. Si no lo ves, busca ${CONTACT_SENDER_HINT} en tu bandeja (revisa spam también).`,
     '',
-    'Muchas empresas se quedan en lo manual por no dar el primer paso — tú ya lo diste.',
-    '',
-    '¿Te parece si conversamos sobre cómo automatizar tu nómina? Cuéntame si pudiste revisar el correo. 👇',
+    '¿Lo recibiste? Cuéntame y vemos cómo automatizar tu nómina.',
   ].join('\n')
 }
 
