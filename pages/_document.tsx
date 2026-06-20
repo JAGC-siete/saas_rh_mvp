@@ -1,5 +1,4 @@
 import { Html, Head, Main, NextScript } from 'next/document'
-import { GA4_MEASUREMENT_ID } from '../lib/analytics/ga4'
 
 /**
  * Mismo patrón que gtag (AW-…): ID público en el HTML.
@@ -11,6 +10,8 @@ const META_PIXEL_ID =
   '833142547420951'
 
 const GADS_CONVERSION_ID = 'AW-17840996991'
+const GA4_MEASUREMENT_ID =
+  process.env['NEXT_PUBLIC_GA4_MEASUREMENT_ID']?.trim() || 'G-4N343EZLY9'
 
 export default function Document() {
   return (

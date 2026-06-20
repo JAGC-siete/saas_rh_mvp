@@ -6,6 +6,7 @@ import { NotificationProvider } from '../components/NotificationProvider'
 import { SessionExpiryWarning } from '../components/SessionExpiryWarning'
 import { ToastContainer } from '../lib/toast'
 import { cn } from '../lib/utils'
+import { isPublicMarketingRoute } from '../lib/seo/public-ssr-routes'
 import '../styles/globals.css'
 import '../styles/landing.css'
 import '../styles/landing-liquid.css'
@@ -32,8 +33,14 @@ export default function App({ Component, pageProps }: AppProps) {
     router.pathname !== '/app/login' &&
     router.pathname !== '/app/forgot-password'
 
-  // Solo el shell autenticado espera hidratación; rutas públicas deben SSR completo para SEO.
-  const needsClientHydrationGate = isMeshAppRoute
+  const isAuthEntryRoute =
+    router.pathname === '/app/login' || router.pathname === '/app/forgot-password'
+
+  // SSR completo solo en landings SEO; shell /app y rutas legacy esperan hidratación.
+  const shouldRenderImmediately =
+    isPublicMarketingRoute(router.pathname) || isAuthEntryRoute
+
+  const needsClientHydrationGate = !shouldRenderImmediately
 
   if (needsClientHydrationGate && !isClient) {
     return (

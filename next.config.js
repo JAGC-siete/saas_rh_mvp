@@ -1,6 +1,11 @@
 /** @type {import('next').NextConfig} */
+const path = require('path')
+
 const nextConfig = {
   reactStrictMode: true,
+
+  // Evita que Next infiera el workspace desde ~/package-lock.json (build standalone colgado/lento).
+  outputFileTracingRoot: path.join(__dirname),
 
   images: {
     formats: ['image/avif', 'image/webp'],
@@ -206,9 +211,27 @@ const nextConfig = {
           },
         ],
       },
-      // Static marketing assets — cache agresivo en CDN
+      // Static marketing assets — cache agresivo en CDN (patrones simples; regex compleja rompe build)
       {
-        source: '/:path*\\.(png|jpg|jpeg|webp|avif|svg|ico)',
+        source: '/:path*.png',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=86400, s-maxage=604800, stale-while-revalidate=86400',
+          },
+        ],
+      },
+      {
+        source: '/:path*.jpg',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=86400, s-maxage=604800, stale-while-revalidate=86400',
+          },
+        ],
+      },
+      {
+        source: '/:path*.webp',
         headers: [
           {
             key: 'Cache-Control',

@@ -9,7 +9,6 @@ export default function AttendanceIndex() {
   const router = useRouter()
   const { user, loading: authLoading } = useAuth()
   const [loading, setLoading] = useState(true)
-  const supabase = createClient()
 
   useEffect(() => {
     const checkUserRole = async () => {
@@ -19,6 +18,8 @@ export default function AttendanceIndex() {
         router.push('/login')
         return
       }
+
+      const supabase = createClient()
 
       try {
         // Fetch user profile to determine role
