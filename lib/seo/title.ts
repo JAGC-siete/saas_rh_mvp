@@ -62,7 +62,10 @@ export const pageTitles = {
   reports: 'Reportes y Análisis | Humano SISU',
   // New strategic pages (aligned with Google Ads hero messaging)
   alternativaOdoo: 'Software RH regional | Biométrico, nómina y ley local | Humano SISU',
-  biometricoNomina: 'Asistencia y nómina en un lugar | Sin cálculos manuales | Humano SISU',
+  biometricoNomina: 'Sistema biométrico + nómina | HN, SV y GT | Humano SISU',
+  ventas: 'Cotización nómina y asistencia | PDF al instante | Humano SISU',
+  gracias: 'Confirmación de activación | Humano SISU',
+  info: 'Solicitar información | Nómina y asistencia | Humano SISU',
   implementacion48h: 'Automatiza asistencia y payroll | Ahorra horas | Humano SISU',
   deduccionesHonduras: 'IHSS, RAP, ISR automático | Sin cálculos manuales | Humano SISU',
   recursos: 'Recursos | Automatización RH y nómina local | Humano SISU',

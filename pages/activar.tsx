@@ -6,8 +6,11 @@ import { Card, CardContent, CardTitle } from '../components/ui/card'
 import { TRIAL_CONFIG } from '../lib/config/trial'
 import { motion } from 'framer-motion'
 import PublicPageShell from '../components/landing/PublicPageShell'
+import PublicPageHead from '../components/SEO/PublicPageHead'
 import BorderBeam from '../components/landing/BorderBeam'
 import { trackActivationFormSubmit, initGoogleAdsTracking } from '../lib/analytics/googleAds'
+import { getPageTitle } from '../lib/seo/title'
+import { getPageDescription } from '../lib/seo/description'
 import {
   buildMetaApiTrackingFields,
   createMetaEventId,
@@ -265,6 +268,12 @@ export default function ActivarPage() {
   if (isSuccess) {
     return (
       <PublicPageShell showFooter={false} loginAlwaysVisible>
+        <PublicPageHead
+          title={getPageTitle('activate')}
+          description={getPageDescription('activate')}
+          canonicalPath="/activar"
+          noindex
+        />
         <div className="container mx-auto px-4 py-8">
           <div className="max-w-2xl mx-auto text-center">
             <div className="mb-8">
@@ -329,6 +338,11 @@ export default function ActivarPage() {
 
   return (
     <PublicPageShell showFooter={false} loginAlwaysVisible mainClassName="flex flex-col overflow-hidden">
+      <PublicPageHead
+        title={getPageTitle('activate')}
+        description={getPageDescription('activate')}
+        canonicalPath="/activar"
+      />
       <div className="flex-grow flex items-center justify-center p-4 sm:p-6 lg:p-8">
         <BorderBeam className="w-full max-w-6xl">
         <Card variant="liquid" className="w-full shadow-2xl relative overflow-hidden">

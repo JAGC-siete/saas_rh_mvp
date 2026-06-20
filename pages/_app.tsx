@@ -32,8 +32,10 @@ export default function App({ Component, pageProps }: AppProps) {
     router.pathname !== '/app/login' &&
     router.pathname !== '/app/forgot-password'
 
-  // Show loading state during hydration
-  if (!isClient) {
+  // Solo el shell autenticado espera hidratación; rutas públicas deben SSR completo para SEO.
+  const needsClientHydrationGate = isMeshAppRoute
+
+  if (needsClientHydrationGate && !isClient) {
     return (
       <div className={cn('min-h-screen flex items-center justify-center', !isMeshAppRoute && 'bg-app')}>
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div>

@@ -1,4 +1,5 @@
 import { Html, Head, Main, NextScript } from 'next/document'
+import { GA4_MEASUREMENT_ID } from '../lib/analytics/ga4'
 
 /**
  * Mismo patrón que gtag (AW-…): ID público en el HTML.
@@ -9,19 +10,22 @@ const META_PIXEL_ID =
   process.env['NEXT_PUBLIC_META_PIXEL_ID']?.trim() ||
   '833142547420951'
 
+const GADS_CONVERSION_ID = 'AW-17840996991'
+
 export default function Document() {
   return (
     <Html lang="es">
       <Head>
-        {/* Google tag (gtag.js) */}
-        <script async src="https://www.googletagmanager.com/gtag/js?id=AW-17840996991"></script>
+        {/* Google tag (gtag.js) — un solo loader; GA4 + Google Ads */}
+        <script async src={`https://www.googletagmanager.com/gtag/js?id=${GA4_MEASUREMENT_ID}`}></script>
         <script
           dangerouslySetInnerHTML={{
             __html: `
               window.dataLayer = window.dataLayer || [];
               function gtag(){dataLayer.push(arguments);}
               gtag('js', new Date());
-              gtag('config', 'AW-17840996991');
+              gtag('config', ${JSON.stringify(GA4_MEASUREMENT_ID)});
+              gtag('config', ${JSON.stringify(GADS_CONVERSION_ID)});
             `,
           }}
         />

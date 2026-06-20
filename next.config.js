@@ -2,6 +2,10 @@
 const nextConfig = {
   reactStrictMode: true,
 
+  images: {
+    formats: ['image/avif', 'image/webp'],
+  },
+
   /** pdfkit + dependencias usan require/fs; si Webpack los empaqueta mal, el PDF falla en runtime (500). */
   serverExternalPackages: ['pdfkit'],
   
@@ -168,7 +172,7 @@ const nextConfig = {
               "style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
               "img-src 'self' data: https:; " +
               "font-src 'self' data: https://fonts.gstatic.com; " +
-              "connect-src 'self' https://*.supabase.co https://*.supabase.com https://www.googletagmanager.com https://www.google-analytics.com https://www.facebook.com https://connect.facebook.net; " +
+              "connect-src 'self' https://*.supabase.co https://*.supabase.com https://www.googletagmanager.com https://www.google-analytics.com https://analytics.google.com https://www.facebook.com https://connect.facebook.net; " +
               "frame-ancestors 'none';",
           },
           // Permissions policy (restricts browser features)
@@ -199,6 +203,25 @@ const nextConfig = {
           {
             key: 'Cache-Control',
             value: 'public, s-maxage=3600, stale-while-revalidate=86400',
+          },
+        ],
+      },
+      // Static marketing assets — cache agresivo en CDN
+      {
+        source: '/:path*\\.(png|jpg|jpeg|webp|avif|svg|ico)',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=86400, s-maxage=604800, stale-while-revalidate=86400',
+          },
+        ],
+      },
+      {
+        source: '/_next/static/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
           },
         ],
       },

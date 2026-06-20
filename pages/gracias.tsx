@@ -1,20 +1,21 @@
-import Head from 'next/head'
 import Link from 'next/link'
 import TrackedWhatsAppLink from '../components/TrackedWhatsAppLink'
 import PublicPageShell from '../components/landing/PublicPageShell'
+import PublicPageHead from '../components/SEO/PublicPageHead'
+import { getPageTitle } from '../lib/seo/title'
+import { getPageDescription } from '../lib/seo/description'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
 import { CheckCircle, Clock, MessageCircle, ArrowRight } from 'lucide-react'
 
 export default function GraciasPage() {
   return (
     <PublicPageShell centered showFooter={false}>
-      <Head>
-        <title>¡Gracias! - HUMANO SISU</title>
-        <meta
-          name="description"
-          content="Tu sistema de RH será activado en 24 horas"
-        />
-      </Head>
+      <PublicPageHead
+        title={getPageTitle('gracias')}
+        description={getPageDescription('gracias')}
+        canonicalPath="/gracias"
+        noindex
+      />
       <div className="w-full max-w-2xl space-y-8 p-4">
         <div className="text-center">
           <div className="mx-auto h-24 w-24 bg-green-500/20 rounded-full flex items-center justify-center mb-6 shadow-lg">

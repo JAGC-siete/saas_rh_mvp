@@ -130,7 +130,9 @@ export default function HeroProductWindow() {
             alt={slide.alt}
             fill
             className="object-cover transition-opacity duration-500"
-            priority
+            priority={currentIndex === 0}
+            loading={currentIndex === 0 ? 'eager' : 'lazy'}
+            sizes="(max-width: 1024px) 100vw, 35vw"
           />
           <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-3 sm:p-4">
             <h3 className="text-white font-semibold text-sm sm:text-base mb-0.5">{slide.title}</h3>

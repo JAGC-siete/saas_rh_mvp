@@ -11,7 +11,10 @@ import {
 } from '@heroicons/react/24/outline'
 import { Card, CardContent, CardTitle } from '../components/ui/card'
 import PublicPageShell from '../components/landing/PublicPageShell'
+import PublicPageHead from '../components/SEO/PublicPageHead'
 import BorderBeam from '../components/landing/BorderBeam'
+import { getPageTitle } from '../lib/seo/title'
+import { getPageDescription } from '../lib/seo/description'
 import type { QuotationQuote, QuotationRequest, QuotationResponse, QuotationUrgencyOffer } from '../lib/ventas/types'
 import { buildQuotationPlanSummary } from '../lib/ventas/quote-display'
 import { formatUrgencyOfferExpiry, urgencyOfferCtaText } from '../lib/ventas/urgency-offer'
@@ -209,6 +212,12 @@ export default function VentasPage() {
   if (isSuccess) {
     return (
       <PublicPageShell showFooter={false} loginAlwaysVisible>
+        <PublicPageHead
+          title={getPageTitle('ventas')}
+          description={getPageDescription('ventas')}
+          canonicalPath="/ventas"
+          noindex
+        />
         <div className="container mx-auto px-4 py-8">
           <div className="max-w-2xl mx-auto text-center">
             <div className="mb-8">
@@ -334,6 +343,11 @@ export default function VentasPage() {
 
   return (
     <PublicPageShell showFooter={false} loginAlwaysVisible mainClassName="flex flex-col overflow-hidden">
+      <PublicPageHead
+        title={getPageTitle('ventas')}
+        description={getPageDescription('ventas')}
+        canonicalPath="/ventas"
+      />
       <div className="flex-grow flex items-center justify-center p-4 sm:p-6 lg:p-8">
         <BorderBeam className="w-full max-w-7xl">
         <Card variant="liquid" className="w-full shadow-2xl relative overflow-hidden">

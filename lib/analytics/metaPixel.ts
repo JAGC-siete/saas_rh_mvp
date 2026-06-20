@@ -10,6 +10,8 @@
  * Píxel base en pages/_document.tsx.
  */
 
+import { trackGA4Event } from './ga4'
+
 export const META_PIXEL_ID = '833142547420951'
 
 type MetaStandardEvent = 'SubmitApplication' | 'CompleteRegistration' | 'StartTrial' | 'Lead'
@@ -173,6 +175,12 @@ export function trackQuotationSubmit(params: {
       fn: params.firstName,
     }
   )
+
+  trackGA4Event('quotation_submit', {
+    event_category: 'Ventas',
+    event_label: params.billingModality || 'annual',
+    value: params.quoteValue ?? params.employeesCount,
+  })
 }
 
 /** Suscripción newsletter en /suscripcion */
@@ -218,6 +226,11 @@ export function trackInfoLeadSubmit(params: {
       fn: params.firstName,
     }
   )
+
+  trackGA4Event('info_lead_submit', {
+    event_category: 'Lead',
+    event_label: 'info',
+  })
 }
 
 declare global {

@@ -54,7 +54,22 @@ const publicPages: SitemapUrl[] = [
     priority: 0.8
   },
   {
+    loc: '/calculadora',
+    changefreq: 'monthly',
+    priority: 0.75
+  },
+  {
+    loc: '/calculadora-prestaciones',
+    changefreq: 'monthly',
+    priority: 0.7
+  },
+  {
     loc: '/calculadora-deducciones',
+    changefreq: 'monthly',
+    priority: 0.7
+  },
+  {
+    loc: '/info',
     changefreq: 'monthly',
     priority: 0.7
   },

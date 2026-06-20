@@ -9,6 +9,8 @@
  * Variables: ver `.env.example` sección Google Ads.
  */
 
+import { trackGA4Event } from './ga4'
+
 const SEND_TO_ACTIVATION = process.env.NEXT_PUBLIC_GADS_SEND_TO_ACTIVATION
 /** Opcional: conversión secundaria en clic de CTA (por defecto desactivada). */
 const SEND_TO_CTA = process.env.NEXT_PUBLIC_GADS_SEND_TO_CTA
@@ -72,6 +74,12 @@ export function trackActivationFormSubmit(
       },
     })
   }
+
+  trackGA4Event('activation_submit', {
+    event_category: 'Activation',
+    event_label: 'Activation Form',
+    value: empleados,
+  })
 }
 
 /**
@@ -87,6 +95,12 @@ export function trackCTAClick(ctaType: string, location: string): void {
       location,
     })
   }
+
+  trackGA4Event('cta_click', {
+    event_category: 'Engagement',
+    event_label: ctaType,
+    location,
+  })
 }
 
 /**
@@ -101,6 +115,11 @@ export function trackWhatsAppClick(context: string): void {
       event_label: context,
     })
   }
+
+  trackGA4Event('whatsapp_click', {
+    event_category: 'Contact',
+    event_label: context,
+  })
 }
 
 /**
