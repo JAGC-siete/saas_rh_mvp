@@ -3,6 +3,7 @@ import { createAdminClient } from '../../../lib/supabase/server'
 import { sendTrialReminderEmail } from '../../../lib/emails/trial-reminder'
 import { calculateAttendanceHoursForDate } from '../../../lib/attendance/calculate-hours'
 import { runInfoDelayedSequenceWelcome } from '../../../lib/cron/info-sequence-welcome'
+import { runLateAttendanceReportCron } from '../../../lib/cron/late-attendance-report'
 import { runSequenceWatchman } from '../../../lib/cron/sequence-watchman'
 import { isBiMonthlyWatchDay } from '../../../lib/marketing/email-sequence-ledger'
 import { logger } from '../../../lib/logger'
@@ -49,6 +50,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       logger.info('Daily CRON: sequence watchman completed', watchmanResult)
     }
 
+    // 7. Late attendance reports when a pay period closed yesterday
+    const lateReportResult = await runLateAttendanceReportCron(now)
+    logger.info('Daily CRON: late attendance report completed', lateReportResult)
+
     console.log('✅ Daily CRON job completed successfully')
 
     return res.status(200).json({
@@ -57,6 +62,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       timestamp: now.toISOString(),
       infoWelcome: infoWelcomeResult,
       watchman: watchmanResult,
+      lateAttendanceReport: lateReportResult,
     })
 
   } catch (error) {
