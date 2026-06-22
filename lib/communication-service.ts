@@ -379,9 +379,9 @@ export interface DispatchResult {
 }
 
 /**
- * Dispatches scheduled campaigns whose time has arrived. Used by the cron.
- * Flips status to 'sending' first (guard against concurrent runs), resolves the
- * audience and sends.
+ * Dispatches scheduled campaigns whose time has arrived. Used by the daily cron
+ * (07:00 America/Tegucigalpa). Flips status to 'sending' first (guard against
+ * concurrent runs), resolves the audience and sends.
  */
 export async function dispatchScheduledCampaigns(now: Date = new Date()): Promise<DispatchResult> {
   const admin = createAdminClient()

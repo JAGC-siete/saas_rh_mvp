@@ -3,7 +3,8 @@ import { dispatchScheduledCampaigns } from '../../../lib/communication-service'
 
 /**
  * Dispatches scheduled communication campaigns whose time has arrived.
- * Schedule via external scheduler (e.g. every 5-15 min) with CRON_SECRET.
+ * Triggered daily at 07:00 America/Tegucigalpa by Railway function
+ * `communications-dispatch-cron` (cron: 0 13 * * * UTC) with CRON_SECRET.
  */
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const authHeader = req.headers.authorization
