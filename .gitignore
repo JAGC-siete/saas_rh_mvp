@@ -118,6 +118,10 @@ dev.log
 local-*.js
 local-*.sql
 
+# SECURITY: Lead import batches (PII — use locally, never commit)
+scripts/data/*.json
+!scripts/data/leads.example.json
+
 # SECURITY: Specific sensitive files (DO NOT COMMIT)
 create-*-user.sql
 create-*-admin.sql

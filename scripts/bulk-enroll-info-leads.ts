@@ -2,7 +2,9 @@
  * Bulk enroll for /info leads (e.g. from business cards).
  *
  * Usage:
- *   railway run npx tsx scripts/bulk-enroll-info-leads.ts scripts/data/info-leads.json
+ *   railway run npx tsx scripts/bulk-enroll-info-leads.ts scripts/data/mi-lote.json
+ *
+ * JSON format: see scripts/data/leads.example.json
  */
 
 import { readFileSync } from 'node:fs'
