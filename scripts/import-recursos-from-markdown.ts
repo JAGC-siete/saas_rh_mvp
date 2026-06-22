@@ -14,6 +14,7 @@ import fs from 'fs'
 import path from 'path'
 import { createAdminClient } from '../lib/supabase/admin-client'
 import { parseFrontmatter } from '../lib/recursos/markdown'
+import { inferCategoryFromSlug, parseCategoryFromFrontmatter } from '../lib/recursos/categories'
 
 const CONTENT_DIR = path.join(process.cwd(), 'content', 'recursos')
 const EXT = '.md'
@@ -65,6 +66,12 @@ async function main() {
     const dateModified = typeof d.dateModified === 'string' ? d.dateModified : null
     const image = typeof d.image === 'string' ? d.image : null
     const author = typeof d.author === 'string' ? d.author : null
+    const category =
+      d.category === 'rrhh' || d.category === 'responsabilidad-individual'
+        ? d.category
+        : parseCategoryFromFrontmatter(d.category) !== 'rrhh'
+          ? parseCategoryFromFrontmatter(d.category)
+          : inferCategoryFromSlug(slug)
 
     const { error } = await supabase.from('recursos').insert({
       slug,
@@ -76,6 +83,7 @@ async function main() {
       image,
       author,
       status: 'published',
+      category,
     })
 
     if (error) {

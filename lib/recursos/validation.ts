@@ -1,4 +1,11 @@
+import {
+  isValidRecursoCategory,
+  RESERVED_RECURSO_SLUGS,
+  type RecursoCategory,
+} from './categories'
+
 export type RecursoStatus = 'draft' | 'published'
+export type { RecursoCategory } from './categories'
 
 export interface RecursoInput {
   slug: string
@@ -10,6 +17,7 @@ export interface RecursoInput {
   image?: string
   author?: string
   status: RecursoStatus
+  category: RecursoCategory
 }
 
 export interface RecursoAdminItem {
@@ -23,6 +31,7 @@ export interface RecursoAdminItem {
   image?: string
   author?: string
   status: RecursoStatus
+  category: RecursoCategory
   createdAt: string
   updatedAt: string
 }
@@ -71,6 +80,9 @@ export function validateRecursoInput(
   if (!SLUG_PATTERN.test(slug)) {
     return { valid: false, error: 'El slug solo puede contener letras minúsculas, números y guiones' }
   }
+  if (RESERVED_RECURSO_SLUGS.has(slug)) {
+    return { valid: false, error: 'Este slug está reservado para una colección de recursos' }
+  }
 
   const description = typeof input.description === 'string' ? input.description.trim() : ''
   const content = typeof input.content === 'string' ? input.content : ''
@@ -81,6 +93,11 @@ export function validateRecursoInput(
   const status = input.status ?? 'draft'
   if (!isValidRecursoStatus(status)) {
     return { valid: false, error: 'El estado debe ser draft o published' }
+  }
+
+  const category = input.category ?? 'rrhh'
+  if (!isValidRecursoCategory(category)) {
+    return { valid: false, error: 'La colección debe ser rrhh o responsabilidad-individual' }
   }
 
   const datePublished =
@@ -95,6 +112,7 @@ export function validateRecursoInput(
     content,
     datePublished,
     status,
+    category,
   }
 
   if (typeof input.dateModified === 'string' && input.dateModified.trim()) {

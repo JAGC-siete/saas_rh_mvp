@@ -284,6 +284,7 @@ export interface ArticleSchema {
   author?: { '@type': string; name: string }
   publisher: { '@type': string; name: string; logo: { '@type': string; url: string } }
   url: string
+  articleSection?: string
 }
 
 /**
@@ -297,8 +298,9 @@ export function generateArticleSchema(options: {
   dateModified?: string
   image?: string
   author?: string
+  articleSection?: string
 }): ArticleSchema {
-  const { url, headline, description, datePublished, dateModified, image, author } = options
+  const { url, headline, description, datePublished, dateModified, image, author, articleSection } = options
   const fullUrl = url.startsWith('http') ? url : `${BASE_URL}${url}`
   return {
     '@context': 'https://schema.org',
@@ -314,7 +316,8 @@ export function generateArticleSchema(options: {
       name: 'Humano SISU',
       logo: { '@type': 'ImageObject', url: `${BASE_URL}/logo-humano-sisu.png` }
     },
-    url: fullUrl
+    url: fullUrl,
+    ...(articleSection ? { articleSection } : {}),
   }
 }
 

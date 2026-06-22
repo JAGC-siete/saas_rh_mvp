@@ -6,7 +6,12 @@
 import fs from 'fs'
 import path from 'path'
 import { parseFrontmatter, markdownToHtml } from './markdown'
-import type { IRecursosAdapter, RecursoMeta, RecursoListItem } from './types'
+import {
+  inferCategoryFromSlug,
+  parseCategoryFromFrontmatter,
+  type RecursoCategory,
+} from './categories'
+import type { IRecursosAdapter, RecursoMeta, RecursoListItem, RecursosListOptions } from './types'
 
 const CONTENT_DIR = path.join(process.cwd(), 'content', 'recursos')
 const EXT = '.md'
@@ -20,6 +25,19 @@ function readRecursosDir(): string[] {
     return []
   }
   return fs.readdirSync(CONTENT_DIR).filter((f) => f.endsWith(EXT))
+}
+
+function resolveCategory(d: Record<string, unknown>, slug: string): RecursoCategory {
+  if (d.category === 'rrhh' || d.category === 'responsabilidad-individual') {
+    return d.category
+  }
+  const fromFrontmatter = parseCategoryFromFrontmatter(d.category)
+  if (fromFrontmatter !== 'rrhh') return fromFrontmatter
+  return inferCategoryFromSlug(slug)
+}
+
+function emptyCounts(): Record<RecursoCategory, number> {
+  return { rrhh: 0, 'responsabilidad-individual': 0 }
 }
 
 export const recursosAdapter: IRecursosAdapter = {
@@ -42,6 +60,7 @@ export const recursosAdapter: IRecursosAdapter = {
     const dateModified = typeof d.dateModified === 'string' ? d.dateModified : undefined
     const image = typeof d.image === 'string' ? d.image : undefined
     const author = typeof d.author === 'string' ? d.author : undefined
+    const category = resolveCategory(d, slug)
     const html = markdownToHtml(content)
     return {
       slug,
@@ -51,17 +70,19 @@ export const recursosAdapter: IRecursosAdapter = {
       datePublished,
       dateModified,
       image,
-      author
+      author,
+      category,
     }
   },
 
-  async getRecursosList(): Promise<RecursoListItem[]> {
+  async getRecursosList(options?: RecursosListOptions): Promise<RecursoListItem[]> {
     const files = readRecursosDir()
     const list: RecursoListItem[] = []
     for (const file of files) {
       const slug = getSlugFromFilename(file)
       const meta = await this.getRecursoBySlug(slug)
       if (meta) {
+        if (options?.category && meta.category !== options.category) continue
         list.push({
           slug: meta.slug,
           title: meta.title,
@@ -69,11 +90,21 @@ export const recursosAdapter: IRecursosAdapter = {
           datePublished: meta.datePublished,
           dateModified: meta.dateModified,
           image: meta.image,
-          author: meta.author
+          author: meta.author,
+          category: meta.category,
         })
       }
     }
-    list.sort((a, b) => (b.datePublished.localeCompare(a.datePublished)))
+    list.sort((a, b) => b.datePublished.localeCompare(a.datePublished))
     return list
-  }
+  },
+
+  async getRecursosCountByCategory(): Promise<Record<RecursoCategory, number>> {
+    const list = await this.getRecursosList()
+    const counts = emptyCounts()
+    for (const item of list) {
+      counts[item.category] += 1
+    }
+    return counts
+  },
 }

@@ -36,6 +36,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         image: body.image,
         author: body.author,
         status,
+        category: body.category ?? 'rrhh',
       })
 
       await revalidateRecursosPages(res, recurso.slug)

@@ -5,7 +5,12 @@ export async function revalidateRecursosPages(
   res: NextApiResponse,
   slug: string
 ): Promise<void> {
-  const paths = ['/recursos', `/recursos/${slug}`]
+  const paths = [
+    '/recursos',
+    '/recursos/rrhh',
+    '/recursos/responsabilidad-individual',
+    `/recursos/${slug}`,
+  ]
 
   for (const path of paths) {
     try {

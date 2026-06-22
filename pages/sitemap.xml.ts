@@ -54,6 +54,16 @@ const publicPages: SitemapUrl[] = [
     priority: 0.8
   },
   {
+    loc: '/recursos/rrhh',
+    changefreq: 'weekly',
+    priority: 0.75
+  },
+  {
+    loc: '/recursos/responsabilidad-individual',
+    changefreq: 'weekly',
+    priority: 0.7
+  },
+  {
     loc: '/calculadora',
     changefreq: 'monthly',
     priority: 0.75

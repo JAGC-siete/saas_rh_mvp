@@ -8,7 +8,8 @@ import { Button } from '../../../components/ui/button'
 import { Badge } from '../../../components/ui/badge'
 import { useNotificationContext } from '../../../components/NotificationProvider'
 import { markdownToHtml } from '../../../lib/recursos/markdown'
-import { normalizeSlug, type RecursoStatus } from '../../../lib/recursos/validation'
+import { normalizeSlug, type RecursoStatus, type RecursoCategory } from '../../../lib/recursos/validation'
+import { RECURSO_CATEGORY_META } from '../../../lib/recursos/categories'
 import type { RecursoAdminItem } from '../../../lib/recursos/admin'
 import {
   BookOpen,
@@ -34,6 +35,7 @@ interface RecursoFormData {
   image: string
   author: string
   status: RecursoStatus
+  category: RecursoCategory
 }
 
 const emptyForm = (): RecursoFormData => ({
@@ -45,6 +47,7 @@ const emptyForm = (): RecursoFormData => ({
   image: '',
   author: 'Licenciado Jorge Arturo Gómez Coello',
   status: 'draft',
+  category: 'rrhh',
 })
 
 function toFormData(recurso: RecursoAdminItem): RecursoFormData {
@@ -57,6 +60,7 @@ function toFormData(recurso: RecursoAdminItem): RecursoFormData {
     image: recurso.image ?? '',
     author: recurso.author ?? '',
     status: recurso.status,
+    category: recurso.category,
   }
 }
 
@@ -322,6 +326,27 @@ export default function RecursosAdminPage() {
                   />
                 </div>
 
+                <div>
+                  <label className="block text-sm text-white/70 mb-1">Colección</label>
+                  <select
+                    value={formData.category}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        category: e.target.value as RecursoCategory,
+                      })
+                    }
+                    className="w-full rounded-lg border border-white/20 bg-white/5 px-3 py-2 text-white"
+                  >
+                    <option value="rrhh" className="bg-slate-900">
+                      {RECURSO_CATEGORY_META.rrhh.hubTitle}
+                    </option>
+                    <option value="responsabilidad-individual" className="bg-slate-900">
+                      {RECURSO_CATEGORY_META['responsabilidad-individual'].hubTitle}
+                    </option>
+                  </select>
+                </div>
+
                 <div className="grid gap-4 md:grid-cols-3">
                   <div>
                     <label className="block text-sm text-white/70 mb-1">Autor</label>
@@ -474,6 +499,9 @@ export default function RecursosAdminPage() {
                             <div className="flex flex-wrap items-center gap-2 mb-1">
                               <h2 className="text-lg font-semibold text-white">{recurso.title}</h2>
                               <StatusBadge status={recurso.status} />
+                              <Badge className="bg-white/10 text-white/80 border-white/20">
+                                {RECURSO_CATEGORY_META[recurso.category].hubTitle}
+                              </Badge>
                             </div>
                             <p className="text-white/50 text-sm font-mono mb-2">/recursos/{recurso.slug}</p>
                             <p className="text-white/70 text-sm line-clamp-2">{recurso.description}</p>

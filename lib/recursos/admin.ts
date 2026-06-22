@@ -25,6 +25,7 @@ function mapRowToAdminItem(row: RecursoRow): RecursoAdminItem {
     image: row.image ?? undefined,
     author: row.author ?? undefined,
     status: (row.status === 'published' ? 'published' : 'draft') as RecursoStatus,
+    category: row.category === 'responsabilidad-individual' ? 'responsabilidad-individual' : 'rrhh',
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   }
@@ -41,6 +42,7 @@ function inputToInsert(input: RecursoInput): Database['public']['Tables']['recur
     image: input.image ?? null,
     author: input.author ?? null,
     status: input.status,
+    category: input.category,
   }
 }
 
@@ -54,6 +56,7 @@ function inputToUpdate(input: RecursoInput): Database['public']['Tables']['recur
     image: input.image ?? null,
     author: input.author ?? null,
     status: input.status,
+    category: input.category,
   }
 }
 
@@ -135,6 +138,7 @@ export async function updateRecurso(slug: string, input: Partial<RecursoInput>):
     image: input.image !== undefined ? input.image : existing.image,
     author: input.author !== undefined ? input.author : existing.author,
     status: input.status ?? existing.status,
+    category: input.category ?? existing.category,
   }
 
   const validation = validateRecursoInput(merged)
