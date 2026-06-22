@@ -55,7 +55,7 @@ export const pageDescriptions = {
   // New strategic pages (aligned with Google Ads hero messaging)
   alternativaOdoo: 'Olvida las hojas de cálculo. Deducciones de ley (IHSS, RAP, INFOP) con activación inmediata y soporte en tu país. Prueba gratis ahora.',
   biometricoNomina: 'Integra tus biométricos con software regional. Automatiza deducciones y nómina local. Sin cálculos manuales, sin errores. Activar gratis hoy.',
-  implementacion48h: 'Del biométrico al comprobante en segundos. Ahorra horas administrativas. Plataforma intuitiva. Solicitar cotización.',
+  implementacion48h: 'Activación inmediata y biométrico en 72 h. Migración, capacitación y garantía de 30 días incluidas. Humano SISU.',
   deduccionesHonduras: 'Integra biométricos con Humano SISU. Automatiza IHSS, RAP, ISR en Honduras. Sin cálculos manuales. Activar gratis hoy, sin tarjeta.',
   recursos: 'Artículos sobre automatización de RH y nómina local. Guías, mejores prácticas y tendencias para MIPYMES.',
   ventas: 'Cotización sin costo para nómina y asistencia biométrica en Honduras, El Salvador y Guatemala. Recibe propuesta en PDF al instante.',

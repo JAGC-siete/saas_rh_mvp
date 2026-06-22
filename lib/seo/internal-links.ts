@@ -26,8 +26,8 @@ export const GUIDE_LINKS: Record<string, GuideLink> = {
   },
   implementacion48h: {
     href: '/implementacion-48-horas',
-    label: 'Implementación en 48 h',
-    description: 'Activa asistencia y nómina sin esperas'
+    label: 'Implementación biométrica en 72 h',
+    description: 'Activación inmediata, migración de datos y garantía de 30 días'
   },
   alternativaOdoo: {
     href: '/alternativa-odoo-honduras',

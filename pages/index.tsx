@@ -22,8 +22,8 @@ import { initGoogleAdsTracking } from '../lib/analytics/googleAds'
 const CursorSpotlight = dynamic(() => import('../components/landing/CursorSpotlight'), { ssr: false })
 
 const TESTIMONIALS = [
-  { name: 'Felix Garcia', company: "Tony's Mar Restaurant", employees: '40 empleados', quote: 'Ya no pierdo domingos haciendo planilla. 4 horas ahora son 4 minutos.', rating: 5 },
-  { name: 'Nancy Urrutia', company: 'PROHALCA', employees: '37 empleados', quote: 'Habiamos contratado un sistema de asistencia que no hacia planilla, ahora tenemos dashboard interactivo.', rating: 5 },
+  { name: 'Felix Garcia', company: 'Restaurante Tonys Mar', employees: '40 empleados', quote: 'Ya no pierdo domingos haciendo planilla. 4 horas ahora son 4 minutos.', rating: 5 },
+  { name: 'Nancy Urrutia', company: 'Prohalca', employees: '37 empleados', quote: 'Habiamos contratado un sistema de asistencia que no hacia planilla, ahora tenemos dashboard interactivo.', rating: 5 },
   { name: 'Abogado Marcio Moya', company: '', employees: '15 empleados', quote: 'Cero errores en deducciones desde que lo uso. Mis clientes están felices.', rating: 5 },
 ]
 

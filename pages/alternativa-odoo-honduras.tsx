@@ -38,7 +38,7 @@ export default function AlternativaOdooPage() {
     {
       question: '¿Cuánto tarda implementar Odoo vs Humano SISU?',
       answer:
-        'Odoo en nómina local suele tardar de 2 a 8 semanas con consultoría. Humano SISU tiene puesta en marcha típica en hasta 48 horas cuando el alcance y los datos acordados están listos.'
+        'Odoo en nómina local suele tardar de 2 a 8 semanas con consultoría. Humano SISU ofrece activación inmediata e implementación biométrica en 72 horas o menos cuando el alcance y los datos acordados están listos.'
     },
     {
       question: '¿Puedo migrar desde Odoo sin perder datos?',
@@ -69,7 +69,7 @@ export default function AlternativaOdooPage() {
     },
     {
       feature: 'Tiempo de implementación',
-      humanoSisu: 'Hasta 48 h',
+      humanoSisu: 'Hasta 72 h',
       odoo: '2-8 semanas',
       description: 'Configuración y puesta en marcha (plazos según alcance acordado)'
     },
@@ -121,7 +121,7 @@ export default function AlternativaOdooPage() {
               Regional · SV, GT, HN
             </span>
             <span className="px-3 py-1 bg-blue-500/20 text-blue-300 text-xs rounded-full border border-blue-500/30">
-              ⚡ 48h vs Semanas
+              ⚡ 72h vs Semanas
             </span>
             <span className="px-3 py-1 bg-purple-500/20 text-purple-300 text-xs rounded-full border border-purple-500/30">
               🔐 Biométrico Integrado
@@ -235,7 +235,7 @@ export default function AlternativaOdooPage() {
               <div className="text-4xl mb-4">⚡</div>
               <h3 className="text-lg sm:text-xl font-bold mb-2 text-white">Puesta en marcha express vs semanas</h3>
               <p className="text-brand-200/90 text-sm sm:text-base">
-                Odoo suele tardar semanas o meses en implementarse. Con Humano SISU la puesta en marcha típica es en hasta 48 horas cuando el alcance y los datos acordados están listos.
+                Odoo suele tardar semanas o meses en implementarse. Con Humano SISU la activación es inmediata y la implementación biométrica queda lista en 72 horas o menos cuando el alcance y los datos acordados están listos.
               </p>
             </div>
           </div>

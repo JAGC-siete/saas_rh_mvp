@@ -630,7 +630,7 @@ export default function ActivarPage() {
                   <label htmlFor="acepta-trial" className="text-white text-sm leading-relaxed cursor-pointer">
                     Quiero mi entorno ahora. Entiendo que se generará información ficticia para evaluar la automatización.
                   </label>
-                  <p className="text-brand-200/70 text-xs mt-2 ml-8">30 días de prueba gratuita. Sin tarjeta. Sin compromisos ocultos.</p>
+                  <p className="text-brand-200/70 text-xs mt-2 ml-8">30 días de prueba. Sin tarjeta. Garantía de dinero de regreso si no cumplimos lo acordado.</p>
                 </div>
 
                 {/* Submit Button */}

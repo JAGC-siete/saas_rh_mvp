@@ -8,6 +8,7 @@ import SchemaMarkup from '../components/SEO/SchemaMarkup'
 import RelatedGuides from '../components/SEO/RelatedGuides'
 import { generateWebPageSchema, generateFAQPageSchema } from '../lib/seo/schema'
 import { ClockIcon, CheckCircleIcon } from '@heroicons/react/24/outline'
+import { SERVICE_GUARANTEES } from '../lib/marketing/service-guarantees'
 
 export default function Implementacion48HorasPage() {
   const pageTitle = getPageTitle('implementacion48h')
@@ -20,29 +21,34 @@ export default function Implementacion48HorasPage() {
 
   const faqs = [
     {
-      question: '¿Qué significa implementación en 48 horas?',
+      question: '¿Qué es la activación inmediata?',
       answer:
-        'Es el plazo típico de puesta en marcha cuando el alcance está acordado y nos entregas a tiempo la información (empleados, estructura, accesos). Incluye configuración, importación de datos, capacitación y una prueba de cierre.'
+        'Puedes crear tu cuenta y empezar a explorar Humano SISU de inmediato, con leyes locales ya parametrizadas para Honduras, El Salvador y Guatemala. No necesitas esperar semanas de consultoría para arrancar.'
     },
     {
-      question: '¿Qué necesito tener listo antes de empezar?',
+      question: '¿En cuánto tiempo queda lista la implementación biométrica?',
       answer:
-        'Lista de empleados (Excel o manual), departamentos, reglas de jornada y, si aplica, acceso al biométrico. Con eso aceleramos las primeras 48 horas sin idas y vueltas.'
+        'Garantizamos conectar tu biométrico a la nómina en 72 horas o menos, cuando nos entregas a tiempo la información, accesos y responsables acordados.'
     },
     {
-      question: '¿La implementación tiene costo adicional?',
+      question: '¿Ayudan a migrar datos desde Excel u otro sistema?',
       answer:
-        'El proceso de implementación está incluido en el plan acordado. No cobramos consultoría externa aparte para el setup estándar de asistencia y nómina.'
+        'Sí. Incluimos asistencia para importar empleados e historial disponible desde Excel, planillas anteriores u otras plataformas.'
     },
     {
-      question: '¿Puedo implementar sin biométrico?',
+      question: '¿La capacitación y las actualizaciones tienen costo extra?',
       answer:
-        'Sí. Puedes arrancar con registro manual o app de asistencia y agregar el biométrico después, sin cambiar de sistema ni volver a migrar datos.'
+        'No. La capacitación de tu equipo y las actualizaciones del software están incluidas en tu plan, sin cobros adicionales por formación ni por ajustes legales.'
     },
     {
-      question: '¿Qué pasa si no queda listo en 48 horas?',
+      question: '¿Hay límite de usuarios o empleados?',
       answer:
-        'Si el retraso no se debe a datos o accesos pendientes de tu lado, coordinamos soporte adicional de implementación hasta dejarlo operativo según el alcance contractual.'
+        'No. Puedes agregar empleados y usuarios administrativos sin pagar licencia extra por cada puesto.'
+    },
+    {
+      question: '¿Cómo funciona la garantía de 30 días con dinero de regreso?',
+      answer:
+        'Si en los primeros 30 días no cumplimos lo acordado, te devolvemos tu dinero según los términos de servicio. Aplica a clientes que cumplan con los requisitos del plan contratado.'
     }
   ]
 
@@ -50,66 +56,49 @@ export default function Implementacion48HorasPage() {
 
   const steps = [
     {
-      time: 'Hora 0-2',
-      title: 'Configuración inicial',
-      description: 'Creamos tu cuenta, configuramos tu empresa y departamentos. Todo listo en menos de 2 horas.',
-      icon: '⚙️'
+      time: 'Inmediato',
+      title: 'Activación de cuenta',
+      description: 'Creamos tu cuenta, configuramos empresa y departamentos. Empiezas a usar el sistema de inmediato.',
+      icon: '⚡'
     },
     {
-      time: 'Hora 2-8',
-      title: 'Registro de empleados',
-      description: 'Importamos o registramos tus empleados. Puedes hacerlo manualmente o importar desde Excel.',
+      time: 'Día 1',
+      title: 'Migración y empleados',
+      description: 'Importamos o registramos empleados desde Excel o manual. Asistencia incluida para migrar tus datos.',
       icon: '👥'
     },
     {
-      time: 'Hora 8-24',
+      time: 'Día 1-2',
       title: 'Configuración de nómina',
-      description: 'Configuramos deducciones y nómina según tu país (El Salvador, Guatemala u Honduras). Preconfiguración local.',
+      description: 'Configuramos deducciones y nómina según tu país (Honduras, El Salvador o Guatemala).',
       icon: '💰'
     },
     {
-      time: 'Hora 24-40',
-      title: 'Instalación biométrica (si aplica)',
-      description: 'Si tienes dispositivo biométrico, lo configuramos y conectamos. Si no, puedes usar registro manual.',
+      time: 'Hasta 72 h',
+      title: 'Implementación biométrica',
+      description: 'Si tienes dispositivo biométrico, lo configuramos y conectamos a la nómina en 72 horas o menos.',
       icon: '🔐'
     },
     {
-      time: 'Hora 40-48',
+      time: 'Cierre',
       title: 'Capacitación y prueba',
-      description: 'Te capacitamos en el uso del sistema y hacemos una prueba completa. Todo funcionando perfectamente.',
+      description: 'Capacitamos a tu equipo y hacemos una prueba completa. Actualizaciones incluidas sin costo adicional.',
       icon: '✅'
     }
   ]
 
-  const guarantees = [
-    {
-      title: 'Compromiso de puesta en marcha',
-      description:
-        'Con la información, accesos y responsables acordados, si no queda operativo en el plazo previsto coordinamos soporte adicional de implementación hasta dejarlo funcionando, según alcance contractual.',
-      icon: '⏱️'
-    },
-    {
-      title: 'Soporte Incluido',
-      description: 'Soporte técnico y capacitación incluidos durante todo el proceso.',
-      icon: '🎓'
-    },
-    {
-      title: 'Sin Costos Ocultos',
-      description: 'Todo el proceso de implementación está incluido. Sin sorpresas.',
-      icon: '💯'
-    }
-  ]
+  const guarantees = SERVICE_GUARANTEES
 
   const testimonials = [
     {
       name: 'Felix Garcia',
-      company: "Tony's Mar Restaurant",
+      company: 'Restaurante Tonys Mar',
       quote: 'En 2 días ya estaba usando el sistema. Odoo me había dicho que tardaría 3 semanas.',
       time: '48 horas'
     },
     {
       name: 'Nancy Urrutia',
-      company: 'PROHALCA',
+      company: 'Prohalca',
       quote: 'La implementación fue más rápida de lo que esperaba. El mismo día ya estábamos registrando asistencia.',
       time: '24 horas'
     }
@@ -134,16 +123,16 @@ export default function Implementacion48HorasPage() {
           {/* Trust badges */}
           <div className="flex flex-wrap justify-center gap-2 sm:gap-3 md:gap-6 mb-6 sm:mb-8 animate-fade-up-subtle">
             <span className="px-3 py-1 bg-green-500/20 text-green-300 text-xs rounded-full border border-green-500/30">
-              ⚡ 48 Horas Garantizadas
+              ⚡ Activación inmediata
             </span>
             <span className="px-3 py-1 bg-blue-500/20 text-blue-300 text-xs rounded-full border border-blue-500/30">
-              🎓 Soporte Incluido
+              🔐 Biométrico en 72 h
             </span>
             <span className="px-3 py-1 bg-purple-500/20 text-purple-300 text-xs rounded-full border border-purple-500/30">
-              💯 Sin Costos Ocultos
+              👥 Sin límite de usuarios
             </span>
             <span className="px-3 py-1 bg-orange-500/20 text-orange-300 text-xs rounded-full border border-orange-500/30">
-              🎁 30 días gratis
+              💰 30 días dinero de regreso
             </span>
           </div>
 
@@ -203,19 +192,19 @@ export default function Implementacion48HorasPage() {
             <ul className="space-y-3 text-gray-300">
               <li className="flex items-start gap-2">
                 <CheckCircleIcon className="h-5 w-5 text-green-400 flex-shrink-0 mt-0.5" />
-                <span><strong>Puesta en marcha típica en hasta 48 h</strong> (según alcance acordado)</span>
+                <span><strong>Activación inmediata</strong> y biométrico en 72 h o menos</span>
               </li>
               <li className="flex items-start gap-2">
                 <CheckCircleIcon className="h-5 w-5 text-green-400 flex-shrink-0 mt-0.5" />
-                <span>Sin consultoría externa necesaria</span>
+                <span>Migración de datos y capacitación incluidas</span>
               </li>
               <li className="flex items-start gap-2">
                 <CheckCircleIcon className="h-5 w-5 text-green-400 flex-shrink-0 mt-0.5" />
-                <span>Configuración simple y guiada</span>
+                <span>Sin límite de usuarios</span>
               </li>
               <li className="flex items-start gap-2">
                 <CheckCircleIcon className="h-5 w-5 text-green-400 flex-shrink-0 mt-0.5" />
-                <span>Soporte incluido durante todo el proceso</span>
+                <span>Garantía de 30 días con dinero de regreso</span>
               </li>
             </ul>
           </div>
@@ -251,7 +240,7 @@ export default function Implementacion48HorasPage() {
           <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-6 sm:mb-8 text-center text-white">
             Nuestras Garantías
           </h2>
-          <div className="grid md:grid-cols-3 gap-4 sm:gap-6">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {guarantees.map((guarantee, index) => (
               <div key={index} className="glass-modern rounded-xl sm:rounded-2xl p-4 sm:p-6 text-center border border-white/10 transition-all duration-300 hover:border-brand-400/40 hover:shadow-xl hover:shadow-brand-900/30">
                 <div className="text-4xl mb-4">{guarantee.icon}</div>
@@ -306,7 +295,7 @@ export default function Implementacion48HorasPage() {
             ¿Listo para una puesta en marcha express?
           </h2>
           <p className="text-lg sm:text-xl text-brand-200/90 mb-6 sm:mb-8">
-            Solicitá tu implementación ahora. Prueba gratis 30 días. Los plazos dependen del alcance acordado y de que nos compartas la información a tiempo.
+            Activación inmediata, biométrico en 72 h o menos y garantía de 30 días con dinero de regreso. Sin límite de usuarios.
           </p>
           <div className="flex flex-wrap justify-center gap-3 sm:gap-4">
             <Link

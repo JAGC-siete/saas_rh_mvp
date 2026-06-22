@@ -33,7 +33,7 @@ const ctaConfigs: Record<string, CTAConfig> = {
     href: '/activar'
   },
   'implementacion-48h': {
-    text: 'Implementación express (hasta 48 h)',
+    text: 'Implementación biométrica en 72 h',
     href: '/implementacion-48-horas'
   },
   'demo-personalizada': {

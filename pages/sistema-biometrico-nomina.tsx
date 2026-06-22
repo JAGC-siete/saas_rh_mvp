@@ -85,12 +85,12 @@ export default function SistemaBiometricoNominaPage() {
     {
       title: 'Restaurantes',
       description: 'Control de asistencia de meseros, cocineros y personal de turnos rotativos.',
-      example: 'Tony\'s Mar Restaurant - 40 empleados'
+      example: 'Restaurante Tonys Mar - 40 empleados'
     },
     {
       title: 'Manufactura',
       description: 'Registro preciso de horas trabajadas para cálculo de horas extras y producción.',
-      example: 'PROHALCA - 37 empleados'
+      example: 'Prohalca - 37 empleados'
     },
     {
       title: 'Oficinas',

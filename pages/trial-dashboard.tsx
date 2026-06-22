@@ -429,7 +429,7 @@ export default function TrialDashboard() {
               <CardDescription className="text-gray-300">
                 Mandá tu planilla y automatizamos tu RH en menos de 24 h.
                 <br />
-                <span className="text-emerald-400 font-semibold">💡 Garantía SISU:</span> si no lo logramos, trabajamos gratis.
+                <span className="text-emerald-400 font-semibold">💡 Garantía SISU:</span> 30 días con dinero de regreso si no cumplimos lo acordado.
               </CardDescription>
             </CardHeader>
             <CardContent>
