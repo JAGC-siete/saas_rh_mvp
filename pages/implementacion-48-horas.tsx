@@ -6,7 +6,7 @@ import { getPageTitle } from '../lib/seo/title'
 import { getPageDescription } from '../lib/seo/description'
 import SchemaMarkup from '../components/SEO/SchemaMarkup'
 import RelatedGuides from '../components/SEO/RelatedGuides'
-import { generateWebPageSchema } from '../lib/seo/schema'
+import { generateWebPageSchema, generateFAQPageSchema } from '../lib/seo/schema'
 import { ClockIcon, CheckCircleIcon } from '@heroicons/react/24/outline'
 
 export default function Implementacion48HorasPage() {
@@ -17,6 +17,36 @@ export default function Implementacion48HorasPage() {
     title: pageTitle,
     description: pageDescription
   })
+
+  const faqs = [
+    {
+      question: '¿Qué significa implementación en 48 horas?',
+      answer:
+        'Es el plazo típico de puesta en marcha cuando el alcance está acordado y nos entregas a tiempo la información (empleados, estructura, accesos). Incluye configuración, importación de datos, capacitación y una prueba de cierre.'
+    },
+    {
+      question: '¿Qué necesito tener listo antes de empezar?',
+      answer:
+        'Lista de empleados (Excel o manual), departamentos, reglas de jornada y, si aplica, acceso al biométrico. Con eso aceleramos las primeras 48 horas sin idas y vueltas.'
+    },
+    {
+      question: '¿La implementación tiene costo adicional?',
+      answer:
+        'El proceso de implementación está incluido en el plan acordado. No cobramos consultoría externa aparte para el setup estándar de asistencia y nómina.'
+    },
+    {
+      question: '¿Puedo implementar sin biométrico?',
+      answer:
+        'Sí. Puedes arrancar con registro manual o app de asistencia y agregar el biométrico después, sin cambiar de sistema ni volver a migrar datos.'
+    },
+    {
+      question: '¿Qué pasa si no queda listo en 48 horas?',
+      answer:
+        'Si el retraso no se debe a datos o accesos pendientes de tu lado, coordinamos soporte adicional de implementación hasta dejarlo operativo según el alcance contractual.'
+    }
+  ]
+
+  const faqSchema = generateFAQPageSchema(faqs)
 
   const steps = [
     {
@@ -96,7 +126,7 @@ export default function Implementacion48HorasPage() {
         <link rel="canonical" href="https://humanosisu.net/implementacion-48-horas" />
         <meta name="keywords" content="implementación nómina express, sistema nómina rápido regional, implementación rápida nómina, setup nómina El Salvador Guatemala Honduras" />
       </Head>
-      <SchemaMarkup schema={webPageSchema} />
+      <SchemaMarkup schema={[webPageSchema, faqSchema]} />
 
       {/* Hero Section */}
       <section className="py-4 sm:py-6 md:py-8 relative overflow-hidden">
@@ -250,6 +280,21 @@ export default function Implementacion48HorasPage() {
                     {testimonial.time}
                   </span>
                 </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* FAQ Section */}
+        <section className="mb-12 sm:mb-16">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-6 sm:mb-8 text-center text-white">
+            Preguntas Frecuentes
+          </h2>
+          <div className="space-y-4 sm:space-y-6">
+            {faqs.map((faq, index) => (
+              <div key={index} className="glass-modern rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-white/10">
+                <h3 className="text-base sm:text-lg font-bold mb-2 text-white">{faq.question}</h3>
+                <p className="text-brand-200/90 text-sm sm:text-base">{faq.answer}</p>
               </div>
             ))}
           </div>

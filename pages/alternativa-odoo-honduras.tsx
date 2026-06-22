@@ -8,7 +8,7 @@ import { getPageTitle } from '../lib/seo/title'
 import { getPageDescription } from '../lib/seo/description'
 import SchemaMarkup from '../components/SEO/SchemaMarkup'
 import RelatedGuides from '../components/SEO/RelatedGuides'
-import { generateWebPageSchema } from '../lib/seo/schema'
+import { generateWebPageSchema, generateFAQPageSchema } from '../lib/seo/schema'
 import { CheckCircleIcon, XMarkIcon } from '@heroicons/react/24/outline'
 
 export default function AlternativaOdooPage() {
@@ -23,6 +23,36 @@ export default function AlternativaOdooPage() {
     title: pageTitle,
     description: pageDescription
   })
+
+  const faqs = [
+    {
+      question: '¿Humano SISU reemplaza a Odoo por completo?',
+      answer:
+        'Humano SISU está enfocado en RH: asistencia, nómina y cumplimiento legal local. Si usas Odoo para inventario o contabilidad, puedes mantenerlo y usar Humano SISU solo para recursos humanos.'
+    },
+    {
+      question: '¿Odoo calcula bien IHSS, RAP e ISR en Honduras?',
+      answer:
+        'Odoo es un ERP genérico; la nómina local en Centroamérica suele requerir módulos, consultoría y ajustes manuales. Humano SISU viene preconfigurado con deducciones y tablas vigentes para HN, SV y GT.'
+    },
+    {
+      question: '¿Cuánto tarda implementar Odoo vs Humano SISU?',
+      answer:
+        'Odoo en nómina local suele tardar de 2 a 8 semanas con consultoría. Humano SISU tiene puesta en marcha típica en hasta 48 horas cuando el alcance y los datos acordados están listos.'
+    },
+    {
+      question: '¿Puedo migrar desde Odoo sin perder datos?',
+      answer:
+        'Sí. Importamos empleados e historial de nómina disponible y te acompañamos durante la transición, con capacitación incluida.'
+    },
+    {
+      question: '¿Para qué tipo de empresa conviene Humano SISU sobre Odoo?',
+      answer:
+        'Para MIPYMES que necesitan RH simple, biométrico integrado y cumplimiento local sin la complejidad ni el costo de implementación de un ERP completo.'
+    }
+  ]
+
+  const faqSchema = generateFAQPageSchema(faqs)
 
   const comparisonFeatures = [
     {
@@ -80,7 +110,7 @@ export default function AlternativaOdooPage() {
         <link rel="canonical" href="https://humanosisu.net/alternativa-odoo-honduras" />
         <meta name="keywords" content="alternativa a Odoo El Salvador Guatemala Honduras, Odoo vs nómina regional, MIPYMES Centroamérica, sistema nómina local" />
       </Head>
-      <SchemaMarkup schema={webPageSchema} />
+      <SchemaMarkup schema={[webPageSchema, faqSchema]} />
 
       {/* Hero Section */}
       <section className="py-4 sm:py-6 md:py-8 relative overflow-hidden">
@@ -208,6 +238,21 @@ export default function AlternativaOdooPage() {
                 Odoo suele tardar semanas o meses en implementarse. Con Humano SISU la puesta en marcha típica es en hasta 48 horas cuando el alcance y los datos acordados están listos.
               </p>
             </div>
+          </div>
+        </section>
+
+        {/* FAQ Section */}
+        <section className="mb-12 sm:mb-16">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-6 sm:mb-8 text-center text-white">
+            Preguntas Frecuentes
+          </h2>
+          <div className="space-y-4 sm:space-y-6">
+            {faqs.map((faq, index) => (
+              <div key={index} className="glass-modern rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-white/10">
+                <h3 className="text-base sm:text-lg font-bold mb-2 text-white">{faq.question}</h3>
+                <p className="text-brand-200/90 text-sm sm:text-base">{faq.answer}</p>
+              </div>
+            ))}
           </div>
         </section>
 

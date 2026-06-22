@@ -20,23 +20,28 @@ export default function DeduccionesHondurasPage() {
   const faqs = [
     {
       question: '¿Cómo se calcula el IHSS en Honduras?',
-      answer: 'El IHSS se calcula sobre el salario base del empleado, con un tope máximo establecido por la ley. El empleado paga el 2.5% y el empleador el 2.5% adicional. Humano SISU calcula esto automáticamente según la ley vigente.'
+      answer:
+        'El IHSS cotiza sobre el salario ordinario hasta el techo vigente (L 11,903.13 en 2026 para IVM y EM, según Decreto 48-2024). Al trabajador se le retiene 2.5% por Enfermedad y Maternidad y 2.5% por Invalidez, Vejez y Muerte (5% en total sobre la base cotizable). El patrono aporta por separado 5% (EM), 3.5% (IVM) y riesgos profesionales. Humano SISU aplica tasas y techos según la norma publicada cada año.'
     },
     {
       question: '¿Qué es el RAP y cómo se calcula?',
-      answer: 'El RAP (Régimen de Ahorro para Pensiones) es una deducción del 1.5% sobre el salario base del empleado, con un tope máximo. Humano SISU calcula el RAP automáticamente según los montos actualizados por la ley hondureña.'
+      answer:
+        'El RAP es el Régimen de Aportaciones Privadas (Decreto 47-2024), no un solo porcentaje. El Fondo de Reserva Laboral es un aporte patronal del 4% con techo de L 57,896.16 en 2026. El FOVIIF retiene 1.5% al trabajador y 1.5% al patrono, solo sobre el salario ordinario que excede L 11,903.13. Humano SISU calcula la retención del trabajador según los parámetros publicados por el RAP.'
     },
     {
       question: '¿Cómo se calcula el ISR en Honduras?',
-      answer: 'El ISR (Impuesto sobre la Renta) se calcula según tablas progresivas establecidas por la ley. Depende del salario del empleado y se aplican diferentes porcentajes según rangos. Humano SISU actualiza estas tablas automáticamente cada año.'
+      answer:
+        'El ISR de quinta categoría usa la tabla progresiva del SAR (Comunicado 02-2026 para 2026): exento hasta L 22,360.36 mensuales, luego 15%, 20% y 25% por tramos. Antes de la tabla se deducen hasta L 40,000 anuales por gastos médicos (Ley del ISR, art. 13). Humano SISU mantiene la tabla y deducciones alineadas a las publicaciones del SAR.'
     },
     {
       question: '¿Por qué usar software en lugar de Excel para calcular deducciones?',
-      answer: 'Excel es propenso a errores humanos, requiere actualización manual de tablas fiscales, y no garantiza cumplimiento legal. Humano SISU calcula todo automáticamente, se actualiza con cambios en la ley, y genera comprobantes auditables.'
+      answer:
+        'Excel depende de fórmulas manuales, copiar tablas cada año y revisar cambios de IHSS, RAP e ISR; un error en el techo o la tasa afecta toda la planilla. Humano SISU centraliza el cálculo, aplica parámetros actualizados y deja registro para revisión y comprobantes.'
     },
     {
       question: '¿Humano SISU se actualiza cuando cambian las leyes fiscales?',
-      answer: 'Sí, Humano SISU se actualiza automáticamente cuando hay cambios en las leyes de IHSS, RAP o ISR. No necesitas hacer nada, el sistema siempre calcula según la ley vigente.'
+      answer:
+        'Sí. Cuando el SAR, IHSS o RAP publican nuevos techos o tablas, actualizamos el motor de cálculo de Humano SISU para que tu planilla use la norma vigente sin reconfigurar fórmulas en Excel.'
     }
   ]
 
@@ -84,7 +89,7 @@ export default function DeduccionesHondurasPage() {
         <meta property="og:description" content={pageDescription} />
         <meta property="og:url" content="https://humanosisu.net/deducciones-honduras-ihss-rap-isr" />
         <link rel="canonical" href="https://humanosisu.net/deducciones-honduras-ihss-rap-isr" />
-        <meta name="keywords" content="cálculo IHSS RAP ISR automático, deducciones Honduras, planilla con IHSS, cálculo nómina Honduras, IHSS RAP ISR 2025" />
+        <meta name="keywords" content="cálculo IHSS RAP ISR automático, deducciones Honduras, planilla con IHSS, cálculo nómina Honduras, IHSS RAP ISR 2026" />
       </Head>
       <SchemaMarkup schema={[webPageSchema, faqSchema]} />
 
@@ -151,19 +156,20 @@ export default function DeduccionesHondurasPage() {
                 <strong>Instituto Hondureño de Seguridad Social</strong>
               </p>
               <p className="text-xs sm:text-sm text-brand-200/70">
-                Deducción del 2.5% para empleado y 2.5% para empleador sobre el salario base, 
-                con tope máximo establecido por ley.
+                Cotización sobre salario ordinario hasta el techo (L 11,903.13 en 2026). Retención al
+                trabajador: 5% total (2.5% EM + 2.5% IVM). El patrono aporta adicionalmente según
+                Decreto 48-2024.
               </p>
             </div>
             <div className="glass-modern rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-white/10 transition-all duration-300 hover:border-brand-400/40 hover:shadow-xl hover:shadow-brand-900/30">
               <div className="text-4xl mb-4">💰</div>
               <h3 className="text-lg sm:text-xl font-bold mb-2 text-white">RAP</h3>
               <p className="text-brand-200/90 mb-3 text-sm sm:text-base">
-                <strong>Régimen de Ahorro para Pensiones</strong>
+                <strong>Régimen de Aportaciones Privadas</strong>
               </p>
               <p className="text-xs sm:text-sm text-brand-200/70">
-                Deducción del 1.5% sobre el salario base del empleado, con tope máximo 
-                establecido por ley.
+                Reserva laboral 4% patronal (techo L 57,896.16 en 2026) y FOVIIF 1.5% obrero + 1.5%
+                patronal sobre el excedente de L 11,903.13 (Decreto 47-2024).
               </p>
             </div>
             <div className="glass-modern rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-white/10 transition-all duration-300 hover:border-brand-400/40 hover:shadow-xl hover:shadow-brand-900/30">
@@ -173,8 +179,8 @@ export default function DeduccionesHondurasPage() {
                 <strong>Impuesto sobre la Renta</strong>
               </p>
               <p className="text-xs sm:text-sm text-brand-200/70">
-                Impuesto progresivo calculado según tablas fiscales, que varía según 
-                el salario del empleado.
+                Tabla progresiva del SAR: exento hasta ~L 22,360.36/mes en 2026, luego 15%, 20% y
+                25% por tramos, con deducción anual de gastos médicos.
               </p>
             </div>
           </div>
@@ -228,8 +234,8 @@ export default function DeduccionesHondurasPage() {
                 <div>
                   <h3 className="text-lg font-bold mb-1">Tablas Fiscales Actualizadas</h3>
                   <p className="text-gray-300">
-                    Humano SISU mantiene las tablas de IHSS, RAP e ISR actualizadas según la ley vigente. 
-                    Cuando hay cambios, el sistema se actualiza automáticamente.
+                    Humano SISU mantiene las tablas de IHSS, RAP e ISR alineadas a publicaciones del
+                    SAR, IHSS y RAP. Cuando hay cambios oficiales, actualizamos el motor de cálculo.
                   </p>
                 </div>
               </div>

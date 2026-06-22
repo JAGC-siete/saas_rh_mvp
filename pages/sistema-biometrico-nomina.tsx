@@ -5,7 +5,7 @@ import { getPageTitle } from '../lib/seo/title'
 import { getPageDescription } from '../lib/seo/description'
 import SchemaMarkup from '../components/SEO/SchemaMarkup'
 import RelatedGuides from '../components/SEO/RelatedGuides'
-import { generateWebPageSchema, generateSoftwareApplicationSchema } from '../lib/seo/schema'
+import { generateWebPageSchema, generateSoftwareApplicationSchema, generateFAQPageSchema } from '../lib/seo/schema'
 import { CheckCircleIcon } from '@heroicons/react/24/outline'
 
 export default function SistemaBiometricoNominaPage() {
@@ -17,6 +17,36 @@ export default function SistemaBiometricoNominaPage() {
     description: pageDescription
   })
   const softwareSchema = generateSoftwareApplicationSchema()
+
+  const faqs = [
+    {
+      question: '¿Puedo usar mi biométrico actual con Humano SISU?',
+      answer:
+        'Sí. Humano SISU se integra con dispositivos biométricos compatibles (por ejemplo Hikvision y otros vía nuestro conector). Si aún no tienes equipo, puedes registrar asistencia manualmente o desde la app. Validamos compatibilidad durante la implementación.'
+    },
+    {
+      question: '¿Las horas del biométrico pasan solas a la nómina?',
+      answer:
+        'Sí. Las checadas alimentan el módulo de asistencia y, al generar planilla, el sistema calcula horas ordinarias y extras según la jornada configurada, sin reingreso manual entre sistemas.'
+    },
+    {
+      question: '¿Qué pasa si falla el biométrico o no hay internet?',
+      answer:
+        'Las checadas pueden quedar en el dispositivo y sincronizarse al restablecer conexión. Mientras tanto puedes registrar asistencia manualmente en Humano SISU sin detener el cálculo de nómina.'
+    },
+    {
+      question: '¿Funciona en Honduras, El Salvador y Guatemala?',
+      answer:
+        'Sí. La plataforma está localizada para HN, SV y GT: deducciones de ley, jornadas y reglas de asistencia según el país de tu empresa.'
+    },
+    {
+      question: '¿Necesito pagar dos sistemas (biométrico y nómina)?',
+      answer:
+        'No. Asistencia y nómina viven en una sola plataforma y una sola suscripción. Evitas licencias duplicadas y errores al pasar datos entre herramientas.'
+    }
+  ]
+
+  const faqSchema = generateFAQPageSchema(faqs)
 
   const benefits = [
     {
@@ -80,7 +110,7 @@ export default function SistemaBiometricoNominaPage() {
         <link rel="canonical" href="https://humanosisu.net/sistema-biometrico-nomina" />
         <meta name="keywords" content="sistema biométrico con nómina, control asistencia biométrico, biométrico integrado nómina, asistencia nómina El Salvador Guatemala Honduras" />
       </Head>
-      <SchemaMarkup schema={[webPageSchema, softwareSchema]} />
+      <SchemaMarkup schema={[webPageSchema, softwareSchema, faqSchema]} />
 
       {/* Hero Section */}
       <section className="py-4 sm:py-6 md:py-8 relative overflow-hidden">
@@ -224,6 +254,21 @@ export default function SistemaBiometricoNominaPage() {
                 <h3 className="text-lg sm:text-xl font-bold mb-2 text-white">{useCase.title}</h3>
                 <p className="text-brand-200/90 mb-4 text-sm sm:text-base">{useCase.description}</p>
                 <p className="text-xs sm:text-sm text-sky-400 font-semibold">{useCase.example}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* FAQ Section */}
+        <section className="mb-12 sm:mb-16">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-6 sm:mb-8 text-center text-white">
+            Preguntas Frecuentes
+          </h2>
+          <div className="space-y-4 sm:space-y-6">
+            {faqs.map((faq, index) => (
+              <div key={index} className="glass-modern rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-white/10">
+                <h3 className="text-base sm:text-lg font-bold mb-2 text-white">{faq.question}</h3>
+                <p className="text-brand-200/90 text-sm sm:text-base">{faq.answer}</p>
               </div>
             ))}
           </div>
