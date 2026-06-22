@@ -2,7 +2,7 @@
 title: "Calculadora de Cesantías: Evite errores legales en el finiquito de sus empleados"
 description: "Guía legal para calcular el Auxilio de Cesantía en Honduras: escala por antigüedad, promedio de 6 meses, tope de 25 meses y amortización del RAP en el finiquito."
 datePublished: "2026-06-22"
-author: "Sisu Steward"
+author: "Licenciado Jorge Arturo Gómez Coello"
 category: "Cumplimiento Legal"
 ---
 

@@ -2,7 +2,7 @@
 title: "La Muerte de la USB: Por qué el Reloj Chequeador es tu Cuello de Botella"
 description: "Descubre por qué la descarga manual de asistencias es el proceso más ineficiente de tu empresa y cómo la sincronización en tiempo real libera tu operación."
 datePublished: "2026-06-16"
-author: "Sisu Steward"
+author: "Licenciado Jorge Arturo Gómez Coello"
 category: "Eficiencia Operativa"
 ---
 

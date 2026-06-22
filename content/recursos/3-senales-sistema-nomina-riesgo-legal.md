@@ -2,7 +2,7 @@
 title: "3 Señales de que su sistema de nómina actual es un riesgo legal para su empresa"
 description: "Detecte si su nómina en Honduras es un riesgo legal: parámetros fiscales desactualizados, horas extras sin respaldo biométrico y errores en 13vo y 14vo proporcional."
 datePublished: "2026-06-22"
-author: "Sisu Steward"
+author: "Licenciado Jorge Arturo Gómez Coello"
 category: "Cumplimiento Legal"
 ---
 

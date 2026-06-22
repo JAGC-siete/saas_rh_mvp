@@ -2,7 +2,7 @@
 title: "La Trampa del Registro Manual: Por qué el crecimiento de tu empresa empieza con la muerte del Excel"
 description: "Descubre el riesgo oculto de gestionar la asistencia y nómina de forma manual y cómo la automatización elimina el error humano en PyMEs de Centroamérica."
 datePublished: "2026-06-14"
-author: "Sisu Steward"
+author: "Licenciado Jorge Arturo Gómez Coello"
 category: "Gestión de Recursos Humanos"
 ---
 

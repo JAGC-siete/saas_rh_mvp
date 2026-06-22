@@ -43,7 +43,7 @@ const emptyForm = (): RecursoFormData => ({
   content: '',
   datePublished: new Date().toISOString().slice(0, 10),
   image: '',
-  author: 'Humano SISU',
+  author: 'Licenciado Jorge Arturo Gómez Coello',
   status: 'draft',
 })
 

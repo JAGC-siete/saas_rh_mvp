@@ -2,7 +2,7 @@
 title: "Guía Completa: Cómo calcular el ISR y RAP en Honduras (Actualizado 2026)"
 description: "Parámetros actualizados 2026 para calcular ISR y RAP en Honduras: tabla progresiva del SAR, deducción médica, techos de cotización y aportes patronales y del trabajador."
 datePublished: "2026-06-22"
-author: "Sisu Steward"
+author: "Licenciado Jorge Arturo Gómez Coello"
 category: "Cumplimiento Legal"
 ---
 

@@ -2,7 +2,7 @@
 title: "Cumplimiento Legal en Honduras: Los errores más comunes al emitir el 13vo y 14vo salario"
 description: "Evite multas y demandas laborales: deducciones ilegales en aguinaldo y 14vo, promedio de variables, proporcionalidad en finiquitos y fechas límite de pago en Honduras."
 datePublished: "2026-06-22"
-author: "Sisu Steward"
+author: "Licenciado Jorge Arturo Gómez Coello"
 category: "Cumplimiento Legal"
 ---
 

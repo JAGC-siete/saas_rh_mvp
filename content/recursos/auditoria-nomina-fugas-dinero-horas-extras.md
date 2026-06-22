@@ -2,7 +2,7 @@
 title: "Auditoría de Nómina: Cómo detectar fugas de dinero en el pago de horas extras"
 description: "Guía de auditoría de horas extras en Honduras: recargos legales (+25%, +50%, +75%), cálculo del valor hora por jornada y límite de 12 horas semanales."
 datePublished: "2026-06-22"
-author: "Sisu Steward"
+author: "Licenciado Jorge Arturo Gómez Coello"
 category: "Cumplimiento Legal"
 ---
 

@@ -2,7 +2,7 @@
 title: "El Mito del Excel 'Gratis': El Costo Real de la Planilla Manual"
 description: "Descubre por qué confiar tu nómina a una hoja de cálculo es la decisión más cara de tu empresa y cómo la automatización elimina la fuga de dinero."
 datePublished: "2026-06-15"
-author: "Sisu Steward"
+author: "Licenciado Jorge Arturo Gómez Coello"
 category: "Eficiencia Operativa"
 ---
 

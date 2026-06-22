@@ -2,7 +2,7 @@
 title: "Blindaje Legal: Cómo Sobrevivir a una Auditoría del Ministerio de Trabajo"
 description: "Asegura tu empresa contra riesgos laborales. Descubre por qué los registros manuales son tu mayor debilidad y cómo la automatización crea un escudo legal inmutable."
 datePublished: "2026-06-17"
-author: "Sisu Steward"
+author: "Licenciado Jorge Arturo Gómez Coello"
 category: "Cumplimiento Legal"
 ---
 
