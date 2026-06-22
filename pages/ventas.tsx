@@ -359,7 +359,7 @@ export default function VentasPage() {
                   Normativa Local: Honduras · El Salvador · Guatemala
                 </div>
 
-                <h1 className="text-4xl sm:text-5xl font-bold mb-6 leading-tight">
+                <h1 className="text-4xl sm:text-5xl font-bold text-white mb-6 leading-tight">
                   El fin del{' '}
                   <span className="bg-gradient-to-r from-white via-emerald-200 to-emerald-400 bg-clip-text text-transparent">
                     trabajo manual

@@ -171,20 +171,20 @@ export default function AlternativaOdooPage() {
             Odoo vs Humano SISU: Comparación Directa
           </h2>
           <div className="glass-modern rounded-xl sm:rounded-2xl p-4 sm:p-6 md:p-8 overflow-x-auto border border-white/10">
-            <table className="w-full">
+            <table className="w-full text-white text-sm sm:text-base">
               <thead>
                 <tr className="border-b border-white/20">
-                  <th className="text-left py-4 px-4">Característica</th>
-                  <th className="text-center py-4 px-4">Humano SISU</th>
-                  <th className="text-center py-4 px-4">Odoo</th>
+                  <th className="text-left py-4 px-4 font-semibold">Característica</th>
+                  <th className="text-center py-4 px-4 font-semibold">Humano SISU</th>
+                  <th className="text-center py-4 px-4 font-semibold">Odoo</th>
                 </tr>
               </thead>
               <tbody>
                 {comparisonFeatures.map((item, index) => (
                   <tr key={index} className="border-b border-white/10">
                     <td className="py-4 px-4">
-                      <div className="font-semibold">{item.feature}</div>
-                      <div className="text-sm text-gray-400">{item.description}</div>
+                      <div className="font-semibold text-white">{item.feature}</div>
+                      <div className="text-sm text-brand-200/80">{item.description}</div>
                     </td>
                     <td className="py-4 px-4 text-center">
                       {item.humanoSisu === true ? (

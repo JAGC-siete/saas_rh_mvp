@@ -125,7 +125,7 @@ export default function InfoPage() {
           <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4 sm:mb-6 px-2">
             Hay un pequeño truco para que el trabajo más aburrido y pesado se haga prácticamente solo.
           </h1>
-          <p className="text-base sm:text-lg md:text-xl text-gray-300 mb-6 sm:mb-8 max-w-2xl mx-auto px-2">
+          <p className="text-base sm:text-lg md:text-xl text-brand-200/90 mb-6 sm:mb-8 max-w-2xl mx-auto px-2">
             Organizar los pagos y horarios no tiene por qué ser la peor parte de tu semana. Anota tu correo aquí y te lo enviamos en una nota rápida.
           </p>
 

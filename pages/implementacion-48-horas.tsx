@@ -168,7 +168,7 @@ export default function Implementacion48HorasPage() {
         <section className="mb-12 sm:mb-16 md:mb-20 grid md:grid-cols-2 gap-4 sm:gap-6">
           <div className="glass-modern rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-red-500/20">
             <h2 className="text-xl sm:text-2xl font-bold mb-4 text-red-400">❌ Otros Sistemas</h2>
-            <ul className="space-y-3 text-gray-300">
+            <ul className="space-y-3 text-brand-200/90 text-sm sm:text-base">
               <li className="flex items-start gap-2">
                 <ClockIcon className="h-5 w-5 text-red-400 flex-shrink-0 mt-0.5" />
                 <span><strong>Odoo:</strong> 2-8 semanas</span>
@@ -189,7 +189,7 @@ export default function Implementacion48HorasPage() {
           </div>
           <div className="glass-modern rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-green-500/20">
             <h2 className="text-xl sm:text-2xl font-bold mb-4 text-green-400">✅ Humano SISU</h2>
-            <ul className="space-y-3 text-gray-300">
+            <ul className="space-y-3 text-brand-200/90 text-sm sm:text-base">
               <li className="flex items-start gap-2">
                 <CheckCircleIcon className="h-5 w-5 text-green-400 flex-shrink-0 mt-0.5" />
                 <span><strong>Activación inmediata</strong> y biométrico en 72 h o menos</span>
@@ -225,9 +225,9 @@ export default function Implementacion48HorasPage() {
                       <span className="px-3 py-1 bg-sky-600/20 text-sky-300 rounded-full text-sm font-semibold">
                         {step.time}
                       </span>
-                      <h3 className="text-xl font-bold">{step.title}</h3>
+                      <h3 className="text-lg sm:text-xl font-bold text-white">{step.title}</h3>
                     </div>
-                    <p className="text-gray-300">{step.description}</p>
+                    <p className="text-brand-200/90 text-sm sm:text-base leading-relaxed">{step.description}</p>
                   </div>
                 </div>
               </div>
@@ -244,8 +244,8 @@ export default function Implementacion48HorasPage() {
             {guarantees.map((guarantee, index) => (
               <div key={index} className="glass-modern rounded-xl sm:rounded-2xl p-4 sm:p-6 text-center border border-white/10 transition-all duration-300 hover:border-brand-400/40 hover:shadow-xl hover:shadow-brand-900/30">
                 <div className="text-4xl mb-4">{guarantee.icon}</div>
-                <h3 className="text-xl font-bold mb-2">{guarantee.title}</h3>
-                <p className="text-gray-300">{guarantee.description}</p>
+                <h3 className="text-lg sm:text-xl font-bold mb-2 text-white">{guarantee.title}</h3>
+                <p className="text-brand-200/90 text-sm sm:text-base leading-relaxed">{guarantee.description}</p>
               </div>
             ))}
           </div>
@@ -259,11 +259,11 @@ export default function Implementacion48HorasPage() {
           <div className="grid md:grid-cols-2 gap-4 sm:gap-6">
             {testimonials.map((testimonial, index) => (
               <div key={index} className="glass-modern rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-white/10">
-                <p className="text-gray-300 italic mb-4">&ldquo;{testimonial.quote}&rdquo;</p>
+                <p className="text-brand-200/90 text-sm sm:text-base italic mb-4">&ldquo;{testimonial.quote}&rdquo;</p>
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="font-semibold text-white">{testimonial.name}</p>
-                    <p className="text-sm text-gray-400">{testimonial.company}</p>
+                    <p className="text-sm text-brand-200/70">{testimonial.company}</p>
                   </div>
                   <span className="px-3 py-1 bg-green-500/20 text-green-300 rounded-full text-sm font-semibold">
                     {testimonial.time}

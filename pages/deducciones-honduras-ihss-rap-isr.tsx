@@ -192,12 +192,12 @@ export default function DeduccionesHondurasPage() {
             Excel vs Humano SISU: ¿Cuál es Mejor?
           </h2>
           <div className="glass-modern rounded-xl sm:rounded-2xl p-4 sm:p-6 md:p-8 overflow-x-auto border border-white/10">
-            <table className="w-full">
+            <table className="w-full text-white text-sm sm:text-base">
               <thead>
                 <tr className="border-b border-white/20">
-                  <th className="text-left py-4 px-4">Aspecto</th>
-                  <th className="text-center py-4 px-4">Excel Manual</th>
-                  <th className="text-center py-4 px-4">Humano SISU</th>
+                  <th className="text-left py-4 px-4 font-semibold">Aspecto</th>
+                  <th className="text-center py-4 px-4 font-semibold">Excel Manual</th>
+                  <th className="text-center py-4 px-4 font-semibold">Humano SISU</th>
                 </tr>
               </thead>
               <tbody>
@@ -206,7 +206,7 @@ export default function DeduccionesHondurasPage() {
                     <td className="py-4 px-4">
                       <div className="flex items-center gap-2">
                         <span>{item.icon}</span>
-                        <span className="font-semibold">{item.aspect}</span>
+                        <span className="font-semibold text-white">{item.aspect}</span>
                       </div>
                     </td>
                     <td className="py-4 px-4 text-center text-red-400">
@@ -232,8 +232,8 @@ export default function DeduccionesHondurasPage() {
               <div className="flex items-start gap-4">
                 <CheckCircleIcon className="h-6 w-6 text-green-400 flex-shrink-0 mt-1" />
                 <div>
-                  <h3 className="text-lg font-bold mb-1">Tablas Fiscales Actualizadas</h3>
-                  <p className="text-gray-300">
+                  <h3 className="text-lg font-bold mb-1 text-white">Tablas Fiscales Actualizadas</h3>
+                  <p className="text-brand-200/90 text-sm sm:text-base">
                     Humano SISU mantiene las tablas de IHSS, RAP e ISR alineadas a publicaciones del
                     SAR, IHSS y RAP. Cuando hay cambios oficiales, actualizamos el motor de cálculo.
                   </p>
@@ -242,8 +242,8 @@ export default function DeduccionesHondurasPage() {
               <div className="flex items-start gap-4">
                 <CheckCircleIcon className="h-6 w-6 text-green-400 flex-shrink-0 mt-1" />
                 <div>
-                  <h3 className="text-lg font-bold mb-1">Cálculo Automático</h3>
-                  <p className="text-gray-300">
+                  <h3 className="text-lg font-bold mb-1 text-white">Cálculo Automático</h3>
+                  <p className="text-brand-200/90 text-sm sm:text-base">
                     Ingresas el salario del empleado y el sistema calcula automáticamente todas las deducciones. 
                     No necesitas hacer fórmulas ni buscar tablas.
                   </p>
@@ -252,8 +252,8 @@ export default function DeduccionesHondurasPage() {
               <div className="flex items-start gap-4">
                 <CheckCircleIcon className="h-6 w-6 text-green-400 flex-shrink-0 mt-1" />
                 <div>
-                  <h3 className="text-lg font-bold mb-1">Comprobantes Automáticos</h3>
-                  <p className="text-gray-300">
+                  <h3 className="text-lg font-bold mb-1 text-white">Comprobantes Automáticos</h3>
+                  <p className="text-brand-200/90 text-sm sm:text-base">
                     Cada cálculo genera un comprobante PDF automático que puedes enviar al empleado 
                     por email o WhatsApp.
                   </p>
@@ -262,8 +262,8 @@ export default function DeduccionesHondurasPage() {
               <div className="flex items-start gap-4">
                 <CheckCircleIcon className="h-6 w-6 text-green-400 flex-shrink-0 mt-1" />
                 <div>
-                  <h3 className="text-lg font-bold mb-1">Auditoría Completa</h3>
-                  <p className="text-gray-300">
+                  <h3 className="text-lg font-bold mb-1 text-white">Auditoría Completa</h3>
+                  <p className="text-brand-200/90 text-sm sm:text-base">
                     Todos los cálculos quedan registrados y auditables. Puedes ver el historial completo 
                     de cada nómina y cada deducción.
                   </p>

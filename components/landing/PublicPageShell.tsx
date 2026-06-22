@@ -27,7 +27,7 @@ export default function PublicPageShell({
   centered = false,
 }: PublicPageShellProps) {
   return (
-    <div className="min-h-screen bg-mesh relative">
+    <div className="min-h-screen bg-mesh relative text-white">
       <MeshBackground />
       {showSpotlight && <CursorSpotlight />}
       <DockNavbar loginAlwaysVisible={loginAlwaysVisible} />

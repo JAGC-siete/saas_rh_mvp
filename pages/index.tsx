@@ -59,7 +59,7 @@ export default function LandingPage() {
   })
 
   return (
-    <div className="min-h-screen bg-mesh pt-20 sm:pt-24 relative">
+    <div className="min-h-screen bg-mesh pt-20 sm:pt-24 relative text-white">
       <Head>
         <title>{pageTitle}</title>
         <link rel="icon" href="/logo-humano-sisu.png" />

@@ -71,7 +71,7 @@ export default function RecursoPage({ article }: RecursoPageProps) {
             >
               {collectionMeta.breadcrumbLabel}
             </Link>
-            <h1 className="text-3xl font-bold mb-2">{article.title}</h1>
+            <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2">{article.title}</h1>
             <div className="flex items-center gap-4 text-brand-300 text-sm">
               <time dateTime={article.datePublished}>
                 {new Date(article.datePublished).toLocaleDateString('es-HN', {

@@ -615,7 +615,7 @@ export default function CalculadoraPrestacionesPage() {
                         : 'border-white/20 bg-white/5 text-brand-100 hover:bg-white/10'
                     }`}
                   >
-                    <div className="font-semibold text-sm">Salario base mensual</div>
+                    <div className="font-semibold text-sm text-white">Salario base mensual</div>
                     <div className="text-xs text-brand-200/80 mt-1">Ingresar un solo monto.</div>
                   </button>
                   <button
@@ -627,7 +627,7 @@ export default function CalculadoraPrestacionesPage() {
                         : 'border-white/20 bg-white/5 text-brand-100 hover:bg-white/10'
                     }`}
                   >
-                    <div className="font-semibold text-sm">Salario promedio mensual</div>
+                    <div className="font-semibold text-sm text-white">Salario promedio mensual</div>
                     <div className="text-xs text-brand-200/80 mt-1">Si ya lo tienes calculado.</div>
                   </button>
                   <button
@@ -639,7 +639,7 @@ export default function CalculadoraPrestacionesPage() {
                         : 'border-white/20 bg-white/5 text-brand-100 hover:bg-white/10'
                     }`}
                   >
-                    <div className="font-semibold text-sm">Últimos 6 meses</div>
+                    <div className="font-semibold text-sm text-white">Últimos 6 meses</div>
                     <div className="text-xs text-brand-200/80 mt-1">El sistema hará el promedio.</div>
                   </button>
                 </div>

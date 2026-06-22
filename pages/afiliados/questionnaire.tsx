@@ -172,7 +172,7 @@ export default function AffiliateQuestionnairePage() {
 
       <div className="container mx-auto px-4 py-8">
         <section className="text-center mb-8">
-          <h1 className="text-4xl md:text-5xl font-bold mb-4">
+          <h1 className="text-4xl md:text-5xl font-bold mb-4 text-white">
             Cuestionario de Afiliación
           </h1>
           <p className="text-lg text-gray-400 max-w-2xl mx-auto">
@@ -269,7 +269,7 @@ export default function AffiliateQuestionnairePage() {
                     onChange={(e) => setTermsAccepted(e.target.checked)}
                     className="mt-1 w-4 h-4 text-blue-600 bg-white/10 border-white/20 rounded focus:ring-blue-500"
                   />
-                  <label htmlFor="terms" className="text-sm text-gray-300">
+                  <label htmlFor="terms" className="text-sm text-brand-200/90">
                     Acepto los{' '}
                     <a href="/afiliados" target="_blank" className="text-blue-400 hover:underline">
                       términos y condiciones
