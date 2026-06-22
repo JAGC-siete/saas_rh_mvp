@@ -1,10 +1,12 @@
 const CLIENTS = [
-  "Tony's Mar Restaurant",
-  'PROHALCA',
-  'Abogado Marcio Moya',
-  'Humano SISU',
-  "Tony's Mar Restaurant",
-  'PROHALCA',
+  'Restaurante Tonys Mar',
+  'Prohalca',
+  'Restaurante Oki Poki',
+  'Paragon Financial Corp',
+  'Restaurante El Chanchito SPS',
+  'Enlace',
+  'Grupo Gastronómico Cueva',
+  'Tuchi.hn',
 ]
 
 export default function TrustBar() {
