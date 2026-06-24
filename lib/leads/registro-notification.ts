@@ -43,13 +43,17 @@ const CONTACT_SENDER_HINT = 'jorgearturo@humanosisu.net'
 export function buildLeadFollowUpWhatsAppMessage(source: LeadRegistroSource): string {
   if (source === 'info') {
     return [
-      '¡Ya te lo mandé! 🪄',
+      '¡Secreto enviado! 🪄',
       '',
-      'Vas a leer ese correo en menos de 1 minuto y tu primera reacción va a ser: "¿En serio era así de fácil?". Es casi absurdo que nadie te lo haya explicado así antes.',
+      'Leerás ese correo en menos de 1 minuto y tu primera reacción va a ser: "¿qué tiene esto que ver conmigo?".',
       '',
-      `Ve a tu correo en este instante. Busca a ${CONTACT_SENDER_HINT} en tu bandeja.`,
+      'Pero para que no te quedes con la duda:',
       '',
-      'Si la tecnología nos traiciona y no lo ves (ni en la carpeta de spam), avísame de inmediato para mandártelo de nuevo a mano. No te quedes con la intriga.',
+      '1. Abrí la app de tu correo.',
+      '',
+      `2. En "🔎 buscar " escribe ${CONTACT_SENDER_HINT}`,
+      '',
+      'Y contesta: En tu trabajo actual; ¿Qué tan difícil es conseguir una constancia de trabajo?',
     ].join('\n')
   }
 

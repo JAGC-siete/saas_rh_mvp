@@ -13,10 +13,10 @@ describe('lead registro notification', () => {
     const info = buildLeadFollowUpWhatsAppMessage('info')
     const suscripcion = buildLeadFollowUpWhatsAppMessage('suscripcion')
 
-    assert.ok(info.includes('¡Ya te lo mandé! 🪄'))
-    assert.ok(info.includes('¿En serio era así de fácil?'))
-    assert.ok(info.includes('explicado así antes'))
-    assert.ok(info.includes('No te quedes con la intriga'))
+    assert.ok(info.includes('¡Secreto enviado! 🪄'))
+    assert.ok(info.includes('¿qué tiene esto que ver conmigo?'))
+    assert.ok(info.includes('Abrí la app de tu correo'))
+    assert.ok(info.includes('constancia de trabajo'))
 
     assert.ok(activar.includes('¡Tu entorno ya está listo! 🚀'))
     assert.ok(activar.includes('credenciales de acceso'))
