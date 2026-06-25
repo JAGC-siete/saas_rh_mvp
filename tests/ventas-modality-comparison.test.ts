@@ -35,15 +35,15 @@ const annualQuote: QuotationQuote = {
 describe('ventas modality comparison', () => {
   const sentAt = new Date('2026-05-22T12:00:00.000Z')
 
-  it('monthly primary shows annual reference with equivalent note', () => {
+  it('monthly primary shows annual reference without monthly equivalent note', () => {
     const comparison = buildModalityComparison({ quote: monthlyQuote, sentAt, now: sentAt })
 
     assert.equal(comparison.alternateModality, 'annual')
     assert.match(comparison.title, /Plan Anual/)
     assert.match(comparison.totalValue, /65,000\.00 \/ año/)
-    assert.ok(comparison.equivalentNote?.includes('≈'))
+    assert.equal(comparison.equivalentNote, null)
     assert.match(comparison.footnote, /terminal biométrica/i)
-    assert.match(comparison.footnote, /72 h/)
+    assert.doesNotMatch(comparison.footnote, /72 h/)
   })
 
   it('annual primary shows monthly reference without urgency discount', () => {
@@ -60,12 +60,12 @@ describe('ventas modality comparison', () => {
     assert.match(comparison.footnote, /cotiza por separado/i)
   })
 
-  it('alternate modality uses list price when primary has 72h offer', () => {
+  it('monthly primary has no 72h offer; alternate annual stays at list price', () => {
     const primary = buildQuotationPlanSummary({ quote: monthlyQuote, sentAt, now: sentAt })
     const comparison = buildModalityComparison({ quote: monthlyQuote, sentAt, now: sentAt })
 
-    assert.equal(primary.urgency.isActive, true)
-    assert.match(primary.totalValue, /5,291\.67 \/ mes/)
+    assert.equal(primary.urgency.isActive, false)
+    assert.match(primary.totalValue, /6,375\.00 \/ mes/)
     assert.match(comparison.totalValue, /65,000\.00 \/ año/)
   })
 
@@ -106,11 +106,11 @@ describe('ventas modality comparison', () => {
     assert.equal(snapshot.currency, 'HNL')
   })
 
-  it('plain text builder returns footnote', () => {
+  it('plain text builder returns footnote without 72h when primary is monthly', () => {
     const lines = buildModalityComparisonPlainText(
       buildModalityComparison({ quote: monthlyQuote, sentAt, now: sentAt })
     )
     assert.ok(lines.some((l) => l.includes('Referencia — Plan Anual')))
-    assert.ok(lines.some((l) => l.includes('72 h')))
+    assert.ok(lines.every((l) => !l.includes('72 h')))
   })
 })

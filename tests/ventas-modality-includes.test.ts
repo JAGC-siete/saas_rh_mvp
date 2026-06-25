@@ -36,7 +36,7 @@ describe('ventas modality includes', () => {
     }
   })
 
-  it('email mensual desglosa software y continuidad hardware', () => {
+  it('email mensual muestra precio de lista sin descuento por contratación temprana', () => {
     const quote: QuotationQuote = {
       tier: { min_employees: 1, max_employees: 30 },
       billing_modality: 'monthly',
@@ -58,9 +58,10 @@ describe('ventas modality includes', () => {
       sentAt,
       now: sentAt,
     })
-    assert.match(text, /Precio mensual con 1 terminal: L\.\s?6,375\.00 \/ mes/)
-    assert.match(text, /Tu inversión mensual total hoy/)
-    assert.match(text, /Ahorro exclusivo por contratación temprana/)
+    assert.match(text, /Precio Software: L\.\s?5,416\.67 \/ mes/)
+    assert.match(text, /Servicio de Continuidad de Hardware \(1 Terminal\): L\.\s?958\.33 \/ mes/)
+    assert.match(text, /Total mensual cotizado: L\.\s?6,375\.00 \/ mes/)
+    assert.doesNotMatch(text, /Ahorro exclusivo por contratación temprana/)
   })
 
   it('hardware fee decrece por terminal hasta el piso', () => {

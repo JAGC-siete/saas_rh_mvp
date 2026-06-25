@@ -61,15 +61,35 @@ export function computeQuotationUrgencyOffer(params: {
   const expiresAt = new Date(sentAt.getTime() + URGENCY_OFFER_DURATION_MS)
   const isMonthly = params.billingModality === 'monthly'
 
-  const softwareListTotal = roundMoney(isMonthly ? params.monthlySoftwareTotal : params.annualTotal)
-  const hardwareTotal = roundMoney(isMonthly ? params.monthlyHardwareFee : 0)
+  if (isMonthly) {
+    const softwareListTotal = roundMoney(params.monthlySoftwareTotal)
+    const hardwareTotal = roundMoney(params.monthlyHardwareFee)
+    const quotedTotal = roundMoney(softwareListTotal + hardwareTotal)
+
+    return {
+      isActive: false,
+      quotedTotal,
+      discountAmount: 0,
+      discountedTotal: quotedTotal,
+      expiresAt,
+      sentAt,
+      softwareListTotal,
+      hardwareTotal,
+      softwareDiscountAmount: 0,
+      softwareOfferTotal: softwareListTotal,
+    }
+  }
+
+  const softwareListTotal = roundMoney(params.annualTotal)
+  const hardwareTotal = 0
   const softwareDiscountAmount = roundMoney(softwareListTotal * URGENCY_OFFER_DISCOUNT_PCT)
   const softwareOfferTotal = roundMoney(softwareListTotal - softwareDiscountAmount)
-  const quotedTotal = roundMoney(softwareListTotal + hardwareTotal)
-  const discountedTotal = roundMoney(softwareOfferTotal + hardwareTotal)
+  const quotedTotal = softwareListTotal
+  const discountedTotal = softwareOfferTotal
+  const offerWindowOpen = now.getTime() < expiresAt.getTime()
 
   return {
-    isActive: now.getTime() < expiresAt.getTime(),
+    isActive: offerWindowOpen,
     quotedTotal,
     discountAmount: softwareDiscountAmount,
     discountedTotal,

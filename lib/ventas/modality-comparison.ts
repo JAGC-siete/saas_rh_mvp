@@ -1,5 +1,5 @@
 import type { QuotationQuote } from './types'
-import { formatMoney, roundMoney } from './pricing'
+import { formatMoney } from './pricing'
 import { buildQuotationPlanSummary, type PlanSummaryLine } from './quote-display'
 import { getVentasModalityDefinition, hardwareFeeMonthly } from './modality-includes'
 
@@ -35,19 +35,16 @@ export function buildModalityComparison(params: {
   const def = getVentasModalityDefinition(alternateModality)
   const fmt = (n: number) => formatMoney(quote.currency, n)
 
+  const listPriceNote =
+    primaryModality === 'annual'
+      ? 'Montos a precio de lista en esta referencia — la oferta de 72 h aplica solo al plan anual que usted seleccionó.'
+      : 'Montos a precio de lista.'
+
   let footnote: string
   if (alternateModality === 'monthly') {
-    footnote =
-      'La terminal biométrica no está incluida en el plan mensual; se cotiza por separado. Montos a precio de lista — la oferta de 72 h aplica solo a la modalidad que usted seleccionó.'
+    footnote = `La terminal biométrica no está incluida en el plan mensual; se cotiza por separado. ${listPriceNote}`
   } else {
-    footnote =
-      'Incluye terminal biométrica en la propuesta. Montos a precio de lista — la oferta de 72 h aplica solo a la modalidad que usted seleccionó.'
-  }
-
-  let equivalentNote: string | null = null
-  if (alternateModality === 'annual') {
-    const monthlyEquiv = roundMoney(quote.annual_total / 12)
-    equivalentNote = `≈ ${fmt(monthlyEquiv)} / mes en software (sin continuidad de hardware mensual).`
+    footnote = `Incluye terminal biométrica en la propuesta. ${listPriceNote}`
   }
 
   return {
@@ -58,7 +55,7 @@ export function buildModalityComparison(params: {
     totalLabel: summary.totalLabel,
     totalValue: summary.totalValue,
     footnote,
-    equivalentNote,
+    equivalentNote: null,
   }
 }
 

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { computeFrozenQuoteAmounts } from '../lib/billing/quote-amounts'
 
 describe('computeFrozenQuoteAmounts', () => {
-  it('freezes 50% deposit on monthly quote with 72h software discount', () => {
+  it('freezes 50% deposit on monthly quote at list price (no early-contract discount)', () => {
     const sentAt = new Date('2026-05-22T12:00:00.000Z')
     const result = computeFrozenQuoteAmounts({
       billingModality: 'monthly',
@@ -13,8 +13,8 @@ describe('computeFrozenQuoteAmounts', () => {
       sentAt,
     })
 
-    assert.equal(result.expectedTotalHnl, 6921.66)
-    assert.equal(result.expectedDepositHnl, 3460.83)
+    assert.equal(result.expectedTotalHnl, 8196.66)
+    assert.equal(result.expectedDepositHnl, 4098.33)
   })
 
   it('freezes annual total with urgency discount on software only', () => {

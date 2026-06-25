@@ -123,6 +123,7 @@ export async function generateVentasQuotationPDF(params: {
         y: planSummary.urgency.isActive ? urgencyY + 38 : comparisonY + 58,
         contentW,
         bankDetails,
+        isAnnual,
       })
 
       doc.end()
@@ -356,17 +357,27 @@ function drawFooter(
     y: number
     contentW: number
     bankDetails?: VentasBankDetails | null
+    isAnnual: boolean
   }
 ) {
-  const { y, contentW, bankDetails } = params
+  const { y, contentW, bankDetails, isAnnual } = params
   const boxW = (contentW - 14) / 2
-  const boxH = 118
+  const boxH = 128
 
-  drawSectionTitle(doc, 'Implementación', MARGIN, y)
+  const implementationTitle = 'Tiempo de implementación'
+  const implementationBody = isAnnual
+    ? 'Tiempo de entrega en 3 a 5 días hábiles.'
+    : 'Entrega en 3 a 5 días hábiles tras confirmar el depósito.'
+
+  const paymentIntro = isAnnual
+    ? '50% anticipo para programar la instalación y enlace de las terminales y 50% únicamente contra la instalación y enlace efectivos de las terminales con el sistema.'
+    : 'El siguiente paso es enviar el comprobante de depósito de la primera mensualidad.'
+
+  drawSectionTitle(doc, implementationTitle, MARGIN, y)
   doc.roundedRect(MARGIN, y + 14, boxW, boxH, 8).fill(T.panelBgAlt)
   doc.roundedRect(MARGIN, y + 14, boxW, boxH, 8).lineWidth(0.7).stroke(T.panelBorder)
   doc.fillColor(T.textBody).font('Helvetica').fontSize(TYPE.body).text(
-    'Entrega en 3 a 5 días hábiles tras confirmar el depósito. Al aceptar, el siguiente paso es el adelanto del 50% sobre la primera cuota.',
+    implementationBody,
     MARGIN + 12,
     y + 28,
     { width: boxW - 24, lineGap: 2 }
@@ -374,43 +385,50 @@ function drawFooter(
   doc.fillColor(T.textMuted).font('Helvetica').fontSize(TYPE.label).text(
     'Envíe comprobante por WhatsApp o responda al correo de cotización.',
     MARGIN + 12,
-    y + 98,
+    y + 108,
     { width: boxW - 24 }
   )
 
-  const bankX = MARGIN + boxW + 14
-  drawSectionTitle(doc, 'Depósito bancario', bankX, y)
-  doc.roundedRect(bankX, y + 14, boxW, boxH, 8).fill(T.panelBgAlt)
-  doc.roundedRect(bankX, y + 14, boxW, boxH, 8).lineWidth(0.7).stroke(T.panelBorder)
+  const paymentX = MARGIN + boxW + 14
+  drawSectionTitle(doc, 'Modalidad de pago', paymentX, y)
+  doc.roundedRect(paymentX, y + 14, boxW, boxH, 8).fill(T.panelBgAlt)
+  doc.roundedRect(paymentX, y + 14, boxW, boxH, 8).lineWidth(0.7).stroke(T.panelBorder)
+
+  doc.fillColor(T.textBody).font('Helvetica').fontSize(TYPE.body).text(
+    paymentIntro,
+    paymentX + 12,
+    y + 28,
+    { width: boxW - 24, lineGap: 2 }
+  )
 
   if (bankDetails) {
-    let rowY = y + 28
-    doc.font('Helvetica').fillColor(T.textBody).fontSize(TYPE.body)
+    let rowY = y + (isAnnual ? 68 : 52)
+    doc.font('Helvetica').fillColor(T.textBody).fontSize(TYPE.label)
     if (bankDetails.clientName) {
-      doc.text(`Titular: ${bankDetails.clientName}`, bankX + 12, rowY, { width: boxW - 24 })
-      rowY += 12
+      doc.text(`Titular: ${bankDetails.clientName}`, paymentX + 12, rowY, { width: boxW - 24 })
+      rowY += 11
     }
     if (bankDetails.clientDni) {
-      doc.text(`DNI: ${bankDetails.clientDni}`, bankX + 12, rowY, { width: boxW - 24 })
-      rowY += 12
+      doc.text(`DNI: ${bankDetails.clientDni}`, paymentX + 12, rowY, { width: boxW - 24 })
+      rowY += 11
     }
     doc.font('Courier').fontSize(TYPE.bankMono).fillColor(T.text)
     if (bankDetails.bacAccount) {
-      doc.text(`BAC Credomatic   ${bankDetails.bacAccount}`, bankX + 12, rowY, { width: boxW - 24 })
-      rowY += 12
+      doc.text(`BAC Credomatic   ${bankDetails.bacAccount}`, paymentX + 12, rowY, { width: boxW - 24 })
+      rowY += 11
     }
     if (bankDetails.banpaisAccount) {
-      doc.text(`Banpais          ${bankDetails.banpaisAccount}`, bankX + 12, rowY, { width: boxW - 24 })
-      rowY += 12
+      doc.text(`Banpais          ${bankDetails.banpaisAccount}`, paymentX + 12, rowY, { width: boxW - 24 })
+      rowY += 11
     }
     if (bankDetails.atlantidaAccount) {
-      doc.text(`Atlántida        ${bankDetails.atlantidaAccount}`, bankX + 12, rowY, { width: boxW - 24 })
+      doc.text(`Atlántida        ${bankDetails.atlantidaAccount}`, paymentX + 12, rowY, { width: boxW - 24 })
     }
   } else {
     doc.fillColor(T.textMuted).font('Helvetica').fontSize(TYPE.body).text(
       'Solicite datos bancarios a su asesor al confirmar.',
-      bankX + 12,
-      y + 32,
+      paymentX + 12,
+      y + 72,
       { width: boxW - 24 }
     )
   }

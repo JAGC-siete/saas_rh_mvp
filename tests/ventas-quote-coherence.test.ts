@@ -36,7 +36,35 @@ describe('ventas quote coherence', () => {
     process.env = envBackup
   })
 
-  it('72h discount applies only to software; hardware stays in monthly total', () => {
+  it('annual primary keeps 72h discount on software only', () => {
+    const sentAt = new Date('2026-05-22T12:00:00.000Z')
+    const annualQuote: QuotationQuote = {
+      ...monthlyQuote,
+      billing_modality: 'annual',
+      monthly_hardware_fee: 0,
+      monthly_total: 5416.67,
+    }
+    const summary = buildQuotationPlanSummary({ quote: annualQuote, sentAt, now: sentAt })
+    const text = generateVentasQuotationEmailText({
+      quote: annualQuote,
+      contactName: 'Alejandra',
+      companyName: 'Grupo Infinitum',
+      countryLabel: 'Honduras',
+      sentAt,
+      now: sentAt,
+    })
+
+    assert.equal(summary.urgency.isActive, true)
+    assert.equal(summary.urgency.softwareDiscountAmount, 15300)
+    assert.equal(summary.urgency.discountedTotal, 61200)
+    assert.match(text, /verdaderamente queremos ayudarte/)
+    assert.match(text, /Precio anual con 2 terminales incluidas: L\.\s?76,500\.00 \/ año/)
+    assert.match(text, /Tu inversión anual total hoy/)
+    assert.match(text, /L\.\s?61,200\.00 \/ año/)
+    assert.match(text, /Ahorro exclusivo por contratación temprana: L\.\s?15,300\.00/)
+  })
+
+  it('monthly quote has no 72h early-contract discount', () => {
     const sentAt = new Date('2026-05-22T12:00:00.000Z')
     const summary = buildQuotationPlanSummary({ quote: monthlyQuote, sentAt, now: sentAt })
     const text = generateVentasQuotationEmailText({
@@ -48,14 +76,14 @@ describe('ventas quote coherence', () => {
       now: sentAt,
     })
 
-    assert.equal(summary.urgency.softwareDiscountAmount, 1275)
-    assert.equal(summary.urgency.discountedTotal, 6921.66)
-    assert.equal(summary.urgency.hardwareTotal, 1821.66)
-    assert.match(text, /verdaderamente queremos ayudarte/)
-    assert.match(text, /Precio mensual con 2 terminales: L\.\s?8,196\.66 \/ mes/)
-    assert.match(text, /Tu inversión mensual total hoy/)
-    assert.match(text, /L\.\s?6,921\.66 \/ mes/)
-    assert.match(text, /Ahorro exclusivo por contratación temprana: L\.\s?1,275\.00/)
+    assert.equal(summary.urgency.isActive, false)
+    assert.equal(summary.urgency.softwareDiscountAmount, 0)
+    assert.equal(summary.urgency.discountedTotal, 8196.66)
+    assert.match(text, /Precio Software: L\.\s?6,375\.00 \/ mes/)
+    assert.match(text, /Servicio de Continuidad de Hardware \(2 Terminales\): L\.\s?1,821\.66 \/ mes/)
+    assert.match(text, /Total mensual cotizado: L\.\s?8,196\.66 \/ mes/)
+    assert.doesNotMatch(text, /Ahorro exclusivo por contratación temprana/)
+    assert.doesNotMatch(text, /verdaderamente queremos ayudarte/)
   })
 
   it('WhatsApp message references quote review and 50% comprobante', () => {
