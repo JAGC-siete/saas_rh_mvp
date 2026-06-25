@@ -82,6 +82,37 @@ export type PublicCalculatorConfig = {
     intro: string
     sections: Array<{ heading: string; body: string }>
   }
+  /** Embudo B2B Hormozi/Suby (opcional; solo HND en v1). */
+  b2bFunnel?: {
+    hero: {
+      headlineLead: string
+      headlineAccent: string
+      subheadline: string
+      authorityLine: string
+    }
+    digitalHealth: {
+      title: string
+      cavemanLabel: string
+      proLabel: string
+      timeLeakHoursPerMonth: number
+      constanciaDaysCaveman: string
+      constanciaSecondsPro: number
+    }
+    trojanHorse: {
+      headline: string
+      subheadline: string
+      rrhh: { label: string; whatsappScript: string }
+      boss: { label: string; whatsappScript: string }
+    }
+    audience: {
+      employeeTitle: string
+      bossTitle: string
+      employeeBody: string
+      bossBody: string
+    }
+    stickyConstancia: { text: string; ctaLabel: string }
+    godfatherKeyword: string
+  }
 }
 
 const BASE = 'https://humanosisu.net'
@@ -106,10 +137,53 @@ export const PUBLIC_CALCULATOR_CONFIGS: Record<CountryCode, PublicCalculatorConf
     },
     hero: {
       badges: ['Calculadora ISR Honduras', 'Calculadora RAP · IHSS', 'Gratis en 30 segundos'],
-      headlineLead: '¿Cuánto te pagan neto en Honduras?',
-      headlineAccent: 'Calcula IHSS, RAP e ISR al instante.',
+      headlineLead: 'Deja de adivinar tu sueldo. Obtén el desglose legal exacto que RR.HH. no te explica.',
+      headlineAccent: 'Calculado con el motor de Humano SISU — cumplimiento legal 2026.',
       subheadline:
         'Ingresa tu salario mensual o quincenal y valida al instante cuánto te descuentan de ISR, RAP e IHSS según las leyes vigentes en Honduras.'
+    },
+    b2bFunnel: {
+      hero: {
+        headlineLead: 'Deja de adivinar tu sueldo. Obtén el desglose legal exacto que RR.HH. no te explica.',
+        headlineAccent: 'Calculado con el motor de Humano SISU — cumplimiento legal 2026.',
+        subheadline:
+          'Ingresa tu salario mensual o quincenal y valida al instante cuánto te descuentan de ISR, RAP e IHSS según las leyes vigentes en Honduras.',
+        authorityLine: 'Cumplimiento 100% legal 2026'
+      },
+      digitalHealth: {
+        title: 'Diagnóstico de tu oficina',
+        cavemanLabel: 'Modo Cavernícola',
+        proLabel: 'Modo Pro',
+        timeLeakHoursPerMonth: 15,
+        constanciaDaysCaveman: '3-5 días',
+        constanciaSecondsPro: 2
+      },
+      trojanHorse: {
+        headline: '¿Quieres que tu jefe te quiera un poquito más (y te dé tus constancias rápido)?',
+        subheadline:
+          'Dale el regalo de la automatización. Hazle saber que puede ahorrar 20 horas de estrés al mes. Nosotros le explicamos cómo, tú solo pasas el link.',
+        rrhh: {
+          label: 'Enviar recomendación al Lic. (RRHH)',
+          whatsappScript:
+            'Hola Lic., estaba validando mis deducciones en una calculadora de Humano SISU y vi que tienen una herramienta para automatizar toda la planilla y que nosotros mismos bajemos las constancias y vouchers desde el cel. Me acordé de cuánto tiempo pasan ustedes revisando esos excels y pensé que esto les ahorraría un mundo de trabajo. Les dejo el link por si les sirve el dato:'
+        },
+        boss: {
+          label: 'Enviar recomendación al Jefe (Dueño)',
+          whatsappScript:
+            'Hola, estaba validando mis deducciones en una calculadora de Humano SISU y vi que tienen una herramienta para automatizar toda la planilla y que nosotros mismos bajemos las constancias y vouchers desde el cel. Me acordé de cuánto tiempo pasan ustedes revisando esos excels y pensé que esto les ahorraría un mundo de trabajo. Les dejo el link por si les sirve el dato:'
+        }
+      },
+      audience: {
+        employeeTitle: 'Soy empleado',
+        bossTitle: 'Soy jefe / RR.HH.',
+        employeeBody: 'Conviértete en el héroe de la eficiencia — comparte Humano SISU con quien decide en tu empresa.',
+        bossBody: 'Deja de quemar dinero en Excel. Activa el mismo motor legal que acabas de probar.'
+      },
+      stickyConstancia: {
+        text: '¿Harto de esperar por tu constancia?',
+        ctaLabel: 'Haz clic aquí'
+      },
+      godfatherKeyword: 'MI CONSTANCIA TARDA UNA ETERNIDAD'
     },
     defaultDeductions: { ihss: true, rap: true, afp: false, infop: false, isr: true },
     deductionOptions: [

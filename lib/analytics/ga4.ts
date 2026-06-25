@@ -12,6 +12,11 @@ export type GA4ConversionEvent =
   | 'whatsapp_click'
   | 'cta_click'
   | 'info_lead_submit'
+  | 'calc_audience_select'
+  | 'calc_digital_health_view'
+  | 'calc_trojan_share'
+  | 'calc_sticky_constancia_click'
+  | 'godfather_reply_sent'
 
 interface GA4EventParams {
   event_category?: string

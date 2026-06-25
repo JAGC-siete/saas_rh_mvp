@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import Head from 'next/head'
 import Link from 'next/link'
 import PublicPageShell from '../landing/PublicPageShell'
@@ -8,6 +8,10 @@ import SchemaMarkup from '../SEO/SchemaMarkup'
 import { validateFormInputs } from '../../lib/deduction-validator/client-validation'
 import type { PublicCalculatorConfig, PublicCalculatorDeductionKey } from '../../lib/public-calculator/config'
 import { generateFAQPageSchema, generateWebPageSchema, generateBreadcrumbListSchema } from '../../lib/seo/schema'
+import DigitalHealthDiagnostic from './DigitalHealthDiagnostic'
+import TrojanHorseShare from './TrojanHorseShare'
+import AudienceSelector, { type CalculatorAudience } from './AudienceSelector'
+import { trackGA4Event } from '../../lib/analytics/ga4'
 
 interface DeductionResult {
   grossSalary: number
@@ -89,6 +93,46 @@ export default function PublicDeductionCalculator({ config }: { config: PublicCa
   const [error, setError] = useState<string | null>(null)
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
   const [emailSent, setEmailSent] = useState(false)
+  const b2b = config.b2bFunnel
+  const audienceStorageKey = `${config.contactStorageKey}_audience`
+  const [audience, setAudience] = useState<CalculatorAudience | null>(null)
+
+  const scrollToTrojan = useCallback(() => {
+    trackGA4Event('calc_sticky_constancia_click', {
+      event_category: 'Calculator',
+      event_label: 'sticky',
+    })
+    const el = document.getElementById('trojan-horse')
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      return
+    }
+    const selector = document.getElementById('audience-selector')
+    selector?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [])
+
+  useEffect(() => {
+    if (!b2b) return
+    try {
+      const stored = sessionStorage.getItem(audienceStorageKey)
+      if (stored === 'empleado' || stored === 'jefe') setAudience(stored)
+    } catch {
+      // ignore
+    }
+  }, [audienceStorageKey, b2b])
+
+  const handleAudienceSelect = (value: CalculatorAudience) => {
+    setAudience(value)
+    try {
+      sessionStorage.setItem(audienceStorageKey, value)
+    } catch {
+      // ignore
+    }
+  }
+
+  const heroCopy = b2b
+    ? b2b.hero
+    : { headlineLead: config.hero.headlineLead, headlineAccent: config.hero.headlineAccent, subheadline: config.hero.subheadline, authorityLine: '' }
 
   useEffect(() => {
     try {
@@ -138,8 +182,9 @@ export default function PublicDeductionCalculator({ config }: { config: PublicCa
   const canSendPdf = consentNewsletter && fullName.trim().length > 0 && emailRegex.test(email)
   const selectorOptions = config.deductionOptions.filter((item) => item.showInSelector)
 
-  const activarUrl = (campaign: 'post-calc' | 'footer' | 'bridge' | 'sticky') =>
-    appendUtmParams(config.conversion.inlineHref, config.countryCode, campaign)
+  const activarUrl = (
+    campaign: 'post-calc' | 'footer' | 'bridge' | 'sticky' | 'sticky-constancia' | 'godfather-email' | 'godfather-pdf'
+  ) => appendUtmParams(config.conversion.inlineHref, config.countryCode, campaign)
   const demoUrl = (label: string) => buildDemoWhatsAppUrl(config.countryCode, label)
 
   const ConversionButtons = ({
@@ -147,7 +192,7 @@ export default function PublicDeductionCalculator({ config }: { config: PublicCa
     size = 'md',
     activarLabel,
   }: {
-    campaign: 'post-calc' | 'footer' | 'sticky'
+    campaign: 'post-calc' | 'footer' | 'sticky' | 'sticky-constancia'
     size?: 'md' | 'sm'
     activarLabel?: string
   }) => {
@@ -329,10 +374,13 @@ export default function PublicDeductionCalculator({ config }: { config: PublicCa
             ))}
           </div>
           <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4 leading-tight">
-            <span className="text-white block sm:inline">{config.hero.headlineLead}</span>
-            <span className="text-brand-300 block sm:inline mt-2 sm:mt-1">{config.hero.headlineAccent}</span>
+            <span className="text-white block sm:inline">{heroCopy.headlineLead}</span>
+            <span className="text-brand-300 block sm:inline mt-2 sm:mt-1">{heroCopy.headlineAccent}</span>
           </h1>
-          <p className="text-lg sm:text-xl text-brand-200/90 max-w-2xl mx-auto">{config.hero.subheadline}</p>
+          <p className="text-lg sm:text-xl text-brand-200/90 max-w-2xl mx-auto">{heroCopy.subheadline}</p>
+          {b2b?.hero.authorityLine && (
+            <p className="text-sm text-brand-300/80 mt-3 max-w-xl mx-auto">{b2b.hero.authorityLine}</p>
+          )}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -534,6 +582,16 @@ export default function PublicDeductionCalculator({ config }: { config: PublicCa
                     </div>
                   </div>
 
+                  {b2b && (
+                    <div className="mb-6">
+                      <DigitalHealthDiagnostic
+                        config={b2b}
+                        monthlyGrossSalary={result.monthlyGrossSalary}
+                        netSalaryFormatted={formatCurrency(result.netSalary)}
+                      />
+                    </div>
+                  )}
+
                   <div className="space-y-3 mb-6">
                     <h3 className="text-lg font-semibold text-white mb-3">Desglose de Deducciones</h3>
                     {renderResultRow(
@@ -611,16 +669,34 @@ export default function PublicDeductionCalculator({ config }: { config: PublicCa
                     </div>
                   )}
 
-                  <div className="glass-modern rounded-xl p-6 border border-cyan-500/30 text-center mb-6">
-                    <h3 className="text-xl font-bold text-white mb-2">{config.conversion.inlineTitle}</h3>
-                    <p className="text-brand-200/90 mb-4">{config.conversion.inlineBody}</p>
-                    <ConversionButtons campaign="post-calc" />
-                  </div>
+                  {!b2b && (
+                    <div className="glass-modern rounded-xl p-6 border border-cyan-500/30 text-center mb-6">
+                      <h3 className="text-xl font-bold text-white mb-2">{config.conversion.inlineTitle}</h3>
+                      <p className="text-brand-200/90 mb-4">{config.conversion.inlineBody}</p>
+                      <ConversionButtons campaign="post-calc" />
+                    </div>
+                  )}
                 </>
               )}
             </div>
           </div>
         </div>
+
+        {b2b && result && (
+          <div id="audience-selector" className="mt-8 space-y-6 scroll-mt-28">
+            <AudienceSelector config={b2b} audience={audience} onSelect={handleAudienceSelect} />
+            {audience === 'empleado' && (
+              <TrojanHorseShare config={b2b} countryCode={config.countryCode} />
+            )}
+            {audience === 'jefe' && (
+              <div className="glass-modern rounded-2xl shadow-2xl p-6 sm:p-8 text-center border border-white/10">
+                <h3 className="text-xl font-bold text-white mb-2">{config.conversion.inlineTitle}</h3>
+                <p className="text-brand-200/90 mb-4">{b2b.audience.bossBody}</p>
+                <ConversionButtons campaign="post-calc" />
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="mt-8 glass-modern rounded-2xl shadow-2xl p-6 sm:p-8 text-center border border-white/10">
           <h3 className="text-lg font-bold text-white mb-2">{config.landingBridge.title}</h3>
@@ -670,7 +746,24 @@ export default function PublicDeductionCalculator({ config }: { config: PublicCa
         </div>
       </div>
 
-      {result && (
+      {result && b2b && (
+        <div className="fixed bottom-0 inset-x-0 z-40 p-3 sm:p-4 bg-slate-900/95 border-t border-white/10 backdrop-blur-md shadow-2xl">
+          <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-center gap-3">
+            <p className="text-sm text-brand-100 text-center">
+              <span className="font-semibold text-white">{b2b.stickyConstancia.text}</span>{' '}
+              <button
+                type="button"
+                onClick={scrollToTrojan}
+                className="text-cyan-300 hover:text-white underline font-medium"
+              >
+                {b2b.stickyConstancia.ctaLabel}
+              </button>
+            </p>
+          </div>
+        </div>
+      )}
+
+      {result && !b2b && (
         <div className="fixed bottom-0 inset-x-0 z-40 p-3 sm:p-4 bg-slate-900/95 border-t border-white/10 backdrop-blur-md shadow-2xl">
           <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
             <p className="text-sm text-brand-100 text-center sm:text-left">

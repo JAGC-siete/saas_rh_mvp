@@ -9,7 +9,15 @@ export function calculatorUtmSource(countryCode: CountryCode): string {
 export function appendUtmParams(
   href: string,
   countryCode: CountryCode,
-  campaign: 'post-calc' | 'footer' | 'bridge' | 'sticky' | 'pdf-email'
+  campaign:
+    | 'post-calc'
+    | 'footer'
+    | 'bridge'
+    | 'sticky'
+    | 'pdf-email'
+    | 'sticky-constancia'
+    | 'godfather-email'
+    | 'godfather-pdf'
 ): string {
   const params = new URLSearchParams({
     utm_source: calculatorUtmSource(countryCode),

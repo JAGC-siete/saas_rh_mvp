@@ -1,7 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { generateDeductionReportPDF } from '../../../lib/deduction-validator/pdf-report'
 import { notificationManager } from '../../../lib/notification-providers'
-import { getResendFromContact } from '../../../lib/resend-from'
+import { getResendFromContact, getResendContactEmail } from '../../../lib/resend-from'
 import { generateDeductionEmailHTML, generateDeductionEmailSubject } from '../../../lib/deduction-validator/email-template'
 import { validateEmail } from '../../../lib/deduction-validator/validation'
 import { withRateLimit } from '../../../lib/deduction-validator/rate-limit-wrapper'
@@ -13,6 +13,8 @@ import {
   enrollPublicToolLeadNonBlocking,
   marketingSourceForDeductionCalculator,
 } from '../../../lib/marketing/enroll-public-tool-lead'
+import { parseCountryCodeInput } from '../../../lib/country/supported'
+import { PUBLIC_CALCULATOR_CONFIGS } from '../../../lib/public-calculator/config'
 
 interface SendDeductionReportRequest {
   email: string
@@ -50,7 +52,8 @@ async function sendEmailWithResend(
   pdfBuffer: Buffer,
   filename: string,
   apiKey: string,
-  fromEmail: string
+  fromEmail: string,
+  replyTo?: string
 ) {
   const { Resend } = await import('resend')
   const resend = new Resend(apiKey)
@@ -60,6 +63,7 @@ async function sendEmailWithResend(
   const result = await resend.emails.send({
     from: fromEmail,
     to: email,
+    replyTo: replyTo || undefined,
     subject,
     html,
     attachments: [
@@ -122,6 +126,11 @@ async function sendReportHandler(
     const sanitizedEmail = emailValidation.sanitized as string
     const consent = consentNewsletter === true
     const name = typeof fullName === 'string' ? fullName.trim() : ''
+    const resolvedCountry = parseCountryCodeInput(
+      typeof countryCode === 'string' ? countryCode : undefined
+    ) ?? 'HND'
+    const useGodfatherFunnel = resolvedCountry === 'HND' && Boolean(PUBLIC_CALCULATOR_CONFIGS.HND.b2bFunnel)
+    const godfatherKeyword = PUBLIC_CALCULATOR_CONFIGS.HND.b2bFunnel?.godfatherKeyword
 
     if (!consent) {
       return res.status(400).json({
@@ -159,6 +168,8 @@ async function sendReportHandler(
             consent_newsletter: true,
             consented_at: new Date().toISOString(),
             last_seen_at: new Date().toISOString(),
+            godfather_pending: useGodfatherFunnel,
+            ...(useGodfatherFunnel ? {} : { godfather_sent_at: null }),
           },
           { onConflict: 'email' }
         )
@@ -200,10 +211,12 @@ async function sendReportHandler(
       isr,
       isrPercentage,
       totalDeductions,
-      netSalary
+      netSalary,
+      useGodfatherFunnel,
+      godfatherKeyword,
     })
 
-    const subject = generateDeductionEmailSubject(year)
+    const subject = generateDeductionEmailSubject(year, useGodfatherFunnel)
     const filename = `reporte-deducciones-${year}-${paymentModality}.pdf`
 
     // Obtener configuración de notificaciones
@@ -213,6 +226,7 @@ async function sendReportHandler(
     // Determinar configuración de email
     const apiKey = notificationConfig?.emailProvider.apiKey || process.env.RESEND_API_KEY
     const fromEmail = getResendFromContact()
+    const replyTo = useGodfatherFunnel ? getResendContactEmail() : undefined
 
     if (!apiKey) {
       logger.error('RESEND_API_KEY no configurado')
@@ -229,7 +243,8 @@ async function sendReportHandler(
       pdfBuffer,
       filename,
       apiKey,
-      fromEmail
+      fromEmail,
+      replyTo
     )
 
     if ((result as any)?.error) {
@@ -252,7 +267,7 @@ async function sendReportHandler(
 
     enrollPublicToolLeadNonBlocking(
       sanitizedEmail,
-      marketingSourceForDeductionCalculator(countryCode)
+      marketingSourceForDeductionCalculator(resolvedCountry)
     )
 
     return res.status(200).json({ 

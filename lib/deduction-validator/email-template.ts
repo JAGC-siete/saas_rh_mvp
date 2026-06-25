@@ -24,6 +24,9 @@ export interface DeductionEmailData {
   isrPercentage: number
   totalDeductions: number
   netSalary: number
+  /** Honduras B2B funnel: Suby Godfather copy + reply hook */
+  useGodfatherFunnel?: boolean
+  godfatherKeyword?: string
 }
 
 function formatL(value: number): string {
@@ -32,7 +35,7 @@ function formatL(value: number): string {
 
 export function generateDeductionEmailHTML(data: DeductionEmailData): string {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://humanosisu.net'
-  const activarUrl = `${siteUrl}/activar?country=HND&utm_source=calculadora-deducciones-hnd&utm_medium=email&utm_campaign=deduction-report`
+  const activarUrl = `${siteUrl}/activar?country=HND&utm_source=calculadora-deducciones-hnd&utm_medium=email&utm_campaign=godfather-email`
   const demoWhatsAppUrl = `https://wa.me/50432226773?text=${encodeURIComponent(
     'Hola, calculé deducciones en Humano SISU (Honduras) y me gustaría una demo personalizada.'
   )}`
@@ -52,36 +55,70 @@ export function generateDeductionEmailHTML(data: DeductionEmailData): string {
     { label: 'Salario Neto', value: formatL(data.netSalary), emphasize: true },
   ])
 
+  const keyword = data.godfatherKeyword ?? 'MI CONSTANCIA TARDA UNA ETERNIDAD'
+
+  const godfatherBlocks = data.useGodfatherFunnel
+    ? [
+        liquidParagraph('Tu desglose está adjunto. Pero aquí va la verdad:'),
+        liquidParagraph(
+          `Si me contestas este correo diciendo <strong>"${keyword}"</strong>, te voy a enviar un PDF de una sola página que puedes dejar "olvidado" en la impresora de tu oficina o enviárselo a tu jefe.`
+        ),
+        liquidParagraph(
+          'Es una comparativa de cuánto dinero está perdiendo tu empresa por no usar tecnología. Tú no pides nada, solo estás "ayudando" a la empresa a ser más rentable.'
+        ),
+        liquidParagraph(`<strong>P.D.</strong> ¿Cuánto tardan realmente en darte una constancia hoy?`),
+      ]
+    : []
+
+  const standardPitch = data.useGodfatherFunnel
+    ? []
+    : [
+        liquidParagraph(
+          `${liquidEmphasis('Deja de calcular en Excel.')} Humano SISU automatiza IHSS, RAP e ISR con el mismo motor que usaste aquí.`
+        ),
+        liquidParagraph('Sin errores manuales — del reloj biométrico al comprobante de pago.'),
+        liquidCta(activarUrl, 'Activar gratis 30 días'),
+        liquidCtaWhatsApp(demoWhatsAppUrl, 'Agendar demo'),
+      ]
+
   const bodyHtml = [
     liquidParagraph('Estimado/a usuario,'),
     liquidParagraph(
-      `Adjunto encontrará el reporte detallado de validación de deducciones de nómina para el año ${data.year}.`
+      data.useGodfatherFunnel
+        ? `Adjunto encontrarás tu reporte de deducciones (${data.year}).`
+        : `Adjunto encontrará el reporte detallado de validación de deducciones de nómina para el año ${data.year}.`
     ),
     summaryTable,
     liquidInfoBox(
       `<strong>Nota:</strong> Estos cálculos están basados en las leyes vigentes de Honduras para el año ${data.year}.`,
       'warning'
     ),
-    liquidParagraph(
-      `${liquidEmphasis('Deja de calcular en Excel.')} Humano SISU automatiza IHSS, RAP e ISR con el mismo motor que usaste aquí.`
-    ),
-    liquidParagraph('Sin errores manuales — del reloj biométrico al comprobante de pago.'),
-    liquidCta(activarUrl, 'Activar gratis 30 días'),
-    liquidCtaWhatsApp(demoWhatsAppUrl, 'Agendar demo'),
+    ...godfatherBlocks,
+    ...standardPitch,
+    ...(data.useGodfatherFunnel
+      ? [
+          liquidParagraph(
+            `<a href="${activarUrl}" style="color:#64748b;font-size:13px;">¿Gestionas planilla? Activar Humano SISU</a>`
+          ),
+        ]
+      : []),
     liquidParagraph(
       'Si tiene alguna pregunta, no dude en contactarnos.<br><strong>Humano SISU</strong> — RRHH y nómina regional (El Salvador, Guatemala y Honduras)'
     ),
-    liquidCtaWhatsApp(supportWhatsAppUrl, '💬 Contactar vía WhatsApp'),
+    ...(data.useGodfatherFunnel ? [] : [liquidCtaWhatsApp(supportWhatsAppUrl, '💬 Contactar vía WhatsApp')]),
   ].join('')
 
   return wrapLiquidEmail({
-    title: 'Reporte de Validación de Deducciones',
+    title: data.useGodfatherFunnel ? 'Secreto enviado...' : 'Reporte de Validación de Deducciones',
     subtitle: `Año fiscal ${data.year}`,
     badge: 'Calculadora',
     bodyHtml,
   })
 }
 
-export function generateDeductionEmailSubject(year: number): string {
+export function generateDeductionEmailSubject(year: number, useGodfatherFunnel?: boolean): string {
+  if (useGodfatherFunnel) {
+    return `Secreto enviado... — tu desglose ${year} | Humano SISU`
+  }
   return `Reporte de Deducciones de Nómina - ${year} - Humano SISU`
 }
