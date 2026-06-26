@@ -1,5 +1,6 @@
 import BorderBeam from '../landing/BorderBeam'
 import { trackGA4Event } from '../../lib/analytics/ga4'
+import { CalcCompanyIcon, CalcEmployeeIcon } from './CalculatorUiIcons'
 
 export type CalculatorRole = 'empleado' | 'empresa'
 
@@ -26,10 +27,10 @@ export default function RoleSelector({
     id: CalculatorRole
     title: string
     body: string
-    icon: string
+    icon: React.ReactNode
   }> = [
-    { id: 'empleado', title: employeeTitle, body: employeeBody, icon: '👤' },
-    { id: 'empresa', title: companyTitle, body: companyBody, icon: '🏢' },
+    { id: 'empleado', title: employeeTitle, body: employeeBody, icon: <CalcEmployeeIcon /> },
+    { id: 'empresa', title: companyTitle, body: companyBody, icon: <CalcCompanyIcon /> },
   ]
 
   return (
@@ -61,7 +62,7 @@ export default function RoleSelector({
               }`}
               aria-pressed={active}
             >
-              <span className="text-2xl mb-3 block" aria-hidden="true">
+              <span className="mb-3 block text-brand-200" aria-hidden="true">
                 {opt.icon}
               </span>
               <div className="font-semibold text-lg">{opt.title}</div>

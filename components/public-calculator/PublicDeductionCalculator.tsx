@@ -16,6 +16,7 @@ import CalculatingState from './CalculatingState'
 import DeductionResultHero from './DeductionResultHero'
 import BenefitLeadCapture from './BenefitLeadCapture'
 import LeadCaptureSoftGate, { useLeadSoftGateTriggers } from './LeadCaptureSoftGate'
+import { CalcPdfSentMessage, CalcTrustLine, CalcCheckIcon, CalcIconTextRow } from './CalculatorUiIcons'
 import { trackGA4Event } from '../../lib/analytics/ga4'
 import {
   trackCalcActivarClick,
@@ -758,7 +759,9 @@ export default function PublicDeductionCalculator({ config }: { config: PublicCa
                   </div>
 
                   <div className="glass rounded-xl p-4 border border-blue-500/30 backdrop-blur-sm bg-gradient-to-r from-blue-500/10 to-cyan-500/5 mb-6">
-                    <p className="text-sm text-blue-300 text-center font-medium">{config.trust.line}</p>
+                    <CalcTrustLine className="text-sm text-blue-300 text-center font-medium">
+                      {config.trust.line}
+                    </CalcTrustLine>
                     <p className="text-xs text-blue-400/70 text-center mt-1">
                       {config.trust.minimumWageLabel}: {formatCurrency(result.constants.minimumWage)} |{' '}
                       {config.trust.ceilingLabel}: {formatCurrency(result.constants.ihssCeiling)}
@@ -789,7 +792,9 @@ export default function PublicDeductionCalculator({ config }: { config: PublicCa
                       />
                       {emailSent && (
                         <div className="glass rounded-xl p-4 border border-green-500/50 text-green-200 text-center">
-                          ✓ Reporte enviado exitosamente a {email}
+                          <CalcIconTextRow icon={<CalcCheckIcon className="text-green-400" solid />}>
+                            Reporte enviado exitosamente a {email}
+                          </CalcIconTextRow>
                         </div>
                       )}
                       {audience === 'empleado' ? (
@@ -815,7 +820,9 @@ export default function PublicDeductionCalculator({ config }: { config: PublicCa
                       )}
                       {emailSent && (
                         <div className="glass rounded-xl p-4 border border-green-500/50 text-green-200 text-center mb-6">
-                          ✓ Reporte enviado exitosamente a {email}
+                          <CalcIconTextRow icon={<CalcCheckIcon className="text-green-400" solid />}>
+                            Reporte enviado exitosamente a {email}
+                          </CalcIconTextRow>
                         </div>
                       )}
                       {!b2b && (
@@ -893,7 +900,7 @@ export default function PublicDeductionCalculator({ config }: { config: PublicCa
         <div className="fixed bottom-0 inset-x-0 z-40 p-3 sm:p-4 bg-slate-900/95 border-t border-white/10 backdrop-blur-md shadow-2xl">
           <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
             {emailSent ? (
-              <p className="text-sm text-green-300 text-center sm:text-left">✓ PDF enviado — revisa tu correo</p>
+              <CalcPdfSentMessage>PDF enviado — revisa tu correo</CalcPdfSentMessage>
             ) : (
               <p className="text-sm text-brand-100 text-center sm:text-left">
                 <span className="font-semibold text-white">{formatCurrency(result.netSalary)}</span>

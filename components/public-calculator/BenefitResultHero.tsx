@@ -1,4 +1,5 @@
 import type { BenefitCalculationResult } from '../../lib/payroll/thirteenth-fourteenth/calculate'
+import { CalcSpeedComparison } from './CalculatorUiIcons'
 
 function formatHNL(value: number): string {
   return `L. ${value.toLocaleString('es-HN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
@@ -18,16 +19,7 @@ export default function BenefitResultHero({ result, labelShort, noDeductionsLine
         {formatHNL(result.monto)}
       </p>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5 text-xs sm:text-sm">
-        <div className="glass rounded-xl p-3 border border-white/10">
-          <p className="text-brand-300/70 mb-1">Cálculo manual (Excel)</p>
-          <p className="text-brand-200">⏳ ~15 min de estrés</p>
-        </div>
-        <div className="glass rounded-xl p-3 border border-green-500/20 bg-green-500/5">
-          <p className="text-green-300/80 mb-1">Motor legal SISU</p>
-          <p className="text-green-200 font-medium">⚡ 0.2 seg — automático</p>
-        </div>
-      </div>
+      <CalcSpeedComparison manualLabel="~15 min de estrés" sisuLabel="0.2 seg — automático" />
 
       <dl className="space-y-2 text-sm text-brand-200 border-t border-white/10 pt-4">
         <div className="flex justify-between gap-4">

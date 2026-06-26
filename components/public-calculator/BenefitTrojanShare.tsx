@@ -2,6 +2,7 @@ import TrackedWhatsAppLink from '../TrackedWhatsAppLink'
 import { trackGA4Event } from '../../lib/analytics/ga4'
 import { benefitCalculatorUtmSource } from '../../lib/public-calculator/utm'
 import type { BenefitTipo } from '../../lib/public-calculator/benefit-config'
+import { CalcShieldIcon } from './CalculatorUiIcons'
 
 const SITE_BASE = 'https://humanosisu.net'
 
@@ -27,8 +28,8 @@ export default function BenefitTrojanShare({ tipo, labelShort, path, montoFormat
       className="glass-modern rounded-2xl border border-green-500/30 p-5 sm:p-6 scroll-mt-28"
     >
       <div className="flex items-start gap-3 mb-4">
-        <span className="text-2xl shrink-0" aria-hidden="true">
-          🛡️
+        <span className="shrink-0 text-cyan-300" aria-hidden="true">
+          <CalcShieldIcon />
         </span>
         <div>
           <h3 className="text-lg font-bold text-white">

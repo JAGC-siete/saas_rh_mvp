@@ -16,6 +16,7 @@ import {
   generatePrestacionesEmailHTML,
   generatePrestacionesEmailSubject,
 } from '../../../lib/prestaciones-public/email-template'
+import { PUBLIC_PRESTACIONES_CONFIG } from '../../../lib/public-calculator/prestaciones-config'
 
 interface SendPrestacionesReportRequest {
   email: string
@@ -23,6 +24,7 @@ interface SendPrestacionesReportRequest {
   company?: string
   phone?: string
   consentNewsletter?: boolean
+  audience?: 'empleado' | 'empresa'
   datosManuales: {
     salarioBaseMensual: number
     salarioPromedioMensual: number
@@ -103,6 +105,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       })
     }
 
+    const calcAudience =
+      body.audience === 'empresa' || body.audience === 'empleado' ? body.audience : null
+    const useGodfatherFunnel = calcAudience !== 'empresa'
+    const godfatherKeyword = PUBLIC_PRESTACIONES_CONFIG.funnel.godfatherKeyword
+
     logger.info('Envío de prestaciones por email iniciado', {
       email: maskEmail(sanitizedEmail),
     })
@@ -121,6 +128,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
             company: typeof body.company === 'string' ? body.company.trim() || null : null,
             phone: phoneNorm,
             source: 'prestaciones',
+            calc_audience: calcAudience,
             consent_newsletter: true,
             consented_at: new Date().toISOString(),
             last_seen_at: new Date().toISOString(),
@@ -133,6 +141,13 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         error: e?.message,
       })
       // No bloqueamos envío de PDF si falla el guardado
+    }
+
+    if (calcAudience === 'empresa') {
+      logger.info('Lead B2B prioritaria — calculadora prestaciones', {
+        email: maskEmail(sanitizedEmail),
+        company: typeof body.company === 'string' ? body.company.trim() || null : null,
+      })
     }
 
     const pdfBuffer = await generatePrestacionesReportPDF({
@@ -153,6 +168,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       salarioBaseMensual: body.datosManuales.salarioBaseMensual,
       salarioPromedioMensual: body.datosManuales.salarioPromedioMensual,
       antiguedadTexto: body.datosManuales.antiguedadTexto,
+      audience: calcAudience ?? undefined,
+      useGodfatherFunnel,
+      godfatherKeyword,
       rubros: {
         preaviso: body.rubros.preaviso,
         cesantiaBruta: body.rubros.cesantiaBruta,

@@ -1,3 +1,5 @@
+import { CalcSpeedComparison } from './CalculatorUiIcons'
+
 type Props = {
   netSalaryFormatted: string
   grossSalaryFormatted: string
@@ -25,16 +27,7 @@ export default function DeductionResultHero({
         Bruto {periodLabel}: <span className="text-white font-medium">{grossSalaryFormatted}</span>
       </p>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs sm:text-sm">
-        <div className="glass rounded-xl p-3 border border-white/10">
-          <p className="text-brand-300/70 mb-1">Cálculo manual (Excel)</p>
-          <p className="text-brand-200">⏳ ~15 min de estrés</p>
-        </div>
-        <div className="glass rounded-xl p-3 border border-green-500/20 bg-green-500/5">
-          <p className="text-green-300/80 mb-1">Motor legal SISU</p>
-          <p className="text-green-200 font-medium">⚡ 0.2 seg — automático</p>
-        </div>
-      </div>
+      <CalcSpeedComparison manualLabel="~15 min de estrés" sisuLabel="0.2 seg — automático" className="text-xs sm:text-sm" />
     </div>
   )
 }

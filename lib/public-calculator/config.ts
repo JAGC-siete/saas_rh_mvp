@@ -230,7 +230,7 @@ export const PUBLIC_CALCULATOR_CONFIGS: Record<CountryCode, PublicCalculatorConf
       isrTooltip: 'Impuesto progresivo según los rangos de ingresos establecidos por la ley.'
     },
     trust: {
-      line: '✓ Cálculos basados en leyes vigentes de Honduras',
+      line: 'Cálculos basados en leyes vigentes de Honduras',
       minimumWageLabel: 'Salario mínimo',
       ceilingLabel: 'Tope Seguro Social'
     },
@@ -407,7 +407,7 @@ export const PUBLIC_CALCULATOR_CONFIGS: Record<CountryCode, PublicCalculatorConf
       isrTooltip: 'Retención mensual en USD según tramos vigentes en El Salvador.'
     },
     trust: {
-      line: '✓ Cálculos basados en leyes vigentes de El Salvador',
+      line: 'Cálculos basados en leyes vigentes de El Salvador',
       minimumWageLabel: 'Salario mínimo ref.',
       ceilingLabel: 'Tope Seguro Social'
     },
@@ -536,7 +536,7 @@ export const PUBLIC_CALCULATOR_CONFIGS: Record<CountryCode, PublicCalculatorConf
       isrTooltip: 'Retención mensual en quetzales según parámetros legales configurados.'
     },
     trust: {
-      line: '✓ Cálculos basados en leyes vigentes de Guatemala',
+      line: 'Cálculos basados en leyes vigentes de Guatemala',
       minimumWageLabel: 'Salario mínimo ref.',
       ceilingLabel: 'Tope Seguro Social'
     },

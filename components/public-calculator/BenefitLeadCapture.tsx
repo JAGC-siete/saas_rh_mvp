@@ -1,3 +1,9 @@
+import {
+  CalcCheckIcon,
+  CalcDocumentIcon,
+  CalcIconTextRow,
+} from './CalculatorUiIcons'
+
 type Props = {
   headline: string
   subheadline: string
@@ -48,8 +54,8 @@ export default function BenefitLeadCapture({
       className="glass-modern rounded-2xl border border-cyan-500/40 p-5 sm:p-6 scroll-mt-24 animate-fade-up-subtle"
     >
       <div className="flex flex-col sm:flex-row gap-4 mb-5">
-        <div className="hidden sm:flex w-16 h-20 shrink-0 rounded-lg border border-white/20 bg-white/5 items-center justify-center text-2xl">
-          📄
+        <div className="hidden sm:flex w-16 h-20 shrink-0 rounded-lg border border-white/20 bg-white/5 items-center justify-center text-brand-300">
+          <CalcDocumentIcon />
         </div>
         <div>
           <h3 className="text-lg font-bold text-white">{headline}</h3>
@@ -107,7 +113,15 @@ export default function BenefitLeadCapture({
         disabled={!canSubmit || sending || sent}
         className="mt-4 w-full py-3.5 bg-cyan-600 hover:bg-cyan-700 text-white font-semibold rounded-xl disabled:opacity-50 transition-all"
       >
-        {sent ? '✓ PDF enviado a tu correo' : sending ? 'Enviando PDF…' : 'Enviar PDF gratis a mi correo'}
+        {sent ? (
+          <CalcIconTextRow icon={<CalcCheckIcon className="text-green-300" solid />}>
+            PDF enviado a tu correo
+          </CalcIconTextRow>
+        ) : sending ? (
+          'Enviando PDF…'
+        ) : (
+          'Enviar PDF gratis a mi correo'
+        )}
       </button>
     </div>
   )

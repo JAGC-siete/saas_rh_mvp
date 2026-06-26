@@ -11,6 +11,28 @@ export function benefitCalculatorUtmSource(tipo: BenefitTipo): string {
   return tipo === '13AVO' ? 'calculadora-aguinaldo-hnd' : 'calculadora-catorceavo-hnd'
 }
 
+export function prestacionesCalculatorUtmSource(): string {
+  return 'calculadora-prestaciones'
+}
+
+export function appendPrestacionesUtmParams(
+  href: string,
+  campaign: 'post-calc' | 'footer' | 'sticky' | 'pdf-email'
+): string {
+  const params = new URLSearchParams({
+    utm_source: prestacionesCalculatorUtmSource(),
+    utm_medium: 'cta',
+    utm_campaign: campaign,
+  })
+  const separator = href.includes('?') ? '&' : '?'
+  return `${href}${separator}${params.toString()}`
+}
+
+export function buildPrestacionesDemoWhatsAppUrl(trackingLabel: string): string {
+  const message = `Hola, calculé mi liquidación de prestaciones en Humano SISU (Honduras) y me gustaría una demo. Ref: ${trackingLabel}`
+  return `https://wa.me/${DEMO_WHATSAPP}?text=${encodeURIComponent(message)}`
+}
+
 export function appendBenefitUtmParams(
   href: string,
   tipo: BenefitTipo,

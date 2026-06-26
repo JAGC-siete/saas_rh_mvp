@@ -27,6 +27,7 @@ import BenefitResultHero from './BenefitResultHero'
 import BenefitLeadCapture from './BenefitLeadCapture'
 import BenefitTrojanShare from './BenefitTrojanShare'
 import LeadCaptureSoftGate, { useLeadSoftGateTriggers } from './LeadCaptureSoftGate'
+import { CalcPdfSentMessage, CalcTrustLine } from './CalculatorUiIcons'
 
 function benefitToolKey(tipo: PublicBenefitCalculatorConfig['tipo']): 'aguinaldo_hnd' | 'catorceavo_hnd' {
   return tipo === '13AVO' ? 'aguinaldo_hnd' : 'catorceavo_hnd'
@@ -486,7 +487,7 @@ export default function PublicBenefitCalculator({ config }: { config: PublicBene
               ) : (
                 <div className="text-center text-brand-300/70 py-12">
                   <p>Completa el formulario y calcula tu {config.labelShort.toLowerCase()}.</p>
-                  <p className="text-xs mt-4">{config.trust.line}</p>
+                  <CalcTrustLine className="text-xs mt-4 text-brand-300/80">{config.trust.line}</CalcTrustLine>
                 </div>
               )}
             </div>
@@ -549,7 +550,7 @@ export default function PublicBenefitCalculator({ config }: { config: PublicBene
         <div className="fixed bottom-0 inset-x-0 z-40 p-3 sm:p-4 bg-slate-900/95 border-t border-white/10 backdrop-blur-md shadow-2xl">
           <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
             {emailSent ? (
-              <p className="text-sm text-green-300 text-center sm:text-left">✓ PDF enviado — revisa tu correo</p>
+              <CalcPdfSentMessage>PDF enviado — revisa tu correo</CalcPdfSentMessage>
             ) : (
               <p className="text-sm text-brand-100 text-center sm:text-left">
                 <span className="font-semibold text-white">{formatHNL(result.monto)}</span>

@@ -112,7 +112,7 @@ export const PUBLIC_BENEFIT_CONFIGS: Record<BenefitTipo, PublicBenefitCalculator
         'Ingresa tu salario y fechas. Misma lógica legal que la planilla profesional de Humano SISU — sin deducciones de ISR, Seguro Social ni RAP.',
     },
     trust: {
-      line: '✓ Cálculo con año comercial 360 días (Honduras)',
+      line: 'Cálculo con año comercial 360 días (Honduras)',
       noDeductionsLine: 'El aguinaldo no lleva deducciones de ISR, Seguro Social ni RAP.',
     },
     conversion: {
@@ -186,7 +186,7 @@ export const PUBLIC_BENEFIT_CONFIGS: Record<BenefitTipo, PublicBenefitCalculator
         'Período julio–junio, calendario comercial 360. Valida tu monto antes del pago del 30 de junio — sin deducciones de ley.',
     },
     trust: {
-      line: '✓ Incluye aviso si no alcanzas 200 días para pago anual íntegro',
+      line: 'Incluye aviso si no alcanzas 200 días para pago anual íntegro',
       noDeductionsLine: 'El catorceavo no lleva deducciones de ISR, Seguro Social ni RAP.',
     },
     conversion: {

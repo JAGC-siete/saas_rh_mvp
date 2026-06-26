@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { CalcStepMarker } from './CalculatorUiIcons'
 
 type Props = {
   steps: string[]
@@ -48,7 +49,7 @@ export default function CalculatingState({ steps, durationMs = 1500, onComplete 
               idx < visibleCount ? 'opacity-100 text-green-300' : 'opacity-30 text-brand-300'
             }`}
           >
-            <span aria-hidden="true">{idx < visibleCount ? '✓' : '○'}</span>
+            <CalcStepMarker done={idx < visibleCount} />
             {step}
           </li>
         ))}

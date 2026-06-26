@@ -183,7 +183,7 @@ export function generateDeductionEmailHTML(data: DeductionEmailData): string {
     liquidParagraph(
       'Si tiene alguna pregunta, no dude en contactarnos.<br><strong>Humano SISU</strong> — RRHH y nómina regional (El Salvador, Guatemala y Honduras)'
     ),
-    ...(data.useGodfatherFunnel && !isEmpresa ? [] : [liquidCtaWhatsApp(supportWhatsAppUrl, '💬 Contactar vía WhatsApp')]),
+    ...(data.useGodfatherFunnel && !isEmpresa ? [] : [liquidCtaWhatsApp(supportWhatsAppUrl, 'Contactar vía WhatsApp')]),
   ].join('')
 
   return wrapLiquidEmail({
