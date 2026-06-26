@@ -332,6 +332,62 @@ export const PUBLIC_CALCULATOR_CONFIGS: Record<CountryCode, PublicCalculatorConf
       subheadline:
         'Calculadora ISR El Salvador con el motor profesional de Humano SISU. Valida tu sueldo neto en dólares antes de firmar o reclamar.'
     },
+    b2bFunnel: {
+      hero: {
+        headlineLead: '¿Cuánto te queda neto en El Salvador?',
+        headlineAccent: 'Calcula Seguro Social, AFP e ISR al instante.',
+        subheadline:
+          'Valida tu sueldo en USD con el mismo motor legal que usa la planilla profesional de Humano SISU.',
+        authorityLine: 'Parámetros legales vigentes · El Salvador'
+      },
+      digitalHealth: {
+        title: 'Diagnóstico de tu oficina',
+        cavemanLabel: 'Modo manual',
+        proLabel: 'Modo SISU',
+        timeLeakHoursPerMonth: 12,
+        constanciaDaysCaveman: '2-4 días',
+        constanciaSecondsPro: 2
+      },
+      trojanHorse: {
+        headline: '¿Quieres que RRHH valide tu recibo con este mismo motor?',
+        subheadline:
+          'Comparte Humano SISU con quien prepara la planilla. Ellos automatizan ISSS, AFP e ISR — tú validas tu sueldo neto en segundos.',
+        rrhh: {
+          label: 'Enviar desglose validado a RRHH',
+          whatsappScript:
+            'Hola, validé mis deducciones (ISSS, AFP e ISR) en la calculadora de Humano SISU y vi que automatizan toda la planilla en El Salvador. Les dejo el link por si les sirve validar los recibos:'
+        },
+        boss: {
+          label: 'Enviar recomendación al patrono / gerencia',
+          whatsappScript:
+            'Hola, usé la calculadora de Humano SISU para validar deducciones de planilla en El Salvador (ISSS, AFP, ISR). Tienen software que conecta asistencia y nómina en USD. Les comparto el link:'
+        }
+      },
+      audience: {
+        employeeTitle: 'Soy empleado',
+        bossTitle: 'Soy empresa / RRHH',
+        employeeBody: 'Quiero validar cuánto me descuentan y cuánto me queda neto en dólares.',
+        bossBody: 'Calculo para mi equipo o quiero automatizar planilla en El Salvador.'
+      },
+      stickyConstancia: {
+        text: '¿Tu recibo no cuadra con este cálculo?',
+        ctaLabel: 'Enviar desglose a RRHH'
+      },
+      godfatherKeyword: '',
+      verificationSteps: [
+        'Verificando tope ISSS vigente…',
+        'Aplicando aporte AFP (7.25%)…',
+        'Validando retención ISR según MH…',
+      ],
+      leadCapture: {
+        headline: 'Recibe tu desglose en PDF oficial',
+        subheadline:
+          'ISSS, AFP e ISR en USD + resumen de cumplimiento. Gratis — no guardamos tu salario en servidores.',
+        softGateTitle: 'No pierdas este cálculo de deducciones',
+        softGateBody:
+          '¿Te enviamos el PDF con tu sueldo neto en dólares? Es gratis y llega en segundos.',
+      },
+    },
     defaultDeductions: { ihss: true, rap: true, afp: true, infop: false, isr: true },
     deductionOptions: [
       { key: 'ihss', title: 'Seguro Social', subtitle: 'ISSS', hint: 'Instituto Salvadoreño del Seguro Social. 3% con tope mensual.', showInSelector: true, showInResults: true },

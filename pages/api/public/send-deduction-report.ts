@@ -130,13 +130,13 @@ async function sendReportHandler(
     const resolvedCountry = parseCountryCodeInput(
       typeof countryCode === 'string' ? countryCode : undefined
     ) ?? 'HND'
+    const calcAudience =
+      bodyAudience === 'empresa' || bodyAudience === 'empleado' ? bodyAudience : null
     const useGodfatherFunnel =
       resolvedCountry === 'HND' &&
       Boolean(PUBLIC_CALCULATOR_CONFIGS.HND.b2bFunnel) &&
       calcAudience !== 'empresa'
     const godfatherKeyword = PUBLIC_CALCULATOR_CONFIGS.HND.b2bFunnel?.godfatherKeyword
-    const calcAudience =
-      bodyAudience === 'empresa' || bodyAudience === 'empleado' ? bodyAudience : null
 
     if (!consent) {
       return res.status(400).json({
@@ -189,7 +189,8 @@ async function sendReportHandler(
     }
 
     if (calcAudience === 'empresa') {
-      logger.info('Lead B2B prioritaria — calculadora deducciones HND', {
+      logger.info('Lead B2B prioritaria — calculadora deducciones', {
+        country: resolvedCountry,
         email: maskEmail(sanitizedEmail),
         company: typeof company === 'string' ? company.trim() || null : null,
       })
@@ -226,6 +227,7 @@ async function sendReportHandler(
       isrPercentage,
       totalDeductions,
       netSalary,
+      countryCode: resolvedCountry,
       useGodfatherFunnel,
       godfatherKeyword,
       audience: calcAudience ?? undefined,
