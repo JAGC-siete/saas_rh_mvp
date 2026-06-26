@@ -80,8 +80,9 @@ const publicPages: SitemapUrl[] = [
   },
   {
     loc: '/info',
-    changefreq: 'monthly',
-    priority: 0.7
+    changefreq: 'weekly',
+    priority: 0.9,
+    lastmod: new Date().toISOString().split('T')[0]
   },
   {
     loc: '/calculadora-deducciones-el-salvador',

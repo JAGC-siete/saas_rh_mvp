@@ -6,6 +6,11 @@ export const CALCULATOR_HUB_LINKS = {
     label: 'Newsletter nómina y RRHH',
     subtitle: 'Guías y alertas legales tras usar las calculadoras',
   },
+  info: {
+    href: '/info',
+    label: 'Solicitar más información',
+    subtitle: 'Recursos sobre nómina y asistencia para PyMEs',
+  },
   landing: { href: '/#como-funciona', label: 'Automatizar nómina con Humano SISU' },
   deductions: [
     {

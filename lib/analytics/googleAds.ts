@@ -12,6 +12,8 @@
 import { trackGA4Event } from './ga4'
 
 const SEND_TO_ACTIVATION = process.env.NEXT_PUBLIC_GADS_SEND_TO_ACTIVATION
+/** PDF calculadoras, /info y otros leads TOFU/MOFU. */
+const SEND_TO_LEAD = process.env.NEXT_PUBLIC_GADS_SEND_TO_LEAD
 /** Opcional: conversión secundaria en clic de CTA (por defecto desactivada). */
 const SEND_TO_CTA = process.env.NEXT_PUBLIC_GADS_SEND_TO_CTA
 const SEND_TO_WHATSAPP = process.env.NEXT_PUBLIC_GADS_SEND_TO_WHATSAPP
@@ -48,6 +50,13 @@ function fireGoogleAdsConversion(
 
 function comparisonSessionKey(page: string): string {
   return `gads_dedupe_comparison_${page.replace(/[^a-z0-9]+/gi, '_')}`
+}
+
+/** Lead genérico (calculadoras PDF, /info, etc.) si NEXT_PUBLIC_GADS_SEND_TO_LEAD está definido. */
+export function fireGoogleAdsLeadConversion(transactionId?: string): void {
+  fireGoogleAdsConversion(SEND_TO_LEAD, {
+    transaction_id: transactionId,
+  })
 }
 
 /**

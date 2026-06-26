@@ -1,7 +1,5 @@
 import { trackGA4Event } from './ga4'
-import { trackCTAClick } from './googleAds'
-
-const SEND_TO_LEAD = process.env.NEXT_PUBLIC_GADS_SEND_TO_LEAD
+import { fireGoogleAdsLeadConversion, trackCTAClick } from './googleAds'
 
 export type CalculatorTool =
   | 'deducciones_hnd'
@@ -14,10 +12,7 @@ export type CalculatorTool =
 export type CalculatorAudience = 'empleado' | 'empresa'
 
 function fireLeadConversion(): void {
-  if (typeof window === 'undefined' || typeof window.gtag !== 'function') return
-  const sendTo = SEND_TO_LEAD?.trim()
-  if (!sendTo) return
-  window.gtag('event', 'conversion', { send_to: sendTo })
+  fireGoogleAdsLeadConversion()
 }
 
 /** Cálculo completado con éxito (engagement). */

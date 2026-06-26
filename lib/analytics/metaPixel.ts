@@ -11,6 +11,7 @@
  */
 
 import { trackGA4Event } from './ga4'
+import { fireGoogleAdsLeadConversion } from './googleAds'
 
 export const META_PIXEL_ID = '833142547420951'
 
@@ -227,9 +228,12 @@ export function trackInfoLeadSubmit(params: {
     }
   )
 
+  fireGoogleAdsLeadConversion(params.eventId)
+
   trackGA4Event('info_lead_submit', {
     event_category: 'Lead',
     event_label: 'info',
+    has_phone: Boolean(params.phone?.trim()),
   })
 }
 
