@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import Head from 'next/head'
 import Link from 'next/link'
 import PublicPageShell from '../landing/PublicPageShell'
@@ -10,7 +10,12 @@ import type { PublicCalculatorConfig, PublicCalculatorDeductionKey } from '../..
 import { generateFAQPageSchema, generateWebPageSchema, generateBreadcrumbListSchema } from '../../lib/seo/schema'
 import DigitalHealthDiagnostic from './DigitalHealthDiagnostic'
 import TrojanHorseShare from './TrojanHorseShare'
-import AudienceSelector, { type CalculatorAudience } from './AudienceSelector'
+import type { CalculatorAudience } from './AudienceSelector'
+import RoleSelector, { type CalculatorRole } from './RoleSelector'
+import CalculatingState from './CalculatingState'
+import DeductionResultHero from './DeductionResultHero'
+import BenefitLeadCapture from './BenefitLeadCapture'
+import LeadCaptureSoftGate, { useLeadSoftGateTriggers } from './LeadCaptureSoftGate'
 import { trackGA4Event } from '../../lib/analytics/ga4'
 import {
   trackCalcActivarClick,
@@ -41,6 +46,18 @@ interface DeductionResult {
     minimumWage: number
     ihssCeiling: number
   }
+}
+
+function roleFromAudience(audience: CalculatorAudience | null): CalculatorRole | null {
+  if (audience === 'jefe') return 'empresa'
+  if (audience === 'empleado') return 'empleado'
+  return null
+}
+
+function leadAudience(audience: CalculatorAudience | null): 'empleado' | 'empresa' | undefined {
+  if (audience === 'jefe') return 'empresa'
+  if (audience === 'empleado') return 'empleado'
+  return undefined
 }
 
 function Tooltip({ title, content, children }: { title: string; content: string; children: React.ReactNode }) {
@@ -99,11 +116,38 @@ export default function PublicDeductionCalculator({ config }: { config: PublicCa
   const [error, setError] = useState<string | null>(null)
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
   const [emailSent, setEmailSent] = useState(false)
+  const [verifying, setVerifying] = useState(false)
+  const [pendingResult, setPendingResult] = useState<DeductionResult | null>(null)
+  const resultRef = useRef<HTMLDivElement>(null)
   const b2b = config.b2bFunnel
+  const croEnabled = Boolean(b2b)
   const audienceStorageKey = `${config.contactStorageKey}_audience`
   const [audience, setAudience] = useState<CalculatorAudience | null>(null)
 
   const calcTool: CalculatorTool = `deducciones_${config.countryCode.toLowerCase()}` as CalculatorTool
+
+  const { showSoftGate, dismissSoftGate } = useLeadSoftGateTriggers(
+    croEnabled && Boolean(result) && !emailSent,
+    5000
+  )
+
+  const finalizeResult = useCallback(
+    (data: DeductionResult) => {
+      setResult(data)
+      setVerifying(false)
+      setPendingResult(null)
+      trackCalcComplete({
+        tool: calcTool,
+        value: data.netSalary,
+        modo: data.paymentModality,
+        audience: leadAudience(audience),
+      })
+      setTimeout(() => {
+        resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }, 100)
+    },
+    [calcTool, audience]
+  )
 
   const scrollToTrojan = useCallback(() => {
     trackGA4Event('calc_sticky_constancia_click', {
@@ -129,10 +173,11 @@ export default function PublicDeductionCalculator({ config }: { config: PublicCa
     }
   }, [audienceStorageKey, b2b])
 
-  const handleAudienceSelect = (value: CalculatorAudience) => {
-    setAudience(value)
+  const handleAudienceSelect = (role: CalculatorRole) => {
+    const mapped: CalculatorAudience = role === 'empresa' ? 'jefe' : 'empleado'
+    setAudience(mapped)
     try {
-      sessionStorage.setItem(audienceStorageKey, value)
+      sessionStorage.setItem(audienceStorageKey, mapped)
     } catch {
       // ignore
     }
@@ -235,6 +280,11 @@ export default function PublicDeductionCalculator({ config }: { config: PublicCa
     setEmailSent(false)
     setValidationErrors({})
 
+    if (croEnabled && !audience) {
+      setError('Selecciona si calculas tu propio sueldo o el de tu equipo.')
+      return
+    }
+
     const validation = validateFormInputs({ salary, paymentModality, email })
     if (!validation.valid) {
       const errorsMap: Record<string, string> = {}
@@ -263,12 +313,17 @@ export default function PublicDeductionCalculator({ config }: { config: PublicCa
       })
       const data = await response.json()
       if (!response.ok) throw new Error(data.error || 'Error al calcular deducciones')
-      setResult(data)
-      trackCalcComplete({
-        tool: calcTool,
-        value: data.netSalary,
-        modo: data.paymentModality,
-      })
+      if (croEnabled) {
+        setPendingResult(data)
+        setVerifying(true)
+      } else {
+        setResult(data)
+        trackCalcComplete({
+          tool: calcTool,
+          value: data.netSalary,
+          modo: data.paymentModality,
+        })
+      }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Error al calcular deducciones. Por favor intenta de nuevo.'
       setError(message)
@@ -305,6 +360,7 @@ export default function PublicDeductionCalculator({ config }: { config: PublicCa
           phone,
           consentNewsletter,
           country_code: config.countryCode,
+          audience: leadAudience(audience),
           ...result,
           salary: parseFloat(salary.replace(/[^\d.]/g, ''))
         })
@@ -312,8 +368,10 @@ export default function PublicDeductionCalculator({ config }: { config: PublicCa
       const data = await response.json()
       if (!response.ok) throw new Error(data.error || 'Error al enviar el reporte por email')
       setEmailSent(true)
+      dismissSoftGate()
       trackCalcLeadSubmit({
         tool: calcTool,
+        audience: leadAudience(audience),
         hasPhone: Boolean(phone.trim()),
         hasCompany: Boolean(company.trim()),
       })
@@ -380,6 +438,14 @@ export default function PublicDeductionCalculator({ config }: { config: PublicCa
       </Head>
       <SchemaMarkup schema={[webPageSchema, faqSchema, breadcrumbSchema]} />
 
+      {croEnabled && result && (
+        <div className="sticky top-0 z-30 bg-slate-900/95 border-b border-green-500/30 backdrop-blur-md py-2 px-4 sm:hidden">
+          <p className="text-center text-sm text-brand-200">
+            Neto: <span className="font-bold text-green-400">{formatCurrency(result.netSalary)}</span>
+          </p>
+        </div>
+      )}
+
       <div className={`max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 relative z-10 ${result ? 'pb-28 sm:pb-24' : ''}`}>
         <div className="text-center mb-8 sm:mb-12">
           <div className="flex flex-wrap justify-center gap-2 sm:gap-3 md:gap-4 mb-6 animate-fade-up-subtle">
@@ -402,6 +468,19 @@ export default function PublicDeductionCalculator({ config }: { config: PublicCa
           )}
         </div>
 
+        {croEnabled && b2b && (
+          <RoleSelector
+            audience={roleFromAudience(audience)}
+            onSelect={handleAudienceSelect}
+            employeeTitle={b2b.audience.employeeTitle}
+            employeeBody={b2b.audience.employeeBody}
+            companyTitle={b2b.audience.bossTitle}
+            companyBody={b2b.audience.bossBody}
+            tool={calcTool}
+          />
+        )}
+
+        {(!croEnabled || audience) && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="glass-modern rounded-2xl shadow-2xl p-6 sm:p-8 relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/20 via-blue-500/20 to-purple-500/20 opacity-50 blur-xl pointer-events-none" />
@@ -490,6 +569,7 @@ export default function PublicDeductionCalculator({ config }: { config: PublicCa
                 </div>
               </div>
 
+              {!croEnabled && (
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-white mb-2">
                   Email (opcional)
@@ -505,7 +585,9 @@ export default function PublicDeductionCalculator({ config }: { config: PublicCa
                   }`}
                 />
               </div>
+              )}
 
+              {!croEnabled && (
               <div className="glass rounded-xl border border-white/10 backdrop-blur-sm overflow-hidden">
                 <button
                   type="button"
@@ -553,6 +635,7 @@ export default function PublicDeductionCalculator({ config }: { config: PublicCa
                   </div>
                 )}
               </div>
+              )}
 
               {error && (
                 <div className="bg-red-500/20 border border-red-500/50 rounded-xl p-4 text-red-200 backdrop-blur-sm">{error}</div>
@@ -560,7 +643,7 @@ export default function PublicDeductionCalculator({ config }: { config: PublicCa
 
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || verifying}
                 className="w-full py-3.5 px-6 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl transition-all disabled:opacity-50"
               >
                 {loading ? 'Calculando...' : 'Calcular Deducciones'}
@@ -568,10 +651,12 @@ export default function PublicDeductionCalculator({ config }: { config: PublicCa
             </form>
           </div>
 
-          <div className="glass-modern rounded-2xl shadow-2xl p-6 sm:p-8 relative overflow-hidden">
+          <div ref={resultRef} className="glass-modern rounded-2xl shadow-2xl p-6 sm:p-8 relative overflow-hidden scroll-mt-28">
             <div className="absolute inset-0 bg-gradient-to-r from-green-500/20 via-cyan-500/20 to-blue-500/20 opacity-50 blur-xl pointer-events-none" />
             <div className="relative z-10">
-              {!result && (
+              {croEnabled && verifying && pendingResult && b2b ? (
+                <CalculatingState steps={b2b.verificationSteps} onComplete={() => finalizeResult(pendingResult)} />
+              ) : !result ? (
                 <div className="text-sm text-brand-200/80">
                   Completa el formulario para ver el desglose. Si eres empresa,{' '}
                   <Link href={activarUrl('post-calc')} onClick={() => trackCalcActivarClick(calcTool, 'post-calc')} className="text-brand-300 hover:text-white underline">
@@ -579,27 +664,35 @@ export default function PublicDeductionCalculator({ config }: { config: PublicCa
                   </Link>{' '}
                   y automatiza tu planilla.
                 </div>
-              )}
-
-              {result && (
+              ) : (
                 <>
-                  <div className="mb-6">
-                    <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">Resultados del Cálculo</h2>
-                    <p className="text-brand-300/80 text-sm">
-                      Año: {result.year} | Modalidad: {result.paymentModality === 'quincenal' ? 'Quincenal' : 'Mensual'}
-                    </p>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                    <div className="bg-white/5 backdrop-blur-sm rounded-xl p-5 border border-white/10">
-                      <div className="text-sm text-brand-300/80 mb-2 font-medium">Salario Bruto</div>
-                      <div className="text-3xl font-bold text-white">{formatCurrency(result.grossSalary)}</div>
-                    </div>
-                    <div className="bg-gradient-to-br from-green-500/20 to-emerald-500/20 backdrop-blur-sm rounded-xl p-5 border border-green-500/30">
-                      <div className="text-sm text-green-300 mb-2 font-medium">Salario Neto</div>
-                      <div className="text-3xl font-bold text-green-400">{formatCurrency(result.netSalary)}</div>
-                    </div>
-                  </div>
+                  {croEnabled && b2b ? (
+                    <DeductionResultHero
+                      netSalaryFormatted={formatCurrency(result.netSalary)}
+                      grossSalaryFormatted={formatCurrency(result.grossSalary)}
+                      paymentModality={result.paymentModality}
+                      year={result.year}
+                    />
+                  ) : (
+                    <>
+                      <div className="mb-6">
+                        <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">Resultados del Cálculo</h2>
+                        <p className="text-brand-300/80 text-sm">
+                          Año: {result.year} | Modalidad: {result.paymentModality === 'quincenal' ? 'Quincenal' : 'Mensual'}
+                        </p>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                        <div className="bg-white/5 backdrop-blur-sm rounded-xl p-5 border border-white/10">
+                          <div className="text-sm text-brand-300/80 mb-2 font-medium">Salario Bruto</div>
+                          <div className="text-3xl font-bold text-white">{formatCurrency(result.grossSalary)}</div>
+                        </div>
+                        <div className="bg-gradient-to-br from-green-500/20 to-emerald-500/20 backdrop-blur-sm rounded-xl p-5 border border-green-500/30">
+                          <div className="text-sm text-green-300 mb-2 font-medium">Salario Neto</div>
+                          <div className="text-3xl font-bold text-green-400">{formatCurrency(result.netSalary)}</div>
+                        </div>
+                      </div>
+                    </>
+                  )}
 
                   {b2b && (
                     <div className="mb-6">
@@ -672,49 +765,79 @@ export default function PublicDeductionCalculator({ config }: { config: PublicCa
                     </p>
                   </div>
 
-                  {email && !emailSent && (
-                    <button
-                      onClick={handleSendEmail}
-                      disabled={sendingEmail || !canSendPdf}
-                      className="w-full py-3.5 px-6 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl transition-all disabled:opacity-50 mb-6"
-                    >
-                      {sendingEmail ? 'Enviando reporte por email...' : 'Enviar Reporte Detallado por Email'}
-                    </button>
-                  )}
-
-                  {emailSent && (
-                    <div className="glass rounded-xl p-4 border border-green-500/50 text-green-200 text-center mb-6">
-                      ✓ Reporte enviado exitosamente a {email}
+                  {croEnabled && b2b ? (
+                    <div className="space-y-6">
+                      <BenefitLeadCapture
+                        headline={b2b.leadCapture.headline}
+                        subheadline={b2b.leadCapture.subheadline}
+                        fullName={fullName}
+                        email={email}
+                        company={company}
+                        phone={phone}
+                        consentNewsletter={consentNewsletter}
+                        onFullNameChange={setFullName}
+                        onEmailChange={setEmail}
+                        onCompanyChange={setCompany}
+                        onPhoneChange={setPhone}
+                        onConsentChange={setConsentNewsletter}
+                        onSubmit={handleSendEmail}
+                        sending={sendingEmail}
+                        sent={emailSent}
+                        showCompanyField={audience === 'jefe'}
+                        idPrefix="deduction-lead"
+                        containerId="deduction-lead-capture"
+                      />
+                      {emailSent && (
+                        <div className="glass rounded-xl p-4 border border-green-500/50 text-green-200 text-center">
+                          ✓ Reporte enviado exitosamente a {email}
+                        </div>
+                      )}
+                      {audience === 'empleado' ? (
+                        <TrojanHorseShare config={b2b} countryCode={config.countryCode} />
+                      ) : (
+                        <div className="glass-modern rounded-xl p-6 border border-cyan-500/30 text-center">
+                          <h3 className="text-xl font-bold text-white mb-2">{config.conversion.inlineTitle}</h3>
+                          <p className="text-brand-200/90 mb-4">{b2b.audience.bossBody}</p>
+                          <ConversionButtons campaign="post-calc" />
+                        </div>
+                      )}
                     </div>
-                  )}
-
-                  {!b2b && (
-                    <div className="glass-modern rounded-xl p-6 border border-cyan-500/30 text-center mb-6">
-                      <h3 className="text-xl font-bold text-white mb-2">{config.conversion.inlineTitle}</h3>
-                      <p className="text-brand-200/90 mb-4">{config.conversion.inlineBody}</p>
-                      <ConversionButtons campaign="post-calc" />
-                    </div>
+                  ) : (
+                    <>
+                      {email && !emailSent && (
+                        <button
+                          onClick={handleSendEmail}
+                          disabled={sendingEmail || !canSendPdf}
+                          className="w-full py-3.5 px-6 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl transition-all disabled:opacity-50 mb-6"
+                        >
+                          {sendingEmail ? 'Enviando reporte por email...' : 'Enviar Reporte Detallado por Email'}
+                        </button>
+                      )}
+                      {emailSent && (
+                        <div className="glass rounded-xl p-4 border border-green-500/50 text-green-200 text-center mb-6">
+                          ✓ Reporte enviado exitosamente a {email}
+                        </div>
+                      )}
+                      {!b2b && (
+                        <div className="glass-modern rounded-xl p-6 border border-cyan-500/30 text-center mb-6">
+                          <h3 className="text-xl font-bold text-white mb-2">{config.conversion.inlineTitle}</h3>
+                          <p className="text-brand-200/90 mb-4">{config.conversion.inlineBody}</p>
+                          <ConversionButtons campaign="post-calc" />
+                        </div>
+                      )}
+                    </>
                   )}
                 </>
               )}
             </div>
           </div>
         </div>
+        )}
 
-        {b2b && result && (
-          <div id="audience-selector" className="mt-8 space-y-6 scroll-mt-28">
-            <AudienceSelector config={b2b} audience={audience} onSelect={handleAudienceSelect} />
-            {audience === 'empleado' && (
-              <TrojanHorseShare config={b2b} countryCode={config.countryCode} />
-            )}
-            {audience === 'jefe' && (
-              <div className="glass-modern rounded-2xl shadow-2xl p-6 sm:p-8 text-center border border-white/10">
-                <h3 className="text-xl font-bold text-white mb-2">{config.conversion.inlineTitle}</h3>
-                <p className="text-brand-200/90 mb-4">{b2b.audience.bossBody}</p>
-                <ConversionButtons campaign="post-calc" />
-              </div>
-            )}
-          </div>
+        {croEnabled && !audience && (
+          <p className="text-center text-sm text-brand-300/70 mt-4">
+            El cálculo es 100% gratis — selecciona tu perfil arriba para comenzar.
+          </p>
         )}
 
         <div className="mt-8 glass-modern rounded-2xl shadow-2xl p-6 sm:p-8 text-center border border-white/10">
@@ -766,7 +889,40 @@ export default function PublicDeductionCalculator({ config }: { config: PublicCa
         </div>
       </div>
 
-      {result && b2b && (
+      {result && b2b && croEnabled && (
+        <div className="fixed bottom-0 inset-x-0 z-40 p-3 sm:p-4 bg-slate-900/95 border-t border-white/10 backdrop-blur-md shadow-2xl">
+          <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
+            {emailSent ? (
+              <p className="text-sm text-green-300 text-center sm:text-left">✓ PDF enviado — revisa tu correo</p>
+            ) : (
+              <p className="text-sm text-brand-100 text-center sm:text-left">
+                <span className="font-semibold text-white">{formatCurrency(result.netSalary)}</span>
+                {' · '}
+                <button
+                  type="button"
+                  onClick={() =>
+                    document.getElementById('deduction-lead-capture')?.scrollIntoView({ behavior: 'smooth' })
+                  }
+                  className="text-cyan-300 hover:text-white underline"
+                >
+                  Recibir PDF gratis
+                </button>
+                {audience === 'empleado' && (
+                  <>
+                    {' · '}
+                    <button type="button" onClick={scrollToTrojan} className="text-cyan-300 hover:text-white underline">
+                      {b2b.stickyConstancia.ctaLabel}
+                    </button>
+                  </>
+                )}
+              </p>
+            )}
+            {audience === 'jefe' && <ConversionButtons campaign="sticky" size="sm" />}
+          </div>
+        </div>
+      )}
+
+      {result && b2b && !croEnabled && (
         <div className="fixed bottom-0 inset-x-0 z-40 p-3 sm:p-4 bg-slate-900/95 border-t border-white/10 backdrop-blur-md shadow-2xl">
           <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-center gap-3">
             <p className="text-sm text-brand-100 text-center">
@@ -793,6 +949,35 @@ export default function PublicDeductionCalculator({ config }: { config: PublicCa
             <ConversionButtons campaign="sticky" size="sm" />
           </div>
         </div>
+      )}
+
+      {croEnabled && b2b && (
+        <LeadCaptureSoftGate
+          open={showSoftGate}
+          onClose={dismissSoftGate}
+          title={b2b.leadCapture.softGateTitle}
+          body={b2b.leadCapture.softGateBody}
+        >
+          <BenefitLeadCapture
+            headline={b2b.leadCapture.headline}
+            subheadline=""
+            fullName={fullName}
+            email={email}
+            company={company}
+            phone={phone}
+            consentNewsletter={consentNewsletter}
+            onFullNameChange={setFullName}
+            onEmailChange={setEmail}
+            onCompanyChange={setCompany}
+            onPhoneChange={setPhone}
+            onConsentChange={setConsentNewsletter}
+            onSubmit={handleSendEmail}
+            sending={sendingEmail}
+            sent={emailSent}
+            showCompanyField={audience === 'jefe'}
+            idPrefix="modal-deduction-lead"
+          />
+        </LeadCaptureSoftGate>
       )}
     </PublicPageShell>
   )

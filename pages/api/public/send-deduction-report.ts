@@ -40,6 +40,7 @@ interface SendDeductionReportRequest {
     ihssCeiling: number
   }
   country_code?: string
+  audience?: 'empleado' | 'empresa'
 }
 
 /**
@@ -109,9 +110,9 @@ async function sendReportHandler(
       netSalary,
       constants,
       country_code: countryCode,
+      audience: bodyAudience,
     }: SendDeductionReportRequest = req.body
 
-    // Validación robusta de email
     const emailValidation = validateEmail(email)
     if (!emailValidation.valid) {
       logger.warn('Email inválido en send-deduction-report', {
@@ -129,8 +130,13 @@ async function sendReportHandler(
     const resolvedCountry = parseCountryCodeInput(
       typeof countryCode === 'string' ? countryCode : undefined
     ) ?? 'HND'
-    const useGodfatherFunnel = resolvedCountry === 'HND' && Boolean(PUBLIC_CALCULATOR_CONFIGS.HND.b2bFunnel)
+    const useGodfatherFunnel =
+      resolvedCountry === 'HND' &&
+      Boolean(PUBLIC_CALCULATOR_CONFIGS.HND.b2bFunnel) &&
+      calcAudience !== 'empresa'
     const godfatherKeyword = PUBLIC_CALCULATOR_CONFIGS.HND.b2bFunnel?.godfatherKeyword
+    const calcAudience =
+      bodyAudience === 'empresa' || bodyAudience === 'empleado' ? bodyAudience : null
 
     if (!consent) {
       return res.status(400).json({
@@ -165,6 +171,7 @@ async function sendReportHandler(
             company: typeof company === 'string' ? company.trim() || null : null,
             phone: phoneNorm,
             source: 'deducciones',
+            calc_audience: calcAudience,
             consent_newsletter: true,
             consented_at: new Date().toISOString(),
             last_seen_at: new Date().toISOString(),
@@ -179,6 +186,13 @@ async function sendReportHandler(
         error: e?.message,
       })
       // No bloqueamos envío de PDF si falla el guardado
+    }
+
+    if (calcAudience === 'empresa') {
+      logger.info('Lead B2B prioritaria — calculadora deducciones HND', {
+        email: maskEmail(sanitizedEmail),
+        company: typeof company === 'string' ? company.trim() || null : null,
+      })
     }
 
     // Generar PDF
@@ -214,6 +228,7 @@ async function sendReportHandler(
       netSalary,
       useGodfatherFunnel,
       godfatherKeyword,
+      audience: calcAudience ?? undefined,
     })
 
     const subject = generateDeductionEmailSubject(year, useGodfatherFunnel)

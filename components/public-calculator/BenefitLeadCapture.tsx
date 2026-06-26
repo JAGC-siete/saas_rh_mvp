@@ -16,6 +16,7 @@ type Props = {
   sent: boolean
   showCompanyField?: boolean
   idPrefix?: string
+  containerId?: string
 }
 
 export default function BenefitLeadCapture({
@@ -36,13 +37,14 @@ export default function BenefitLeadCapture({
   sent,
   showCompanyField = false,
   idPrefix = 'lead',
+  containerId = 'benefit-lead-capture',
 }: Props) {
   const canSubmit =
     fullName.trim().length > 0 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && consentNewsletter
 
   return (
     <div
-      id="benefit-lead-capture"
+      id={containerId}
       className="glass-modern rounded-2xl border border-cyan-500/40 p-5 sm:p-6 scroll-mt-24 animate-fade-up-subtle"
     >
       <div className="flex flex-col sm:flex-row gap-4 mb-5">

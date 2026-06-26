@@ -112,6 +112,13 @@ export type PublicCalculatorConfig = {
     }
     stickyConstancia: { text: string; ctaLabel: string }
     godfatherKeyword: string
+    verificationSteps: string[]
+    leadCapture: {
+      headline: string
+      subheadline: string
+      softGateTitle: string
+      softGateBody: string
+    }
   }
 }
 
@@ -183,7 +190,20 @@ export const PUBLIC_CALCULATOR_CONFIGS: Record<CountryCode, PublicCalculatorConf
         text: '¿Harto de esperar por tu constancia?',
         ctaLabel: 'Haz clic aquí'
       },
-      godfatherKeyword: 'MI CONSTANCIA TARDA UNA ETERNIDAD'
+      godfatherKeyword: 'MI CONSTANCIA TARDA UNA ETERNIDAD',
+      verificationSteps: [
+        'Verificando techos Seguro Social 2026…',
+        'Aplicando tablas de retención RAP…',
+        'Validando ISR según ley vigente…',
+      ],
+      leadCapture: {
+        headline: 'Recibe tu desglose en PDF oficial',
+        subheadline:
+          'Reporte detallado Seguro Social, RAP e ISR + guía de cumplimiento. Gratis, sin guardar tu salario en servidores.',
+        softGateTitle: 'No pierdas este cálculo de deducciones',
+        softGateBody:
+          '¿Te enviamos el PDF con tu salario neto y el desglose legal? Es gratis y llega en segundos.',
+      },
     },
     defaultDeductions: { ihss: true, rap: true, afp: false, infop: false, isr: true },
     deductionOptions: [

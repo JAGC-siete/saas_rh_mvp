@@ -27,6 +27,8 @@ export interface DeductionEmailData {
   /** Honduras B2B funnel: Suby Godfather copy + reply hook */
   useGodfatherFunnel?: boolean
   godfatherKeyword?: string
+  /** empleado | empresa (jefe/RRHH) — personaliza CTA del correo */
+  audience?: 'empleado' | 'empresa'
 }
 
 function formatL(value: number): string {
@@ -56,30 +58,57 @@ export function generateDeductionEmailHTML(data: DeductionEmailData): string {
   ])
 
   const keyword = data.godfatherKeyword ?? 'MI CONSTANCIA TARDA UNA ETERNIDAD'
+  const isEmpresa = data.audience === 'empresa'
+  const ventasUrl = `${siteUrl}/ventas?utm_source=calculadora-deducciones-hnd&utm_medium=email&utm_campaign=empresa-pdf`
 
-  const godfatherBlocks = data.useGodfatherFunnel
+  const godfatherBlocks =
+    data.useGodfatherFunnel && !isEmpresa
+      ? [
+          liquidParagraph('Tu desglose está adjunto. Pero aquí va la verdad:'),
+          liquidParagraph(
+            `Si me contestas este correo diciendo <strong>"${keyword}"</strong>, te voy a enviar un PDF de una sola página que puedes dejar "olvidado" en la impresora de tu oficina o enviárselo a tu jefe.`
+          ),
+          liquidParagraph(
+            'Es una comparativa de cuánto dinero está perdiendo tu empresa por no usar tecnología. Tú no pides nada, solo estás "ayudando" a la empresa a ser más rentable.'
+          ),
+          liquidParagraph(`<strong>P.D.</strong> ¿Cuánto tardan realmente en darte una constancia hoy?`),
+        ]
+      : []
+
+  const empresaPitch = isEmpresa
     ? [
-        liquidParagraph('Tu desglose está adjunto. Pero aquí va la verdad:'),
         liquidParagraph(
-          `Si me contestas este correo diciendo <strong>"${keyword}"</strong>, te voy a enviar un PDF de una sola página que puedes dejar "olvidado" en la impresora de tu oficina o enviárselo a tu jefe.`
+          `${liquidEmphasis('¿Validas deducciones de 1 empleado aquí, pero tienes toda una planilla?')}`
         ),
         liquidParagraph(
-          'Es una comparativa de cuánto dinero está perdiendo tu empresa por no usar tecnología. Tú no pides nada, solo estás "ayudando" a la empresa a ser más rentable.'
+          'Humano SISU automatiza Seguro Social, RAP e ISR para todo tu equipo — desde asistencia biométrica hasta comprobantes.'
         ),
-        liquidParagraph(`<strong>P.D.</strong> ¿Cuánto tardan realmente en darte una constancia hoy?`),
+        liquidCta(ventasUrl, 'Agendar demo corta'),
+        liquidCta(activarUrl, 'Activar Humano SISU gratis'),
       ]
     : []
 
-  const standardPitch = data.useGodfatherFunnel
-    ? []
-    : [
-        liquidParagraph(
-          `${liquidEmphasis('Deja de calcular en Excel.')} Humano SISU automatiza Seguro Social, RAP e ISR con el mismo motor que usaste aquí.`
-        ),
-        liquidParagraph('Sin errores manuales — del reloj biométrico al comprobante de pago.'),
-        liquidCta(activarUrl, 'Activar gratis 30 días'),
-        liquidCtaWhatsApp(demoWhatsAppUrl, 'Agendar demo'),
-      ]
+  const employeeSharePitch =
+    data.useGodfatherFunnel && !isEmpresa
+      ? []
+      : !isEmpresa
+        ? [
+            liquidParagraph(`${liquidEmphasis('¿Tus compañeros también quieren validar su sueldo?')}`),
+            liquidCtaWhatsApp(demoWhatsAppUrl, 'Compartir calculadora por WhatsApp'),
+          ]
+        : []
+
+  const standardPitch =
+    data.useGodfatherFunnel || isEmpresa
+      ? []
+      : [
+          liquidParagraph(
+            `${liquidEmphasis('Deja de calcular en Excel.')} Humano SISU automatiza Seguro Social, RAP e ISR con el mismo motor que usaste aquí.`
+          ),
+          liquidParagraph('Sin errores manuales — del reloj biométrico al comprobante de pago.'),
+          liquidCta(activarUrl, 'Activar gratis 30 días'),
+          liquidCtaWhatsApp(demoWhatsAppUrl, 'Agendar demo'),
+        ]
 
   const bodyHtml = [
     liquidParagraph('Estimado/a usuario,'),
@@ -94,8 +123,10 @@ export function generateDeductionEmailHTML(data: DeductionEmailData): string {
       'warning'
     ),
     ...godfatherBlocks,
+    ...empresaPitch,
+    ...employeeSharePitch,
     ...standardPitch,
-    ...(data.useGodfatherFunnel
+    ...(data.useGodfatherFunnel && !isEmpresa
       ? [
           liquidParagraph(
             `<a href="${activarUrl}" style="color:#64748b;font-size:13px;">¿Gestionas planilla? Activar Humano SISU</a>`
@@ -105,7 +136,7 @@ export function generateDeductionEmailHTML(data: DeductionEmailData): string {
     liquidParagraph(
       'Si tiene alguna pregunta, no dude en contactarnos.<br><strong>Humano SISU</strong> — RRHH y nómina regional (El Salvador, Guatemala y Honduras)'
     ),
-    ...(data.useGodfatherFunnel ? [] : [liquidCtaWhatsApp(supportWhatsAppUrl, '💬 Contactar vía WhatsApp')]),
+    ...(data.useGodfatherFunnel && !isEmpresa ? [] : [liquidCtaWhatsApp(supportWhatsAppUrl, '💬 Contactar vía WhatsApp')]),
   ].join('')
 
   return wrapLiquidEmail({
