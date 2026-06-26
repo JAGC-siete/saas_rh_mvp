@@ -33,6 +33,7 @@ export type PublicBenefitCalculatorConfig = {
     inlineBody: string
     inlineButton: string
     inlineHref: string
+    demoButton: string
     footerTitle: string
     footerBody: string
     footerButton: string
@@ -48,6 +49,7 @@ const BASE = 'https://humanosisu.net'
 const SHARED_CONVERSION = {
   inlineButton: 'Activar gratis — Honduras',
   inlineHref: '/activar?country=HND',
+  demoButton: 'Demo por WhatsApp',
   footerButton: 'Activar gratis',
   footerHref: '/activar?country=HND',
 }

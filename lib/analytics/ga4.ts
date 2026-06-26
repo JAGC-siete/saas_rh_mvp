@@ -16,6 +16,8 @@ export type GA4ConversionEvent =
   | 'calc_digital_health_view'
   | 'calc_trojan_share'
   | 'calc_sticky_constancia_click'
+  | 'calc_complete'
+  | 'calc_lead_submit'
   | 'godfather_reply_sent'
 
 interface GA4EventParams {

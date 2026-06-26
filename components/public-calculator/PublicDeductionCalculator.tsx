@@ -12,6 +12,12 @@ import DigitalHealthDiagnostic from './DigitalHealthDiagnostic'
 import TrojanHorseShare from './TrojanHorseShare'
 import AudienceSelector, { type CalculatorAudience } from './AudienceSelector'
 import { trackGA4Event } from '../../lib/analytics/ga4'
+import {
+  trackCalcActivarClick,
+  trackCalcComplete,
+  trackCalcLeadSubmit,
+  type CalculatorTool,
+} from '../../lib/analytics/calculator-events'
 
 interface DeductionResult {
   grossSalary: number
@@ -96,6 +102,8 @@ export default function PublicDeductionCalculator({ config }: { config: PublicCa
   const b2b = config.b2bFunnel
   const audienceStorageKey = `${config.contactStorageKey}_audience`
   const [audience, setAudience] = useState<CalculatorAudience | null>(null)
+
+  const calcTool: CalculatorTool = `deducciones_${config.countryCode.toLowerCase()}` as CalculatorTool
 
   const scrollToTrojan = useCallback(() => {
     trackGA4Event('calc_sticky_constancia_click', {
@@ -202,6 +210,7 @@ export default function PublicDeductionCalculator({ config }: { config: PublicCa
       <div className="flex flex-col sm:flex-row flex-wrap justify-center gap-3">
         <Link
           href={activarUrl(campaign)}
+          onClick={() => trackCalcActivarClick(calcTool, campaign)}
           className={`inline-block ${pad} bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl transition-all text-center`}
         >
           {label}
@@ -255,6 +264,11 @@ export default function PublicDeductionCalculator({ config }: { config: PublicCa
       const data = await response.json()
       if (!response.ok) throw new Error(data.error || 'Error al calcular deducciones')
       setResult(data)
+      trackCalcComplete({
+        tool: calcTool,
+        value: data.netSalary,
+        modo: data.paymentModality,
+      })
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Error al calcular deducciones. Por favor intenta de nuevo.'
       setError(message)
@@ -298,6 +312,11 @@ export default function PublicDeductionCalculator({ config }: { config: PublicCa
       const data = await response.json()
       if (!response.ok) throw new Error(data.error || 'Error al enviar el reporte por email')
       setEmailSent(true)
+      trackCalcLeadSubmit({
+        tool: calcTool,
+        hasPhone: Boolean(phone.trim()),
+        hasCompany: Boolean(company.trim()),
+      })
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Error al enviar el reporte por email. Por favor intenta de nuevo.'
       setError(message)
@@ -555,7 +574,7 @@ export default function PublicDeductionCalculator({ config }: { config: PublicCa
               {!result && (
                 <div className="text-sm text-brand-200/80">
                   Completa el formulario para ver el desglose. Si eres empresa,{' '}
-                  <Link href={activarUrl('post-calc')} className="text-brand-300 hover:text-white underline">
+                  <Link href={activarUrl('post-calc')} onClick={() => trackCalcActivarClick(calcTool, 'post-calc')} className="text-brand-300 hover:text-white underline">
                     activa Humano SISU
                   </Link>{' '}
                   y automatiza tu planilla.
@@ -703,6 +722,7 @@ export default function PublicDeductionCalculator({ config }: { config: PublicCa
           <p className="text-brand-200/90 mb-4 max-w-2xl mx-auto">{config.landingBridge.body}</p>
           <Link
             href={appendUtmParams(config.landingBridge.href, config.countryCode, 'bridge')}
+            onClick={() => trackCalcActivarClick(calcTool, 'bridge')}
             className="inline-block py-2.5 px-6 bg-white/10 hover:bg-white/15 text-white font-semibold rounded-xl border border-white/20 transition-all"
           >
             {config.landingBridge.cta}

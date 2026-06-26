@@ -3,13 +3,27 @@ import Head from 'next/head'
 import Link from 'next/link'
 import PublicPageShell from '../landing/PublicPageShell'
 import SchemaMarkup from '../SEO/SchemaMarkup'
+import TrackedWhatsAppLink from '../TrackedWhatsAppLink'
 import type { PublicBenefitCalculatorConfig } from '../../lib/public-calculator/benefit-config'
+import {
+  appendBenefitUtmParams,
+  buildBenefitDemoWhatsAppUrl,
+} from '../../lib/public-calculator/utm'
+import {
+  trackCalcActivarClick,
+  trackCalcComplete,
+  trackCalcLeadSubmit,
+} from '../../lib/analytics/calculator-events'
 import {
   generateBreadcrumbListSchema,
   generateFAQPageSchema,
   generateWebPageSchema,
 } from '../../lib/seo/schema'
 import type { BenefitCalculationResult } from '../../lib/payroll/thirteenth-fourteenth/calculate'
+
+function benefitToolKey(tipo: PublicBenefitCalculatorConfig['tipo']): 'aguinaldo_hnd' | 'catorceavo_hnd' {
+  return tipo === '13AVO' ? 'aguinaldo_hnd' : 'catorceavo_hnd'
+}
 
 function todayISO(): string {
   const d = new Date()
@@ -37,6 +51,12 @@ export default function PublicBenefitCalculator({ config }: { config: PublicBene
   const [result, setResult] = useState<BenefitCalculationResult | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [emailSent, setEmailSent] = useState(false)
+
+  const tool = benefitToolKey(config.tipo)
+  const activarUrl = (campaign: 'post-calc' | 'footer' | 'sticky') =>
+    appendBenefitUtmParams(config.conversion.inlineHref, config.tipo, campaign)
+  const demoUrl = (campaign: string) =>
+    buildBenefitDemoWhatsAppUrl(config.tipo, `calc_${tool}_${campaign}`)
 
   useEffect(() => {
     try {
@@ -121,6 +141,11 @@ export default function PublicBenefitCalculator({ config }: { config: PublicBene
         return
       }
       setResult(data)
+      trackCalcComplete({
+        tool,
+        value: data.monto,
+        modo: data.modoCalculo,
+      })
       window.scrollTo({ top: 0, behavior: 'smooth' })
     } catch {
       setError('No se pudo conectar con el servidor.')
@@ -158,6 +183,11 @@ export default function PublicBenefitCalculator({ config }: { config: PublicBene
         return
       }
       setEmailSent(true)
+      trackCalcLeadSubmit({
+        tool,
+        hasPhone: Boolean(phone.trim()),
+        hasCompany: Boolean(company.trim()),
+      })
     } catch {
       setError('Error al enviar el correo.')
     } finally {
@@ -165,8 +195,38 @@ export default function PublicBenefitCalculator({ config }: { config: PublicBene
     }
   }
 
+  const ConversionButtons = ({
+    campaign,
+    size = 'md',
+  }: {
+    campaign: 'post-calc' | 'footer' | 'sticky'
+    size?: 'md' | 'sm'
+  }) => {
+    const pad = size === 'sm' ? 'py-2.5 px-5 text-sm' : 'py-3 px-6'
+    return (
+      <div className="flex flex-col sm:flex-row flex-wrap justify-center gap-3">
+        <Link
+          href={activarUrl(campaign)}
+          onClick={() => trackCalcActivarClick(tool, campaign)}
+          className={`inline-flex justify-center ${pad} bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl transition-all text-center`}
+        >
+          {config.conversion.inlineButton}
+        </Link>
+        <TrackedWhatsAppLink
+          href={demoUrl(campaign)}
+          target="_blank"
+          rel="noopener noreferrer"
+          trackingContext={`calc_${tool}_demo_${campaign}`}
+          className={`inline-flex justify-center ${pad} bg-green-600 hover:bg-green-700 text-white font-semibold rounded-xl transition-all text-center`}
+        >
+          {config.conversion.demoButton}
+        </TrackedWhatsAppLink>
+      </div>
+    )
+  }
+
   return (
-    <PublicPageShell>
+    <PublicPageShell mainClassName={result ? 'pb-28 sm:pb-24' : ''}>
       <Head>
         <title>{config.seo.title}</title>
         <meta name="description" content={config.seo.description} />
@@ -178,7 +238,7 @@ export default function PublicBenefitCalculator({ config }: { config: PublicBene
       </Head>
       <SchemaMarkup schema={[webPageSchema, faqSchema, breadcrumbSchema]} />
 
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 relative z-10">
+      <div className={`max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 relative z-10 ${result ? 'pb-28 sm:pb-24' : ''}`}>
         <div className="text-center mb-8 sm:mb-10">
           <div className="flex flex-wrap justify-center gap-2 mb-6">
             {config.hero.badges.map((badge) => (
@@ -394,6 +454,12 @@ export default function PublicBenefitCalculator({ config }: { config: PublicBene
                     {emailSent ? 'PDF enviado' : sendingEmail ? 'Enviando...' : 'Enviar PDF por correo'}
                   </button>
                 )}
+
+                <div className="mt-8 glass-modern rounded-xl p-5 border border-cyan-500/30 text-center">
+                  <h3 className="text-lg font-bold text-white mb-2">{config.conversion.inlineTitle}</h3>
+                  <p className="text-sm text-brand-200/90 mb-4">{config.conversion.inlineBody}</p>
+                  <ConversionButtons campaign="post-calc" size="sm" />
+                </div>
               </div>
             ) : (
               <div className="text-center text-brand-300/70 py-12">
@@ -405,14 +471,9 @@ export default function PublicBenefitCalculator({ config }: { config: PublicBene
         </div>
 
         <section className="mt-12 glass-modern rounded-2xl p-6 sm:p-8">
-          <h2 className="text-xl font-bold text-white mb-4">{config.conversion.inlineTitle}</h2>
-          <p className="text-brand-200/90 mb-4">{config.conversion.inlineBody}</p>
-          <Link
-            href={config.conversion.inlineHref}
-            className="inline-flex px-6 py-3 bg-brand-600 text-white rounded-xl font-semibold hover:bg-brand-700"
-          >
-            {config.conversion.inlineButton}
-          </Link>
+          <h2 className="text-xl font-bold text-white mb-4">{config.conversion.footerTitle}</h2>
+          <p className="text-brand-200/90 mb-4">{config.conversion.footerBody}</p>
+          <ConversionButtons campaign="footer" />
         </section>
 
         <section className="mt-10">
@@ -445,6 +506,18 @@ export default function PublicBenefitCalculator({ config }: { config: PublicBene
           </div>
         </section>
       </div>
+
+      {result && (
+        <div className="fixed bottom-0 inset-x-0 z-40 p-3 sm:p-4 bg-slate-900/95 border-t border-white/10 backdrop-blur-md shadow-2xl">
+          <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
+            <p className="text-sm text-brand-100 text-center sm:text-left">
+              <span className="font-semibold text-white">¿Gestionas planilla?</span>{' '}
+              Automatiza el {config.labelShort.toLowerCase()} con Humano SISU.
+            </p>
+            <ConversionButtons campaign="sticky" size="sm" />
+          </div>
+        </div>
+      )}
     </PublicPageShell>
   )
 }
