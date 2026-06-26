@@ -14,19 +14,19 @@ export const CALCULATOR_MENU_ITEMS = [
   },
   {
     href: '/calculadora-deducciones',
-    title: 'Honduras · IHSS · RAP · ISR',
+    title: 'Honduras · Seguro Social · RAP · ISR',
     subtitle: 'Calculadora deducciones (HNL)',
     featured: 'hn' as const,
   },
   {
     href: '/calculadora-deducciones-el-salvador',
-    title: 'El Salvador · ISSS · AFP · ISR',
+    title: 'El Salvador · Seguro Social · AFP · ISR',
     subtitle: 'Calculadora sueldo neto (USD)',
     featured: false,
   },
   {
     href: '/calculadora-deducciones-guatemala',
-    title: 'Guatemala · IGSS · ISR',
+    title: 'Guatemala · Seguro Social · ISR',
     subtitle: 'Calculadora sueldo neto (GTQ)',
     featured: false,
   },
@@ -39,8 +39,8 @@ export const CALCULATOR_MENU_ITEMS = [
 ] as const
 
 export const CALCULATOR_MOBILE_LINKS = [
-  { href: '/calculadora-deducciones', label: 'Honduras · IHSS / RAP / ISR' },
-  { href: '/calculadora-deducciones-el-salvador', label: 'El Salvador · ISSS / AFP / ISR' },
-  { href: '/calculadora-deducciones-guatemala', label: 'Guatemala · IGSS / ISR' },
+  { href: '/calculadora-deducciones', label: 'Honduras · Seguro Social / RAP / ISR' },
+  { href: '/calculadora-deducciones-el-salvador', label: 'El Salvador · Seguro Social / AFP / ISR' },
+  { href: '/calculadora-deducciones-guatemala', label: 'Guatemala · Seguro Social / ISR' },
   { href: '/calculadora-prestaciones', label: 'Prestaciones laborales (cesantía, preaviso, vacaciones…)' },
 ] as const

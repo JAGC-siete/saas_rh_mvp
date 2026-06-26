@@ -42,7 +42,7 @@ export async function generateGodfatherComparisonPdf(): Promise<Buffer> {
 
       const rows = [
         ['Tiempo en planilla manual', '~15-20 h/mes en Excel', 'Minutos con motor legal SISU'],
-        ['Errores en IHSS / RAP / ISR', 'Riesgo alto (copiar tablas)', 'Parámetros legales actualizados'],
+        ['Errores en Seguro Social / RAP / ISR', 'Riesgo alto (copiar tablas)', 'Parámetros legales actualizados'],
         ['Constancias y vouchers', '3-5 días (RR.HH. ocupado)', '~2 segundos (autogestión)'],
         ['Costo de oportunidad', 'Domingos del Lic. + multas', 'Equipo enfocado en crecer'],
       ]

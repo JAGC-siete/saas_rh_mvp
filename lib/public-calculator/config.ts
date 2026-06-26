@@ -136,18 +136,18 @@ export const PUBLIC_CALCULATOR_CONFIGS: Record<CountryCode, PublicCalculatorConf
       inLanguage: 'es-HN'
     },
     hero: {
-      badges: ['Calculadora ISR Honduras', 'Calculadora RAP · IHSS', 'Gratis en 30 segundos'],
+      badges: ['Calculadora ISR Honduras', 'Calculadora RAP · Seguro Social', 'Gratis en 30 segundos'],
       headlineLead: 'Deja de adivinar tu sueldo. Obtén el desglose legal exacto que RR.HH. no te explica.',
       headlineAccent: 'Calculado con el motor de Humano SISU — cumplimiento legal 2026.',
       subheadline:
-        'Ingresa tu salario mensual o quincenal y valida al instante cuánto te descuentan de ISR, RAP e IHSS según las leyes vigentes en Honduras.'
+        'Ingresa tu salario mensual o quincenal y valida al instante cuánto te descuentan de ISR, RAP y Seguro Social según las leyes vigentes en Honduras.'
     },
     b2bFunnel: {
       hero: {
         headlineLead: 'Deja de adivinar tu sueldo. Obtén el desglose legal exacto que RR.HH. no te explica.',
         headlineAccent: 'Calculado con el motor de Humano SISU — cumplimiento legal 2026.',
         subheadline:
-          'Ingresa tu salario mensual o quincenal y valida al instante cuánto te descuentan de ISR, RAP e IHSS según las leyes vigentes en Honduras.',
+          'Ingresa tu salario mensual o quincenal y valida al instante cuánto te descuentan de ISR, RAP y Seguro Social según las leyes vigentes en Honduras.',
         authorityLine: 'Cumplimiento 100% legal 2026'
       },
       digitalHealth: {
@@ -187,19 +187,19 @@ export const PUBLIC_CALCULATOR_CONFIGS: Record<CountryCode, PublicCalculatorConf
     },
     defaultDeductions: { ihss: true, rap: true, afp: false, infop: false, isr: true },
     deductionOptions: [
-      { key: 'ihss', title: 'IHSS', subtitle: 'Seguridad social', hint: 'Instituto Hondureño de Seguridad Social. 5% hasta el tope.', showInSelector: true, showInResults: true },
-      { key: 'rap', title: 'RAP', subtitle: 'Ahorro pensiones', hint: 'FOVIIF: 1.5% sobre el excedente del techo IHSS IVM.', showInSelector: true, showInResults: true },
+      { key: 'ihss', title: 'Seguro Social', subtitle: 'IHSS', hint: 'Instituto Hondureño de Seguridad Social. 5% hasta el tope.', showInSelector: true, showInResults: true },
+      { key: 'rap', title: 'RAP', subtitle: 'Ahorro pensiones', hint: 'FOVIIF: 1.5% sobre el excedente del techo del Seguro Social (IVM).', showInSelector: true, showInResults: true },
       { key: 'afp', title: 'AFP', subtitle: 'Fondo de pensiones', hint: 'En Honduras esta calculadora pública muestra AFP como opción; el cálculo obrero va en 0.', showInSelector: true, showInResults: true },
       { key: 'infop', title: 'INFOP', subtitle: 'Formación (1%)', hint: 'Normalmente aporte patronal. Si lo activas, lo incluimos como 1% del salario.', showInSelector: true, showInResults: true },
       { key: 'isr', title: 'ISR', subtitle: 'Impuesto renta', hint: 'Impuesto progresivo según tablas vigentes.', showInSelector: true, showInResults: true }
     ],
     resultLabels: {
-      socialPrimary: 'IHSS',
-      socialPrimaryLong: '(Instituto Hondureño de Seguridad Social)',
+      socialPrimary: 'Seguro Social',
+      socialPrimaryLong: '(IHSS — Instituto Hondureño de Seguridad Social)',
       socialPrimaryTooltip: 'Se calcula como el 5% del salario hasta el tope máximo establecido por ley.',
       socialSecondary: 'RAP',
       socialSecondaryLong: '(Régimen de Ahorro para Pensiones)',
-      socialSecondaryTooltip: 'Se calcula como el 1.5% sobre el excedente del salario respecto al techo IHSS IVM.',
+      socialSecondaryTooltip: 'Se calcula como el 1.5% sobre el excedente del salario respecto al techo del Seguro Social (IVM).',
       afp: 'AFP',
       afpLong: '(Fondo de pensiones)',
       afpTooltip: 'En esta calculadora pública para Honduras se muestra como opción pero actualmente retorna 0.',
@@ -212,12 +212,12 @@ export const PUBLIC_CALCULATOR_CONFIGS: Record<CountryCode, PublicCalculatorConf
     trust: {
       line: '✓ Cálculos basados en leyes vigentes de Honduras',
       minimumWageLabel: 'Salario mínimo',
-      ceilingLabel: 'Tope IHSS'
+      ceilingLabel: 'Tope Seguro Social'
     },
     conversion: {
       inlineTitle: 'Deja de calcular en Excel. Automatiza toda tu nómina.',
       inlineBody:
-        'Acabas de usar el mismo motor legal que Humano SISU. Del biométrico al comprobante en segundos — IHSS, RAP e ISR sin errores manuales.',
+        'Acabas de usar el mismo motor legal que Humano SISU. Del biométrico al comprobante en segundos — Seguro Social, RAP e ISR sin errores manuales.',
       inlineButton: 'Activar gratis — Sin tarjeta',
       inlineHref: '/activar?country=HND',
       demoButton: 'Agendar demo',
@@ -236,12 +236,12 @@ export const PUBLIC_CALCULATOR_CONFIGS: Record<CountryCode, PublicCalculatorConf
       {
         question: '¿Qué es la calculadora RAP y cómo se calcula?',
         answer:
-          'La calculadora RAP estima el aporte obrero al FOVIIF: 1.5% sobre el excedente del techo IHSS IVM. Puedes activar o desactivar RAP junto con IHSS e ISR para ver el total de deducciones.'
+          'La calculadora RAP estima el aporte obrero al FOVIIF: 1.5% sobre el excedente del techo del Seguro Social (IVM). Puedes activar o desactivar RAP junto con Seguro Social e ISR para ver el total de deducciones.'
       },
       {
-        question: '¿Cómo calcular IHSS en Honduras con esta herramienta?',
+        question: '¿Cómo calcular el Seguro Social en Honduras con esta herramienta?',
         answer:
-          'El IHSS obrero es el 5% del salario hasta el tope legal del año. La calculadora usa los mismos parámetros que el motor de nómina profesional de Humano SISU.'
+          'El aporte obrero al Seguro Social (IHSS) es el 5% del salario hasta el tope legal del año. La calculadora usa los mismos parámetros que el motor de nómina profesional de Humano SISU.'
       },
       {
         question: '¿Sirve para planilla quincenal y mensual?',
@@ -273,17 +273,17 @@ export const PUBLIC_CALCULATOR_CONFIGS: Record<CountryCode, PublicCalculatorConf
         {
           heading: 'Calculadora RAP: deducción de pensiones',
           body:
-            'El RAP descuenta el 1.5% sobre la parte del salario que excede el techo IHSS IVM. La calculadora RAP te permite ver ese rubro por separado o junto con IHSS e ISR para conocer tu sueldo neto real.'
+            'El RAP descuenta el 1.5% sobre la parte del salario que excede el techo del Seguro Social (IVM). La calculadora RAP te permite ver ese rubro por separado o junto con Seguro Social e ISR para conocer tu sueldo neto real.'
         },
         {
-          heading: 'IHSS y salario neto en lempiras',
+          heading: 'Seguro Social y salario neto en lempiras',
           body:
-            'Además de ISR y RAP, el IHSS obrero (5% con tope) suele ser la otra deducción principal. Al sumar los rubros que correspondan a tu caso, obtienes el total descontado y el neto a recibir — útil para validar tu voucher o negociar con RR.HH.'
+            'Además de ISR y RAP, el aporte obrero al Seguro Social (5% con tope) suele ser la otra deducción principal. Al sumar los rubros que correspondan a tu caso, obtienes el total descontado y el neto a recibir — útil para validar tu voucher o negociar con RR.HH.'
         },
         {
           heading: '¿Empresa o empleado?',
           body:
-            'Si solo quieres validar tu recibo, basta con la calculadora gratuita. Si gestionas planilla para varios colaboradores, Humano SISU automatiza IHSS, RAP e ISR desde la asistencia biométrica hasta el comprobante de pago.'
+            'Si solo quieres validar tu recibo, basta con la calculadora gratuita. Si gestionas planilla para varios colaboradores, Humano SISU automatiza Seguro Social, RAP e ISR desde la asistencia biométrica hasta el comprobante de pago.'
         }
       ]
     }
@@ -306,23 +306,23 @@ export const PUBLIC_CALCULATOR_CONFIGS: Record<CountryCode, PublicCalculatorConf
       inLanguage: 'es-SV'
     },
     hero: {
-      badges: ['ISSS · AFP · ISR', 'El Salvador · USD', 'Gratis en 30 segundos'],
+      badges: ['Seguro Social · AFP · ISR', 'El Salvador · USD', 'Gratis en 30 segundos'],
       headlineLead: '¿Cuánto te queda neto en El Salvador?',
-      headlineAccent: 'Calcula ISSS, AFP e ISR al instante.',
+      headlineAccent: 'Calcula Seguro Social, AFP e ISR al instante.',
       subheadline:
         'Calculadora ISR El Salvador con el motor profesional de Humano SISU. Valida tu sueldo neto en dólares antes de firmar o reclamar.'
     },
     defaultDeductions: { ihss: true, rap: true, afp: true, infop: false, isr: true },
     deductionOptions: [
-      { key: 'ihss', title: 'ISSS', subtitle: 'Seguro social', hint: 'Instituto Salvadoreño del Seguro Social. 3% con tope mensual.', showInSelector: true, showInResults: true },
+      { key: 'ihss', title: 'Seguro Social', subtitle: 'ISSS', hint: 'Instituto Salvadoreño del Seguro Social. 3% con tope mensual.', showInSelector: true, showInResults: true },
       { key: 'rap', title: 'AFP', subtitle: 'Pensiones', hint: 'Administradora de Fondos de Pensiones. 7.25% sobre salario.', showInSelector: true, showInResults: true },
       { key: 'afp', title: 'AFP', subtitle: 'Alias pensiones', hint: 'Misma deducción que AFP/rap en planilla salvadoreña.', showInSelector: false, showInResults: false },
       { key: 'infop', title: 'INFOP', subtitle: 'No aplica', hint: 'No se incluye en esta calculadora para El Salvador.', showInSelector: false, showInResults: false },
       { key: 'isr', title: 'ISR', subtitle: 'Retención renta', hint: 'Retención mensual según tablas del Ministerio de Hacienda.', showInSelector: true, showInResults: true }
     ],
     resultLabels: {
-      socialPrimary: 'ISSS',
-      socialPrimaryLong: '(Instituto Salvadoreño del Seguro Social)',
+      socialPrimary: 'Seguro Social',
+      socialPrimaryLong: '(ISSS — Instituto Salvadoreño del Seguro Social)',
       socialPrimaryTooltip: 'Aporte obrero con tope mensual según parámetros legales vigentes.',
       socialSecondary: 'AFP',
       socialSecondaryLong: '(Administradora de Fondos de Pensiones)',
@@ -333,24 +333,24 @@ export const PUBLIC_CALCULATOR_CONFIGS: Record<CountryCode, PublicCalculatorConf
     trust: {
       line: '✓ Cálculos basados en leyes vigentes de El Salvador',
       minimumWageLabel: 'Salario mínimo ref.',
-      ceilingLabel: 'Tope ISSS'
+      ceilingLabel: 'Tope Seguro Social'
     },
     conversion: {
       inlineTitle: 'Deja de calcular en Excel. Automatiza toda tu nómina.',
       inlineBody:
-        'Del reloj biométrico al comprobante en USD. ISSS, AFP e ISR con el mismo motor que acabas de usar — sin errores manuales.',
+        'Del reloj biométrico al comprobante en USD. Seguro Social, AFP e ISR con el mismo motor que acabas de usar — sin errores manuales.',
       inlineButton: 'Activar gratis — El Salvador',
       inlineHref: '/activar?country=SLV',
       demoButton: 'Agendar demo',
       footerTitle: '¿Tu empresa aún calcula planilla a mano?',
       footerBody:
-        'Humano SISU automatiza asistencia, ISSS, AFP e ISR para equipos en El Salvador. Soporte regional en español.',
+        'Humano SISU automatiza asistencia, Seguro Social, AFP e ISR para equipos en El Salvador. Soporte regional en español.',
       footerButton: 'Activar gratis',
       footerHref: '/activar?country=SLV'
     },
     faqs: [
-      { question: '¿Cómo usar la calculadora ISR El Salvador?', answer: 'Ingresa tu salario mensual o quincenal en USD, elige las deducciones y obtén ISSS, AFP e ISR con el mismo motor de nómina de Humano SISU.' },
-      { question: '¿El sueldo neto incluye ISSS y AFP?', answer: 'Sí. Puedes activar o desactivar cada rubro. El neto es salario bruto menos ISSS, AFP e ISR seleccionados.' }
+      { question: '¿Cómo usar la calculadora ISR El Salvador?', answer: 'Ingresa tu salario mensual o quincenal en USD, elige las deducciones y obtén Seguro Social, AFP e ISR con el mismo motor de nómina de Humano SISU.' },
+      { question: '¿El sueldo neto incluye Seguro Social y AFP?', answer: 'Sí. Puedes activar o desactivar cada rubro. El neto es salario bruto menos Seguro Social, AFP e ISR seleccionados.' }
     ],
     relatedCalculators: [
       { href: '/calculadora-deducciones', label: 'Calculadora Honduras' },
@@ -359,7 +359,7 @@ export const PUBLIC_CALCULATOR_CONFIGS: Record<CountryCode, PublicCalculatorConf
     breadcrumbLabel: 'Deducciones El Salvador',
     landingBridge: {
       title: '¿Gestionas planilla en El Salvador?',
-      body: 'Descubre cómo Humano SISU automatiza ISSS, AFP e ISR desde la asistencia hasta el comprobante en USD.',
+      body: 'Descubre cómo Humano SISU automatiza Seguro Social, AFP e ISR desde la asistencia hasta el comprobante en USD.',
       href: '/#como-funciona',
       cta: 'Conocer Humano SISU para empresas en El Salvador'
     }
@@ -382,48 +382,48 @@ export const PUBLIC_CALCULATOR_CONFIGS: Record<CountryCode, PublicCalculatorConf
       inLanguage: 'es-GT'
     },
     hero: {
-      badges: ['IGSS · ISR', 'Guatemala · GTQ', 'Gratis en 30 segundos'],
+      badges: ['Seguro Social · ISR', 'Guatemala · GTQ', 'Gratis en 30 segundos'],
       headlineLead: '¿Cuánto recibes neto en Guatemala?',
-      headlineAccent: 'Calcula IGSS e ISR en quetzales.',
+      headlineAccent: 'Calcula Seguro Social e ISR en quetzales.',
       subheadline:
         'Calculadora de sueldo neto Guatemala con parámetros legales vigentes. Misma lógica que la planilla profesional de Humano SISU.'
     },
     defaultDeductions: { ihss: true, rap: false, afp: false, infop: false, isr: true },
     deductionOptions: [
-      { key: 'ihss', title: 'IGSS', subtitle: 'Seguro social', hint: 'Instituto Guatemalteco de Seguridad Social. Aporte obrero según tasa vigente.', showInSelector: true, showInResults: true },
+      { key: 'ihss', title: 'Seguro Social', subtitle: 'IGSS', hint: 'Instituto Guatemalteco de Seguridad Social. Aporte obrero según tasa vigente.', showInSelector: true, showInResults: true },
       { key: 'rap', title: 'RAP', subtitle: 'No aplica', hint: 'No aplica en Guatemala para esta calculadora.', showInSelector: false, showInResults: false },
       { key: 'afp', title: 'AFP', subtitle: 'No aplica', hint: 'No aplica en Guatemala.', showInSelector: false, showInResults: false },
       { key: 'infop', title: 'INFOP', subtitle: 'No aplica', hint: 'No se incluye en esta calculadora para Guatemala.', showInSelector: false, showInResults: false },
       { key: 'isr', title: 'ISR', subtitle: 'Impuesto renta', hint: 'Retención según modelo anual simplificado vigente.', showInSelector: true, showInResults: true }
     ],
     resultLabels: {
-      socialPrimary: 'IGSS',
-      socialPrimaryLong: '(Instituto Guatemalteco de Seguridad Social)',
-      socialPrimaryTooltip: 'Aporte obrero de IGSS calculado sobre la base mensual.',
+      socialPrimary: 'Seguro Social',
+      socialPrimaryLong: '(IGSS — Instituto Guatemalteco de Seguridad Social)',
+      socialPrimaryTooltip: 'Aporte obrero de Seguro Social calculado sobre la base mensual.',
       isrLong: '(Impuesto sobre la Renta)',
       isrTooltip: 'Retención mensual en quetzales según parámetros legales configurados.'
     },
     trust: {
       line: '✓ Cálculos basados en leyes vigentes de Guatemala',
       minimumWageLabel: 'Salario mínimo ref.',
-      ceilingLabel: 'Referencia IGSS'
+      ceilingLabel: 'Tope Seguro Social'
     },
     conversion: {
       inlineTitle: 'Deja de calcular en Excel. Automatiza toda tu nómina.',
       inlineBody:
-        'Integra asistencia biométrica y planilla en quetzales. IGSS e ISR con el mismo motor que acabas de usar — sin errores manuales.',
+        'Integra asistencia biométrica y planilla en quetzales. Seguro Social e ISR con el mismo motor que acabas de usar — sin errores manuales.',
       inlineButton: 'Activar gratis — Guatemala',
       inlineHref: '/activar?country=GTM',
       demoButton: 'Agendar demo',
       footerTitle: '¿Listo para dejar Excel en Guatemala?',
       footerBody:
-        'Humano SISU centraliza asistencia, IGSS, ISR y comprobantes para empresas guatemaltecas. Implementación express.',
+        'Humano SISU centraliza asistencia, Seguro Social, ISR y comprobantes para empresas guatemaltecas. Implementación express.',
       footerButton: 'Activar gratis',
       footerHref: '/activar?country=GTM'
     },
     faqs: [
-      { question: '¿Cómo calcular sueldo neto en Guatemala?', answer: 'Ingresa tu salario en quetzales, selecciona IGSS e ISR y obtén el neto del período con el motor de nómina de Humano SISU.' },
-      { question: '¿La calculadora incluye IGSS?', answer: 'Sí. El rubro IGSS usa la tasa obrero configurada en los parámetros legales del SaaS para Guatemala.' }
+      { question: '¿Cómo calcular sueldo neto en Guatemala?', answer: 'Ingresa tu salario en quetzales, selecciona Seguro Social e ISR y obtén el neto del período con el motor de nómina de Humano SISU.' },
+      { question: '¿La calculadora incluye Seguro Social?', answer: 'Sí. El rubro de Seguro Social (IGSS) usa la tasa obrero configurada en los parámetros legales del SaaS para Guatemala.' }
     ],
     relatedCalculators: [
       { href: '/calculadora-deducciones', label: 'Calculadora Honduras' },
@@ -431,7 +431,7 @@ export const PUBLIC_CALCULATOR_CONFIGS: Record<CountryCode, PublicCalculatorConf
     ],
     breadcrumbLabel: 'Deducciones Guatemala',
     landingBridge: {
-      title: '¿Tu equipo aún concilia IGSS e ISR a mano?',
+      title: '¿Tu equipo aún concilia Seguro Social e ISR a mano?',
       body: 'Humano SISU integra asistencia y nómina en quetzales con el mismo motor legal que esta calculadora.',
       href: '/#como-funciona',
       cta: 'Ver la plataforma de nómina para Guatemala'

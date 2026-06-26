@@ -6,19 +6,19 @@ export const CALCULATOR_HUB_LINKS = {
     {
       href: '/calculadora-deducciones',
       country: 'Honduras',
-      title: 'IHSS, RAP e ISR',
+      title: 'Seguro Social, RAP e ISR',
       subtitle: 'Deducciones en lempiras (HNL)',
     },
     {
       href: '/calculadora-deducciones-el-salvador',
       country: 'El Salvador',
-      title: 'ISSS, AFP e ISR',
+      title: 'Seguro Social, AFP e ISR',
       subtitle: 'Sueldo neto en dólares (USD)'
     },
     {
       href: '/calculadora-deducciones-guatemala',
       country: 'Guatemala',
-      title: 'IGSS e ISR',
+      title: 'Seguro Social e ISR',
       subtitle: 'Sueldo neto en quetzales (GTQ)'
     }
   ],

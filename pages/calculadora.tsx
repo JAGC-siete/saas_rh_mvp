@@ -14,7 +14,7 @@ export default function CalculadoraHubPage() {
   })
   const pageDescription = generateDescription({
     valueProposition:
-      'Calculadoras de deducciones (IHSS, ISSS, IGSS, ISR) y prestaciones para Honduras, El Salvador y Guatemala',
+      'Calculadoras de deducciones (Seguro Social, ISR) y prestaciones para Honduras, El Salvador y Guatemala',
     cta: 'Usa la calculadora gratis',
     additionalBenefit: 'mismo motor legal que Humano SISU'
   })

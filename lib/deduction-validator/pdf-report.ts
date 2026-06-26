@@ -88,7 +88,7 @@ export async function generateDeductionReportPDF(
       yPos += 85
       doc.fontSize(10).fillColor(PDF.bodyMuted)
       doc.text(`Salario Mínimo (${data.year}): ${formatHNL(data.constants.minimumWage)}`, 40, yPos)
-      doc.text(`Tope IHSS (${data.year}): ${formatHNL(data.constants.ihssCeiling)}`, 300, yPos)
+      doc.text(`Tope Seguro Social (${data.year}): ${formatHNL(data.constants.ihssCeiling)}`, 300, yPos)
 
       // Resumen de resultados
       yPos += 25
@@ -107,7 +107,7 @@ export async function generateDeductionReportPDF(
 
       // Tabla de deducciones
       const deductionsTable = [
-        { label: 'IHSS', description: 'Instituto Hondureño de Seguridad Social', amount: data.ihss, percentage: data.ihssPercentage },
+        { label: 'Seguro Social', description: 'Instituto Hondureño de Seguridad Social (IHSS)', amount: data.ihss, percentage: data.ihssPercentage },
         { label: 'RAP', description: 'Régimen de Ahorro para Pensiones', amount: data.rap, percentage: data.rapPercentage },
         { label: 'ISR', description: 'Impuesto sobre la Renta', amount: data.isr, percentage: data.isrPercentage }
       ]
@@ -153,7 +153,7 @@ export async function generateDeductionReportPDF(
         { align: 'center', width: 535 }
       )
       doc.fontSize(10).fillColor(PDF.accent).text(
-        'Deja de calcular en Excel. Automatiza IHSS, RAP e ISR sin errores.',
+        'Deja de calcular en Excel. Automatiza Seguro Social, RAP e ISR sin errores.',
         30,
         footerY + 24,
         { align: 'center', width: 535 }

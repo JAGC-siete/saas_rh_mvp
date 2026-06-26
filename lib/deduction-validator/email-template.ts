@@ -48,7 +48,7 @@ export function generateDeductionEmailHTML(data: DeductionEmailData): string {
       label: `Salario ${data.paymentModality === 'quincenal' ? 'Quincenal' : 'Mensual'}`,
       value: formatL(data.grossSalary),
     },
-    { label: 'IHSS', value: `${formatL(data.ihss)} (${data.ihssPercentage.toFixed(2)}%)` },
+    { label: 'Seguro Social', value: `${formatL(data.ihss)} (${data.ihssPercentage.toFixed(2)}%)` },
     { label: 'RAP', value: `${formatL(data.rap)} (${data.rapPercentage.toFixed(2)}%)` },
     { label: 'ISR', value: `${formatL(data.isr)} (${data.isrPercentage.toFixed(2)}%)` },
     { label: 'Total Deducciones', value: formatL(data.totalDeductions) },
@@ -74,7 +74,7 @@ export function generateDeductionEmailHTML(data: DeductionEmailData): string {
     ? []
     : [
         liquidParagraph(
-          `${liquidEmphasis('Deja de calcular en Excel.')} Humano SISU automatiza IHSS, RAP e ISR con el mismo motor que usaste aquí.`
+          `${liquidEmphasis('Deja de calcular en Excel.')} Humano SISU automatiza Seguro Social, RAP e ISR con el mismo motor que usaste aquí.`
         ),
         liquidParagraph('Sin errores manuales — del reloj biométrico al comprobante de pago.'),
         liquidCta(activarUrl, 'Activar gratis 30 días'),
