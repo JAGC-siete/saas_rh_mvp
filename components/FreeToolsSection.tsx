@@ -45,6 +45,23 @@ export default function FreeToolsSection() {
           ))}
         </div>
 
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 mb-6">
+          {CALCULATOR_HUB_LINKS.benefits.map((item, i) => (
+            <ScrollReveal key={item.href} delay={i * 0.06}>
+              <BorderBeam>
+                <Link
+                  href={item.href}
+                  className="glass-modern rounded-2xl p-5 min-h-[100px] hover:scale-[1.01] transition-all text-left group block h-full"
+                >
+                  <div className="text-xs text-brand-300 mb-1">{item.country}</div>
+                  <div className="text-lg font-semibold text-white group-hover:text-brand-200">{item.title}</div>
+                  <div className="text-sm text-slate-400 mt-1">{item.subtitle}</div>
+                </Link>
+              </BorderBeam>
+            </ScrollReveal>
+          ))}
+        </div>
+
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 text-sm">
           <Link href={CALCULATOR_HUB_LINKS.hub.href} className="text-brand-300 hover:text-white underline">
             {CALCULATOR_HUB_LINKS.hub.label}

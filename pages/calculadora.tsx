@@ -81,6 +81,21 @@ export default function CalculadoraHubPage() {
           ))}
         </div>
 
+        <h2 className="text-xl font-semibold text-white mb-4">Aguinaldo y catorceavo (Honduras)</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-10">
+          {CALCULATOR_HUB_LINKS.benefits.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="glass-modern rounded-2xl p-5 border border-white/15 hover:border-green-400/40 transition-all hover:-translate-y-0.5"
+            >
+              <div className="text-xs text-brand-300 mb-1">{item.country}</div>
+              <div className="text-lg font-bold text-white">{item.title}</div>
+              <div className="text-sm text-brand-200/80 mt-2">{item.subtitle}</div>
+            </Link>
+          ))}
+        </div>
+
         <h2 className="text-xl font-semibold text-white mb-4">Otras herramientas</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <Link

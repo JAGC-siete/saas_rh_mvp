@@ -1,9 +1,10 @@
 import Decimal from 'decimal.js'
 import { z } from 'zod'
 import { CesantiasRequestInput, motivoSalidaEnum } from './cesantias-schema'
+import { diffDays360, DIAS_ANO_COMERCIAL, DIAS_MES_COMERCIAL } from './thirteenth-fourteenth/calendar'
+import { calculateLiquidation13vo14vo } from './thirteenth-fourteenth/calculate'
 
-export const DIAS_MES_COMERCIAL = 30
-export const DIAS_ANO_COMERCIAL = 360
+export { DIAS_MES_COMERCIAL, DIAS_ANO_COMERCIAL } from './thirteenth-fourteenth/calendar'
 export const CESANTIA_MAX_ANOS = 25
 
 export type MotivoSalida = z.infer<typeof motivoSalidaEnum>
@@ -44,34 +45,6 @@ export interface LiquidacionResult {
     preavisoGozado: boolean
     salaryAverageMode: 'real_6m' | 'manual_avg' | 'proxy_14_12'
   }
-}
-
-interface CommercialDate {
-  year: number
-  month: number
-  day: number
-}
-
-function toCommercialDate(date: Date): CommercialDate {
-  return {
-    year: date.getFullYear(),
-    month: date.getMonth() + 1,
-    day: Math.min(date.getDate(), 30)
-  }
-}
-
-function toCommercialDayNumber(date: Date): number {
-  const d = toCommercialDate(date)
-  return d.year * DIAS_ANO_COMERCIAL + (d.month - 1) * DIAS_MES_COMERCIAL + (d.day - 1)
-}
-
-function diffDays360(start: Date, end: Date): number {
-  const startNum = toCommercialDayNumber(start)
-  const endNum = toCommercialDayNumber(end)
-  if (endNum < startNum) {
-    return 0
-  }
-  return endNum - startNum + 1
 }
 
 function calcularAntiguedad360(fechaIngreso: Date, fechaEgreso: Date): TiemposLaborados {
@@ -189,26 +162,6 @@ function calcularVacacionesProporcionales(
     .mul(salarioBaseDiario)
 }
 
-function calcularAguinaldo(
-  salarioBaseMensual: Decimal,
-  diasAnoNatural: number
-): Decimal {
-  if (diasAnoNatural <= 0) return new Decimal(0)
-  return salarioBaseMensual
-    .div(DIAS_ANO_COMERCIAL)
-    .mul(diasAnoNatural)
-}
-
-function calcularDecimoCuarto(
-  salarioBaseMensual: Decimal,
-  diasDesdeJulio: number
-): Decimal {
-  if (diasDesdeJulio <= 0) return new Decimal(0)
-  return salarioBaseMensual
-    .div(DIAS_ANO_COMERCIAL)
-    .mul(diasDesdeJulio)
-}
-
 function calcularCesantia(
   salarioPromedioMensual: Decimal,
   tiempos: TiemposLaborados
@@ -303,7 +256,6 @@ export function calcularLiquidacionHonduras(
   const bases = calcularBasesSalariales(salarioBaseMensual, avg.salarioPromedioMensual)
   const tiempos = calcularAntiguedad360(ingresoDate, egresoDate)
 
-  const salarioBaseMensualDec = new Decimal(bases.salarioBaseMensual)
   const salarioBaseDiarioDec = new Decimal(bases.salarioBaseDiario)
   const salarioPromedioMensualDec = new Decimal(bases.salarioPromedioMensual)
   const salarioPromedioDiarioDec = new Decimal(bases.salarioPromedioDiario)
@@ -330,14 +282,13 @@ export function calcularLiquidacionHonduras(
   )
 
   // 13er y 14to
-  const aguinaldoDec = calcularAguinaldo(
-    salarioBaseMensualDec,
-    tiempos.diasAnoNatural
-  )
-  const decimoCuartoDec = calcularDecimoCuarto(
-    salarioBaseMensualDec,
+  const { aguinaldo, decimoCuarto } = calculateLiquidation13vo14vo(
+    bases.salarioBaseMensual,
+    tiempos.diasAnoNatural,
     tiempos.diasDesdeJulio
   )
+  const aguinaldoDec = new Decimal(aguinaldo)
+  const decimoCuartoDec = new Decimal(decimoCuarto)
 
   // Compensación RAP (solo cuando hay cesantía calculada)
   let rapAplicadoDec = new Decimal(0)

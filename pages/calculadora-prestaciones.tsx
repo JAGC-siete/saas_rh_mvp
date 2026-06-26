@@ -1144,10 +1144,20 @@ export default function CalculadoraPrestacionesPage() {
           </div>
         </div>
 
-        <div className="mt-10 text-center">
+        <div className="mt-10 text-center space-y-3">
+          <p className="text-sm text-brand-200/80">
+            ¿Solo necesitas calcular el 13vo o 14vo?{' '}
+            <Link href="/calculadora-aguinaldo-honduras" className="text-brand-300 hover:text-white underline">
+              Calculadora de aguinaldo
+            </Link>
+            {' · '}
+            <Link href="/calculadora-catorceavo-honduras" className="text-brand-300 hover:text-white underline">
+              Calculadora de catorceavo
+            </Link>
+          </p>
           <Link
             href="/calculadora"
-            className="text-sm text-brand-200/90 hover:text-white underline decoration-white/20 hover:decoration-white/40 transition-colors"
+            className="text-sm text-brand-200/90 hover:text-white underline decoration-white/20 hover:decoration-white/40 transition-colors inline-block"
           >
             Ver todas las calculadoras →
           </Link>

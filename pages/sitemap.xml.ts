@@ -94,6 +94,16 @@ const publicPages: SitemapUrl[] = [
     priority: 0.75
   },
   {
+    loc: '/calculadora-aguinaldo-honduras',
+    changefreq: 'monthly',
+    priority: 0.75
+  },
+  {
+    loc: '/calculadora-catorceavo-honduras',
+    changefreq: 'monthly',
+    priority: 0.75
+  },
+  {
     loc: '/politicadeprivacidad',
     changefreq: 'yearly',
     priority: 0.5

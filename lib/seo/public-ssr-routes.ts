@@ -22,6 +22,8 @@ const PUBLIC_SSR_EXACT = new Set([
   '/calculadora-deducciones-el-salvador',
   '/calculadora-deducciones-guatemala',
   '/calculadora-prestaciones',
+  '/calculadora-aguinaldo-honduras',
+  '/calculadora-catorceavo-honduras',
 ])
 
 export function isPublicMarketingRoute(pathname: string): boolean {

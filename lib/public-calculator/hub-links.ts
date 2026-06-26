@@ -26,5 +26,19 @@ export const CALCULATOR_HUB_LINKS = {
     href: '/calculadora-prestaciones',
     title: 'Prestaciones y finiquito',
     subtitle: 'Cesantía, preaviso, vacaciones, 13vo y 14vo'
-  }
+  },
+  benefits: [
+    {
+      href: '/calculadora-aguinaldo-honduras',
+      country: 'Honduras',
+      title: 'Aguinaldo (13vo)',
+      subtitle: 'Décimo tercer mes en lempiras',
+    },
+    {
+      href: '/calculadora-catorceavo-honduras',
+      country: 'Honduras',
+      title: 'Catorceavo (14vo)',
+      subtitle: 'Décimo cuarto mes jul–jun',
+    },
+  ],
 } as const
