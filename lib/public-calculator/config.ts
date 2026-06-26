@@ -464,6 +464,62 @@ export const PUBLIC_CALCULATOR_CONFIGS: Record<CountryCode, PublicCalculatorConf
       subheadline:
         'Calculadora de sueldo neto Guatemala con parámetros legales vigentes. Misma lógica que la planilla profesional de Humano SISU.'
     },
+    b2bFunnel: {
+      hero: {
+        headlineLead: '¿Cuánto recibes neto en Guatemala?',
+        headlineAccent: 'Calcula Seguro Social e ISR en quetzales.',
+        subheadline:
+          'Valida tu sueldo en GTQ con el mismo motor legal que usa la planilla profesional de Humano SISU.',
+        authorityLine: 'Parámetros legales vigentes · Guatemala'
+      },
+      digitalHealth: {
+        title: 'Diagnóstico de tu oficina',
+        cavemanLabel: 'Modo manual',
+        proLabel: 'Modo SISU',
+        timeLeakHoursPerMonth: 14,
+        constanciaDaysCaveman: '2-5 días',
+        constanciaSecondsPro: 2
+      },
+      trojanHorse: {
+        headline: '¿Quieres que RRHH valide tu recibo con este mismo motor?',
+        subheadline:
+          'Comparte Humano SISU con quien prepara la planilla. Ellos automatizan IGSS e ISR — tú validas tu sueldo neto en quetzales.',
+        rrhh: {
+          label: 'Enviar desglose validado a RRHH',
+          whatsappScript:
+            'Hola, validé mis deducciones (IGSS e ISR) en la calculadora de Humano SISU y vi que automatizan toda la planilla en Guatemala. Les dejo el link por si les sirve validar los recibos:'
+        },
+        boss: {
+          label: 'Enviar recomendación a gerencia / patrono',
+          whatsappScript:
+            'Hola, usé la calculadora de Humano SISU para validar deducciones de planilla en Guatemala (IGSS, ISR). Tienen software que conecta asistencia y nómina en quetzales. Les comparto el link:'
+        }
+      },
+      audience: {
+        employeeTitle: 'Soy empleado',
+        bossTitle: 'Soy empresa / RRHH',
+        employeeBody: 'Quiero validar cuánto me descuentan y cuánto me queda neto en quetzales.',
+        bossBody: 'Calculo para mi equipo o quiero automatizar planilla en Guatemala.'
+      },
+      stickyConstancia: {
+        text: '¿Tu recibo no coincide con este cálculo?',
+        ctaLabel: 'Enviar desglose a RRHH'
+      },
+      godfatherKeyword: '',
+      verificationSteps: [
+        'Verificando tasa IGSS vigente…',
+        'Aplicando base de cotización…',
+        'Validando retención ISR según SAT…',
+      ],
+      leadCapture: {
+        headline: 'Recibe tu desglose en PDF oficial',
+        subheadline:
+          'IGSS e ISR en quetzales + resumen de cumplimiento. Gratis — no guardamos tu salario en servidores.',
+        softGateTitle: 'No pierdas este cálculo de deducciones',
+        softGateBody:
+          '¿Te enviamos el PDF con tu sueldo neto en quetzales? Es gratis y llega en segundos.',
+      },
+    },
     defaultDeductions: { ihss: true, rap: false, afp: false, infop: false, isr: true },
     deductionOptions: [
       { key: 'ihss', title: 'Seguro Social', subtitle: 'IGSS', hint: 'Instituto Guatemalteco de Seguridad Social. Aporte obrero según tasa vigente.', showInSelector: true, showInResults: true },
