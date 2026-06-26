@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import Head from 'next/head'
 import Link from 'next/link'
 import PublicPageShell from '../landing/PublicPageShell'
@@ -13,6 +13,7 @@ import {
   trackCalcActivarClick,
   trackCalcComplete,
   trackCalcLeadSubmit,
+  type CalculatorAudience,
 } from '../../lib/analytics/calculator-events'
 import {
   generateBreadcrumbListSchema,
@@ -20,6 +21,12 @@ import {
   generateWebPageSchema,
 } from '../../lib/seo/schema'
 import type { BenefitCalculationResult } from '../../lib/payroll/thirteenth-fourteenth/calculate'
+import RoleSelector from './RoleSelector'
+import CalculatingState from './CalculatingState'
+import BenefitResultHero from './BenefitResultHero'
+import BenefitLeadCapture from './BenefitLeadCapture'
+import BenefitTrojanShare from './BenefitTrojanShare'
+import LeadCaptureSoftGate, { useLeadSoftGateTriggers } from './LeadCaptureSoftGate'
 
 function benefitToolKey(tipo: PublicBenefitCalculatorConfig['tipo']): 'aguinaldo_hnd' | 'catorceavo_hnd' {
   return tipo === '13AVO' ? 'aguinaldo_hnd' : 'catorceavo_hnd'
@@ -35,6 +42,7 @@ function formatHNL(value: number): string {
 }
 
 export default function PublicBenefitCalculator({ config }: { config: PublicBenefitCalculatorConfig }) {
+  const [audience, setAudience] = useState<CalculatorAudience | null>(null)
   const [salarioBase, setSalarioBase] = useState('')
   const [salarioPromedio, setSalarioPromedio] = useState('')
   const [fechaIngreso, setFechaIngreso] = useState('')
@@ -45,18 +53,35 @@ export default function PublicBenefitCalculator({ config }: { config: PublicBene
   const [company, setCompany] = useState('')
   const [phone, setPhone] = useState('')
   const [consentNewsletter, setConsentNewsletter] = useState(false)
-  const [isContactOpen, setIsContactOpen] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [verifying, setVerifying] = useState(false)
+  const [pendingResult, setPendingResult] = useState<BenefitCalculationResult | null>(null)
   const [sendingEmail, setSendingEmail] = useState(false)
   const [result, setResult] = useState<BenefitCalculationResult | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [emailSent, setEmailSent] = useState(false)
+  const resultRef = useRef<HTMLDivElement>(null)
 
   const tool = benefitToolKey(config.tipo)
+  const audienceStorageKey = `${config.contactStorageKey}_audience`
   const activarUrl = (campaign: 'post-calc' | 'footer' | 'sticky') =>
     appendBenefitUtmParams(config.conversion.inlineHref, config.tipo, campaign)
   const demoUrl = (campaign: string) =>
     buildBenefitDemoWhatsAppUrl(config.tipo, `calc_${tool}_${campaign}`)
+
+  const { showSoftGate, dismissSoftGate } = useLeadSoftGateTriggers(
+    Boolean(result) && !emailSent,
+    5000
+  )
+
+  useEffect(() => {
+    try {
+      const stored = sessionStorage.getItem(audienceStorageKey)
+      if (stored === 'empleado' || stored === 'empresa') setAudience(stored)
+    } catch {
+      /* ignore */
+    }
+  }, [audienceStorageKey])
 
   useEffect(() => {
     try {
@@ -72,6 +97,15 @@ export default function PublicBenefitCalculator({ config }: { config: PublicBene
     }
   }, [config.contactStorageKey])
 
+  const handleAudienceSelect = (role: CalculatorAudience) => {
+    setAudience(role)
+    try {
+      sessionStorage.setItem(audienceStorageKey, role)
+    } catch {
+      /* ignore */
+    }
+  }
+
   const persistContact = useCallback(() => {
     try {
       localStorage.setItem(
@@ -82,6 +116,24 @@ export default function PublicBenefitCalculator({ config }: { config: PublicBene
       /* ignore */
     }
   }, [config.contactStorageKey, fullName, email, company, phone])
+
+  const finalizeResult = useCallback(
+    (data: BenefitCalculationResult) => {
+      setResult(data)
+      setVerifying(false)
+      setPendingResult(null)
+      trackCalcComplete({
+        tool,
+        value: data.monto,
+        modo: data.modoCalculo,
+        audience,
+      })
+      setTimeout(() => {
+        resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }, 100)
+    },
+    [tool, audience]
+  )
 
   const webPageSchema = generateWebPageSchema({
     url: config.path,
@@ -100,6 +152,11 @@ export default function PublicBenefitCalculator({ config }: { config: PublicBene
     e.preventDefault()
     setError(null)
     setEmailSent(false)
+
+    if (!audience) {
+      setError('Selecciona si calculas para ti o para tu empresa.')
+      return
+    }
 
     const base = parseFloat(salarioBase.replace(/,/g, ''))
     if (!Number.isFinite(base) || base <= 0) {
@@ -122,6 +179,7 @@ export default function PublicBenefitCalculator({ config }: { config: PublicBene
     }
 
     setLoading(true)
+    setResult(null)
     try {
       const res = await fetch('/api/public/calculate-benefit', {
         method: 'POST',
@@ -140,13 +198,8 @@ export default function PublicBenefitCalculator({ config }: { config: PublicBene
         setError(data.error || 'Error al calcular.')
         return
       }
-      setResult(data)
-      trackCalcComplete({
-        tool,
-        value: data.monto,
-        modo: data.modoCalculo,
-      })
-      window.scrollTo({ top: 0, behavior: 'smooth' })
+      setPendingResult(data)
+      setVerifying(true)
     } catch {
       setError('No se pudo conectar con el servidor.')
     } finally {
@@ -175,6 +228,7 @@ export default function PublicBenefitCalculator({ config }: { config: PublicBene
           consentNewsletter: true,
           fechaIngreso,
           label: config.label,
+          audience: audience ?? undefined,
         }),
       })
       const data = await res.json()
@@ -183,8 +237,10 @@ export default function PublicBenefitCalculator({ config }: { config: PublicBene
         return
       }
       setEmailSent(true)
+      dismissSoftGate()
       trackCalcLeadSubmit({
         tool,
+        audience,
         hasPhone: Boolean(phone.trim()),
         hasCompany: Boolean(company.trim()),
       })
@@ -238,8 +294,17 @@ export default function PublicBenefitCalculator({ config }: { config: PublicBene
       </Head>
       <SchemaMarkup schema={[webPageSchema, faqSchema, breadcrumbSchema]} />
 
+      {result && (
+        <div className="sticky top-0 z-30 bg-slate-900/95 border-b border-green-500/30 backdrop-blur-md py-2 px-4 sm:hidden">
+          <p className="text-center text-sm text-brand-200">
+            Tu {config.labelShort}:{' '}
+            <span className="font-bold text-green-400">{formatHNL(result.monto)}</span>
+          </p>
+        </div>
+      )}
+
       <div className={`max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 relative z-10 ${result ? 'pb-28 sm:pb-24' : ''}`}>
-        <div className="text-center mb-8 sm:mb-10">
+        <div className="text-center mb-6 sm:mb-8">
           <div className="flex flex-wrap justify-center gap-2 mb-6">
             {config.hero.badges.map((badge) => (
               <span
@@ -260,220 +325,193 @@ export default function PublicBenefitCalculator({ config }: { config: PublicBene
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="glass-modern rounded-2xl p-6 sm:p-8">
-            <form onSubmit={handleCalculate} className="space-y-5">
-              <div>
-                <label htmlFor="salarioBase" className="block text-sm font-medium text-white mb-2">
-                  Salario base mensual (L.)
-                </label>
-                <input
-                  id="salarioBase"
-                  type="text"
-                  value={salarioBase}
-                  onChange={(e) => setSalarioBase(e.target.value)}
-                  placeholder="Ej: 25000"
-                  className="block w-full px-3 py-3 border rounded-xl bg-white/5 text-white border-white/20"
-                  required
-                />
-              </div>
+        <RoleSelector
+          audience={audience}
+          onSelect={handleAudienceSelect}
+          employeeTitle={config.funnel.audience.employeeTitle}
+          employeeBody={config.funnel.audience.employeeBody}
+          companyTitle={config.funnel.audience.companyTitle}
+          companyBody={config.funnel.audience.companyBody}
+          tool={tool}
+        />
 
-              {modoCalculo === 'anual' && (
+        {audience && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="glass-modern rounded-2xl p-6 sm:p-8">
+              <form onSubmit={handleCalculate} className="space-y-5">
                 <div>
-                  <label htmlFor="salarioPromedio" className="block text-sm font-medium text-white mb-2">
-                    Salario promedio ordinario del período (L.)
+                  <label htmlFor="salarioBase" className="block text-sm font-medium text-white mb-2">
+                    Salario base mensual (L.)
                   </label>
                   <input
-                    id="salarioPromedio"
+                    id="salarioBase"
                     type="text"
-                    value={salarioPromedio}
-                    onChange={(e) => setSalarioPromedio(e.target.value)}
-                    placeholder="Incluye comisiones recurrentes"
-                    className="block w-full px-3 py-3 border rounded-xl bg-white/5 text-white border-white/20"
-                  />
-                </div>
-              )}
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label htmlFor="fechaIngreso" className="block text-sm font-medium text-white mb-2">
-                    Fecha de ingreso
-                  </label>
-                  <input
-                    id="fechaIngreso"
-                    type="date"
-                    value={fechaIngreso}
-                    onChange={(e) => setFechaIngreso(e.target.value)}
+                    value={salarioBase}
+                    onChange={(e) => setSalarioBase(e.target.value)}
+                    placeholder="Ej: 25000"
                     className="block w-full px-3 py-3 border rounded-xl bg-white/5 text-white border-white/20"
                     required
                   />
                 </div>
-                <div>
-                  <label htmlFor="fechaCalculo" className="block text-sm font-medium text-white mb-2">
-                    Fecha de cálculo
-                  </label>
-                  <input
-                    id="fechaCalculo"
-                    type="date"
-                    value={fechaCalculo}
-                    onChange={(e) => setFechaCalculo(e.target.value)}
-                    className="block w-full px-3 py-3 border rounded-xl bg-white/5 text-white border-white/20"
-                    required
-                  />
-                </div>
-              </div>
 
-              <div>
-                <label className="block text-sm font-medium text-white mb-2">Modo de cálculo</label>
-                <div className="grid grid-cols-2 gap-3">
-                  {(['proporcional', 'anual'] as const).map((mode) => (
-                    <button
-                      key={mode}
-                      type="button"
-                      onClick={() => setModoCalculo(mode)}
-                      className={`py-3 px-3 rounded-xl border-2 text-sm font-medium ${
-                        modoCalculo === mode
-                          ? 'border-brand-500/70 bg-brand-600 text-white'
-                          : 'border-white/20 bg-white/5 text-brand-200'
-                      }`}
-                    >
-                      {mode === 'proporcional' ? 'Proporcional / finiquito' : 'Pago anual (promedio)'}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="glass rounded-xl border border-white/10 overflow-hidden">
-                <button
-                  type="button"
-                  onClick={() => setIsContactOpen((v) => !v)}
-                  className="w-full px-4 py-3 text-left text-white font-semibold hover:bg-white/5"
-                >
-                  Recibir PDF por correo (opcional)
-                </button>
-                {isContactOpen && (
-                  <div className="px-4 pb-4 space-y-3">
-                    <input
-                      type="text"
-                      value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
-                      placeholder="Tu nombre"
-                      className="block w-full px-3 py-3 border rounded-xl bg-white/5 text-white border-white/20"
-                    />
-                    <input
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="tu@email.com"
-                      className="block w-full px-3 py-3 border rounded-xl bg-white/5 text-white border-white/20"
-                    />
-                    <input
-                      type="text"
-                      value={company}
-                      onChange={(e) => setCompany(e.target.value)}
-                      placeholder="Empresa (opcional)"
-                      className="block w-full px-3 py-3 border rounded-xl bg-white/5 text-white border-white/20"
-                    />
-                    <input
-                      type="tel"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      placeholder="Teléfono (opcional)"
-                      className="block w-full px-3 py-3 border rounded-xl bg-white/5 text-white border-white/20"
-                    />
-                    <label className="flex items-start gap-2 text-sm text-brand-100">
-                      <input
-                        type="checkbox"
-                        checked={consentNewsletter}
-                        onChange={(e) => setConsentNewsletter(e.target.checked)}
-                        className="mt-1"
-                      />
-                      Acepto recibir el PDF y suscribirme al newsletter.
+                {modoCalculo === 'anual' && (
+                  <div>
+                    <label htmlFor="salarioPromedio" className="block text-sm font-medium text-white mb-2">
+                      Salario promedio ordinario del período (L.)
                     </label>
+                    <input
+                      id="salarioPromedio"
+                      type="text"
+                      value={salarioPromedio}
+                      onChange={(e) => setSalarioPromedio(e.target.value)}
+                      placeholder="Incluye comisiones recurrentes"
+                      className="block w-full px-3 py-3 border rounded-xl bg-white/5 text-white border-white/20"
+                    />
                   </div>
                 )}
-              </div>
 
-              {error && (
-                <div className="bg-red-500/20 border border-red-500/50 rounded-xl p-3 text-red-200 text-sm">
-                  {error}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="fechaIngreso" className="block text-sm font-medium text-white mb-2">
+                      Fecha de ingreso
+                    </label>
+                    <input
+                      id="fechaIngreso"
+                      type="date"
+                      value={fechaIngreso}
+                      onChange={(e) => setFechaIngreso(e.target.value)}
+                      className="block w-full px-3 py-3 border rounded-xl bg-white/5 text-white border-white/20"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="fechaCalculo" className="block text-sm font-medium text-white mb-2">
+                      Fecha de cálculo
+                    </label>
+                    <input
+                      id="fechaCalculo"
+                      type="date"
+                      value={fechaCalculo}
+                      onChange={(e) => setFechaCalculo(e.target.value)}
+                      className="block w-full px-3 py-3 border rounded-xl bg-white/5 text-white border-white/20"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-white mb-2">Modo de cálculo</label>
+                  <div className="grid grid-cols-2 gap-3">
+                    {(['proporcional', 'anual'] as const).map((mode) => (
+                      <button
+                        key={mode}
+                        type="button"
+                        onClick={() => setModoCalculo(mode)}
+                        className={`py-3 px-3 rounded-xl border-2 text-sm font-medium ${
+                          modoCalculo === mode
+                            ? 'border-brand-500/70 bg-brand-600 text-white'
+                            : 'border-white/20 bg-white/5 text-brand-200'
+                        }`}
+                      >
+                        {mode === 'proporcional' ? 'Proporcional / finiquito' : 'Pago anual (promedio)'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {error && (
+                  <div className="bg-red-500/20 border border-red-500/50 rounded-xl p-3 text-red-200 text-sm">
+                    {error}
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={loading || verifying}
+                  className="w-full py-3 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl disabled:opacity-50"
+                >
+                  {loading ? 'Calculando...' : `Calcular ${config.labelShort}`}
+                </button>
+              </form>
+            </div>
+
+            <div ref={resultRef} className="glass-modern rounded-2xl p-6 sm:p-8 scroll-mt-28">
+              {verifying && pendingResult ? (
+                <CalculatingState
+                  steps={config.funnel.verificationSteps}
+                  onComplete={() => finalizeResult(pendingResult)}
+                />
+              ) : result ? (
+                <div className="space-y-6">
+                  <BenefitResultHero
+                    result={result}
+                    labelShort={config.labelShort}
+                    noDeductionsLine={config.trust.noDeductionsLine}
+                  />
+
+                  <BenefitLeadCapture
+                    headline={config.funnel.leadCapture.headline}
+                    subheadline={config.funnel.leadCapture.subheadline}
+                    fullName={fullName}
+                    email={email}
+                    company={company}
+                    phone={phone}
+                    consentNewsletter={consentNewsletter}
+                    onFullNameChange={setFullName}
+                    onEmailChange={setEmail}
+                    onCompanyChange={setCompany}
+                    onPhoneChange={setPhone}
+                    onConsentChange={setConsentNewsletter}
+                    onSubmit={handleSendEmail}
+                    sending={sendingEmail}
+                    sent={emailSent}
+                    showCompanyField={audience === 'empresa'}
+                  />
+
+                  {audience === 'empleado' ? (
+                    <BenefitTrojanShare
+                      tipo={config.tipo}
+                      labelShort={config.labelShort}
+                      path={config.path}
+                      montoFormatted={formatHNL(result.monto)}
+                    />
+                  ) : (
+                    <div className="glass-modern rounded-xl p-5 border border-cyan-500/30 text-center">
+                      <h3 className="text-lg font-bold text-white mb-2">{config.conversion.inlineTitle}</h3>
+                      <p className="text-sm text-brand-200/90 mb-4">{config.conversion.inlineBody}</p>
+                      <ConversionButtons campaign="post-calc" size="sm" />
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center text-brand-300/70 py-12">
+                  <p>Completa el formulario y calcula tu {config.labelShort.toLowerCase()}.</p>
+                  <p className="text-xs mt-4">{config.trust.line}</p>
                 </div>
               )}
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full py-3 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl disabled:opacity-50"
-              >
-                {loading ? 'Calculando...' : `Calcular ${config.labelShort}`}
-              </button>
-            </form>
+            </div>
           </div>
+        )}
 
-          <div className="glass-modern rounded-2xl p-6 sm:p-8">
-            {result ? (
-              <div>
-                <h2 className="text-2xl font-bold text-white mb-2">Resultado</h2>
-                <p className="text-4xl font-bold text-green-400 mb-4">{formatHNL(result.monto)}</p>
-                <dl className="space-y-2 text-sm text-brand-200">
-                  <div className="flex justify-between">
-                    <dt>Período</dt>
-                    <dd>
-                      {result.periodo.inicio} → {result.periodo.fin}
-                    </dd>
-                  </div>
-                  <div className="flex justify-between">
-                    <dt>Días (360)</dt>
-                    <dd>{result.diasEnPeriodo}</dd>
-                  </div>
-                  <div className="flex justify-between">
-                    <dt>Salario usado</dt>
-                    <dd>{formatHNL(result.salarioUsado)}</dd>
-                  </div>
-                  <div className="flex justify-between">
-                    <dt>Modo</dt>
-                    <dd>{result.modoCalculo === 'anual' ? 'Pago anual' : 'Proporcional'}</dd>
-                  </div>
-                </dl>
-                {result.tipo === '14AVO' && result.elegible14voAnual === false && (
-                  <p className="mt-4 text-amber-300 text-sm">
-                    Aviso: menos de 200 días en el ciclo jul–jun para el pago anual íntegro del 14vo. El monto
-                    mostrado es proporcional devengado.
-                  </p>
-                )}
-                <p className="mt-4 text-xs text-brand-300/80">{config.trust.noDeductionsLine}</p>
-                <p className="mt-2 text-xs text-brand-300/70">{result.desglose.formula}</p>
-
-                {isContactOpen && email && fullName && consentNewsletter && (
-                  <button
-                    type="button"
-                    onClick={handleSendEmail}
-                    disabled={sendingEmail || emailSent}
-                    className="mt-6 w-full py-3 border border-cyan-400/50 text-cyan-200 rounded-xl hover:bg-cyan-500/10 disabled:opacity-50"
-                  >
-                    {emailSent ? 'PDF enviado' : sendingEmail ? 'Enviando...' : 'Enviar PDF por correo'}
-                  </button>
-                )}
-
-                <div className="mt-8 glass-modern rounded-xl p-5 border border-cyan-500/30 text-center">
-                  <h3 className="text-lg font-bold text-white mb-2">{config.conversion.inlineTitle}</h3>
-                  <p className="text-sm text-brand-200/90 mb-4">{config.conversion.inlineBody}</p>
-                  <ConversionButtons campaign="post-calc" size="sm" />
-                </div>
-              </div>
-            ) : (
-              <div className="text-center text-brand-300/70 py-12">
-                <p>Completa el formulario y calcula tu {config.labelShort.toLowerCase()}.</p>
-                <p className="text-xs mt-4">{config.trust.line}</p>
-              </div>
-            )}
-          </div>
-        </div>
+        {!audience && (
+          <p className="text-center text-sm text-brand-300/70 mt-4">
+            El cálculo es 100% gratis — selecciona tu perfil arriba para comenzar.
+          </p>
+        )}
 
         <section className="mt-12 glass-modern rounded-2xl p-6 sm:p-8">
           <h2 className="text-xl font-bold text-white mb-4">{config.conversion.footerTitle}</h2>
           <p className="text-brand-200/90 mb-4">{config.conversion.footerBody}</p>
           <ConversionButtons campaign="footer" />
+        </section>
+
+        <section className="mt-8 text-center opacity-50">
+          <p className="text-xs text-brand-300/80 uppercase tracking-wider mb-3">
+            Empresas en Centroamérica confían en Humano SISU
+          </p>
+          <p className="text-sm text-brand-200/70 max-w-xl mx-auto">
+            Más equipos de RRHH dejan Excel cada mes. Únete a la era SISU.
+          </p>
         </section>
 
         <section className="mt-10">
@@ -510,14 +548,56 @@ export default function PublicBenefitCalculator({ config }: { config: PublicBene
       {result && (
         <div className="fixed bottom-0 inset-x-0 z-40 p-3 sm:p-4 bg-slate-900/95 border-t border-white/10 backdrop-blur-md shadow-2xl">
           <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
-            <p className="text-sm text-brand-100 text-center sm:text-left">
-              <span className="font-semibold text-white">¿Gestionas planilla?</span>{' '}
-              Automatiza el {config.labelShort.toLowerCase()} con Humano SISU.
-            </p>
-            <ConversionButtons campaign="sticky" size="sm" />
+            {emailSent ? (
+              <p className="text-sm text-green-300 text-center sm:text-left">✓ PDF enviado — revisa tu correo</p>
+            ) : (
+              <p className="text-sm text-brand-100 text-center sm:text-left">
+                <span className="font-semibold text-white">{formatHNL(result.monto)}</span>
+                {' · '}
+                <button
+                  type="button"
+                  onClick={() =>
+                    document.getElementById('benefit-lead-capture')?.scrollIntoView({ behavior: 'smooth' })
+                  }
+                  className="text-cyan-300 hover:text-white underline"
+                >
+                  Recibir PDF gratis
+                </button>
+              </p>
+            )}
+            {audience === 'empresa' && <ConversionButtons campaign="sticky" size="sm" />}
           </div>
         </div>
       )}
+
+      <LeadCaptureSoftGate
+        open={showSoftGate}
+        onClose={dismissSoftGate}
+        title={config.funnel.leadCapture.softGateTitle}
+        body={config.funnel.leadCapture.softGateBody}
+      >
+        <BenefitLeadCapture
+          headline={config.funnel.leadCapture.headline}
+          subheadline=""
+          fullName={fullName}
+          email={email}
+          company={company}
+          phone={phone}
+          consentNewsletter={consentNewsletter}
+          onFullNameChange={setFullName}
+          onEmailChange={setEmail}
+          onCompanyChange={setCompany}
+          onPhoneChange={setPhone}
+          onConsentChange={setConsentNewsletter}
+          onSubmit={() => {
+            handleSendEmail()
+          }}
+          sending={sendingEmail}
+          sent={emailSent}
+          showCompanyField={audience === 'empresa'}
+          idPrefix="modal-lead"
+        />
+      </LeadCaptureSoftGate>
     </PublicPageShell>
   )
 }

@@ -2,6 +2,22 @@ import type { FAQItem } from '../seo/schema'
 
 export type BenefitTipo = '13AVO' | '14AVO'
 
+export type BenefitFunnelConfig = {
+  audience: {
+    employeeTitle: string
+    employeeBody: string
+    companyTitle: string
+    companyBody: string
+  }
+  verificationSteps: string[]
+  leadCapture: {
+    headline: string
+    subheadline: string
+    softGateTitle: string
+    softGateBody: string
+  }
+}
+
 export type PublicBenefitCalculatorConfig = {
   tipo: BenefitTipo
   path: string
@@ -42,6 +58,7 @@ export type PublicBenefitCalculatorConfig = {
   faqs: FAQItem[]
   relatedCalculators: Array<{ href: string; label: string }>
   breadcrumbLabel: string
+  funnel: BenefitFunnelConfig
 }
 
 const BASE = 'https://humanosisu.net'
@@ -52,6 +69,20 @@ const SHARED_CONVERSION = {
   demoButton: 'Demo por WhatsApp',
   footerButton: 'Activar gratis',
   footerHref: '/activar?country=HND',
+}
+
+const SHARED_FUNNEL_BASE = {
+  audience: {
+    employeeTitle: 'Soy empleado',
+    employeeBody: 'Quiero validar cuánto me corresponde de este beneficio.',
+    companyTitle: 'Soy empresa / RRHH',
+    companyBody: 'Calculo para mi equipo o quiero automatizar la planilla.',
+  },
+  verificationSteps: [
+    'Verificando calendario comercial 360 días…',
+    'Aplicando período legal del beneficio…',
+    'Validando reglas sin deducciones ISR/SS…',
+  ],
 }
 
 export const PUBLIC_BENEFIT_CONFIGS: Record<BenefitTipo, PublicBenefitCalculatorConfig> = {
@@ -117,6 +148,17 @@ export const PUBLIC_BENEFIT_CONFIGS: Record<BenefitTipo, PublicBenefitCalculator
       },
     ],
     breadcrumbLabel: 'Aguinaldo Honduras',
+    funnel: {
+      ...SHARED_FUNNEL_BASE,
+      leadCapture: {
+        headline: 'Recibe tu aguinaldo en PDF oficial',
+        subheadline:
+          'Desglose legal + recordatorio de pago antes del 15 de diciembre. Gratis, sin guardar tu salario en servidores.',
+        softGateTitle: 'No pierdas este cálculo de aguinaldo',
+        softGateBody:
+          '¿Te enviamos el PDF y un recordatorio legal antes del 15 de diciembre? Es gratis.',
+      },
+    },
   },
   '14AVO': {
     tipo: '14AVO',
@@ -181,5 +223,16 @@ export const PUBLIC_BENEFIT_CONFIGS: Record<BenefitTipo, PublicBenefitCalculator
       },
     ],
     breadcrumbLabel: 'Catorceavo Honduras',
+    funnel: {
+      ...SHARED_FUNNEL_BASE,
+      leadCapture: {
+        headline: 'Recibe tu catorceavo en PDF oficial',
+        subheadline:
+          'Desglose legal + calendario de pago antes del 30 de junio. Gratis y confidencial.',
+        softGateTitle: 'No pierdas este cálculo de catorceavo',
+        softGateBody:
+          '¿Te enviamos el PDF y un recordatorio legal antes del 30 de junio? Es gratis.',
+      },
+    },
   },
 }

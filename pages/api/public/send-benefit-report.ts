@@ -28,6 +28,7 @@ interface SendBenefitReportRequest extends BenefitCalculationResult {
   consentNewsletter?: boolean
   fechaIngreso: string
   label: string
+  audience?: 'empleado' | 'empresa'
 }
 
 async function sendEmailWithResend(
@@ -85,6 +86,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
     const tipo = body.tipo as BenefitTipo
     const leadSource = leadSourceForBenefitCalculator(tipo)
+    const audience =
+      body.audience === 'empresa' || body.audience === 'empleado' ? body.audience : null
 
     try {
       const supabase = createAdminClient()
@@ -96,6 +99,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           company: typeof body.company === 'string' ? body.company.trim() || null : null,
           phone: phoneNorm,
           source: leadSource,
+          calc_audience: audience,
           consent_newsletter: true,
           consented_at: new Date().toISOString(),
           last_seen_at: new Date().toISOString(),
@@ -107,13 +111,21 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       logger.warn('No se pudo guardar lead (beneficio)', { email: maskEmail(sanitizedEmail), error: message })
     }
 
+    if (audience === 'empresa') {
+      logger.info('Lead B2B prioritaria — calculadora beneficio', {
+        email: maskEmail(sanitizedEmail),
+        source: leadSource,
+        company: typeof body.company === 'string' ? body.company.trim() || null : null,
+      })
+    }
+
     const pdfBuffer = await generateBenefitReportPDF({
       ...body,
       label: body.label,
       fechaIngreso: body.fechaIngreso,
     })
 
-    const html = generateBenefitEmailHTML({ ...body, label: body.label })
+    const html = generateBenefitEmailHTML({ ...body, label: body.label, audience: audience ?? undefined })
     const subject = generateBenefitEmailSubject(body.label)
     const filename = `${leadSource}-humano-sisu.pdf`
 
