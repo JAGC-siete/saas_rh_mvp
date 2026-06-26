@@ -1,6 +1,11 @@
 /** Enlaces del cluster de calculadoras — hub & spoke para SEO interno. */
 export const CALCULATOR_HUB_LINKS = {
   hub: { href: '/calculadora', label: 'Todas las calculadoras laborales' },
+  suscripcion: {
+    href: '/suscripcion',
+    label: 'Newsletter nómina y RRHH',
+    subtitle: 'Guías y alertas legales tras usar las calculadoras',
+  },
   landing: { href: '/#como-funciona', label: 'Automatizar nómina con Humano SISU' },
   deductions: [
     {

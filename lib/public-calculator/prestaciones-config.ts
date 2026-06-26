@@ -123,6 +123,7 @@ export const PUBLIC_PRESTACIONES_CONFIG: PublicPrestacionesConfig = {
     { href: '/calculadora-aguinaldo-honduras', label: 'Calculadora de aguinaldo' },
     { href: '/calculadora-catorceavo-honduras', label: 'Calculadora de catorceavo' },
     { href: '/calculadora-deducciones', label: 'Calculadora de deducciones' },
+    { href: '/suscripcion', label: 'Newsletter nómina y RRHH' },
     { href: '/calculadora', label: 'Ver todas las calculadoras' },
   ],
   breadcrumbLabel: 'Prestaciones Honduras',

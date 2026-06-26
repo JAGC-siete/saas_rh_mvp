@@ -62,13 +62,17 @@ export default function FreeToolsSection() {
           ))}
         </div>
 
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 text-sm">
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 text-sm flex-wrap">
           <Link href={CALCULATOR_HUB_LINKS.hub.href} className="text-brand-300 hover:text-white underline">
             {CALCULATOR_HUB_LINKS.hub.label}
           </Link>
           <span className="hidden sm:inline text-brand-400">·</span>
           <Link href={CALCULATOR_HUB_LINKS.prestaciones.href} className="text-brand-300 hover:text-white underline">
             {CALCULATOR_HUB_LINKS.prestaciones.title}
+          </Link>
+          <span className="hidden sm:inline text-brand-400">·</span>
+          <Link href={CALCULATOR_HUB_LINKS.suscripcion.href} className="text-brand-300 hover:text-white underline">
+            {CALCULATOR_HUB_LINKS.suscripcion.label}
           </Link>
         </div>
 

@@ -17,6 +17,7 @@ import DeductionResultHero from './DeductionResultHero'
 import BenefitLeadCapture from './BenefitLeadCapture'
 import LeadCaptureSoftGate, { useLeadSoftGateTriggers } from './LeadCaptureSoftGate'
 import { CalcPdfSentMessage, CalcTrustLine, CalcCheckIcon, CalcIconTextRow } from './CalculatorUiIcons'
+import CalculatorSubscriptionBridge from './CalculatorSubscriptionBridge'
 import { trackGA4Event } from '../../lib/analytics/ga4'
 import {
   trackCalcActivarClick,
@@ -893,6 +894,14 @@ export default function PublicDeductionCalculator({ config }: { config: PublicCa
               ))}
             </div>
           )}
+        </div>
+
+        <div className="mt-6">
+          <CalculatorSubscriptionBridge
+            tool={calcTool}
+            placement="footer"
+            activarHref={activarUrl('footer')}
+          />
         </div>
       </div>
 

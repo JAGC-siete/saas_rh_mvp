@@ -115,8 +115,9 @@ const publicPages: SitemapUrl[] = [
   },
   {
     loc: '/suscripcion',
-    changefreq: 'monthly',
-    priority: 0.8
+    changefreq: 'weekly',
+    priority: 0.85,
+    lastmod: new Date().toISOString().split('T')[0]
   }
 ]
 

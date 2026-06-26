@@ -271,7 +271,8 @@ export const PUBLIC_CALCULATOR_CONFIGS: Record<CountryCode, PublicCalculatorConf
     ],
     relatedCalculators: [
       { href: '/calculadora-deducciones-el-salvador', label: 'Calculadora El Salvador' },
-      { href: '/calculadora-deducciones-guatemala', label: 'Calculadora Guatemala' }
+      { href: '/calculadora-deducciones-guatemala', label: 'Calculadora Guatemala' },
+      { href: '/suscripcion', label: 'Newsletter nómina y RRHH' },
     ],
     breadcrumbLabel: 'Deducciones Honduras',
     landingBridge: {
@@ -430,7 +431,8 @@ export const PUBLIC_CALCULATOR_CONFIGS: Record<CountryCode, PublicCalculatorConf
     ],
     relatedCalculators: [
       { href: '/calculadora-deducciones', label: 'Calculadora Honduras' },
-      { href: '/calculadora-deducciones-guatemala', label: 'Calculadora Guatemala' }
+      { href: '/calculadora-deducciones-guatemala', label: 'Calculadora Guatemala' },
+      { href: '/suscripcion', label: 'Newsletter nómina y RRHH' },
     ],
     breadcrumbLabel: 'Deducciones El Salvador',
     landingBridge: {
@@ -559,7 +561,8 @@ export const PUBLIC_CALCULATOR_CONFIGS: Record<CountryCode, PublicCalculatorConf
     ],
     relatedCalculators: [
       { href: '/calculadora-deducciones', label: 'Calculadora Honduras' },
-      { href: '/calculadora-deducciones-el-salvador', label: 'Calculadora El Salvador' }
+      { href: '/calculadora-deducciones-el-salvador', label: 'Calculadora El Salvador' },
+      { href: '/suscripcion', label: 'Newsletter nómina y RRHH' },
     ],
     breadcrumbLabel: 'Deducciones Guatemala',
     landingBridge: {

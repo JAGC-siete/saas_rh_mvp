@@ -28,6 +28,7 @@ import LeadCaptureSoftGate, { useLeadSoftGateTriggers } from './LeadCaptureSoftG
 import PrestacionesResultHero from './PrestacionesResultHero'
 import PrestacionesTrojanShare from './PrestacionesTrojanShare'
 import { CalcPdfSentMessage, CalcTrustLine } from './CalculatorUiIcons'
+import CalculatorSubscriptionBridge from './CalculatorSubscriptionBridge'
 
 const FORM_STORAGE_KEY = 'public_prestaciones_calculator_v1'
 const TOOL = 'prestaciones_hnd' as const
@@ -854,6 +855,14 @@ export default function PublicPrestacionesCalculator({ config }: { config: Publi
           <p className="text-brand-200/90 mb-4">{config.conversion.footerBody}</p>
           <ConversionButtons campaign="footer" />
         </section>
+
+        <div className="mt-8">
+          <CalculatorSubscriptionBridge
+            tool={TOOL}
+            placement="footer"
+            activarHref={activarUrl('footer')}
+          />
+        </div>
 
         <section className="mt-10">
           <h2 className="text-xl font-bold text-white mb-4">Preguntas frecuentes</h2>

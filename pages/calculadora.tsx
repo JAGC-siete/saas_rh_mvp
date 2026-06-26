@@ -120,7 +120,7 @@ export default function CalculadoraHubPage() {
           <p className="text-brand-200/90 mb-4">
             ¿Validaste tu sueldo y quieres eliminar Excel en tu empresa?
           </p>
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+          <div className="flex flex-col sm:flex-row gap-3 justify-center flex-wrap">
             <Link
               href="/activar"
               className="inline-flex justify-center py-3 px-6 btn-shiny bg-brand-500 hover:bg-brand-600 text-white font-semibold rounded-xl"
@@ -128,10 +128,16 @@ export default function CalculadoraHubPage() {
               Probar Humano SISU gratis
             </Link>
             <Link
-              href="/"
+              href="/suscripcion?utm_source=calculadora-hub&utm_medium=cta&utm_campaign=footer"
+              className="inline-flex justify-center py-3 px-6 glass-modern hover:bg-white/10 text-white font-semibold rounded-xl border border-brand-500/40"
+            >
+              Suscribirme al newsletter
+            </Link>
+            <Link
+              href="/ventas?utm_source=calculadora-hub&utm_medium=cta&utm_campaign=pricing"
               className="inline-flex justify-center py-3 px-6 glass-modern hover:bg-white/10 text-white font-semibold rounded-xl border border-white/20"
             >
-              Volver a la landing principal
+              Ver planes y cotización
             </Link>
           </div>
         </div>
