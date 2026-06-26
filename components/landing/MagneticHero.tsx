@@ -43,15 +43,15 @@ export default function MagneticHero() {
               className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-5xl font-bold leading-tight"
             >
               <span className="bg-gradient-to-r from-white via-brand-200 to-brand-400 bg-clip-text text-transparent">
-                Gestión de Capital Humano 100% Automatizada:
+                Humano SISU — Software de Recursos Humanos y Control de Asistencia
               </span>
               <span className="block text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-4xl mt-2 bg-gradient-to-r from-brand-200 to-brand-500 bg-clip-text text-transparent font-semibold">
-                Dejá el Excel y eliminá los errores en tu nómina.
+                Nómina automatizada y biometría integrada para Honduras, El Salvador y Guatemala.
               </span>
             </motion.h1>
 
             <p className="text-base sm:text-lg text-slate-400 max-w-2xl mt-4 sm:mt-6 font-medium landing-dark-text">
-              El cerebro digital que integra biometría y software. Detén la fuga silenciosa de tiempo y automatiza tus deducciones legales, para que tu equipo deje de hacer trabajo manual y se enfoque en hacer crecer la empresa.
+              Humano SISU es el software de RH que une reloj biométrico y planilla en un solo flujo. Automatiza deducciones legales, elimina errores de Excel y libera a tu equipo para hacer crecer la empresa.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-3 mt-6 sm:mt-8">

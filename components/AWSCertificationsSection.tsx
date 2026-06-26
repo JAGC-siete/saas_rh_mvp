@@ -16,10 +16,10 @@ export default function AWSCertificationsSection() {
         <ScrollReveal>
           <div className="text-center mb-10">
             <h2 className="text-2xl sm:text-3xl font-bold text-white mb-6">
-              Desarrollado por ingenieros certificados en AWS
+              Humano SISU: infraestructura cloud certificada AWS
             </h2>
             <p className="text-slate-400 max-w-4xl mx-auto mb-4 text-base sm:text-lg font-medium landing-dark-text">
-              Hecho con la misma tecnología que usan Netflix y Airbnb, ahora para tu MIPYME local
+              Software de recursos humanos y control de asistencia construido con la misma tecnología que usan Netflix y Airbnb, adaptado a MIPYMES en Centroamérica.
               <br />
               <span className="text-brand-400 font-medium">
                 Optimizado para que tu empresa tenga la seguridad y escalabilidad de un gigante, sin pagar como uno.

@@ -26,11 +26,11 @@ export default function HowItWorksBento() {
       <ScrollReveal>
         <div className="text-center mb-8">
           <div className="inline-block glass-modern text-slate-400 text-xs font-medium px-4 py-2 rounded-full mb-6 uppercase tracking-widest">
-            Cómo funciona SISU
+            Cómo funciona Humano SISU
           </div>
           <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white leading-tight mb-6 px-2">
-            <span className="text-white block sm:inline">El fin del trabajo manual:</span>
-            <span className="text-brand-300 block sm:inline mt-1 sm:mt-0">así automatizamos el 80% de tus tareas de RRHH.</span>
+            <span className="text-white block sm:inline">Control de asistencia + nómina en un solo software de RH:</span>
+            <span className="text-brand-300 block sm:inline mt-1 sm:mt-0">así automatiza Humano SISU el 80% de tus tareas.</span>
           </h2>
         </div>
       </ScrollReveal>

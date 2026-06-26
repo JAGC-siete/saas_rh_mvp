@@ -8,10 +8,10 @@ export default function LandingClosingSection() {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-16 sm:py-20 text-center">
         <ScrollReveal>
           <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white leading-tight mb-4">
-            ¿Listo para dejar el Excel y automatizar tu nómina?
+            Activa Humano SISU: software de recursos humanos y control de asistencia
           </h2>
           <p className="text-slate-400 text-base sm:text-lg max-w-2xl mx-auto mb-8 font-medium">
-            Cotización sin costo o prueba gratuita.
+            Cotización sin costo o prueba gratuita del sistema de nómina y biometría para tu empresa.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center items-stretch sm:items-center">
             <Link

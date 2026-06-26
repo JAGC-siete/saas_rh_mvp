@@ -16,11 +16,11 @@ export default function FreeToolsSection() {
               Herramientas gratuitas
             </span>
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-4">
-              Valida deducciones antes de automatizar tu planilla
+              Calculadoras gratuitas de Humano SISU
             </h2>
             <p className="text-slate-400 max-w-3xl mx-auto font-medium landing-dark-text">
-              Miles de búsquedas empiezan preguntando cuánto descuentan de sueldo. Usa nuestras calculadoras
-              gratuitas — las mismas reglas legales que Humano SISU — y cuando estés listo, activa la nómina completa.
+              Valida deducciones de sueldo con las mismas reglas legales del software de recursos humanos Humano SISU.
+              Cuando estés listo, activa el control de asistencia y la nómina completa.
             </p>
           </div>
         </ScrollReveal>

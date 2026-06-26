@@ -73,11 +73,11 @@ export default function BentoServicesGrid() {
       <ScrollReveal>
         <header className="max-w-3xl mb-8 sm:mb-10 mx-auto text-center px-2">
           <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white leading-tight">
-            <span className="text-white block sm:inline">Tu nuevo ecosistema de RRHH:</span>
-            <span className="text-brand-300 block sm:inline mt-1 sm:mt-0">diseñado para escalar sin burocracia.</span>
+            <span className="text-white block sm:inline">Módulos de Humano SISU:</span>
+            <span className="text-brand-300 block sm:inline mt-1 sm:mt-0">software de recursos humanos diseñado para escalar sin burocracia.</span>
           </h2>
           <p className="mt-3 text-sm sm:text-base text-slate-400 px-2 font-medium landing-dark-text">
-            Dejá de contratar personal solo para pasar datos. Centralizá tu operación con tecnología y{' '}
+            Centralizá nómina, control de asistencia biométrico y cumplimiento legal en una sola plataforma de RH con{' '}
             <span className="text-brand-400">trazabilidad</span>.
           </p>
         </header>

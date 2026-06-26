@@ -32,7 +32,7 @@ export function generateOrganizationSchema(): OrganizationSchema {
     url: BASE_URL,
     logo: `${BASE_URL}/logo-humano-sisu.png`,
     description:
-      'Sistema automatizado de recursos humanos para MIPYMES en El Salvador, Guatemala y Honduras. Gestión de asistencia, nómina con deducciones de ley locales y más.',
+      'Humano SISU es software de recursos humanos y control de asistencia para MIPYMES en Honduras, El Salvador y Guatemala. Nómina automatizada, biometría integrada y deducciones de ley locales.',
     contactPoint: {
       '@type': 'ContactPoint',
       telephone: '+504 32226773',
@@ -51,6 +51,7 @@ export interface WebSiteSchema {
   '@type': string
   name: string
   url: string
+  description?: string
 }
 
 /**
@@ -62,6 +63,8 @@ export function generateWebSiteSchema(): WebSiteSchema {
     '@type': 'WebSite',
     name: 'Humano SISU',
     url: BASE_URL,
+    description:
+      'Software de recursos humanos y control de asistencia para Honduras, El Salvador y Guatemala.',
   }
 }
 

@@ -38,7 +38,7 @@ export function generateDescription(options: DescriptionOptions = {}): string {
  * Predefined descriptions for common pages
  */
 export const pageDescriptions = {
-  home: 'Control de asistencia y nómina en un solo lugar. Integra biométricos con software regional (SV, GT, HN). Automatiza deducciones locales. Activar gratis hoy, sin tarjeta.',
+  home: 'Humano SISU: software de recursos humanos y control de asistencia para Honduras, El Salvador y Guatemala. Nómina, biometría y deducciones legales. Activar gratis.',
   activate: 'Activa tu cuenta en Humano SISU y comienza a automatizar tu nómina. Configuración en minutos, sin complicaciones.',
   affiliates: 'Únete al programa de afiliados de Humano SISU. Gana comisiones recomendando la mejor solución de nómina para MIPYMES en la región.',
   calculator: 'Calculadora ISR Honduras y calculadora RAP gratis. IHSS, deducciones y sueldo neto con el motor de nómina Humano SISU.',
