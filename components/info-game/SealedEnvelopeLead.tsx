@@ -359,28 +359,28 @@ export default function SealedEnvelopeLead() {
               </div>
             </div>
 
-            {/* Estado 3 — Misión 2 */}
+            {/* Estado 3 — El siguiente paso */}
             <motion.div
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.25, duration: 0.4 }}
               className="glass-modern rounded-2xl border border-purple-500/30 p-5 sm:p-6"
             >
-              <h3 className="text-lg font-bold text-white mb-2">{copy.mission2.title}</h3>
-              <p className="text-sm text-brand-200/90 leading-relaxed mb-3">{copy.mission2.body}</p>
-              <p className="text-xs text-brand-300/70 mb-4">{copy.mission2.emailHint}</p>
+              <h3 className="text-lg font-bold text-white mb-2">{copy.nextStep.title}</h3>
+              <p className="text-sm text-brand-200/90 leading-relaxed mb-3">{copy.nextStep.body}</p>
+              <p className="text-xs text-brand-300/70 mb-4">{copy.nextStep.emailHint}</p>
               <div className="flex flex-col sm:flex-row gap-3">
                 <Link
                   href="/activar?utm_source=info&utm_medium=unlock&utm_campaign=sealed_envelope"
                   className="inline-flex justify-center py-2.5 px-5 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl text-sm transition-colors"
                 >
-                  {copy.mission2.ctaActivar}
+                  {copy.nextStep.ctaActivar}
                 </Link>
                 <Link
                   href="/calculadora?utm_source=info&utm_medium=unlock&utm_campaign=sealed_envelope"
                   className="inline-flex justify-center py-2.5 px-5 border border-white/20 hover:bg-white/10 text-white font-semibold rounded-xl text-sm transition-colors"
                 >
-                  {copy.mission2.ctaCalculadora}
+                  {copy.nextStep.ctaCalculadora}
                 </Link>
               </div>
             </motion.div>

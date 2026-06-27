@@ -57,12 +57,12 @@ export const SEALED_ENVELOPE_COPY = {
     ],
   },
 
-  /** Estado 3 — Misión 2 iniciada */
-  mission2: {
-    title: 'Misión 2 iniciada',
+  /** Estado 3 — Cierre (conversación humana, sin gamificación) */
+  nextStep: {
+    title: '¿Qué pasa ahora?',
     body:
-      'Te enviamos el mismo truco a tu correo (por si quieres guardarlo). En las próximas horas llega la primera misión: por qué casi nadie aplica esto aunque suene obvio.',
-    emailHint: 'Busca un correo de jorgearturo@humanosisu.com — revisa spam si no lo ves.',
+      'Ya tienes el secreto en tu bandeja de entrada. No tienes que hacer más nada por hoy. En las próximas horas te voy a mandar la primera trampa invisible que nos arrastra de vuelta al trabajo manual y repetitivo (aunque la solución sea tan obvia como la que acabas de ver).',
+    emailHint: 'Busca un correo de jorgearturo@humanosisu.net — revisa spam si no lo ves.',
     ctaActivar: 'Ver cómo se ve en 30 segundos',
     ctaCalculadora: 'Probar calculadora gratis',
   },
