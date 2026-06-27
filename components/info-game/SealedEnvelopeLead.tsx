@@ -120,16 +120,17 @@ export default function SealedEnvelopeLead() {
 
   return (
     <div className="max-w-lg mx-auto">
-      {/* Estado 0 — Intriga (hero) */}
-      <div className="text-center mb-8">
-        <span className="inline-block px-3 py-1 mb-4 text-xs rounded-full bg-purple-500/15 text-purple-300 border border-purple-500/25">
-          {copy.badge}
-        </span>
-        <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-4 leading-tight">
-          {copy.intrigue.headline}
-        </h1>
-        <p className="text-base sm:text-lg text-brand-200/90 leading-relaxed">{copy.intrigue.subheadline}</p>
-      </div>
+      {status !== 'intrigue' && (
+        <div className="text-center mb-8">
+          <span className="inline-block px-3 py-1 mb-4 text-xs rounded-full bg-purple-500/15 text-purple-300 border border-purple-500/25">
+            {copy.badge}
+          </span>
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-4 leading-tight">
+            {copy.intrigue.headline}
+          </h1>
+          <p className="text-base sm:text-lg text-brand-200/90 leading-relaxed">{copy.intrigue.subheadline}</p>
+        </div>
+      )}
 
       {status === 'unlocking' && (
         <InfoProgressRail
@@ -149,6 +150,11 @@ export default function SealedEnvelopeLead() {
             exit={{ opacity: 0, scale: 0.96 }}
             transition={{ duration: 0.35 }}
           >
+            <div className="text-center mb-6">
+              <span className="inline-block px-3 py-1 mb-4 text-xs rounded-full bg-purple-500/15 text-purple-300 border border-purple-500/25">
+                {copy.badge}
+              </span>
+            </div>
             <BorderBeam className="mb-6">
               <div className="glass-modern rounded-2xl border border-amber-500/25 p-8 sm:p-10 text-center bg-gradient-to-b from-amber-500/5 to-transparent">
                 <div className="text-5xl sm:text-6xl mb-4" aria-hidden>
@@ -160,6 +166,12 @@ export default function SealedEnvelopeLead() {
                 <p className="text-sm text-brand-200/90 max-w-xs mx-auto">{copy.intrigue.envelopeHint}</p>
               </div>
             </BorderBeam>
+            <div className="text-center mb-8">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-4 leading-tight">
+                {copy.intrigue.headline}
+              </h1>
+              <p className="text-base sm:text-lg text-brand-200/90 leading-relaxed">{copy.intrigue.subheadline}</p>
+            </div>
             <Button type="button" variant="modern" className="w-full" onClick={() => setStatus('unlocking')}>
               {copy.intrigue.cta}
             </Button>
