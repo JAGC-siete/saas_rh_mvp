@@ -9,13 +9,11 @@ import {
 type Props = {
   tool: CalculatorTool
   placement?: 'footer' | 'post-calc'
-  activarHref: string
 }
 
 export default function CalculatorSubscriptionBridge({
   tool,
   placement = 'footer',
-  activarHref,
 }: Props) {
   const suscripcionHref = appendSuscripcionUtmParams(tool, placement)
 
@@ -32,10 +30,10 @@ export default function CalculatorSubscriptionBridge({
           {CALCULATOR_SUBSCRIPTION_BRIDGE.ctaLabel}
         </Link>
         <Link
-          href={activarHref}
+          href={CALCULATOR_SUBSCRIPTION_BRIDGE.secondaryHref}
           className="inline-flex justify-center py-3 px-5 border border-white/20 hover:bg-white/10 text-white font-semibold rounded-xl text-sm text-center transition-all"
         >
-          {CALCULATOR_SUBSCRIPTION_BRIDGE.activarLabel}
+          {CALCULATOR_SUBSCRIPTION_BRIDGE.secondaryLabel}
         </Link>
         <Link
           href={CALCULATOR_SUBSCRIPTION_BRIDGE.pricingHref}

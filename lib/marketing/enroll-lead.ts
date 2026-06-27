@@ -11,6 +11,11 @@ import {
 } from './email-sequence-ledger'
 import { isMarketingExcluded } from './is-marketing-excluded'
 import { sendInfoPackEmail, buildInfoPackSubject, INFO_PACK_LEDGER_LABEL } from './info-pack-email'
+import {
+  sendSuscripcionPackEmail,
+  buildSuscripcionPackSubject,
+  SUSCRIPCION_PACK_LEDGER_LABEL,
+} from './suscripcion-pack-email'
 import { sendSequenceEmail } from './send-sequence-email'
 import { generateUnsubscribeToken } from './unsubscribe'
 
@@ -46,6 +51,14 @@ export type EnrollMarketingLeadResult = {
 
 function isInfoLeadSource(source: string): boolean {
   return normalizeLeadSource(source) === 'info'
+}
+
+function isSuscripcionLeadSource(source: string): boolean {
+  return normalizeLeadSource(source) === 'suscripcion'
+}
+
+function usesAcceleratedPack(source: string): boolean {
+  return isInfoLeadSource(source) || isSuscripcionLeadSource(source)
 }
 
 async function hasWelcomeInLedger(
@@ -197,33 +210,45 @@ export async function enrollMarketingLead(
 
   if (shouldSendWelcome) {
     try {
-      if (isInfoLeadSource(source)) {
-        const { data: infoState } = await client
+      if (usesAcceleratedPack(source)) {
+        const { data: packState } = await client
           .from('marketing_leads')
           .select('info_pack_sent_at')
           .eq('id', lead.id)
           .maybeSingle()
 
-        if (infoState?.info_pack_sent_at) {
-          logger.info('Info pack already sent; skipping duplicate', { email: trimmedEmail })
+        if (packState?.info_pack_sent_at) {
+          logger.info('Initial pack already sent; skipping duplicate', { email: trimmedEmail, source })
         } else {
           const displayName =
             contactPatch.full_name ||
             (typeof input.fullName === 'string' ? input.fullName.trim() : '') ||
             undefined
 
-          await sendInfoPackEmail({
-            to: trimmedEmail,
-            nombre: displayName,
-            unsubscribeToken: lead.unsubscribe_token,
-          })
+          if (isInfoLeadSource(source)) {
+            await sendInfoPackEmail({
+              to: trimmedEmail,
+              nombre: displayName,
+              unsubscribeToken: lead.unsubscribe_token,
+            })
+          } else {
+            await sendSuscripcionPackEmail({
+              to: trimmedEmail,
+              nombre: displayName,
+              unsubscribeToken: lead.unsubscribe_token,
+            })
+          }
+
+          const packLabel = isInfoLeadSource(source) ? INFO_PACK_LEDGER_LABEL : SUSCRIPCION_PACK_LEDGER_LABEL
+          const packSubject = isInfoLeadSource(source)
+            ? buildInfoPackSubject(displayName, trimmedEmail)
+            : buildSuscripcionPackSubject(displayName, trimmedEmail)
 
           await client
             .from('marketing_leads')
             .update({
               info_pack_sent_at: now.toISOString(),
               last_mail_sent_at: now.toISOString(),
-              // Stay on step 0 until info-sequence-welcome sends the real Welcome (+24h).
               current_step: SEQUENCE_STEP.WELCOME,
             })
             .eq('id', lead.id)
@@ -231,12 +256,14 @@ export async function enrollMarketingLead(
           await client.from('marketing_email_ledger').insert({
             lead_id: lead.id,
             step: SEQUENCE_STEP.WELCOME,
-            step_label: INFO_PACK_LEDGER_LABEL,
-            subject: buildInfoPackSubject(displayName, trimmedEmail),
+            step_label: packLabel,
+            subject: packSubject,
             watch_window_key: getWatchWindowKey(now),
           })
 
-          infoPackSent = true
+          if (isInfoLeadSource(source)) {
+            infoPackSent = true
+          }
           welcomeSent = true
         }
       } else {

@@ -14,21 +14,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const { email, source } = req.body
+    const { email, source, nombre } = req.body
     if (!email) return res.status(400).json(createErrorResponse('Email is required', 'VALIDATION_ERROR'))
 
     const trimmedEmail = email.trim().toLowerCase()
     const leadSource = typeof source === 'string' && source.trim() ? source.trim() : 'suscripcion-page'
+    const fullName = typeof nombre === 'string' ? nombre.trim() : undefined
 
     const { leadId, welcomeSent, skippedReason } = await enrollMarketingLead({
       email: trimmedEmail,
       source: leadSource,
+      fullName: fullName || null,
     })
 
     if (skippedReason !== 'excluded') {
       void sendLeadRegistroNotification({
         source: 'suscripcion',
-        nombre: trimmedEmail.split('@')[0] || 'Suscriptor',
+        nombre: fullName || trimmedEmail.split('@')[0] || 'Suscriptor',
         email: trimmedEmail,
       })
     }

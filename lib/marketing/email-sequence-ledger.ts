@@ -6,7 +6,22 @@
 
 import { getMarketingSiteUrl } from './unsubscribe'
 import { buildMissionTextFooter } from './mission-config'
-import { INFO_WELCOME_MISSION_TEASER } from './info-sequence-timing'
+import {
+  buildInfoPainPoint1Text,
+  buildInfoPainPoint2Text,
+  buildInfoPainPoint3Text,
+  buildInfoPainPoint4Text,
+  buildInfoPainPoint5Text,
+  buildInfoWelcomeText,
+} from './info-field-notes-email'
+import {
+  buildSuscripcionPainPoint1Text,
+  buildSuscripcionPainPoint2Text,
+  buildSuscripcionPainPoint3Text,
+  buildSuscripcionPainPoint4Text,
+  buildSuscripcionPainPoint5Text,
+  buildSuscripcionWelcomeText,
+} from './suscripcion-field-notes-email'
 
 export const SEQUENCE_STEP = {
   WELCOME: 0,
@@ -62,11 +77,13 @@ export function normalizeLeadSource(raw?: string | null): LeadSourceKind {
 
 export function buildWelcomeText(source?: string | null): string {
   const kind = normalizeLeadSource(source)
-  const base = `${WELCOME_GREETINGS[kind]}\n\n${WELCOME_BODY_AFTER_GREETING}`
   if (kind === 'info') {
-    return `${base}\n\n${INFO_WELCOME_MISSION_TEASER}`
+    return buildInfoWelcomeText()
   }
-  return base
+  if (kind === 'suscripcion') {
+    return buildSuscripcionWelcomeText()
+  }
+  return `${WELCOME_GREETINGS[kind]}\n\n${WELCOME_BODY_AFTER_GREETING}`
 }
 
 /** One-time manual bulk send (Jul 2026): personalized opener, shared body. */
@@ -102,13 +119,15 @@ export function buildPainPoint1Text(params?: {
   source?: string | null
   leadToken?: string | null
 }): string {
-  const name = sequenceFirstName(params?.nombre, params?.email)
-  const isInfo = normalizeLeadSource(params?.source) === 'info'
-  const intro = isInfo
-    ? 'En el correo anterior te mandé la nota con el truco para que los pagos y horarios se hagan solos. Hoy quiero contarte por qué a muchos equipos les cuesta tanto dar ese sencillo paso.'
-    : 'Hoy quiero contarte por qué a muchos equipos les cuesta tanto dar ese sencillo paso hacia una mejor organización del personal.'
+  if (normalizeLeadSource(params?.source) === 'info') {
+    return buildInfoPainPoint1Text(params ?? {})
+  }
+  if (normalizeLeadSource(params?.source) === 'suscripcion') {
+    return buildSuscripcionPainPoint1Text(params ?? {})
+  }
 
-  let body = `Hola ${name},\n\n${intro}\n\n${PAIN_POINT_1_BODY_CORE}`
+  const name = sequenceFirstName(params?.nombre, params?.email)
+  let body = `Hola ${name},\n\nHoy quiero contarte por qué a muchos equipos les cuesta tanto dar ese sencillo paso hacia una mejor organización del personal.\n\n${PAIN_POINT_1_BODY_CORE}`
 
   if (params?.leadToken) {
     body += buildMissionTextFooter(1, params.leadToken)
@@ -162,6 +181,13 @@ export function buildPainPoint2Text(params?: {
   source?: string | null
   leadToken?: string | null
 }): string {
+  if (normalizeLeadSource(params?.source) === 'info') {
+    return buildInfoPainPoint2Text(params ?? {})
+  }
+  if (normalizeLeadSource(params?.source) === 'suscripcion') {
+    return buildSuscripcionPainPoint2Text(params ?? {})
+  }
+
   const name = sequenceFirstName(params?.nombre, params?.email)
   const kind = normalizeLeadSource(params?.source)
   const intro = PAIN_POINT_2_INTRO[kind]
@@ -233,6 +259,13 @@ export function buildPainPoint3Text(params?: {
   source?: string | null
   leadToken?: string | null
 }): string {
+  if (normalizeLeadSource(params?.source) === 'info') {
+    return buildInfoPainPoint3Text(params ?? {})
+  }
+  if (normalizeLeadSource(params?.source) === 'suscripcion') {
+    return buildSuscripcionPainPoint3Text(params ?? {})
+  }
+
   const name = sequenceFirstName(params?.nombre, params?.email)
   const kind = normalizeLeadSource(params?.source)
   const intro = PAIN_POINT_3_INTRO[kind]
@@ -312,6 +345,13 @@ export function buildPainPoint4Text(params?: {
   source?: string | null
   leadToken?: string | null
 }): string {
+  if (normalizeLeadSource(params?.source) === 'info') {
+    return buildInfoPainPoint4Text(params ?? {})
+  }
+  if (normalizeLeadSource(params?.source) === 'suscripcion') {
+    return buildSuscripcionPainPoint4Text(params ?? {})
+  }
+
   const name = sequenceFirstName(params?.nombre, params?.email)
   const kind = normalizeLeadSource(params?.source)
   const intro = PAIN_POINT_4_INTRO[kind]
@@ -381,6 +421,13 @@ export function buildPainPoint5Text(params?: {
   source?: string | null
   leadToken?: string | null
 }): string {
+  if (normalizeLeadSource(params?.source) === 'info') {
+    return buildInfoPainPoint5Text(params ?? {})
+  }
+  if (normalizeLeadSource(params?.source) === 'suscripcion') {
+    return buildSuscripcionPainPoint5Text(params ?? {})
+  }
+
   const name = sequenceFirstName(params?.nombre, params?.email)
   const kind = normalizeLeadSource(params?.source)
   const intro = PAIN_POINT_5_INTRO[kind]

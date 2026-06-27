@@ -1,4 +1,5 @@
 import { buildMissionActivarUrl, type MissionId } from '../marketing/mission-config'
+import { normalizeLeadSource } from '../marketing/email-sequence-ledger'
 
 export type MissionFeedback = {
   title: string
@@ -17,9 +18,14 @@ export function getMissionFeedback(
   missionId: MissionId,
   choice: string,
   firstName: string,
-  leadToken: string
+  leadToken: string,
+  source?: string | null
 ): MissionFeedback {
   const name = firstName || 'Curioso'
+
+  if (normalizeLeadSource(source) === 'suscripcion') {
+    return getSuscripcionMissionFeedback(missionId, choice, name)
+  }
 
   if (missionId === 1) {
     const map: Record<string, { hours: number; headline: string; body: string }> = {
@@ -124,6 +130,110 @@ export function getMissionFeedback(
     cta: {
       label: 'Iniciar la prueba en la sombra',
       href: buildMissionActivarUrl(leadToken),
+    },
+  }
+}
+
+function getSuscripcionMissionFeedback(
+  missionId: MissionId,
+  choice: string,
+  name: string
+): MissionFeedback {
+  if (missionId === 1) {
+    const map: Record<string, MissionFeedback> = {
+      'yes-often': {
+        title: 'Nota #1 · registrada',
+        headline: 'No sos la única persona.',
+        body: `${name}, si te pasó más de una vez, vale la pena anotar la diferencia y comparar el próximo mes con la calculadora.`,
+      },
+      'yes-once': {
+        title: 'Nota #1 · registrada',
+        headline: 'Una vez ya es señal.',
+        body: `${name}, no hace falta que sea habitual para merecer una revisión. Guardá el cálculo y el recibo.`,
+      },
+      never: {
+        title: 'Nota #1 · registrada',
+        headline: 'Qué bueno que cuadre.',
+        body: `${name}, igual conviene revisar cada cierto tiempo — a veces cambian deducciones sin que te avisen claro.`,
+      },
+    }
+    return map[choice] ?? map['yes-once']
+  }
+
+  if (missionId === 2) {
+    const map: Record<string, MissionFeedback> = {
+      'yes-clear': {
+        title: 'Nota #2 · registrada',
+        headline: 'Vas adelantado/a.',
+        body: `${name}, entender tu recibo te protege cuando algo cambia sin explicación clara.`,
+      },
+      some: {
+        title: 'Nota #2 · registrada',
+        headline: 'Es lo más común.',
+        body: `${name}, casi nadie entiende cada línea. Por eso mandamos explicaciones en lenguaje simple.`,
+      },
+      'no-idea': {
+        title: 'Nota #2 · registrada',
+        headline: 'Honestidad útil.',
+        body: `${name}, no pasa nada. En las próximas notas vamos desglosando siglas sin jerga de RRHH.`,
+      },
+    }
+    return map[choice] ?? map.some
+  }
+
+  if (missionId === 3) {
+    const map: Record<string, MissionFeedback> = {
+      yes: {
+        title: 'Nota #3 · registrada',
+        headline: 'Mejor prevenir.',
+        body: `${name}, saber las fechas te evita sorpresas de último momento.`,
+      },
+      approx: {
+        title: 'Nota #3 · registrada',
+        headline: 'Casi cuenta.',
+        body: `${name}, te mandamos recordatorios para afinar fechas según tu país.`,
+      },
+      no: {
+        title: 'Nota #3 · registrada',
+        headline: 'Para eso están las alertas.',
+        body: `${name}, aguinaldo y catorceavo tienen plazos legales — te avisamos antes.`,
+      },
+    }
+    return map[choice] ?? map.no
+  }
+
+  if (missionId === 4) {
+    const map: Record<string, MissionFeedback> = {
+      'ask-hr': {
+        title: 'Nota #4 · registrada',
+        headline: 'Buen primer paso.',
+        body: `${name}, llegar con números en mano hace la conversación más fácil y concreta.`,
+      },
+      recalc: {
+        title: 'Nota #4 · registrada',
+        headline: 'También funciona.',
+        body: `${name}, volvé a calcular con los mismos datos del recibo antes de asumir un error.`,
+        cta: {
+          label: 'Volver a la calculadora',
+          href: '/calculadora?utm_source=email&utm_medium=mission&utm_campaign=subs_m4',
+        },
+      },
+      'stay-quiet': {
+        title: 'Nota #4 · registrada',
+        headline: 'Entiendo la duda.',
+        body: `${name}, aunque no preguntes hoy, guardar el cálculo te da referencia para el próximo mes.`,
+      },
+    }
+    return map[choice] ?? map.recalc
+  }
+
+  return {
+    title: 'Nota #5 · registrada',
+    headline: choice === 'yes-alerts' ? 'Perfecto — seguís en la lista.' : 'Sin presión.',
+    body: `${name}, seguirás recibiendo alertas legales cuando haya cambios que afecten tu sueldo.`,
+    cta: {
+      label: 'Explorar calculadoras',
+      href: '/calculadora?utm_source=email&utm_medium=mission&utm_campaign=subs_m5',
     },
   }
 }

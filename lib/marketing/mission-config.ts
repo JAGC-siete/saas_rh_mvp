@@ -1,6 +1,15 @@
-import { INFO_FUNNEL_PUBLIC_PATH, infoMissionPublicPath } from './info-funnel-path'
+import { infoMissionPublicPath } from './info-funnel-path'
 import { getMarketingSiteUrl } from './unsubscribe'
 import { SEQUENCE_STEP } from './email-sequence-ledger'
+
+/** Suscripcion-style leads (newsletter / calculadoras) use employee-focused mission copy. */
+function isSuscripcionMissionAudience(source?: string | null): boolean {
+  const s = (source ?? '').trim().toLowerCase()
+  if (s === 'info' || s.startsWith('info:') || s === 'info-page') return false
+  if (s === 'activar' || s.startsWith('activaciones:') || s.startsWith('activar:')) return false
+  if (s === 'ventas' || s.startsWith('ventas:')) return false
+  return true
+}
 
 export const MISSION_IDS = [1, 2, 3, 4, 5] as const
 export type MissionId = (typeof MISSION_IDS)[number]
@@ -21,40 +30,40 @@ export type MissionDef = {
 export const MISSIONS: Record<MissionId, MissionDef> = {
   1: {
     id: 1,
-    badge: 'Misión 1 de 5',
+    badge: 'Nota #1',
     stepLabel: 'Inercia',
-    question: '¿Cuántas horas calculas que pierdes al mes en tareas repetitivas?',
+    question: '¿Cuántas horas al mes crees que se te van en lo repetitivo — firmas, cruces, correcciones?',
     choices: [
       { id: '0-5', label: '0 a 5 horas' },
       { id: '5-15', label: '5 a 15 horas' },
-      { id: '15plus', label: '¡Más de 15 horas!' },
+      { id: '15plus', label: 'Más de 15 horas' },
     ],
   },
   2: {
     id: 2,
-    badge: 'Misión 2 de 5',
+    badge: 'Nota #2',
     stepLabel: 'Complejidad',
-    question: '¿Qué te da más miedo de automatizar?',
+    question: '¿Qué es lo que más te frena cuando piensas en automatizar algo?',
     choices: [
       { id: 'difficult', label: 'Que sea muy difícil' },
       { id: 'expensive', label: 'Que sea muy caro' },
-      { id: 'control', label: 'Perder el control legal' },
+      { id: 'control', label: 'Perder el control / algo legal' },
     ],
   },
   3: {
     id: 3,
-    badge: 'Misión 3 de 5',
+    badge: 'Nota #3',
     stepLabel: 'Costo oculto',
-    question: '¿Dónde sientes que se te escapa más el tiempo hoy?',
+    question: '¿Dónde sientes que hoy se te escapa más el tiempo?',
     choices: [
-      { id: 'attendance', label: 'Firmas y Asistencia' },
-      { id: 'payroll', label: 'Cálculos de Planilla' },
-      { id: 'permissions', label: 'Permisos y Vacaciones' },
+      { id: 'attendance', label: 'Firmas y asistencia' },
+      { id: 'payroll', label: 'Cálculos de planilla' },
+      { id: 'permissions', label: 'Permisos y vacaciones' },
     ],
   },
   4: {
     id: 4,
-    badge: 'Misión 4 de 5',
+    badge: 'Nota #4',
     stepLabel: 'Pseudo digitalización',
     question: 'Se honesto: ¿Tu Excel actual tiene errores que rezas porque nadie descubra?',
     choices: [
@@ -64,11 +73,76 @@ export const MISSIONS: Record<MissionId, MissionDef> = {
   },
   5: {
     id: 5,
-    badge: 'Misión final',
+    badge: 'Nota #5',
     stepLabel: 'Prueba en la sombra',
-    question: '¿Listo para ver el experimento sin riesgo?',
-    choices: [{ id: 'shadow', label: 'Iniciar la prueba en la sombra' }],
+    question: '¿Te interesa ver cómo sería esa prueba en la sombra?',
+    choices: [{ id: 'shadow', label: 'Sí, muéstrame' }],
   },
+}
+
+/** Employee-focused missions for /suscripcion leads (calculator audience). */
+export const SUSCRIPCION_MISSIONS: Record<MissionId, MissionDef> = {
+  1: {
+    id: 1,
+    badge: 'Nota #1',
+    stepLabel: 'Recibo vs cálculo',
+    question: '¿Alguna vez tu recibo no cuadró con lo que esperabas?',
+    choices: [
+      { id: 'yes-often', label: 'Sí, más de una vez' },
+      { id: 'yes-once', label: 'Sí, alguna vez' },
+      { id: 'never', label: 'No, siempre cuadra' },
+    ],
+  },
+  2: {
+    id: 2,
+    badge: 'Nota #2',
+    stepLabel: 'Deducciones',
+    question: '¿Entendés para qué va cada descuento en tu recibo?',
+    choices: [
+      { id: 'yes-clear', label: 'Sí, más o menos' },
+      { id: 'some', label: 'Algunos, no todos' },
+      { id: 'no-idea', label: 'Honestamente, no' },
+    ],
+  },
+  3: {
+    id: 3,
+    badge: 'Nota #3',
+    stepLabel: 'Fechas legales',
+    question: '¿Sabés cuándo te corresponde el aguinaldo / catorceavo?',
+    choices: [
+      { id: 'yes', label: 'Sí, tengo claro' },
+      { id: 'approx', label: 'Más o menos' },
+      { id: 'no', label: 'No estoy seguro/a' },
+    ],
+  },
+  4: {
+    id: 4,
+    badge: 'Nota #4',
+    stepLabel: 'Si no cuadra',
+    question: 'Si los números no coinciden, ¿qué harías primero?',
+    choices: [
+      { id: 'ask-hr', label: 'Preguntar en RRHH' },
+      { id: 'recalc', label: 'Volver a calcular yo/a' },
+      { id: 'stay-quiet', label: 'Dejarlo así' },
+    ],
+  },
+  5: {
+    id: 5,
+    badge: 'Nota #5',
+    stepLabel: 'Alertas',
+    question: '¿Te interesa seguir recibiendo alertas legales sobre tu sueldo?',
+    choices: [
+      { id: 'yes-alerts', label: 'Sí, avisame' },
+      { id: 'maybe', label: 'Tal vez' },
+    ],
+  },
+}
+
+export function getMissionDef(missionId: MissionId, source?: string | null): MissionDef {
+  if (isSuscripcionMissionAudience(source)) {
+    return SUSCRIPCION_MISSIONS[missionId]
+  }
+  return MISSIONS[missionId]
 }
 
 export function isMissionId(value: unknown): value is MissionId {
@@ -81,8 +155,12 @@ export function parseMissionId(raw: string | string[] | undefined): MissionId | 
   return isMissionId(n) ? n : null
 }
 
-export function isValidMissionChoice(missionId: MissionId, choice: string): boolean {
-  return MISSIONS[missionId].choices.some((c) => c.id === choice)
+export function isValidMissionChoice(
+  missionId: MissionId,
+  choice: string,
+  source?: string | null
+): boolean {
+  return getMissionDef(missionId, source).choices.some((c) => c.id === choice)
 }
 
 export function sequenceStepToMissionId(step: number): MissionId | null {
@@ -112,14 +190,18 @@ export function buildMissionActivarUrl(leadToken: string): string {
   return `${site}/activar?${params.toString()}`
 }
 
-export function buildMissionTextFooter(missionId: MissionId, leadToken: string): string {
-  const mission = MISSIONS[missionId]
-  const lines = ['', '🕹️ Tu misión (1 clic):', mission.question, '']
+export function buildMissionTextFooter(
+  missionId: MissionId,
+  leadToken: string,
+  source?: string | null
+): string {
+  const mission = getMissionDef(missionId, source)
+  const lines = ['', 'Campo · pregunta rápida (1 clic):', mission.question, '']
 
   for (const choice of mission.choices) {
     lines.push(`→ ${choice.label}: ${buildMissionPageUrl(missionId, leadToken, choice.id)}`)
   }
 
-  lines.push('', '— Jorge · Humano SISU')
+  lines.push('', '— Jorge')
   return lines.join('\n')
 }

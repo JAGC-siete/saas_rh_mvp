@@ -7,7 +7,7 @@ import PublicPageHead from '../../../components/SEO/PublicPageHead'
 import { Button } from '../../../components/ui/button'
 import { trackInfoMissionComplete } from '../../../lib/analytics/info-mission-events'
 import type { MissionFeedback } from '../../../lib/info-game/mission-feedback'
-import { MISSIONS, parseMissionId, isValidMissionChoice, type MissionId } from '../../../lib/marketing/mission-config'
+import { parseMissionId, getMissionDef, type MissionId } from '../../../lib/marketing/mission-config'
 import { recordMissionChoice } from '../../../lib/marketing/record-mission-choice'
 import { INFO_FUNNEL_PUBLIC_PATH, infoMissionPublicPath } from '../../../lib/marketing/info-funnel-path'
 
@@ -16,10 +16,17 @@ type PageProps = {
   choice: string
   feedback: MissionFeedback
   alreadyRecorded: boolean
+  leadSource: string | null
 }
 
-export default function InfoMissionPage({ missionId, choice, feedback, alreadyRecorded }: PageProps) {
-  const mission = MISSIONS[missionId]
+export default function InfoMissionPage({
+  missionId,
+  choice,
+  feedback,
+  alreadyRecorded,
+  leadSource,
+}: PageProps) {
+  const mission = getMissionDef(missionId, leadSource)
 
   useEffect(() => {
     trackInfoMissionComplete({ missionId, choice, alreadyRecorded })
@@ -93,18 +100,24 @@ export const getServerSideProps: GetServerSideProps<PageProps> = async (ctx) => 
   const leadToken = typeof ctx.query.lead === 'string' ? ctx.query.lead.trim() : ''
   const choice = typeof ctx.query.choice === 'string' ? ctx.query.choice.trim() : ''
 
-  if (!missionId || !leadToken || !choice || !isValidMissionChoice(missionId, choice)) {
+  if (!missionId || !leadToken || !choice) {
     return { notFound: true }
   }
 
-  const { getMissionFeedback } = await import('../../../lib/info-game/mission-feedback')
   const recorded = await recordMissionChoice({ missionId, leadToken, choice })
 
   if (!recorded.ok) {
     return { notFound: true }
   }
 
-  const feedback = getMissionFeedback(missionId, choice, recorded.firstName ?? 'Curioso', leadToken)
+  const { getMissionFeedback } = await import('../../../lib/info-game/mission-feedback')
+  const feedback = getMissionFeedback(
+    missionId,
+    choice,
+    recorded.firstName ?? 'Curioso',
+    leadToken,
+    recorded.leadSource ?? null
+  )
 
   return {
     props: {
@@ -112,6 +125,7 @@ export const getServerSideProps: GetServerSideProps<PageProps> = async (ctx) => 
       choice,
       feedback,
       alreadyRecorded: recorded.alreadyRecorded,
+      leadSource: recorded.leadSource ?? null,
     },
   }
 }

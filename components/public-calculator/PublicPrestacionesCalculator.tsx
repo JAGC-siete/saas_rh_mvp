@@ -860,7 +860,6 @@ export default function PublicPrestacionesCalculator({ config }: { config: Publi
           <CalculatorSubscriptionBridge
             tool={TOOL}
             placement="footer"
-            activarHref={activarUrl('footer')}
           />
         </div>
 

@@ -14,6 +14,8 @@ import {
 } from './email-sequence-ledger'
 import { sequenceStepToMissionId } from './mission-config'
 import { normalizeLeadSource } from './email-sequence-ledger'
+import { getInfoSequenceSubject } from './info-field-notes-email'
+import { getSuscripcionSequenceSubject } from './suscripcion-field-notes-email'
 import { buildSequenceEmailHtml, buildWelcomeEmailHtml } from './sequence-email-html'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
@@ -64,23 +66,30 @@ export async function sendSequenceEmail(input: SendSequenceEmailInput): Promise<
   const text = appendUnsubscribeFooter(bodyText, input.unsubscribeToken)
 
   const missionId = sequenceStepToMissionId(input.step)
-  const isInfoWelcome =
-    input.step === SEQUENCE_STEP.WELCOME && normalizeLeadSource(input.source) === 'info'
+  const leadKind = normalizeLeadSource(input.source)
+  const subject =
+    leadKind === 'info'
+      ? getInfoSequenceSubject(input.step)
+      : leadKind === 'suscripcion'
+        ? getSuscripcionSequenceSubject(input.step)
+        : content.subject
   const html =
     input.step === SEQUENCE_STEP.WELCOME
       ? buildWelcomeEmailHtml({
-          subject: content.subject,
-          bodyText: bodyText.replace(/\n\n— Jorge · Humano SISU[\s\S]*?(?=\n\n---|$)/, '').trim(),
+          subject,
+          bodyText: bodyText.replace(/\n\n— Jorge[\s\S]*?(?=\n\n---|$)/, '').trim(),
           unsubscribeToken: input.unsubscribeToken,
-          showMissionTeaser: isInfoWelcome,
+          showMissionTeaser: false,
+          source: input.source,
         })
       : missionId
         ? buildSequenceEmailHtml({
-            subject: content.subject,
+            subject,
             bodyText,
             unsubscribeToken: input.unsubscribeToken,
             missionId,
             leadToken: input.unsubscribeToken,
+            source: input.source,
           })
         : undefined
 
@@ -95,7 +104,7 @@ export async function sendSequenceEmail(input: SendSequenceEmailInput): Promise<
   await resend.emails.send({
     from: getResendFromContact(),
     to: input.to,
-    subject: content.subject,
+    subject,
     text,
     ...(html ? { html } : {}),
   })

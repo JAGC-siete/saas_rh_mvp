@@ -28,9 +28,8 @@ describe('lead registro notification', () => {
     assert.ok(ventas.includes('también te incluí las llaves del sistema'))
     assert.ok(ventas.includes('números y tus accesos'))
 
-    assert.ok(suscripcion.includes('Acabo de enviarte algo que la mayoría ignora'))
-    assert.ok(suscripcion.includes('venda en los ojos'))
-    assert.ok(suscripcion.includes('descubrirla'))
+    assert.ok(suscripcion.includes('Revisaste tus deducciones'))
+    assert.ok(suscripcion.includes('menos de 1 minuto'))
 
     for (const msg of [activar, ventas, info, suscripcion]) {
       assert.ok(msg.includes('jorgearturo@humanosisu.net'))

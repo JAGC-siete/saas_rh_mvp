@@ -81,11 +81,17 @@ export function buildLeadFollowUpWhatsAppMessage(source: LeadRegistroSource): st
     ].join('\n')
   }
 
-  return [
-    'Acabo de enviarte algo que la mayoría ignora hasta que es muy tarde. Hay una frase inofensiva pero que en realidad funciona como una venda en los ojos.',
-    '',
-    `Ve a quitarte la duda. Busca a ${CONTACT_SENDER_HINT} en tu correo ahora mismo para descubrirla.`,
-  ].join('\n')
+  if (source === 'suscripcion') {
+    return [
+      'Revisaste tus deducciones — ahora mirá tu correo.',
+      '',
+      `Buscá a ${CONTACT_SENDER_HINT}`,
+      '',
+      'La primera nota se lee en menos de 1 minuto.',
+    ].join('\n')
+  }
+
+  return ''
 }
 
 function getWhatsAppCallingCode(countryCode: CountryCode): string {

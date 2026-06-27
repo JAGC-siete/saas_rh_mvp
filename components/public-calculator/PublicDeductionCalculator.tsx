@@ -900,7 +900,6 @@ export default function PublicDeductionCalculator({ config }: { config: PublicCa
           <CalculatorSubscriptionBridge
             tool={calcTool}
             placement="footer"
-            activarHref={activarUrl('footer')}
           />
         </div>
       </div>

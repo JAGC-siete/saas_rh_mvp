@@ -8,15 +8,16 @@ import {
 import { MARKETING_UNSUBSCRIBE_FOOTER_TEXT, buildUnsubscribeUrl } from './unsubscribe'
 import {
   buildMissionPageUrl,
-  MISSIONS,
+  getMissionDef,
   type MissionId,
 } from './mission-config'
 import { INFO_WELCOME_MISSION_TEASER } from './info-sequence-timing'
+import { normalizeLeadSource } from './email-sequence-ledger'
 
 const T = LIQUID
 
-function missionChoiceButtons(missionId: MissionId, leadToken: string): string {
-  const mission = MISSIONS[missionId]
+function missionChoiceButtons(missionId: MissionId, leadToken: string, source?: string | null): string {
+  const mission = getMissionDef(missionId, source)
   const buttons = mission.choices
     .map((choice, idx) => {
       const href = buildMissionPageUrl(missionId, leadToken, choice.id)
@@ -37,9 +38,9 @@ function missionChoiceButtons(missionId: MissionId, leadToken: string): string {
     .join('')
 
   return `
-    <div style="margin: 28px 0 8px 0; padding: 20px 18px; border-radius: 16px; border: 1px solid rgba(168, 85, 247, 0.35); background: rgba(168, 85, 247, 0.08);">
-      <p style="margin: 0 0 6px 0; font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #c4b5fd;">
-        🕹️ ${escapeHtml(mission.badge)}
+    <div style="margin: 28px 0 8px 0; padding: 20px 18px; border-radius: 16px; border: 1px solid rgba(251, 191, 36, 0.35); background: rgba(251, 191, 36, 0.06);">
+      <p style="margin: 0 0 6px 0; font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #fcd34d;">
+        Campo · ${escapeHtml(mission.badge)}
       </p>
       <p style="margin: 0 0 16px 0; font-size: 16px; font-weight: 600; color: ${T.text}; line-height: 1.45;">
         ${escapeHtml(mission.question)}
@@ -70,7 +71,7 @@ function bodyTextToHtml(bodyText: string, stripTeaser = false): string {
   if (stripTeaser) {
     text = text.replace(new RegExp(`\\n\\n${INFO_WELCOME_MISSION_TEASER.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`), '').trim()
   }
-  const withoutMissionFooter = text.replace(/\n\n🕹️ Tu misión[\s\S]*?(?=\n\n— Jorge|$)/, '').trim()
+  const withoutMissionFooter = text.replace(/\n\nCampo · pregunta[\s\S]*?(?=\n\n— Jorge|$)/, '').trim()
   const blocks = withoutMissionFooter.split(/\n\n+/).filter(Boolean)
   return blocks
     .map((block) => {
@@ -83,7 +84,7 @@ function bodyTextToHtml(bodyText: string, stripTeaser = false): string {
 }
 
 function signOffHtml(): string {
-  return liquidParagraph('Un saludo,<br /><strong style="color: #fff;">Jorge</strong> · Humano SISU')
+  return liquidParagraph('— <strong style="color: #fff;">Jorge</strong>')
 }
 
 function unsubscribeHtml(token: string): string {
@@ -102,13 +103,14 @@ export type BuildSequenceEmailHtmlInput = {
   missionId?: MissionId | null
   leadToken?: string
   badge?: string
+  source?: string | null
 }
 
 export function buildSequenceEmailHtml(input: BuildSequenceEmailHtmlInput): string {
-  const { subject, bodyText, unsubscribeToken, missionId, leadToken, badge } = input
+  const { subject, bodyText, unsubscribeToken, missionId, leadToken, badge, source } = input
 
   const missionBlock =
-    missionId && leadToken ? missionChoiceButtons(missionId, leadToken) : ''
+    missionId && leadToken ? missionChoiceButtons(missionId, leadToken, source) : ''
 
   const bodyHtml = [
     bodyTextToHtml(bodyText),
@@ -119,8 +121,8 @@ export function buildSequenceEmailHtml(input: BuildSequenceEmailHtmlInput): stri
 
   return wrapLiquidEmail({
     title: subject,
-    subtitle: 'Tablero de misiones · Humano SISU',
-    badge: badge ?? (missionId ? MISSIONS[missionId].badge : 'Serie educativa'),
+    subtitle: 'Tablero de notas de campo · Humano SISU',
+    badge: badge ?? (missionId ? getMissionDef(missionId, source).badge : 'Serie educativa'),
     bodyHtml,
     footerNote: `Humano SISU · ${SITE_URL.replace(/^https?:\/\//, '')}`,
     extraCss: `
@@ -134,6 +136,7 @@ export function buildWelcomeEmailHtml(input: {
   bodyText: string
   unsubscribeToken: string
   showMissionTeaser?: boolean
+  source?: string | null
 }): string {
   const bodyHtml = [
     bodyTextToHtml(input.bodyText, input.showMissionTeaser),
@@ -144,8 +147,11 @@ export function buildWelcomeEmailHtml(input: {
 
   return wrapLiquidEmail({
     title: input.subject,
-    subtitle: 'Una nota personal antes de las misiones',
-    badge: 'Misión 0',
+    subtitle:
+      normalizeLeadSource(input.source) === 'suscripcion'
+        ? 'Alertas sobre tu sueldo · Humano SISU'
+        : 'Notas de campo · Humano SISU',
+    badge: 'Nota #0',
     bodyHtml,
   })
 }

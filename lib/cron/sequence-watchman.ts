@@ -3,13 +3,14 @@ import { logger } from '../logger'
 import {
   getWatchWindowKey,
   isBiMonthlyWatchDay,
-  normalizeLeadSource,
   SEQUENCE_COMPLETE_STEP,
   SEQUENCE_CONTENT,
   WATCHMAN_FIRST_STEP,
   WATCHMAN_LAST_STEP,
 } from '../marketing/email-sequence-ledger'
 import { sendSequenceEmail } from '../marketing/send-sequence-email'
+import { isInfoAcceleratedLead } from '../marketing/info-sequence-timing'
+import { isSuscripcionAcceleratedLead } from '../marketing/suscripcion-sequence-timing'
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -104,8 +105,8 @@ export async function runSequenceWatchman(now: Date = new Date()): Promise<Seque
       continue
     }
 
-    // /info leads use fixed 48h cadence via runInfoAcceleratedPainPoints (daily cron).
-    if (normalizeLeadSource(lead.source) === 'info') {
+    // Accelerated leads use fixed 48h cadence via daily cron jobs.
+    if (isInfoAcceleratedLead(lead.source) || isSuscripcionAcceleratedLead(lead.source)) {
       continue
     }
 

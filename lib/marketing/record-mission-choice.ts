@@ -15,6 +15,7 @@ export type RecordMissionChoiceResult =
       leadId: string
       firstName: string | null
       email: string
+      leadSource: string | null
       alreadyRecorded: boolean
     }
   | { ok: false; reason: 'invalid_choice' | 'lead_not_found' | 'db_error' }
@@ -30,17 +31,13 @@ export async function recordMissionChoice(
 ): Promise<RecordMissionChoiceResult> {
   const { missionId, leadToken, choice } = input
 
-  if (!isValidMissionChoice(missionId, choice)) {
-    return { ok: false, reason: 'invalid_choice' }
-  }
-
   const client =
     input.supabase ??
     createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
 
   const { data: lead, error: leadError } = await client
     .from('marketing_leads')
-    .select('id, email, full_name, status')
+    .select('id, email, full_name, status, source')
     .eq('unsubscribe_token', leadToken.trim())
     .maybeSingle()
 
@@ -51,6 +48,10 @@ export async function recordMissionChoice(
 
   if (!lead || lead.status === 'unsubscribed') {
     return { ok: false, reason: 'lead_not_found' }
+  }
+
+  if (!isValidMissionChoice(missionId, choice, lead.source)) {
+    return { ok: false, reason: 'invalid_choice' }
   }
 
   const { data: existing } = await client
@@ -66,6 +67,7 @@ export async function recordMissionChoice(
       leadId: lead.id,
       firstName: firstNameFromLead(lead.full_name, lead.email),
       email: lead.email,
+      leadSource: lead.source,
       alreadyRecorded: true,
     }
   }
@@ -92,6 +94,7 @@ export async function recordMissionChoice(
     leadId: lead.id,
     firstName: firstNameFromLead(lead.full_name, lead.email),
     email: lead.email,
+    leadSource: lead.source,
     alreadyRecorded: false,
   }
 }

@@ -4,6 +4,8 @@ import { sendTrialReminderEmail } from '../../../lib/emails/trial-reminder'
 import { calculateAttendanceHoursForDate } from '../../../lib/attendance/calculate-hours'
 import { runInfoAcceleratedPainPoints } from '../../../lib/cron/info-sequence-pain-points'
 import { runInfoDelayedSequenceWelcome } from '../../../lib/cron/info-sequence-welcome'
+import { runSuscripcionAcceleratedPainPoints } from '../../../lib/cron/suscripcion-sequence-pain-points'
+import { runSuscripcionDelayedSequenceWelcome } from '../../../lib/cron/suscripcion-sequence-welcome'
 import { runLateAttendanceReportCron } from '../../../lib/cron/late-attendance-report'
 import { runSequenceWatchman } from '../../../lib/cron/sequence-watchman'
 import { isBiMonthlyWatchDay } from '../../../lib/marketing/email-sequence-ledger'
@@ -48,6 +50,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const infoPainPointsResult = await runInfoAcceleratedPainPoints(now)
     logger.info('Daily CRON: info accelerated pain points completed', infoPainPointsResult)
 
+    // 5c. /suscripcion delayed welcome (24h after recibo pack)
+    const suscripcionWelcomeResult = await runSuscripcionDelayedSequenceWelcome(now)
+    logger.info('Daily CRON: suscripcion delayed sequence welcome completed', suscripcionWelcomeResult)
+
+    // 5d. /suscripcion accelerated pain points (48h cadence)
+    const suscripcionPainPointsResult = await runSuscripcionAcceleratedPainPoints(now)
+    logger.info('Daily CRON: suscripcion accelerated pain points completed', suscripcionPainPointsResult)
+
     // 6. Marketing sequence watchman (bi-monthly windows: days 12–16 and 26–30; excludes /info)
     let watchmanResult: Awaited<ReturnType<typeof runSequenceWatchman>> | null = null
     if (isBiMonthlyWatchDay(now)) {
@@ -67,6 +77,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       timestamp: now.toISOString(),
       infoWelcome: infoWelcomeResult,
       infoPainPoints: infoPainPointsResult,
+      suscripcionWelcome: suscripcionWelcomeResult,
+      suscripcionPainPoints: suscripcionPainPointsResult,
       watchman: watchmanResult,
       lateAttendanceReport: lateReportResult,
     })

@@ -511,7 +511,6 @@ export default function PublicBenefitCalculator({ config }: { config: PublicBene
           <CalculatorSubscriptionBridge
             tool={tool}
             placement="footer"
-            activarHref={activarUrl('footer')}
           />
         </div>
 

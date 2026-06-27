@@ -3,8 +3,8 @@ import assert from 'node:assert/strict'
 import {
   buildMissionPageUrl,
   buildMissionTextFooter,
+  getMissionDef,
   isValidMissionChoice,
-  MISSIONS,
 } from '../lib/marketing/mission-config'
 
 describe('marketing mission config', () => {
@@ -15,16 +15,23 @@ describe('marketing mission config', () => {
     assert.ok(url.includes('choice=5-15'))
   })
 
-  it('validates mission choices', () => {
-    assert.equal(isValidMissionChoice(1, '15plus'), true)
-    assert.equal(isValidMissionChoice(1, 'invalid'), false)
-    assert.equal(isValidMissionChoice(5, 'shadow'), true)
+  it('validates mission choices by lead source', () => {
+    assert.equal(isValidMissionChoice(1, '15plus', 'info'), true)
+    assert.equal(isValidMissionChoice(1, 'invalid', 'info'), false)
+    assert.equal(isValidMissionChoice(5, 'shadow', 'info'), true)
   })
 
   it('buildMissionTextFooter includes all choice links', () => {
-    const footer = buildMissionTextFooter(2, 'tok')
-    assert.ok(footer.includes(MISSIONS[2].question))
+    const footer = buildMissionTextFooter(2, 'tok', 'info')
+    assert.ok(footer.includes('Campo · pregunta'))
     assert.ok(footer.includes('Que sea muy difícil'))
     assert.ok(footer.includes('choice=difficult'))
+  })
+
+  it('suscripcion missions use employee-focused questions', () => {
+    const mission = getMissionDef(1, 'suscripcion')
+    assert.ok(mission.question.includes('recibo'))
+    assert.ok(isValidMissionChoice(1, 'yes-once', 'suscripcion'))
+    assert.equal(isValidMissionChoice(1, '15plus', 'suscripcion'), false)
   })
 })

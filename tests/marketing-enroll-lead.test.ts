@@ -40,27 +40,29 @@ describe('marketing welcome greetings by source', () => {
     assert.ok(activar.includes(WELCOME_BODY_AFTER_GREETING))
 
     const subs = buildWelcomeText('suscripcion-page')
-    assert.ok(subs.startsWith(WELCOME_GREETINGS.suscripcion))
-    assert.ok(subs.includes(WELCOME_BODY_AFTER_GREETING))
+    assert.ok(subs.startsWith('Hola,'))
+    assert.ok(subs.includes('Te quedaste'))
+    assert.ok(subs.includes('recibo no coincide'))
+    assert.ok(!subs.includes(WELCOME_BODY_AFTER_GREETING))
 
     const info = buildWelcomeText('info')
-    assert.ok(info.startsWith(WELCOME_GREETINGS.info))
-    assert.ok(info.includes(WELCOME_BODY_AFTER_GREETING))
+    assert.ok(info.startsWith('Hola,'))
+    assert.ok(info.includes('Te quedaste'))
+    assert.ok(info.includes('siempre lo hemos hecho así'))
+    assert.ok(!info.includes(WELCOME_BODY_AFTER_GREETING))
   })
 
-  it('welcome body after greeting is identical across sources', () => {
+  it('welcome body after greeting is identical for ventas and activar', () => {
     const ventasBody = buildWelcomeText('ventas').split('\n\n').slice(1).join('\n\n')
     const activarBody = buildWelcomeText('activar').split('\n\n').slice(1).join('\n\n')
-    const subsBody = buildWelcomeText('suscripcion-page').split('\n\n').slice(1).join('\n\n')
 
     assert.equal(ventasBody, WELCOME_BODY_AFTER_GREETING)
     assert.equal(activarBody, WELCOME_BODY_AFTER_GREETING)
-    assert.equal(subsBody, WELCOME_BODY_AFTER_GREETING)
     assert.equal(ventasBody, activarBody)
   })
 
-  it('SEQUENCE_CONTENT welcome uses default suscripcion greeting', () => {
-    assert.ok(SEQUENCE_CONTENT[SEQUENCE_STEP.WELCOME].text.startsWith(WELCOME_GREETINGS.suscripcion))
+  it('SEQUENCE_CONTENT welcome uses suscripcion field-notes welcome', () => {
+    assert.ok(SEQUENCE_CONTENT[SEQUENCE_STEP.WELCOME].text.includes('recibo no coincide'))
   })
 
   it('isMoreSpecificSource ranks activar > ventas > suscripcion', () => {
@@ -89,25 +91,39 @@ describe('sendSequenceEmail welcome source (unit)', () => {
 
     assert.ok(welcomeVentas.startsWith('Hola, estás más cerca que nunca.'))
     assert.ok(painPoint1.startsWith('Hola María,'))
-    assert.ok(painPoint1.includes('nota con el truco'))
+    assert.ok(painPoint1.includes('extracto del sobre'))
     assert.ok(painPoint1.includes('siempre lo hemos hecho así'))
     assert.ok(!painPoint1.includes('6 meses de implementación'))
+
+    const subsPp1 = buildPainPoint1Text({
+      nombre: 'María',
+      email: 'm@x.com',
+      source: 'suscripcion',
+    })
+    assert.ok(subsPp1.includes('recibo siempre sale'))
+    assert.ok(subsPp1.includes('lo que siempre me han pagado') === false)
   })
 
   it('pain point 2 adapts intro and closing by lead source', () => {
     const info = buildPainPoint2Text({ nombre: 'Ana', email: 'a@x.com', source: 'info' })
+    const infoWithMission = buildPainPoint2Text({
+      nombre: 'Ana',
+      email: 'a@x.com',
+      source: 'info',
+      leadToken: 'tok',
+    })
     const ventas = buildPainPoint2Text({ nombre: 'Ana', email: 'a@x.com', source: 'ventas' })
     const activar = buildPainPoint2Text({ nombre: 'Ana', email: 'a@x.com', source: 'activar' })
 
     assert.ok(info.startsWith('Hola Ana,'))
-    assert.ok(info.includes('temor que nos atrapa'))
-    assert.ok(info.includes('tres meses instalándolo'))
-    assert.ok(info.includes('72 horas o menos'))
+    assert.ok(info.includes('sistemas nuevos es complicado'))
+    assert.ok(info.includes('WhatsApp como sistema operativo'))
+    assert.ok(infoWithMission.includes('Campo · pregunta'))
     assert.ok(ventas.includes('cotizando o comparando opciones'))
     assert.ok(ventas.includes('cerrar la cotización'))
     assert.ok(activar.includes('activar tu entorno'))
     assert.ok(activar.includes('SISU puede servirte'))
-    assert.ok(info.includes('errores "invisibles"'))
+    assert.ok(ventas.includes('tres meses instalándolo'))
   })
 
   it('pain point 3 adapts intro, SISU line, and teaser by lead source', () => {
@@ -116,9 +132,8 @@ describe('sendSequenceEmail welcome source (unit)', () => {
     const activar = buildPainPoint3Text({ nombre: 'Luis', email: 'l@x.com', source: 'activar' })
 
     assert.ok(info.startsWith('Hola Luis,'))
-    assert.ok(info.includes('errores "invisibles"'))
-    assert.ok(info.includes('fugas de dinero'))
-    assert.ok(info.includes('dormir tranquilo'))
+    assert.ok(info.includes('se escapa algo'))
+    assert.ok(info.includes('¿Lo hicimos bien?'))
     assert.ok(ventas.includes('evaluando una cotización'))
     assert.ok(ventas.includes('cotizar y decidir con números claros'))
     assert.ok(ventas.includes('hojas de cálculo'))
@@ -133,11 +148,8 @@ describe('sendSequenceEmail welcome source (unit)', () => {
     const activar = buildPainPoint4Text({ nombre: 'Carla', email: 'c@x.com', source: 'activar' })
 
     assert.ok(info.startsWith('Hola Carla,'))
-    assert.ok(info.includes('biométrico análogo'))
-    assert.ok(info.includes('pseudo digitalización') === false)
-    assert.ok(info.includes('hacer el trabajo doble'))
-    assert.ok(info.includes('liberador de tiempo'))
-    assert.ok(info.includes('último) correo de esta serie'))
+    assert.ok(info.includes('Biométrico en la puerta'))
+    assert.ok(info.includes('reprocesamiento disfrazado'))
     assert.ok(ventas.includes('armas la cotización'))
     assert.ok(ventas.includes('final_v2'))
     assert.ok(ventas.includes('cerrar la decisión'))
@@ -147,14 +159,19 @@ describe('sendSequenceEmail welcome source (unit)', () => {
   })
 
   it('pain point 5 is the closing email with source-specific CTA', () => {
-    const info = buildPainPoint5Text({ nombre: 'Pedro', email: 'p@x.com', source: 'info' })
+    const info = buildPainPoint5Text({
+      nombre: 'Pedro',
+      email: 'p@x.com',
+      source: 'info',
+      leadToken: 'tok',
+    })
     const ventas = buildPainPoint5Text({ nombre: 'Pedro', email: 'p@x.com', source: 'ventas' })
     const activar = buildPainPoint5Text({ nombre: 'Pedro', email: 'p@x.com', source: 'activar' })
 
     assert.ok(info.startsWith('Hola Pedro,'))
-    assert.ok(info.includes('último correo de esta serie'))
+    assert.ok(info.includes('Última nota de esta serie'))
     assert.ok(info.includes('prueba en la sombra'))
-    assert.ok(info.includes('quiero echar un vistazo'))
+    assert.ok(info.includes('Sí, muéstrame'))
     assert.ok(info.includes('/activar'))
     assert.ok(ventas.includes('tablas de cotización'))
     assert.ok(ventas.includes('sin compromiso de compra'))
