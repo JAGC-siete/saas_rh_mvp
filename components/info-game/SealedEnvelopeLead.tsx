@@ -150,28 +150,33 @@ export default function SealedEnvelopeLead() {
             exit={{ opacity: 0, scale: 0.96 }}
             transition={{ duration: 0.35 }}
           >
-            <div className="text-center mb-6">
+            <div className="text-center mb-4">
               <span className="inline-block px-3 py-1 mb-4 text-xs rounded-full bg-green-500/15 text-green-300 border border-green-500/25">
                 {copy.badge}
               </span>
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white leading-tight">
+                {copy.intrigue.headline}
+              </h1>
             </div>
             <BorderBeam className="mb-6">
               <div className="glass-modern rounded-2xl border border-amber-500/25 p-8 sm:p-10 text-center bg-gradient-to-b from-amber-500/5 to-transparent">
-                <div className="text-5xl sm:text-6xl mb-4" aria-hidden>
+                <motion.div
+                  className="text-5xl sm:text-6xl mb-4"
+                  aria-hidden
+                  animate={{ y: [0, -6, 0], scale: [1, 1.03, 1] }}
+                  transition={{ repeat: Infinity, duration: 3.5, ease: 'easeInOut' }}
+                >
                   ✉️
-                </div>
+                </motion.div>
                 <p className="text-xs font-semibold tracking-widest text-amber-300/90 mb-2">
                   {copy.intrigue.envelopeLabel}
                 </p>
                 <p className="text-sm text-brand-200/90 max-w-xs mx-auto">{copy.intrigue.envelopeHint}</p>
               </div>
             </BorderBeam>
-            <div className="text-center mb-8">
-              <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-4 leading-tight">
-                {copy.intrigue.headline}
-              </h1>
-              <p className="text-base sm:text-lg text-brand-200/90 leading-relaxed">{copy.intrigue.subheadline}</p>
-            </div>
+            <p className="text-base sm:text-lg text-brand-200/90 leading-relaxed text-center mb-8">
+              {copy.intrigue.subheadline}
+            </p>
             <Button type="button" variant="modern" className="w-full" onClick={() => setStatus('unlocking')}>
               {copy.intrigue.cta}
             </Button>
