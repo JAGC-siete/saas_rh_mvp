@@ -4,7 +4,6 @@ import PublicPageShell from '../components/landing/PublicPageShell'
 import PublicPageHead from '../components/SEO/PublicPageHead'
 import SchemaMarkup from '../components/SEO/SchemaMarkup'
 import SealedEnvelopeLead from '../components/info-game/SealedEnvelopeLead'
-import { CALCULATOR_HUB_LINKS } from '../lib/public-calculator/hub-links'
 import { initGoogleAdsTracking } from '../lib/analytics/googleAds'
 import { generateBreadcrumbListSchema, generateFAQPageSchema, generateWebPageSchema } from '../lib/seo/schema'
 import { getPageDescription } from '../lib/seo/description'
@@ -86,29 +85,6 @@ export default function InfoPage() {
                 className="inline-flex justify-center py-2.5 px-5 border border-white/20 hover:bg-white/10 text-white font-semibold rounded-xl text-sm"
               >
                 Cotización y precios
-              </Link>
-            </div>
-          </div>
-
-          <div className="mb-8">
-            <h2 className="text-lg font-semibold text-white mb-3">Calculadoras gratuitas</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {[...CALCULATOR_HUB_LINKS.deductions, ...CALCULATOR_HUB_LINKS.benefits].map((item) => (
-                <Link
-                  key={item.href}
-                  href={`${item.href}?utm_source=info&utm_medium=internal&utm_campaign=calc-link`}
-                  className="glass rounded-xl p-4 border border-white/10 hover:border-cyan-400/40 transition-all text-sm"
-                >
-                  <div className="font-medium text-white">{item.title}</div>
-                  <div className="text-xs text-brand-300/70 mt-1">{item.country}</div>
-                </Link>
-              ))}
-              <Link
-                href={`${CALCULATOR_HUB_LINKS.prestaciones.href}?utm_source=info&utm_medium=internal&utm_campaign=calc-link`}
-                className="glass rounded-xl p-4 border border-white/10 hover:border-cyan-400/40 transition-all text-sm sm:col-span-2"
-              >
-                <div className="font-medium text-white">{CALCULATOR_HUB_LINKS.prestaciones.title}</div>
-                <div className="text-xs text-brand-300/70 mt-1">{CALCULATOR_HUB_LINKS.prestaciones.subtitle}</div>
               </Link>
             </div>
           </div>
