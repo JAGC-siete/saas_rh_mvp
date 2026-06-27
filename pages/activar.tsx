@@ -34,7 +34,7 @@ export default function ActivarPage() {
   )
 
   return (
-    <PublicPageShell showFooter={false} loginAlwaysVisible mainClassName="flex flex-col overflow-hidden">
+    <PublicPageShell showTrustBar loginAlwaysVisible mainClassName="flex flex-col">
       <PublicPageHead
         title={getPageTitle('activate')}
         description={getPageDescription('activate')}

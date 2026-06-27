@@ -29,7 +29,7 @@ export default function VentasPage() {
   )
 
   return (
-    <PublicPageShell showFooter={false} loginAlwaysVisible mainClassName="flex flex-col overflow-hidden">
+    <PublicPageShell showTrustBar loginAlwaysVisible mainClassName="flex flex-col">
       <PublicPageHead
         title={getPageTitle('ventas')}
         description={getPageDescription('ventas')}
