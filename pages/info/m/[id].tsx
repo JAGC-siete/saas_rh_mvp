@@ -9,6 +9,7 @@ import { trackInfoMissionComplete } from '../../../lib/analytics/info-mission-ev
 import type { MissionFeedback } from '../../../lib/info-game/mission-feedback'
 import { MISSIONS, parseMissionId, isValidMissionChoice, type MissionId } from '../../../lib/marketing/mission-config'
 import { recordMissionChoice } from '../../../lib/marketing/record-mission-choice'
+import { INFO_FUNNEL_PUBLIC_PATH, infoMissionPublicPath } from '../../../lib/marketing/info-funnel-path'
 
 type PageProps = {
   missionId: MissionId
@@ -29,7 +30,7 @@ export default function InfoMissionPage({ missionId, choice, feedback, alreadyRe
       <PublicPageHead
         title={`${feedback.title} | Humano SISU`}
         description={feedback.headline}
-        canonicalPath={`/info/m/${missionId}`}
+        canonicalPath={infoMissionPublicPath(missionId)}
         noindex
       />
 
@@ -75,7 +76,7 @@ export default function InfoMissionPage({ missionId, choice, feedback, alreadyRe
             )}
 
             <Link
-              href="/info"
+              href={INFO_FUNNEL_PUBLIC_PATH}
               className="block text-center text-sm text-brand-300 hover:text-white underline"
             >
               Volver al Tablón de la Intriga

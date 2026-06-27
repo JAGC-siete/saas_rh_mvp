@@ -1,4 +1,6 @@
 /** Enlaces del cluster de calculadoras — hub & spoke para SEO interno. */
+import { INFO_FUNNEL_PUBLIC_PATH } from '../marketing/info-funnel-path'
+
 export const CALCULATOR_HUB_LINKS = {
   hub: { href: '/calculadora', label: 'Todas las calculadoras laborales' },
   suscripcion: {
@@ -7,9 +9,9 @@ export const CALCULATOR_HUB_LINKS = {
     subtitle: 'Guías y alertas legales tras usar las calculadoras',
   },
   info: {
-    href: '/info',
-    label: 'Solicitar más información',
-    subtitle: 'Recursos sobre nómina y asistencia para PyMEs',
+    href: INFO_FUNNEL_PUBLIC_PATH,
+    label: 'El Secreto',
+    subtitle: 'Archivo reservado: truco y misiones sobre nómina',
   },
   landing: { href: '/#como-funciona', label: 'Automatizar nómina con Humano SISU' },
   deductions: [

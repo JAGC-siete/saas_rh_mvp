@@ -79,6 +79,7 @@ export const MIDDLEWARE_CONFIG = {
       '/implementacion-48-horas',
       '/deducciones-honduras-ihss-rap-isr',
       '/afiliados',
+      '/secreto',
       '/info',
       '/suscripcion',
       '/recursos',

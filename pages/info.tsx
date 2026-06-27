@@ -9,6 +9,7 @@ import { initGoogleAdsTracking } from '../lib/analytics/googleAds'
 import { generateBreadcrumbListSchema, generateFAQPageSchema, generateWebPageSchema } from '../lib/seo/schema'
 import { getPageDescription } from '../lib/seo/description'
 import { getPageTitle } from '../lib/seo/title'
+import { INFO_FUNNEL_PUBLIC_PATH } from '../lib/marketing/info-funnel-path'
 
 const FAQS = [
   {
@@ -38,14 +39,14 @@ export default function InfoPage() {
   const pageDescription = getPageDescription('info')
 
   const webPageSchema = generateWebPageSchema({
-    url: '/info',
+    url: INFO_FUNNEL_PUBLIC_PATH,
     title: pageTitle,
     description: pageDescription,
     inLanguage: 'es',
   })
   const breadcrumbSchema = generateBreadcrumbListSchema([
     { name: 'Inicio', url: '/' },
-    { name: 'Más información', url: '/info' },
+    { name: 'El Secreto', url: INFO_FUNNEL_PUBLIC_PATH },
   ])
   const faqSchema = generateFAQPageSchema(FAQS)
 
@@ -55,7 +56,7 @@ export default function InfoPage() {
 
   return (
     <PublicPageShell showSpotlight loginAlwaysVisible>
-      <PublicPageHead title={pageTitle} description={pageDescription} canonicalPath="/info" />
+      <PublicPageHead title={pageTitle} description={pageDescription} canonicalPath={INFO_FUNNEL_PUBLIC_PATH} />
       <SchemaMarkup schema={[webPageSchema, breadcrumbSchema, faqSchema]} />
 
       <section id="info-lead" className="py-10 sm:py-14 md:py-16">

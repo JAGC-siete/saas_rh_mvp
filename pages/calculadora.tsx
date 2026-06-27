@@ -134,7 +134,7 @@ export default function CalculadoraHubPage() {
               Suscribirme al newsletter
             </Link>
             <Link
-              href="/info?utm_source=calculadora-hub&utm_medium=cta&utm_campaign=footer"
+              href={`${CALCULATOR_HUB_LINKS.info.href}?utm_source=calculadora-hub&utm_medium=cta&utm_campaign=footer`}
               className="inline-flex justify-center py-3 px-6 glass-modern hover:bg-white/10 text-white font-semibold rounded-xl border border-white/20"
             >
               Más información

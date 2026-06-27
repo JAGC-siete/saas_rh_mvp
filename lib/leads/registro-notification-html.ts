@@ -29,7 +29,7 @@ const SOURCE_LABELS: Record<
   },
   info: {
     title: 'Nueva Solicitud de Información en SISU',
-    subtitle: 'Lead solicitó más información desde /info',
+    subtitle: 'Lead solicitó más información desde /secreto',
     badge: 'Más información',
   },
 }

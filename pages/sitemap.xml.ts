@@ -1,5 +1,6 @@
 import { GetServerSideProps } from 'next'
 import { recursosAdapter } from '../lib/recursos'
+import { INFO_FUNNEL_PUBLIC_PATH } from '../lib/marketing/info-funnel-path'
 
 interface SitemapUrl {
   loc: string
@@ -79,7 +80,7 @@ const publicPages: SitemapUrl[] = [
     priority: 0.7
   },
   {
-    loc: '/info',
+    loc: INFO_FUNNEL_PUBLIC_PATH,
     changefreq: 'weekly',
     priority: 0.9,
     lastmod: new Date().toISOString().split('T')[0]

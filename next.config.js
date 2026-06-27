@@ -59,12 +59,18 @@ const nextConfig = {
   // Configuración para rutas internas (no subdominios)
   async rewrites() {
     return [
-      // Rewrite /favicon.ico to logo to prevent 502 errors
-      // Browsers automatically request /favicon.ico, and if it doesn't exist,
-      // it can cause 502 errors when behind a proxy like Cloudflare
       {
         source: '/favicon.ico',
         destination: '/logo-humano-sisu.png',
+      },
+      // Public slug → internal pages (files stay at pages/info*)
+      {
+        source: '/secreto',
+        destination: '/info',
+      },
+      {
+        source: '/secreto/m/:id',
+        destination: '/info/m/:id',
       },
     ]
   },
@@ -125,6 +131,17 @@ const nextConfig = {
         source: '/login',
         destination: '/app/login',
         permanent: false,
+      },
+      // Funnel TOFU: slug público /secreto (legacy /info → 301)
+      {
+        source: '/info',
+        destination: '/secreto',
+        permanent: true,
+      },
+      {
+        source: '/info/m/:id',
+        destination: '/secreto/m/:id',
+        permanent: true,
       },
       // Redirigir attendance legacy - COMENTADO: ahora /attendance/register existe directamente
       // {

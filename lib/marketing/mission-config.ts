@@ -1,3 +1,4 @@
+import { INFO_FUNNEL_PUBLIC_PATH, infoMissionPublicPath } from './info-funnel-path'
 import { getMarketingSiteUrl } from './unsubscribe'
 import { SEQUENCE_STEP } from './email-sequence-ledger'
 
@@ -96,7 +97,7 @@ export function sequenceStepToMissionId(step: number): MissionId | null {
 export function buildMissionPageUrl(missionId: MissionId, leadToken: string, choiceId: string): string {
   const site = getMarketingSiteUrl().replace(/\/$/, '')
   const params = new URLSearchParams({ lead: leadToken, choice: choiceId })
-  return `${site}/info/m/${missionId}?${params.toString()}`
+  return `${site}${infoMissionPublicPath(missionId)}?${params.toString()}`
 }
 
 export function buildMissionActivarUrl(leadToken: string): string {
