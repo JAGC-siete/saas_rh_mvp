@@ -122,7 +122,7 @@ export default function SealedEnvelopeLead() {
     <div className="max-w-lg mx-auto">
       {status !== 'intrigue' && (
         <div className="text-center mb-8">
-          <span className="inline-block px-3 py-1 mb-4 text-xs rounded-full bg-purple-500/15 text-purple-300 border border-purple-500/25">
+          <span className="inline-block px-3 py-1 mb-4 text-xs rounded-full bg-green-500/15 text-green-300 border border-green-500/25">
             {copy.badge}
           </span>
           <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-4 leading-tight">
@@ -151,7 +151,7 @@ export default function SealedEnvelopeLead() {
             transition={{ duration: 0.35 }}
           >
             <div className="text-center mb-6">
-              <span className="inline-block px-3 py-1 mb-4 text-xs rounded-full bg-purple-500/15 text-purple-300 border border-purple-500/25">
+              <span className="inline-block px-3 py-1 mb-4 text-xs rounded-full bg-green-500/15 text-green-300 border border-green-500/25">
                 {copy.badge}
               </span>
             </div>
