@@ -9,7 +9,7 @@ import { buildSuscripcionPackEmailHtml } from '../lib/marketing/suscripcion-pack
 
 describe('suscripcion pack email', () => {
   it('uses employee-focused subject and body', () => {
-    const subject = buildSuscripcionPackSubject('Ana', 'ana@x.com')
+    const subject = buildSuscripcionPackSubject()
     assert.ok(subject.includes('recibo'))
 
     const text = buildSuscripcionPackEmailText({

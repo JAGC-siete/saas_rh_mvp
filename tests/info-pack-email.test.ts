@@ -10,7 +10,7 @@ import { buildInfoPackEmailHtml } from '../lib/marketing/info-pack-email-html'
 
 describe('info pack email (/info TOFU)', () => {
   it('uses field-notes subject', () => {
-    assert.equal(buildInfoPackSubject('Victor Obed Torres Paz', 'jorge7gomez@gmail.com'), INFO_PACK_SUBJECT)
+    assert.equal(buildInfoPackSubject(), INFO_PACK_SUBJECT)
     assert.ok(INFO_PACK_SUBJECT.includes('pantalla'))
   })
 
