@@ -51,7 +51,7 @@ function buildBodyText(input: SendSequenceEmailInput): string {
   if (input.step === SEQUENCE_STEP.PAIN_POINT_4) return buildPainPoint4Text(tokenParams)
   if (input.step === SEQUENCE_STEP.PAIN_POINT_5) return buildPainPoint5Text(tokenParams)
 
-  return SEQUENCE_CONTENT[input.step].text
+  throw new Error(`Unknown sequence step: ${String(input.step)}`)
 }
 
 export async function sendSequenceEmail(input: SendSequenceEmailInput): Promise<void> {

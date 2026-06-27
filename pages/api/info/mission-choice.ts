@@ -1,9 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { createErrorResponse, createSuccessResponse } from '../../lib/security/api-responses'
-import { getMissionFeedback } from '../../lib/info-game/mission-feedback'
-import { parseMissionId, isValidMissionChoice } from '../../lib/marketing/mission-config'
-import { recordMissionChoice } from '../../lib/marketing/record-mission-choice'
-import { logger } from '../../lib/logger'
+import { createErrorResponse, createSuccessResponse } from '../../../lib/security/api-responses'
+import { getMissionFeedback } from '../../../lib/info-game/mission-feedback'
+import { parseMissionId, isValidMissionChoice } from '../../../lib/marketing/mission-config'
+import { recordMissionChoice } from '../../../lib/marketing/record-mission-choice'
+import { logger } from '../../../lib/logger'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET' && req.method !== 'POST') {
