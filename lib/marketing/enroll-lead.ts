@@ -61,12 +61,16 @@ function isActivarLeadSource(source: string): boolean {
   return normalizeLeadSource(source) === 'activar'
 }
 
+function isVentasLeadSource(source: string): boolean {
+  return normalizeLeadSource(source) === 'ventas'
+}
+
 function usesAcceleratedPack(source: string): boolean {
   return isInfoLeadSource(source) || isSuscripcionLeadSource(source)
 }
 
 function usesAcceleratedOnboarding(source: string): boolean {
-  return usesAcceleratedPack(source) || isActivarLeadSource(source)
+  return usesAcceleratedPack(source) || isActivarLeadSource(source) || isVentasLeadSource(source)
 }
 
 async function hasWelcomeInLedger(
@@ -227,7 +231,7 @@ export async function enrollMarketingLead(
 
         if (packState?.info_pack_sent_at) {
           logger.info('Onboarding anchor already set; skipping duplicate', { email: trimmedEmail, source })
-        } else if (isActivarLeadSource(source)) {
+        } else if (isActivarLeadSource(source) || isVentasLeadSource(source)) {
           await client
             .from('marketing_leads')
             .update({
@@ -236,7 +240,10 @@ export async function enrollMarketingLead(
             })
             .eq('id', lead.id)
 
-          logger.info('Activar onboarding scheduled (Nota #0 in 24h)', { email: trimmedEmail })
+          logger.info('Post-capture onboarding scheduled (Nota #0 in 24h)', {
+            email: trimmedEmail,
+            source,
+          })
           welcomeSent = true
         } else {
           const displayName =
@@ -260,8 +267,8 @@ export async function enrollMarketingLead(
 
           const packLabel = isInfoLeadSource(source) ? INFO_PACK_LEDGER_LABEL : SUSCRIPCION_PACK_LEDGER_LABEL
           const packSubject = isInfoLeadSource(source)
-            ? buildInfoPackSubject(displayName, trimmedEmail)
-            : buildSuscripcionPackSubject(displayName, trimmedEmail)
+            ? buildInfoPackSubject()
+            : buildSuscripcionPackSubject()
 
           await client
             .from('marketing_leads')

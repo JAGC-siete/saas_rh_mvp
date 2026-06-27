@@ -12,6 +12,7 @@ import { sendSequenceEmail } from '../marketing/send-sequence-email'
 import { isInfoAcceleratedLead } from '../marketing/info-sequence-timing'
 import { isSuscripcionAcceleratedLead } from '../marketing/suscripcion-sequence-timing'
 import { isActivarAcceleratedLead } from '../marketing/activar-sequence-timing'
+import { isVentasAcceleratedLead } from '../marketing/ventas-sequence-timing'
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -110,7 +111,8 @@ export async function runSequenceWatchman(now: Date = new Date()): Promise<Seque
     if (
       isInfoAcceleratedLead(lead.source) ||
       isSuscripcionAcceleratedLead(lead.source) ||
-      isActivarAcceleratedLead(lead.source)
+      isActivarAcceleratedLead(lead.source) ||
+      isVentasAcceleratedLead(lead.source)
     ) {
       continue
     }

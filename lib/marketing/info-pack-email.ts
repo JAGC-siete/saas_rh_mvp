@@ -48,7 +48,7 @@ export async function sendInfoPackEmail(input: SendInfoPackEmailInput): Promise<
   }
 
   const resend = new Resend(process.env.RESEND_API_KEY)
-  const subject = buildInfoPackSubject(input.nombre, input.to)
+  const subject = buildInfoPackSubject()
   const text = buildInfoPackEmailText({
     nombre: input.nombre,
     email: input.to,

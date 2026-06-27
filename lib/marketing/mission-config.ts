@@ -2,6 +2,12 @@ import { infoMissionPublicPath } from './info-funnel-path'
 import { getMarketingSiteUrl } from './unsubscribe'
 import { SEQUENCE_STEP } from './email-sequence-ledger'
 
+/** Post-cotización /ventas leads use commercial closing mission copy. */
+function isVentasMissionAudience(source?: string | null): boolean {
+  const s = (source ?? '').trim().toLowerCase()
+  return s === 'ventas' || s.startsWith('ventas:')
+}
+
 /** Trial /activar leads use onboarding-focused mission copy. */
 function isActivarMissionAudience(source?: string | null): boolean {
   const s = (source ?? '').trim().toLowerCase()
@@ -202,7 +208,68 @@ export const ACTIVAR_MISSIONS: Record<MissionId, MissionDef> = {
   },
 }
 
+export const VENTAS_MISSIONS: Record<MissionId, MissionDef> = {
+  1: {
+    id: 1,
+    badge: 'Nota #1',
+    stepLabel: 'Aprobación',
+    question: '¿Quién aprueba esta inversión además de usted?',
+    choices: [
+      { id: 'just-me', label: 'Solo yo / gerencia directa' },
+      { id: 'partner', label: 'Socio o director' },
+      { id: 'board', label: 'Comité o junta' },
+    ],
+  },
+  2: {
+    id: 2,
+    badge: 'Nota #2',
+    stepLabel: 'Modalidad',
+    question: '¿Prefiere arrancar anual o mensual?',
+    choices: [
+      { id: 'annual', label: 'Anual' },
+      { id: 'monthly', label: 'Mensual' },
+      { id: 'undecided', label: 'Aún lo evalúo' },
+    ],
+  },
+  3: {
+    id: 3,
+    badge: 'Nota #3',
+    stepLabel: 'Plazo',
+    question: '¿Cuándo necesita tener la primera planilla en el sistema?',
+    choices: [
+      { id: 'this-month', label: 'Este mes' },
+      { id: 'next-month', label: 'Próximo mes' },
+      { id: 'exploring', label: 'Solo explorando' },
+    ],
+  },
+  4: {
+    id: 4,
+    badge: 'Nota #4',
+    stepLabel: 'Revisión PDF',
+    question: '¿Ya revisó el PDF con su equipo?',
+    choices: [
+      { id: 'yes-team', label: 'Sí, con el equipo' },
+      { id: 'solo', label: 'Solo yo por ahora' },
+      { id: 'not-yet', label: 'Todavía no' },
+    ],
+  },
+  5: {
+    id: 5,
+    badge: 'Nota #5',
+    stepLabel: 'Contratación',
+    question: '¿Desea que le enviemos datos bancarios para reservar la oferta?',
+    choices: [
+      { id: 'yes-bank', label: 'Sí, envíen datos' },
+      { id: 'whatsapp', label: 'Prefiero WhatsApp' },
+      { id: 'not-yet', label: 'Aún no' },
+    ],
+  },
+}
+
 export function getMissionDef(missionId: MissionId, source?: string | null): MissionDef {
+  if (isVentasMissionAudience(source)) {
+    return VENTAS_MISSIONS[missionId]
+  }
   if (isActivarMissionAudience(source)) {
     return ACTIVAR_MISSIONS[missionId]
   }
@@ -263,7 +330,10 @@ export function buildMissionTextFooter(
   source?: string | null
 ): string {
   const mission = getMissionDef(missionId, source)
-  const lines = ['', 'Campo · pregunta rápida (1 clic):', mission.question, '']
+  const footerLabel = isVentasMissionAudience(source)
+    ? 'Respuesta rápida (1 clic):'
+    : 'Campo · pregunta rápida (1 clic):'
+  const lines = ['', footerLabel, mission.question, '']
 
   for (const choice of mission.choices) {
     lines.push(`→ ${choice.label}: ${buildMissionPageUrl(missionId, leadToken, choice.id)}`)

@@ -27,6 +27,10 @@ export function getMissionFeedback(
     return getSuscripcionMissionFeedback(missionId, choice, name)
   }
 
+  if (normalizeLeadSource(source) === 'ventas') {
+    return getVentasMissionFeedback(missionId, choice, name)
+  }
+
   if (normalizeLeadSource(source) === 'activar') {
     return getActivarMissionFeedback(missionId, choice, name)
   }
@@ -341,6 +345,111 @@ function getActivarMissionFeedback(
     cta: {
       label: 'Ver opciones para mi empresa',
       href: '/ventas?utm_source=email&utm_medium=mission&utm_campaign=act_m5',
+    },
+  }
+}
+
+function getVentasMissionFeedback(
+  missionId: MissionId,
+  choice: string,
+  name: string
+): MissionFeedback {
+  if (missionId === 1) {
+    const map: Record<string, MissionFeedback> = {
+      'just-me': {
+        title: 'Nota #1 · registrada',
+        headline: 'Decisión directa.',
+        body: `${name}, si usted cierra, el siguiente paso es revisar modalidad y plazo de arranque en el PDF.`,
+      },
+      partner: {
+        title: 'Nota #1 · registrada',
+        headline: 'Comparta el PDF.',
+        body: `${name}, el documento está pensado para reenviar — incluye desglose y comparación de modalidades.`,
+      },
+      board: {
+        title: 'Nota #1 · registrada',
+        headline: 'Material listo para comité.',
+        body: `${name}, use el PDF como anexo; si necesita una versión con su logo, responda al correo.`,
+      },
+    }
+    return map[choice] ?? map['just-me']
+  }
+
+  if (missionId === 2) {
+    const map: Record<string, MissionFeedback> = {
+      annual: {
+        title: 'Nota #2 · registrada',
+        headline: 'Anual suele convenir.',
+        body: `${name}, en anual aplican terminales incluidas y la ventana del 20% si aún está vigente.`,
+      },
+      monthly: {
+        title: 'Nota #2 · registrada',
+        headline: 'Mensual = flexibilidad.',
+        body: `${name}, revise en el PDF el desglose de software y hardware mensual.`,
+      },
+      undecided: {
+        title: 'Nota #2 · registrada',
+        headline: 'Compare en el PDF.',
+        body: `${name}, la propuesta incluye ambas modalidades lado a lado.`,
+      },
+    }
+    return map[choice] ?? map.undecided
+  }
+
+  if (missionId === 3) {
+    const map: Record<string, MissionFeedback> = {
+      'this-month': {
+        title: 'Nota #3 · registrada',
+        headline: 'Plazo ajustado.',
+        body: `${name}, escríbanos por WhatsApp o responda al correo para coordinar arranque este mes.`,
+      },
+      'next-month': {
+        title: 'Nota #3 · registrada',
+        headline: 'Tiempo para implementar.',
+        body: `${name}, podemos reservar condiciones mientras define fecha exacta.`,
+      },
+      exploring: {
+        title: 'Nota #3 · registrada',
+        headline: 'Sin presión.',
+        body: `${name}, use el acceso de evaluación mientras define calendario interno.`,
+      },
+    }
+    return map[choice] ?? map.exploring
+  }
+
+  if (missionId === 4) {
+    const map: Record<string, MissionFeedback> = {
+      'yes-team': {
+        title: 'Nota #4 · registrada',
+        headline: 'Buen paso.',
+        body: `${name}, si surgen dudas del equipo, respondemos por correo o WhatsApp.`,
+      },
+      solo: {
+        title: 'Nota #4 · registrada',
+        headline: 'Cuando comparta, estamos.',
+        body: `${name}, el PDF está listo para reenviar cuando lo necesite.`,
+      },
+      'not-yet': {
+        title: 'Nota #4 · registrada',
+        headline: 'Revíselo con calma.',
+        body: `${name}, busque jorgearturo@humanosisu.net si no encuentra el adjunto.`,
+      },
+    }
+    return map[choice] ?? map['not-yet']
+  }
+
+  return {
+    title: 'Nota #5 · registrada',
+    headline: choice === 'yes-bank' ? 'Le enviamos datos por correo.' : 'Cuando quiera, estamos.',
+    body:
+      choice === 'whatsapp'
+        ? `${name}, use el enlace de WhatsApp del PDF para continuar contratación.`
+        : choice === 'yes-bank'
+          ? `${name}, revise el correo con datos bancarios o responda para reenvío.`
+          : `${name}, la cotización sigue vigente como referencia.`,
+    cta: {
+      label: 'Ir a inicio de sesión',
+      href: '/app/login?utm_source=email&utm_medium=mission&utm_campaign=ventas_m5',
     },
   }
 }

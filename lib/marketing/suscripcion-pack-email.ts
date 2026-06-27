@@ -41,7 +41,7 @@ export async function sendSuscripcionPackEmail(input: SendSuscripcionPackEmailIn
   }
 
   const resend = new Resend(process.env.RESEND_API_KEY)
-  const subject = buildSuscripcionPackSubject(input.nombre, input.to)
+  const subject = buildSuscripcionPackSubject()
   const text = buildSuscripcionPackEmailText({
     nombre: input.nombre,
     email: input.to,

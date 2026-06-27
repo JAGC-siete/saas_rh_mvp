@@ -376,7 +376,12 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
 
     const quoteId = inserted?.id as string
 
-    void enrollMarketingLead({ email: contactEmail, source: 'ventas' }).catch((err: unknown) => {
+    void enrollMarketingLead({
+      email: contactEmail,
+      source: 'ventas',
+      fullName: contactName || undefined,
+      phone: phoneNorm || undefined,
+    }).catch((err: unknown) => {
       const message = err instanceof Error ? err.message : 'Unknown error'
       logger.warn('Marketing enroll failed after ventas quote (non-blocking)', {
         email: maskEmail(contactEmail),

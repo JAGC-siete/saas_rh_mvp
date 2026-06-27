@@ -23,6 +23,14 @@ import {
   buildActivarWelcomeText,
 } from './activar-field-notes-email'
 import {
+  buildVentasPainPoint1Text,
+  buildVentasPainPoint2Text,
+  buildVentasPainPoint3Text,
+  buildVentasPainPoint4Text,
+  buildVentasPainPoint5Text,
+  buildVentasWelcomeText,
+} from './ventas-field-notes-email'
+import {
   buildSuscripcionPainPoint1Text,
   buildSuscripcionPainPoint2Text,
   buildSuscripcionPainPoint3Text,
@@ -94,6 +102,9 @@ export function buildWelcomeText(source?: string | null): string {
   if (kind === 'activar') {
     return buildActivarWelcomeText()
   }
+  if (kind === 'ventas') {
+    return buildVentasWelcomeText()
+  }
   return `${WELCOME_GREETINGS[kind]}\n\n${WELCOME_BODY_AFTER_GREETING}`
 }
 
@@ -138,6 +149,9 @@ export function buildPainPoint1Text(params?: {
   }
   if (normalizeLeadSource(params?.source) === 'activar') {
     return buildActivarPainPoint1Text(params ?? {})
+  }
+  if (normalizeLeadSource(params?.source) === 'ventas') {
+    return buildVentasPainPoint1Text(params ?? {})
   }
 
   const name = sequenceFirstName(params?.nombre, params?.email)
@@ -203,6 +217,9 @@ export function buildPainPoint2Text(params?: {
   }
   if (normalizeLeadSource(params?.source) === 'activar') {
     return buildActivarPainPoint2Text(params ?? {})
+  }
+  if (normalizeLeadSource(params?.source) === 'ventas') {
+    return buildVentasPainPoint2Text(params ?? {})
   }
 
   const name = sequenceFirstName(params?.nombre, params?.email)
@@ -284,6 +301,9 @@ export function buildPainPoint3Text(params?: {
   }
   if (normalizeLeadSource(params?.source) === 'activar') {
     return buildActivarPainPoint3Text(params ?? {})
+  }
+  if (normalizeLeadSource(params?.source) === 'ventas') {
+    return buildVentasPainPoint3Text(params ?? {})
   }
 
   const name = sequenceFirstName(params?.nombre, params?.email)
@@ -374,6 +394,9 @@ export function buildPainPoint4Text(params?: {
   if (normalizeLeadSource(params?.source) === 'activar') {
     return buildActivarPainPoint4Text(params ?? {})
   }
+  if (normalizeLeadSource(params?.source) === 'ventas') {
+    return buildVentasPainPoint4Text(params ?? {})
+  }
 
   const name = sequenceFirstName(params?.nombre, params?.email)
   const kind = normalizeLeadSource(params?.source)
@@ -452,6 +475,9 @@ export function buildPainPoint5Text(params?: {
   }
   if (normalizeLeadSource(params?.source) === 'activar') {
     return buildActivarPainPoint5Text(params ?? {})
+  }
+  if (normalizeLeadSource(params?.source) === 'ventas') {
+    return buildVentasPainPoint5Text(params ?? {})
   }
 
   const name = sequenceFirstName(params?.nombre, params?.email)

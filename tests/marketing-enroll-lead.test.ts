@@ -32,8 +32,9 @@ describe('marketing welcome greetings by source', () => {
 
   it('buildWelcomeText uses source-specific first line only', () => {
     const ventas = buildWelcomeText('ventas')
-    assert.ok(ventas.startsWith(WELCOME_GREETINGS.ventas))
-    assert.ok(ventas.includes(WELCOME_BODY_AFTER_GREETING))
+    assert.ok(ventas.includes('propuesta en PDF'))
+    assert.ok(ventas.includes('— Jorge'))
+    assert.ok(!ventas.includes(WELCOME_BODY_AFTER_GREETING))
 
     const activar = buildWelcomeText('activar')
     assert.ok(activar.includes('Encendiste el motor'))
@@ -53,13 +54,10 @@ describe('marketing welcome greetings by source', () => {
     assert.ok(!info.includes(WELCOME_BODY_AFTER_GREETING))
   })
 
-  it('welcome body after greeting is identical for ventas only (activar uses field notes)', () => {
-    const ventasBody = buildWelcomeText('ventas').split('\n\n').slice(1).join('\n\n')
-    const activarBody = buildWelcomeText('activar')
-
-    assert.equal(ventasBody, WELCOME_BODY_AFTER_GREETING)
-    assert.ok(activarBody.includes('Encendiste el motor'))
-    assert.ok(!activarBody.includes(WELCOME_BODY_AFTER_GREETING))
+  it('welcome body after greeting is generic only for legacy sources without field notes', () => {
+    const ventasBody = buildWelcomeText('ventas')
+    assert.ok(ventasBody.includes('propuesta en PDF'))
+    assert.ok(!ventasBody.includes(WELCOME_BODY_AFTER_GREETING))
   })
 
   it('SEQUENCE_CONTENT welcome uses suscripcion field-notes welcome', () => {
@@ -90,7 +88,8 @@ describe('sendSequenceEmail welcome source (unit)', () => {
       source: 'info',
     })
 
-    assert.ok(welcomeVentas.startsWith('Hola, estás más cerca que nunca.'))
+    assert.ok(welcomeVentas.includes('propuesta en PDF'))
+    assert.ok(welcomeVentas.includes('— Jorge'))
     assert.ok(painPoint1.startsWith('Hola María,'))
     assert.ok(painPoint1.includes('extracto del sobre'))
     assert.ok(painPoint1.includes('siempre lo hemos hecho así'))
@@ -120,12 +119,11 @@ describe('sendSequenceEmail welcome source (unit)', () => {
     assert.ok(info.includes('sistemas nuevos es complicado'))
     assert.ok(info.includes('WhatsApp como sistema operativo'))
     assert.ok(infoWithMission.includes('Campo · pregunta'))
-    assert.ok(ventas.includes('cotizando o comparando opciones'))
-    assert.ok(ventas.includes('cerrar la cotización'))
-    assert.ok(activar.includes('ya encendiste'))
+    assert.ok(ventas.includes('72 horas'))
+    assert.ok(ventas.includes('20%'))
+    assert.ok(activar.includes('encendiste el entorno'))
     assert.ok(activar.includes('10 minutos'))
     assert.ok(!activar.includes('SISU puede servirte'))
-    assert.ok(ventas.includes('tres meses instalándolo'))
   })
 
   it('pain point 3 adapts intro, SISU line, and teaser by lead source', () => {
@@ -136,9 +134,9 @@ describe('sendSequenceEmail welcome source (unit)', () => {
     assert.ok(info.startsWith('Hola Luis,'))
     assert.ok(info.includes('se escapa algo'))
     assert.ok(info.includes('¿Lo hicimos bien?'))
-    assert.ok(ventas.includes('evaluando una cotización'))
-    assert.ok(ventas.includes('cotizar y decidir con números claros'))
-    assert.ok(ventas.includes('hojas de cálculo'))
+    assert.ok(ventas.includes('objeción'))
+    assert.ok(ventas.includes('biométrico'))
+    assert.ok(!ventas.includes('evaluando una cotización'))
     assert.ok(activar.includes('confiar en el número'))
     assert.ok(activar.includes('¿Está bien esta planilla?'))
     assert.ok(!activar.includes('primer corte de asistencia'))
@@ -152,9 +150,9 @@ describe('sendSequenceEmail welcome source (unit)', () => {
     assert.ok(info.startsWith('Hola Carla,'))
     assert.ok(info.includes('Biométrico en la puerta'))
     assert.ok(info.includes('reprocesamiento disfrazado'))
-    assert.ok(ventas.includes('armas la cotización'))
-    assert.ok(ventas.includes('final_v2'))
-    assert.ok(ventas.includes('cerrar la decisión'))
+    assert.ok(ventas.includes('/app/login'))
+    assert.ok(ventas.includes('trial incluido'))
+    assert.ok(!ventas.includes('final_v2'))
     assert.ok(activar.includes('Biométrico en la entrada'))
     assert.ok(activar.includes('reprocesando la ejecución'))
     assert.ok(!activar.includes('frenando el salto a SISU'))
@@ -175,9 +173,10 @@ describe('sendSequenceEmail welcome source (unit)', () => {
     assert.ok(info.includes('prueba en la sombra'))
     assert.ok(info.includes('Sí, muéstrame'))
     assert.ok(info.includes('/activar'))
-    assert.ok(ventas.includes('tablas de cotización'))
-    assert.ok(ventas.includes('sin compromiso de compra'))
-    assert.ok(activar.includes('Última nota de esta serie'))
+    assert.ok(ventas.includes('contratación'))
+    assert.ok(ventas.includes('WhatsApp'))
+    assert.ok(!ventas.includes('/activar'))
+    assert.ok(!ventas.includes('dar el primer paso'))
     assert.ok(activar.includes('/ventas'))
     assert.ok(!activar.includes('dar el primer paso'))
     assert.ok(!activar.includes('/activar'))
