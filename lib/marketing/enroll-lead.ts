@@ -10,7 +10,7 @@ import {
   WATCHMAN_FIRST_STEP,
 } from './email-sequence-ledger'
 import { isMarketingExcluded } from './is-marketing-excluded'
-import { sendInfoPackEmail, buildInfoPackSubject } from './info-pack-email'
+import { sendInfoPackEmail, buildInfoPackSubject, INFO_PACK_LEDGER_LABEL } from './info-pack-email'
 import { sendSequenceEmail } from './send-sequence-email'
 import { generateUnsubscribeToken } from './unsubscribe'
 
@@ -52,11 +52,13 @@ async function hasWelcomeInLedger(
   client: SupabaseClient,
   leadId: string
 ): Promise<boolean> {
+  const welcomeLabel = SEQUENCE_CONTENT[SEQUENCE_STEP.WELCOME].label
   const { count, error } = await client
     .from('marketing_email_ledger')
     .select('id', { count: 'exact', head: true })
     .eq('lead_id', leadId)
     .eq('step', SEQUENCE_STEP.WELCOME)
+    .eq('step_label', welcomeLabel)
 
   if (error) {
     logger.warn('Could not check welcome ledger', { leadId, error: error.message })
@@ -221,14 +223,15 @@ export async function enrollMarketingLead(
             .update({
               info_pack_sent_at: now.toISOString(),
               last_mail_sent_at: now.toISOString(),
-              current_step: WATCHMAN_FIRST_STEP,
+              // Stay on step 0 until info-sequence-welcome sends the real Welcome (+24h).
+              current_step: SEQUENCE_STEP.WELCOME,
             })
             .eq('id', lead.id)
 
           await client.from('marketing_email_ledger').insert({
             lead_id: lead.id,
             step: SEQUENCE_STEP.WELCOME,
-            step_label: welcomeContent.label,
+            step_label: INFO_PACK_LEDGER_LABEL,
             subject: buildInfoPackSubject(displayName, trimmedEmail),
             watch_window_key: getWatchWindowKey(now),
           })

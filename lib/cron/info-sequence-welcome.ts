@@ -7,7 +7,7 @@ import {
   SEQUENCE_STEP,
   WATCHMAN_FIRST_STEP,
 } from '../marketing/email-sequence-ledger'
-import { INFO_SEQUENCE_WELCOME_DELAY_HOURS } from '../marketing/info-pack-email'
+import { INFO_SEQUENCE_WELCOME_DELAY_HOURS } from '../marketing/info-sequence-timing'
 import { sendSequenceEmail } from '../marketing/send-sequence-email'
 
 const supabaseAdmin = createClient(
@@ -23,11 +23,13 @@ export type InfoSequenceWelcomeResult = {
 }
 
 async function hasWelcomeInLedger(leadId: string): Promise<boolean> {
+  const welcomeLabel = SEQUENCE_CONTENT[SEQUENCE_STEP.WELCOME].label
   const { count, error } = await supabaseAdmin
     .from('marketing_email_ledger')
     .select('id', { count: 'exact', head: true })
     .eq('lead_id', leadId)
     .eq('step', SEQUENCE_STEP.WELCOME)
+    .eq('step_label', welcomeLabel)
 
   if (error) {
     logger.warn('Info welcome scheduler: ledger lookup failed', { leadId, error: error.message })
@@ -37,7 +39,7 @@ async function hasWelcomeInLedger(leadId: string): Promise<boolean> {
   return (count ?? 0) > 0
 }
 
-/** Sends Step 0 welcome to /info leads 24h after the informational pack. */
+/** Sends Step 0 welcome to /info leads 24h after the informational pack (includes Misión 1 teaser). */
 export async function runInfoDelayedSequenceWelcome(
   now: Date = new Date()
 ): Promise<InfoSequenceWelcomeResult> {

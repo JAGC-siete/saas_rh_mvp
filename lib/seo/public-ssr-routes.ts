@@ -29,5 +29,6 @@ const PUBLIC_SSR_EXACT = new Set([
 export function isPublicMarketingRoute(pathname: string): boolean {
   if (PUBLIC_SSR_EXACT.has(pathname)) return true
   if (pathname.startsWith('/recursos')) return true
+  if (pathname.startsWith('/info/m/')) return true
   return false
 }

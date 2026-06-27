@@ -17,7 +17,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const { nombre, email, phone } = req.body
+    const { nombre, email, phone, empresa } = req.body
 
     const trimmedName = typeof nombre === 'string' ? nombre.trim() : ''
     if (!trimmedName) {
@@ -64,6 +64,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         nombre: trimmedName,
         email: trimmedEmail,
         whatsapp: phoneNorm,
+        empresa: typeof empresa === 'string' ? empresa.trim() || undefined : undefined,
       })
     }
 

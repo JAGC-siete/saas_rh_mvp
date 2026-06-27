@@ -1,9 +1,12 @@
 /**
  * Email sequence ledger — Step 0 (Welcome) + Steps 1–5 (Pain Points).
- * Watchman delivers Steps 1–5 on bi-monthly calendar windows (days 12–16 and 26–30).
+ * Cold leads: watchman delivers PP1–PP5 on bi-monthly windows (days 12–16 and 26–30).
+ * /info leads: welcome +24h, PP1 +48h from registration, then +48h between each PP (daily cron).
  */
 
 import { getMarketingSiteUrl } from './unsubscribe'
+import { buildMissionTextFooter } from './mission-config'
+import { INFO_WELCOME_MISSION_TEASER } from './info-sequence-timing'
 
 export const SEQUENCE_STEP = {
   WELCOME: 0,
@@ -59,7 +62,11 @@ export function normalizeLeadSource(raw?: string | null): LeadSourceKind {
 
 export function buildWelcomeText(source?: string | null): string {
   const kind = normalizeLeadSource(source)
-  return `${WELCOME_GREETINGS[kind]}\n\n${WELCOME_BODY_AFTER_GREETING}`
+  const base = `${WELCOME_GREETINGS[kind]}\n\n${WELCOME_BODY_AFTER_GREETING}`
+  if (kind === 'info') {
+    return `${base}\n\n${INFO_WELCOME_MISSION_TEASER}`
+  }
+  return base
 }
 
 /** One-time manual bulk send (Jul 2026): personalized opener, shared body. */
@@ -87,18 +94,13 @@ const PAIN_POINT_1_BODY_CORE = [
   'El verdadero riesgo no es probar algo nuevo; el riesgo real es seguir perdiendo horas y horas cada semana haciendo a mano cosas (y corrigiendo errores) que una herramienta sencilla podría resolver en un par de segundos.',
   '',
   'Nota mental: No dejemos que la costumbre de hacer las cosas "como siempre" nos quite el tiempo y la energía que nuestro negocio de verdad necesita para crecer.',
-  '',
-  'En el próximo correo te contaré sobre un mito gigante que asusta a muchos antes de dar el paso.',
-  '',
-  'Un saludo,',
-  '',
-  'Equipo Humano SISU',
 ].join('\n')
 
 export function buildPainPoint1Text(params?: {
   nombre?: string | null
   email?: string
   source?: string | null
+  leadToken?: string | null
 }): string {
   const name = sequenceFirstName(params?.nombre, params?.email)
   const isInfo = normalizeLeadSource(params?.source) === 'info'
@@ -106,7 +108,15 @@ export function buildPainPoint1Text(params?: {
     ? 'En el correo anterior te mandé la nota con el truco para que los pagos y horarios se hagan solos. Hoy quiero contarte por qué a muchos equipos les cuesta tanto dar ese sencillo paso.'
     : 'Hoy quiero contarte por qué a muchos equipos les cuesta tanto dar ese sencillo paso hacia una mejor organización del personal.'
 
-  return `Hola ${name},\n\n${intro}\n\n${PAIN_POINT_1_BODY_CORE}`
+  let body = `Hola ${name},\n\n${intro}\n\n${PAIN_POINT_1_BODY_CORE}`
+
+  if (params?.leadToken) {
+    body += buildMissionTextFooter(1, params.leadToken)
+  } else {
+    body += '\n\nEn el próximo correo te contaré sobre un mito gigante que asusta a muchos antes de dar el paso.\n\nUn saludo,\n\nEquipo Humano SISU'
+  }
+
+  return body
 }
 
 export const PAIN_POINT_2_SUBJECT = 'El mito de los "6 meses de implementación"'
@@ -143,12 +153,6 @@ function buildPainPoint2BodyCore(kind: LeadSourceKind): string {
     'Por eso, con SISU nos aseguramos de que empezar a usarlo sea tan natural que ni se siente. No necesitas ser un experto en computadoras, o leyes laborales, para que el sistema empiece a hacer el trabajo pesado por ti en 72 horas o menos.',
     '',
     PAIN_POINT_2_CLOSING_QUESTION[kind],
-    '',
-    'En el próximo correo te voy a revelar algo que casi nadie nota: los pequeños errores "invisibles" que ocurren cuando llevamos todo a mano (y que, sin darte cuenta, salen bastante caros).',
-    '',
-    'Un saludo,',
-    '',
-    'Equipo Humano SISU',
   ].join('\n')
 }
 
@@ -156,12 +160,22 @@ export function buildPainPoint2Text(params?: {
   nombre?: string | null
   email?: string
   source?: string | null
+  leadToken?: string | null
 }): string {
   const name = sequenceFirstName(params?.nombre, params?.email)
   const kind = normalizeLeadSource(params?.source)
   const intro = PAIN_POINT_2_INTRO[kind]
 
-  return `Hola ${name},\n\n${intro}\n\n${buildPainPoint2BodyCore(kind)}`
+  let body = `Hola ${name},\n\n${intro}\n\n${buildPainPoint2BodyCore(kind)}`
+
+  if (params?.leadToken) {
+    body += buildMissionTextFooter(2, params.leadToken)
+  } else {
+    body +=
+      '\n\nEn el próximo correo te voy a revelar algo que casi nadie nota: los pequeños errores "invisibles" que ocurren cuando llevamos todo a mano (y que, sin darte cuenta, salen bastante caros).\n\nUn saludo,\n\nEquipo Humano SISU'
+  }
+
+  return body
 }
 
 export const PAIN_POINT_3_SUBJECT = 'El costo oculto de trabajar "a mano"'
@@ -210,12 +224,6 @@ function buildPainPoint3BodyCore(kind: LeadSourceKind): string {
     PAIN_POINT_3_SISU_LINE[kind],
     '',
     'En los negocios, tener esa tranquilidad no debería ser un lujo.',
-    '',
-    PAIN_POINT_3_NEXT_TEASER[kind],
-    '',
-    'Un saludo,',
-    '',
-    'Equipo Humano SISU',
   ].join('\n')
 }
 
@@ -223,12 +231,21 @@ export function buildPainPoint3Text(params?: {
   nombre?: string | null
   email?: string
   source?: string | null
+  leadToken?: string | null
 }): string {
   const name = sequenceFirstName(params?.nombre, params?.email)
   const kind = normalizeLeadSource(params?.source)
   const intro = PAIN_POINT_3_INTRO[kind]
 
-  return `Hola ${name},\n\n${intro}\n\n${buildPainPoint3BodyCore(kind)}`
+  let body = `Hola ${name},\n\n${intro}\n\n${buildPainPoint3BodyCore(kind)}`
+
+  if (params?.leadToken) {
+    body += buildMissionTextFooter(3, params.leadToken)
+  } else {
+    body += `\n\n${PAIN_POINT_3_NEXT_TEASER[kind]}\n\nUn saludo,\n\nEquipo Humano SISU`
+  }
+
+  return body
 }
 
 export const PAIN_POINT_4_SUBJECT = 'El engaño de la pseudo digitalización'
@@ -286,12 +303,6 @@ function buildPainPoint4BodyCore(kind: LeadSourceKind): string {
     'Al final, terminas pasando la mayor parte de tu tiempo persiguiendo, cruzando o buscando la información, en lugar de usarla. Eso no es trabajar más rápido, es hacer el trabajo doble.',
     '',
     PAIN_POINT_4_SISU_LINE[kind],
-    '',
-    PAIN_POINT_4_NEXT_TEASER[kind],
-    '',
-    'Un saludo,',
-    '',
-    'Equipo Humano SISU',
   ].join('\n')
 }
 
@@ -299,12 +310,21 @@ export function buildPainPoint4Text(params?: {
   nombre?: string | null
   email?: string
   source?: string | null
+  leadToken?: string | null
 }): string {
   const name = sequenceFirstName(params?.nombre, params?.email)
   const kind = normalizeLeadSource(params?.source)
   const intro = PAIN_POINT_4_INTRO[kind]
 
-  return `Hola ${name},\n\n${intro}\n\n${buildPainPoint4BodyCore(kind)}`
+  let body = `Hola ${name},\n\n${intro}\n\n${buildPainPoint4BodyCore(kind)}`
+
+  if (params?.leadToken) {
+    body += buildMissionTextFooter(4, params.leadToken)
+  } else {
+    body += `\n\n${PAIN_POINT_4_NEXT_TEASER[kind]}\n\nUn saludo,\n\nEquipo Humano SISU`
+  }
+
+  return body
 }
 
 export const PAIN_POINT_5_SUBJECT = 'Te propongo un trato (donde tú tienes las de ganar)'
@@ -342,9 +362,6 @@ function buildPainPoint5Cta(kind: LeadSourceKind, activarUrl: string): string {
 }
 
 function buildPainPoint5BodyCore(kind: LeadSourceKind): string {
-  const site = getMarketingSiteUrl().replace(/\/$/, '')
-  const activarUrl = `${site}/activar`
-
   return [
     '"Todo suena muy bien, pero ¿cómo pruebo algo nuevo sin poner de cabeza el trabajo que ya funciona?"',
     '',
@@ -355,12 +372,6 @@ function buildPainPoint5BodyCore(kind: LeadSourceKind): string {
     PAIN_POINT_5_SHADOW_EXPERIMENT[kind],
     '',
     'Si te da un poco de curiosidad ver cómo se vería este experimento en tu negocio, sin presiones y sin llamadas intimidantes de ventas...',
-    '',
-    buildPainPoint5Cta(kind, activarUrl),
-    '',
-    'Un saludo,',
-    '',
-    'Equipo Humano SISU',
   ].join('\n')
 }
 
@@ -368,12 +379,22 @@ export function buildPainPoint5Text(params?: {
   nombre?: string | null
   email?: string
   source?: string | null
+  leadToken?: string | null
 }): string {
   const name = sequenceFirstName(params?.nombre, params?.email)
   const kind = normalizeLeadSource(params?.source)
   const intro = PAIN_POINT_5_INTRO[kind]
 
-  return `Hola ${name},\n\n${intro}\n\n${buildPainPoint5BodyCore(kind)}`
+  let body = `Hola ${name},\n\n${intro}\n\n${buildPainPoint5BodyCore(kind)}`
+
+  if (params?.leadToken) {
+    body += buildMissionTextFooter(5, params.leadToken)
+  } else {
+    const site = getMarketingSiteUrl().replace(/\/$/, '')
+    body += `\n\n${buildPainPoint5Cta(kind, `${site}/activar`)}\n\nUn saludo,\n\nEquipo Humano SISU`
+  }
+
+  return body
 }
 
 /** Prefer more specific sources when updating an existing lead (activar > ventas > suscripcion). */

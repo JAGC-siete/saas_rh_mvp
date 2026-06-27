@@ -38,6 +38,11 @@ describe('info pack email (/info TOFU)', () => {
     assert.equal(INFO_SEQUENCE_WELCOME_DELAY_HOURS, 24)
   })
 
+  it('uses distinct ledger label for info pack vs sequence welcome', async () => {
+    const { INFO_PACK_LEDGER_LABEL } = await import('../lib/marketing/info-pack-email')
+    assert.equal(INFO_PACK_LEDGER_LABEL, 'Info Pack')
+  })
+
   it('html template includes truco copy, CTAs, and PD', () => {
     const html = buildInfoPackEmailHtml({
       nombre: 'Victor Obed Torres Paz',

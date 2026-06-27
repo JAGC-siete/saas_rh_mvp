@@ -6,11 +6,13 @@ import { appendUnsubscribeFooter, getMarketingSiteUrl } from './unsubscribe'
 export const INFO_PACK_SUBJECT =
   'Lo prometido: El truco para que el trabajo aburrido se haga solo 🪄'
 
+/** Ledger label for the immediate /info pack (distinct from sequence Welcome at +24h). */
+export const INFO_PACK_LEDGER_LABEL = 'Info Pack'
+
 /** @deprecated Use INFO_PACK_SUBJECT */
 export const INFO_PACK_SUBJECT_PREFIX = INFO_PACK_SUBJECT
 
-/** Hours after info pack before Step 0 (welcome) of the pain-point sequence. */
-export const INFO_SEQUENCE_WELCOME_DELAY_HOURS = 24
+export { INFO_SEQUENCE_WELCOME_DELAY_HOURS } from './info-sequence-timing'
 
 function displayName(raw?: string | null, email?: string): string {
   const name = typeof raw === 'string' ? raw.trim() : ''
