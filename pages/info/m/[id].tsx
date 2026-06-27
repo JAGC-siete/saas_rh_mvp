@@ -79,7 +79,7 @@ export default function InfoMissionPage({ missionId, choice, feedback, alreadyRe
               href={INFO_FUNNEL_PUBLIC_PATH}
               className="block text-center text-sm text-brand-300 hover:text-white underline"
             >
-              Volver al Tablón de la Intriga
+              Volver al Acceso Temporal Concedido
             </Link>
           </motion.div>
         </div>

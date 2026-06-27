@@ -1,16 +1,16 @@
-/** Copy for /info — Tablón de la Intriga (Sobre Sellado). */
+/** Copy for /secreto — Acceso Temporal Concedido (Sobre Sellado). */
 
 export const SEALED_ENVELOPE_COPY = {
-  badge: 'Tablón de la Intriga',
+  badge: 'Acceso Temporal Concedido',
 
   /** Estado 0 — Intriga */
   intrigue: {
-    headline: 'Hay un truco para que el trabajo aburrido se haga solo.',
+    headline: 'Nuestro truco secreto para que lo repetitivo se haga solo.',
     subheadline:
-      'Está dentro de este sobre. No necesitas saber de leyes ni de planillas — solo curiosidad.',
-    envelopeLabel: 'SOBRE CLASIFICADO',
-    envelopeHint: 'El truco para delegar lo repetitivo sin perder el control.',
-    cta: 'Descifrar el sobre',
+      'Está dentro de este sobre por tiempo limitado. No necesitas ser experto en leyes ni tener 10 años de experiencia, planillas o recursos humanos — solo tener curiosidad.',
+    envelopeLabel: 'METODO SECRETO',
+    envelopeHint: 'El método absoluto para delegar la carga operativa para siempre.',
+    cta: 'Revelar el secreto',
   },
 
   /** Estado 1 — Desbloqueo */
