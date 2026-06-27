@@ -10,7 +10,7 @@ import {
 } from '@heroicons/react/24/outline'
 import { Card, CardContent } from '../ui/card'
 import BorderBeam from '../landing/BorderBeam'
-import InfoProgressRail from '../info-game/InfoProgressRail'
+import WizardStepProgress from '../funnel/WizardStepProgress'
 import type { QuotationQuote, QuotationRequest, QuotationResponse, QuotationUrgencyOffer } from '../../lib/ventas/types'
 import { buildQuotationPlanSummary } from '../../lib/ventas/quote-display'
 import { formatUrgencyOfferExpiry, urgencyOfferCtaText } from '../../lib/ventas/urgency-offer'
@@ -60,12 +60,14 @@ const defaultForm = (country: CountryCode): QuotationRequest => ({
   consent_newsletter: true,
 })
 
-function computeProgress(step: WizardStep, fd: QuotationRequest): number {
+const VENTAS_WIZARD_STEPS: [string, string, string] = ['Alcance', 'Empresa', 'Entrega']
+
+function wizardStepIndex(step: WizardStep): number {
   if (step === 'intro') return 0
-  if (step === 'scope') return Object.keys(ventasScopeErrors(fd)).length === 0 ? 35 : 12
-  if (step === 'company') return Object.keys(ventasCompanyErrors(fd)).length === 0 ? 70 : 45
-  if (step === 'delivery') return 90
-  return 100
+  if (step === 'scope') return 1
+  if (step === 'company') return 2
+  if (step === 'delivery') return 3
+  return 3
 }
 
 export default function CotizacionGuiadaLead({
@@ -83,7 +85,7 @@ export default function CotizacionGuiadaLead({
 
   const headline = utmContext.headline ?? copy.intro.headline
   const subheadline = utmContext.subheadline ?? copy.intro.subheadline
-  const progress = useMemo(() => computeProgress(step, formData), [step, formData])
+  const wizardStep = wizardStepIndex(step)
   const countryLabel =
     formData.country_code && isCountryCode(formData.country_code)
       ? VENTAS_COUNTRY_LABEL[formData.country_code]
@@ -301,9 +303,13 @@ export default function CotizacionGuiadaLead({
       <BorderBeam className="w-full max-w-3xl">
         <Card variant="liquid" className="w-full shadow-2xl relative overflow-hidden">
           <CardContent className="p-6 sm:p-8 lg:p-10 relative z-10">
-            {step !== 'intro' && (
-              <InfoProgressRail points={progress} maxPoints={100} label="Armando propuesta" compact />
-            )}
+            <WizardStepProgress
+              step={wizardStep}
+              title="Cotización guiada"
+              stepLabels={VENTAS_WIZARD_STEPS}
+              gradientClass="from-emerald-500 to-cyan-500"
+              dotClass="bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.5)] ring-emerald-400/40"
+            />
 
             <AnimatePresence mode="wait">
               {step === 'intro' && (

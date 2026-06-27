@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
   ArrowLeftIcon,
@@ -10,7 +10,7 @@ import {
 } from '@heroicons/react/24/outline'
 import { Card, CardContent } from '../ui/card'
 import BorderBeam from '../landing/BorderBeam'
-import InfoProgressRail from '../info-game/InfoProgressRail'
+import WizardStepProgress from '../funnel/WizardStepProgress'
 import { TRIAL_CONFIG } from '../../lib/config/trial'
 import {
   activarStep1Errors,
@@ -56,18 +56,14 @@ type Props = {
   initialCountryCode?: CountryCode
 }
 
-function computeProgress(step: WizardStep, fd: ActivarFormData): number {
+const ACTIVAR_WIZARD_STEPS: [string, string, string] = ['Calibrar', 'Acceso', 'Encender']
+
+function wizardStepIndex(step: WizardStep): number {
   if (step === 'intrigue') return 0
-  if (step === 'config') {
-    const e = activarStep1Errors(fd)
-    return Object.keys(e).length === 0 ? 33 : 10
-  }
-  if (step === 'account') {
-    const e = activarStep2Errors(fd)
-    return Object.keys(e).length === 0 ? 66 : 40
-  }
-  if (step === 'confirm') return 90
-  return 100
+  if (step === 'config') return 1
+  if (step === 'account') return 2
+  if (step === 'confirm') return 3
+  return 3
 }
 
 function motorLightsOn(step: WizardStep): number {
@@ -106,7 +102,7 @@ export default function MotorEncendidoLead({ utmContext = {}, initialCountryCode
 
   const headline = utmContext.headline ?? copy.intrigue.headline
   const subheadline = utmContext.subheadline ?? copy.intrigue.subheadline
-  const progress = useMemo(() => computeProgress(step, formData), [step, formData])
+  const wizardStep = wizardStepIndex(step)
   const lights = motorLightsOn(step)
   const countryLabel = isCountryCode(formData.countryCode) ? COUNTRY_LABEL[formData.countryCode] : ''
 
@@ -246,9 +242,12 @@ export default function MotorEncendidoLead({ utmContext = {}, initialCountryCode
       <BorderBeam className="w-full max-w-3xl">
         <Card variant="liquid" className="w-full shadow-2xl relative overflow-hidden">
           <CardContent className="p-6 sm:p-8 lg:p-10 relative z-10">
-            {step !== 'intrigue' && (
-              <InfoProgressRail points={progress} maxPoints={100} label="Encendiendo motor" compact />
-            )}
+            <WizardStepProgress
+              step={wizardStep}
+              title="Encender el motor"
+              stepLabels={ACTIVAR_WIZARD_STEPS}
+              gradientClass="from-cyan-500 to-brand-500"
+            />
 
             <AnimatePresence mode="wait">
               {step === 'intrigue' && (
