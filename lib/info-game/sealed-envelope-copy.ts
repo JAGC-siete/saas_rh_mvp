@@ -15,28 +15,28 @@ export const SEALED_ENVELOPE_COPY = {
 
   /** Estado 1 — Desbloqueo */
   unlock: {
-    progressLabel: 'Desbloqueando Secreto',
+    progressLabel: 'Autorizando acceso al método…',
     fields: {
       nombre: {
-        label: 'Pista 1',
-        placeholder: '¿Cómo te llamo cuando te cuente el truco?',
+        label: 'Nombre',
+        placeholder: '¿A quién le revelamos el secreto?',
       },
       email: {
-        label: 'Pista 2',
-        placeholder: '¿A qué correo te mando el Secreto y la Misión 2?',
+        label: 'Correo',
+        placeholder: '¿A dónde te enviamos el secreto?',
       },
       phone: {
-        label: 'Pista extra',
-        placeholder: 'WhatsApp (opcional) — avísame cuando llegue la Misión 2',
+        label: 'Línea directa (Opcional)',
+        placeholder: '¿A qué número te avisamos cuando llegue el secreto? (Opcional)',
       },
       empresa: {
-        label: 'Pista extra',
-        placeholder: 'Nombre de tu empresa (opcional)',
+        label: 'Organización',
+        placeholder: '¿En qué empresa vas a aplicar este truco? (Opcional)',
       },
     },
     submit: 'Desbloquear el Secreto',
     submitting: 'Abriendo sobre…',
-    disclaimer: 'Sin compromiso. Cero venta. No activamos trial ni cotización automática.',
+    disclaimer: 'Estás a un solo clic de saber lo que las mayorías ignoran.',
   },
 
   /** Estado 2 — Revelación (on-screen) */
