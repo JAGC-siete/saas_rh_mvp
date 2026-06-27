@@ -36,8 +36,9 @@ describe('marketing welcome greetings by source', () => {
     assert.ok(ventas.includes(WELCOME_BODY_AFTER_GREETING))
 
     const activar = buildWelcomeText('activar')
-    assert.ok(activar.startsWith(WELCOME_GREETINGS.activar))
-    assert.ok(activar.includes(WELCOME_BODY_AFTER_GREETING))
+    assert.ok(activar.includes('Encendiste el motor'))
+    assert.ok(activar.includes('— Jorge'))
+    assert.ok(!activar.includes(WELCOME_BODY_AFTER_GREETING))
 
     const subs = buildWelcomeText('suscripcion-page')
     assert.ok(subs.startsWith('Hola,'))
@@ -52,13 +53,13 @@ describe('marketing welcome greetings by source', () => {
     assert.ok(!info.includes(WELCOME_BODY_AFTER_GREETING))
   })
 
-  it('welcome body after greeting is identical for ventas and activar', () => {
+  it('welcome body after greeting is identical for ventas only (activar uses field notes)', () => {
     const ventasBody = buildWelcomeText('ventas').split('\n\n').slice(1).join('\n\n')
-    const activarBody = buildWelcomeText('activar').split('\n\n').slice(1).join('\n\n')
+    const activarBody = buildWelcomeText('activar')
 
     assert.equal(ventasBody, WELCOME_BODY_AFTER_GREETING)
-    assert.equal(activarBody, WELCOME_BODY_AFTER_GREETING)
-    assert.equal(ventasBody, activarBody)
+    assert.ok(activarBody.includes('Encendiste el motor'))
+    assert.ok(!activarBody.includes(WELCOME_BODY_AFTER_GREETING))
   })
 
   it('SEQUENCE_CONTENT welcome uses suscripcion field-notes welcome', () => {
@@ -121,8 +122,9 @@ describe('sendSequenceEmail welcome source (unit)', () => {
     assert.ok(infoWithMission.includes('Campo · pregunta'))
     assert.ok(ventas.includes('cotizando o comparando opciones'))
     assert.ok(ventas.includes('cerrar la cotización'))
-    assert.ok(activar.includes('activar tu entorno'))
-    assert.ok(activar.includes('SISU puede servirte'))
+    assert.ok(activar.includes('ya encendiste'))
+    assert.ok(activar.includes('10 minutos'))
+    assert.ok(!activar.includes('SISU puede servirte'))
     assert.ok(ventas.includes('tres meses instalándolo'))
   })
 
@@ -137,9 +139,9 @@ describe('sendSequenceEmail welcome source (unit)', () => {
     assert.ok(ventas.includes('evaluando una cotización'))
     assert.ok(ventas.includes('cotizar y decidir con números claros'))
     assert.ok(ventas.includes('hojas de cálculo'))
-    assert.ok(activar.includes('antes de activar tu entorno'))
-    assert.ok(activar.includes('primer corte de asistencia o nómina'))
-    assert.ok(activar.includes('al momento de activar algo mejor'))
+    assert.ok(activar.includes('confiar en el número'))
+    assert.ok(activar.includes('¿Está bien esta planilla?'))
+    assert.ok(!activar.includes('primer corte de asistencia'))
   })
 
   it('pain point 4 adapts intro, tools line, and closing teaser by lead source', () => {
@@ -153,9 +155,9 @@ describe('sendSequenceEmail welcome source (unit)', () => {
     assert.ok(ventas.includes('armas la cotización'))
     assert.ok(ventas.includes('final_v2'))
     assert.ok(ventas.includes('cerrar la decisión'))
-    assert.ok(activar.includes('frenando el salto a SISU'))
-    assert.ok(activar.includes('reportes del reloj'))
-    assert.ok(activar.includes('activar SISU'))
+    assert.ok(activar.includes('Biométrico en la entrada'))
+    assert.ok(activar.includes('reprocesando la ejecución'))
+    assert.ok(!activar.includes('frenando el salto a SISU'))
   })
 
   it('pain point 5 is the closing email with source-specific CTA', () => {
@@ -175,7 +177,9 @@ describe('sendSequenceEmail welcome source (unit)', () => {
     assert.ok(info.includes('/activar'))
     assert.ok(ventas.includes('tablas de cotización'))
     assert.ok(ventas.includes('sin compromiso de compra'))
-    assert.ok(activar.includes('antes de activar SISU'))
-    assert.ok(activar.includes('dar el primer paso'))
+    assert.ok(activar.includes('Última nota de esta serie'))
+    assert.ok(activar.includes('/ventas'))
+    assert.ok(!activar.includes('dar el primer paso'))
+    assert.ok(!activar.includes('/activar'))
   })
 })

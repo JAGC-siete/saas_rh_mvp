@@ -15,6 +15,7 @@ import {
 import { sequenceStepToMissionId } from './mission-config'
 import { normalizeLeadSource } from './email-sequence-ledger'
 import { getInfoSequenceSubject } from './info-field-notes-email'
+import { getActivarSequenceSubject } from './activar-field-notes-email'
 import { getSuscripcionSequenceSubject } from './suscripcion-field-notes-email'
 import { buildSequenceEmailHtml, buildWelcomeEmailHtml } from './sequence-email-html'
 
@@ -72,7 +73,9 @@ export async function sendSequenceEmail(input: SendSequenceEmailInput): Promise<
       ? getInfoSequenceSubject(input.step)
       : leadKind === 'suscripcion'
         ? getSuscripcionSequenceSubject(input.step)
-        : content.subject
+        : leadKind === 'activar'
+          ? getActivarSequenceSubject(input.step)
+          : content.subject
   const html =
     input.step === SEQUENCE_STEP.WELCOME
       ? buildWelcomeEmailHtml({

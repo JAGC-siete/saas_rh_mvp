@@ -6,6 +6,8 @@ import { runInfoAcceleratedPainPoints } from '../../../lib/cron/info-sequence-pa
 import { runInfoDelayedSequenceWelcome } from '../../../lib/cron/info-sequence-welcome'
 import { runSuscripcionAcceleratedPainPoints } from '../../../lib/cron/suscripcion-sequence-pain-points'
 import { runSuscripcionDelayedSequenceWelcome } from '../../../lib/cron/suscripcion-sequence-welcome'
+import { runActivarAcceleratedPainPoints } from '../../../lib/cron/activar-sequence-pain-points'
+import { runActivarDelayedSequenceWelcome } from '../../../lib/cron/activar-sequence-welcome'
 import { runLateAttendanceReportCron } from '../../../lib/cron/late-attendance-report'
 import { runSequenceWatchman } from '../../../lib/cron/sequence-watchman'
 import { isBiMonthlyWatchDay } from '../../../lib/marketing/email-sequence-ledger'
@@ -58,7 +60,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const suscripcionPainPointsResult = await runSuscripcionAcceleratedPainPoints(now)
     logger.info('Daily CRON: suscripcion accelerated pain points completed', suscripcionPainPointsResult)
 
-    // 6. Marketing sequence watchman (bi-monthly windows: days 12–16 and 26–30; excludes /info)
+    // 5e. /activar delayed welcome (24h after trial anchor)
+    const activarWelcomeResult = await runActivarDelayedSequenceWelcome(now)
+    logger.info('Daily CRON: activar delayed sequence welcome completed', activarWelcomeResult)
+
+    // 5f. /activar accelerated pain points (48h cadence)
+    const activarPainPointsResult = await runActivarAcceleratedPainPoints(now)
+    logger.info('Daily CRON: activar accelerated pain points completed', activarPainPointsResult)
+
+    // 6. Marketing sequence watchman (bi-monthly windows: days 12–16 and 26–30; excludes accelerated)
     let watchmanResult: Awaited<ReturnType<typeof runSequenceWatchman>> | null = null
     if (isBiMonthlyWatchDay(now)) {
       watchmanResult = await runSequenceWatchman(now)
@@ -79,6 +89,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       infoPainPoints: infoPainPointsResult,
       suscripcionWelcome: suscripcionWelcomeResult,
       suscripcionPainPoints: suscripcionPainPointsResult,
+      activarWelcome: activarWelcomeResult,
+      activarPainPoints: activarPainPointsResult,
       watchman: watchmanResult,
       lateAttendanceReport: lateReportResult,
     })

@@ -2,6 +2,12 @@ import { infoMissionPublicPath } from './info-funnel-path'
 import { getMarketingSiteUrl } from './unsubscribe'
 import { SEQUENCE_STEP } from './email-sequence-ledger'
 
+/** Trial /activar leads use onboarding-focused mission copy. */
+function isActivarMissionAudience(source?: string | null): boolean {
+  const s = (source ?? '').trim().toLowerCase()
+  return s === 'activar' || s.startsWith('activaciones:') || s.startsWith('activar:')
+}
+
 /** Suscripcion-style leads (newsletter / calculadoras) use employee-focused mission copy. */
 function isSuscripcionMissionAudience(source?: string | null): boolean {
   const s = (source ?? '').trim().toLowerCase()
@@ -138,7 +144,68 @@ export const SUSCRIPCION_MISSIONS: Record<MissionId, MissionDef> = {
   },
 }
 
+export const ACTIVAR_MISSIONS: Record<MissionId, MissionDef> = {
+  1: {
+    id: 1,
+    badge: 'Nota #1',
+    stepLabel: 'Tiempo',
+    question: '¿Qué te llevó más tiempo el mes pasado — cruzar datos o calcular?',
+    choices: [
+      { id: 'cross-data', label: 'Cruzar / mover datos' },
+      { id: 'calc-deductions', label: 'Calcular deducciones' },
+      { id: 'both-equal', label: 'Las dos por igual' },
+    ],
+  },
+  2: {
+    id: 2,
+    badge: 'Nota #2',
+    stepLabel: 'Primer login',
+    question: '¿Entraste al entorno de prueba al menos una vez?',
+    choices: [
+      { id: 'yes-once', label: 'Sí, al menos una vez' },
+      { id: 'plan-to', label: 'Todavía no, planifico' },
+      { id: 'no-time', label: 'No, no encontré tiempo' },
+    ],
+  },
+  3: {
+    id: 3,
+    badge: 'Nota #3',
+    stepLabel: 'Fuga de tiempo',
+    question: '¿Dónde sentís que se escapa más tiempo hoy — asistencia o planilla?',
+    choices: [
+      { id: 'attendance', label: 'Asistencia' },
+      { id: 'payroll', label: 'Planilla' },
+      { id: 'both', label: 'Las dos' },
+    ],
+  },
+  4: {
+    id: 4,
+    badge: 'Nota #4',
+    stepLabel: 'Confianza',
+    question: '¿Tu Excel actual te da tranquilidad o duda a fin de mes?',
+    choices: [
+      { id: 'calm', label: 'Tranquilidad' },
+      { id: 'doubt', label: 'Duda' },
+      { id: 'depends', label: 'Depende del mes' },
+    ],
+  },
+  5: {
+    id: 5,
+    badge: 'Nota #5',
+    stepLabel: 'Tu operación',
+    question: '¿Te interesa ver cómo se vería con tus números reales?',
+    choices: [
+      { id: 'yes-real', label: 'Sí, quiero verlo' },
+      { id: 'maybe', label: 'Tal vez' },
+      { id: 'not-yet', label: 'Aún no' },
+    ],
+  },
+}
+
 export function getMissionDef(missionId: MissionId, source?: string | null): MissionDef {
+  if (isActivarMissionAudience(source)) {
+    return ACTIVAR_MISSIONS[missionId]
+  }
   if (isSuscripcionMissionAudience(source)) {
     return SUSCRIPCION_MISSIONS[missionId]
   }

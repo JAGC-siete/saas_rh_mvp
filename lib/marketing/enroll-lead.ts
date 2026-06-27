@@ -57,8 +57,16 @@ function isSuscripcionLeadSource(source: string): boolean {
   return normalizeLeadSource(source) === 'suscripcion'
 }
 
+function isActivarLeadSource(source: string): boolean {
+  return normalizeLeadSource(source) === 'activar'
+}
+
 function usesAcceleratedPack(source: string): boolean {
   return isInfoLeadSource(source) || isSuscripcionLeadSource(source)
+}
+
+function usesAcceleratedOnboarding(source: string): boolean {
+  return usesAcceleratedPack(source) || isActivarLeadSource(source)
 }
 
 async function hasWelcomeInLedger(
@@ -210,7 +218,7 @@ export async function enrollMarketingLead(
 
   if (shouldSendWelcome) {
     try {
-      if (usesAcceleratedPack(source)) {
+      if (usesAcceleratedOnboarding(source)) {
         const { data: packState } = await client
           .from('marketing_leads')
           .select('info_pack_sent_at')
@@ -218,7 +226,18 @@ export async function enrollMarketingLead(
           .maybeSingle()
 
         if (packState?.info_pack_sent_at) {
-          logger.info('Initial pack already sent; skipping duplicate', { email: trimmedEmail, source })
+          logger.info('Onboarding anchor already set; skipping duplicate', { email: trimmedEmail, source })
+        } else if (isActivarLeadSource(source)) {
+          await client
+            .from('marketing_leads')
+            .update({
+              info_pack_sent_at: now.toISOString(),
+              current_step: SEQUENCE_STEP.WELCOME,
+            })
+            .eq('id', lead.id)
+
+          logger.info('Activar onboarding scheduled (Nota #0 in 24h)', { email: trimmedEmail })
+          welcomeSent = true
         } else {
           const displayName =
             contactPatch.full_name ||

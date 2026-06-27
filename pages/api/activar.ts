@@ -193,6 +193,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     void enrollMarketingLead({
       email: contactoEmail.trim().toLowerCase(),
       source: 'activar',
+      fullName: typeof nombre === 'string' ? nombre.trim() : undefined,
+      phone: typeof contactoWhatsApp === 'string' && contactoWhatsApp.trim() ? contactoWhatsApp.trim() : undefined,
     }).catch((err: unknown) => {
       const message = err instanceof Error ? err.message : 'Unknown error'
       console.warn('⚠️ Marketing enroll failed after activar (non-blocking):', message)

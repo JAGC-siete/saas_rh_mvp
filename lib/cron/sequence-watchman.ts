@@ -11,6 +11,7 @@ import {
 import { sendSequenceEmail } from '../marketing/send-sequence-email'
 import { isInfoAcceleratedLead } from '../marketing/info-sequence-timing'
 import { isSuscripcionAcceleratedLead } from '../marketing/suscripcion-sequence-timing'
+import { isActivarAcceleratedLead } from '../marketing/activar-sequence-timing'
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -106,7 +107,11 @@ export async function runSequenceWatchman(now: Date = new Date()): Promise<Seque
     }
 
     // Accelerated leads use fixed 48h cadence via daily cron jobs.
-    if (isInfoAcceleratedLead(lead.source) || isSuscripcionAcceleratedLead(lead.source)) {
+    if (
+      isInfoAcceleratedLead(lead.source) ||
+      isSuscripcionAcceleratedLead(lead.source) ||
+      isActivarAcceleratedLead(lead.source)
+    ) {
       continue
     }
 

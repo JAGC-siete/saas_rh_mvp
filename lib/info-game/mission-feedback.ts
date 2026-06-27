@@ -27,6 +27,10 @@ export function getMissionFeedback(
     return getSuscripcionMissionFeedback(missionId, choice, name)
   }
 
+  if (normalizeLeadSource(source) === 'activar') {
+    return getActivarMissionFeedback(missionId, choice, name)
+  }
+
   if (missionId === 1) {
     const map: Record<string, { hours: number; headline: string; body: string }> = {
       '0-5': {
@@ -234,6 +238,109 @@ function getSuscripcionMissionFeedback(
     cta: {
       label: 'Explorar calculadoras',
       href: '/calculadora?utm_source=email&utm_medium=mission&utm_campaign=subs_m5',
+    },
+  }
+}
+
+function getActivarMissionFeedback(
+  missionId: MissionId,
+  choice: string,
+  name: string
+): MissionFeedback {
+  if (missionId === 1) {
+    const map: Record<string, MissionFeedback> = {
+      'cross-data': {
+        title: 'Nota #1 · registrada',
+        headline: 'Ahí está el reprocesamiento.',
+        body: `${name}, si cruzar datos te come más tiempo que calcular, el cuello de botella no es la ley — es el puente entre sistemas.`,
+      },
+      'calc-deductions': {
+        title: 'Nota #1 · registrada',
+        headline: 'El cálculo manual también pesa.',
+        body: `${name}, deducciones a mano son donde más errores silenciosos aparecen. En el entorno de prueba compará tiempos.`,
+      },
+      'both-equal': {
+        title: 'Nota #1 · registrada',
+        headline: 'Las dos se comen la quincena.',
+        body: `${name}, cuando cruce y cálculo duelen por igual, automatizar uno solo no alcanza — ahí importa que el dato viaje.`,
+      },
+    }
+    return map[choice] ?? map['both-equal']
+  }
+
+  if (missionId === 2) {
+    const map: Record<string, MissionFeedback> = {
+      'yes-once': {
+        title: 'Nota #2 · registrada',
+        headline: 'Bien — ya viste el motor.',
+        body: `${name}, con una sola entrada al entorno ya podés comparar contra tu Excel. Dale 10 minutos más esta semana.`,
+      },
+      'plan-to': {
+        title: 'Nota #2 · registrada',
+        headline: 'Reservá esos 10 minutos.',
+        body: `${name}, no hace falta configurar nada raro: entrá con las credenciales y mirá una nómina de prueba calcularse sola.`,
+      },
+      'no-time': {
+        title: 'Nota #2 · registrada',
+        headline: 'El trial sigue corriendo.',
+        body: `${name}, cuando tengas un hueco, el entorno ya está encendido — no expira por no entrar hoy.`,
+      },
+    }
+    return map[choice] ?? map['plan-to']
+  }
+
+  if (missionId === 3) {
+    const map: Record<string, MissionFeedback> = {
+      attendance: {
+        title: 'Nota #3 · registrada',
+        headline: 'Asistencia primero.',
+        body: `${name}, si la fuga está en marcajes, fijate en el entorno cómo el dato no salta a Excel.`,
+      },
+      payroll: {
+        title: 'Nota #3 · registrada',
+        headline: 'Planilla es donde duele.',
+        body: `${name}, la duda a fin de mes suele venir del cálculo — compará confianza en el número de prueba vs tu hoja actual.`,
+      },
+      both: {
+        title: 'Nota #3 · registrada',
+        headline: 'Captura + cálculo juntos.',
+        body: `${name}, cuando las dos fugan tiempo, necesitás que vivan en el mismo sitio — eso es lo que muestra el entorno.`,
+      },
+    }
+    return map[choice] ?? map.both
+  }
+
+  if (missionId === 4) {
+    const map: Record<string, MissionFeedback> = {
+      calm: {
+        title: 'Nota #4 · registrada',
+        headline: 'Tranquilidad es oro.',
+        body: `${name}, si Excel te da paz, usá el entorno para validar si esa paz se sostiene cuando crece el equipo.`,
+      },
+      doubt: {
+        title: 'Nota #4 · registrada',
+        headline: 'La duda tiene costo.',
+        body: `${name}, revisar dos veces la misma planilla es tiempo regalado — el entorno de prueba existe para comparar sin riesgo.`,
+      },
+      depends: {
+        title: 'Nota #4 · registrada',
+        headline: 'Mes bueno, mes malo.',
+        body: `${name}, cuando la confianza oscila, un sistema con trazabilidad baja la ansiedad a fin de quincena.`,
+      },
+    }
+    return map[choice] ?? map.doubt
+  }
+
+  return {
+    title: 'Nota #5 · registrada',
+    headline: choice === 'yes-real' ? 'Perfecto — hablemos de tu operación.' : 'Sin presión.',
+    body:
+      choice === 'yes-real'
+        ? `${name}, respondé al correo con "quiero verlo con mi operación" y armamos el siguiente paso.`
+        : `${name}, el trial sigue corriendo — cuando quieras ver números reales, estamos.`,
+    cta: {
+      label: 'Ver opciones para mi empresa',
+      href: '/ventas?utm_source=email&utm_medium=mission&utm_campaign=act_m5',
     },
   }
 }

@@ -15,6 +15,14 @@ import {
   buildInfoWelcomeText,
 } from './info-field-notes-email'
 import {
+  buildActivarPainPoint1Text,
+  buildActivarPainPoint2Text,
+  buildActivarPainPoint3Text,
+  buildActivarPainPoint4Text,
+  buildActivarPainPoint5Text,
+  buildActivarWelcomeText,
+} from './activar-field-notes-email'
+import {
   buildSuscripcionPainPoint1Text,
   buildSuscripcionPainPoint2Text,
   buildSuscripcionPainPoint3Text,
@@ -83,6 +91,9 @@ export function buildWelcomeText(source?: string | null): string {
   if (kind === 'suscripcion') {
     return buildSuscripcionWelcomeText()
   }
+  if (kind === 'activar') {
+    return buildActivarWelcomeText()
+  }
   return `${WELCOME_GREETINGS[kind]}\n\n${WELCOME_BODY_AFTER_GREETING}`
 }
 
@@ -124,6 +135,9 @@ export function buildPainPoint1Text(params?: {
   }
   if (normalizeLeadSource(params?.source) === 'suscripcion') {
     return buildSuscripcionPainPoint1Text(params ?? {})
+  }
+  if (normalizeLeadSource(params?.source) === 'activar') {
+    return buildActivarPainPoint1Text(params ?? {})
   }
 
   const name = sequenceFirstName(params?.nombre, params?.email)
@@ -187,6 +201,9 @@ export function buildPainPoint2Text(params?: {
   if (normalizeLeadSource(params?.source) === 'suscripcion') {
     return buildSuscripcionPainPoint2Text(params ?? {})
   }
+  if (normalizeLeadSource(params?.source) === 'activar') {
+    return buildActivarPainPoint2Text(params ?? {})
+  }
 
   const name = sequenceFirstName(params?.nombre, params?.email)
   const kind = normalizeLeadSource(params?.source)
@@ -195,7 +212,7 @@ export function buildPainPoint2Text(params?: {
   let body = `Hola ${name},\n\n${intro}\n\n${buildPainPoint2BodyCore(kind)}`
 
   if (params?.leadToken) {
-    body += buildMissionTextFooter(2, params.leadToken)
+    body += buildMissionTextFooter(2, params.leadToken, params?.source)
   } else {
     body +=
       '\n\nEn el próximo correo te voy a revelar algo que casi nadie nota: los pequeños errores "invisibles" que ocurren cuando llevamos todo a mano (y que, sin darte cuenta, salen bastante caros).\n\nUn saludo,\n\nEquipo Humano SISU'
@@ -265,6 +282,9 @@ export function buildPainPoint3Text(params?: {
   if (normalizeLeadSource(params?.source) === 'suscripcion') {
     return buildSuscripcionPainPoint3Text(params ?? {})
   }
+  if (normalizeLeadSource(params?.source) === 'activar') {
+    return buildActivarPainPoint3Text(params ?? {})
+  }
 
   const name = sequenceFirstName(params?.nombre, params?.email)
   const kind = normalizeLeadSource(params?.source)
@@ -273,7 +293,7 @@ export function buildPainPoint3Text(params?: {
   let body = `Hola ${name},\n\n${intro}\n\n${buildPainPoint3BodyCore(kind)}`
 
   if (params?.leadToken) {
-    body += buildMissionTextFooter(3, params.leadToken)
+    body += buildMissionTextFooter(3, params.leadToken, params?.source)
   } else {
     body += `\n\n${PAIN_POINT_3_NEXT_TEASER[kind]}\n\nUn saludo,\n\nEquipo Humano SISU`
   }
@@ -351,6 +371,9 @@ export function buildPainPoint4Text(params?: {
   if (normalizeLeadSource(params?.source) === 'suscripcion') {
     return buildSuscripcionPainPoint4Text(params ?? {})
   }
+  if (normalizeLeadSource(params?.source) === 'activar') {
+    return buildActivarPainPoint4Text(params ?? {})
+  }
 
   const name = sequenceFirstName(params?.nombre, params?.email)
   const kind = normalizeLeadSource(params?.source)
@@ -426,6 +449,9 @@ export function buildPainPoint5Text(params?: {
   }
   if (normalizeLeadSource(params?.source) === 'suscripcion') {
     return buildSuscripcionPainPoint5Text(params ?? {})
+  }
+  if (normalizeLeadSource(params?.source) === 'activar') {
+    return buildActivarPainPoint5Text(params ?? {})
   }
 
   const name = sequenceFirstName(params?.nombre, params?.email)
