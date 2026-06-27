@@ -35,37 +35,40 @@ export function buildInfoPackEmailHtml(params: {
   const bodyHtml = [
     liquidParagraph(`Hola ${greeting},`),
     liquidParagraph(
-      'El "truco" es más simple de lo que parece: <strong>Digitaliza el registro de asistencia a la oficina.</strong>'
+      'Si acabas de ver el extracto confidencial en nuestra pantalla, ya sabes de qué hablo. El gran error de la mayoría de empresas en <strong>Honduras, El Salvador y Guatemala</strong> es caer en la trampa de la <strong>"pseudo-digitalización"</strong>.'
     ),
     liquidParagraph(
-      'Para que el trabajo más aburrido se haga solo, usamos el <strong>reloj biométrico SISU</strong>. En lugar de que una persona anote las horas a mano a fin de mes, el reloj registra, almacena, opera y presenta el trabajo pesado por ti.'
+      'Ponen un reloj biométrico en la entrada (digitalizan), pero siguen usando Excel para procesar la planilla a mano (no automatizan). Al final, terminan atrapados en el <strong>círculo del reprocesamiento</strong>: descargar datos a una USB, subirlos a la computadora, pelear con fórmulas de Excel que se rompen y perseguir permisos por WhatsApp. Sigue siendo trabajo manual, solo que más caro.'
+    ),
+    liquidParagraph(
+      'El verdadero "truco" de Humano SISU no es venderte un software; es <strong>conectar la captura con la ejecución</strong> para que puedas <strong>DELEGAR</strong>.'
     ),
     liquidPanel(
       liquidBulletList([
-        '<strong>Asistencia en tiempo real:</strong> Se conecta por internet a un reloj inteligente. Puedes ver desde tu celular o computadora quién llegó y a qué hora, sin tener que revisar libretas ni hojas de firmas.',
-        '<strong>Los pagos se calculan solos:</strong> Te olvidas de hacer las sumas a mano. El sistema ya sabe cómo calcular todo (incluyendo IHSS, RAP o ISR según las reglas de tu país).',
-        '<strong>Cero registros perdidos:</strong> Los permisos, vacaciones y datos importantes de tu equipo quedan guardados en un solo lugar seguro, y no perdidos en un chat de WhatsApp.',
+        '<strong>Conexión directa en la nube:</strong> El empleado pone su huella o rostro en el reloj inteligente y el dato viaja directo a tu cuenta. No más archivos CSV, no más memorias USB, no más hojas de firmas impresas.',
+        '<strong>El motor legal calcula solo:</strong> Te olvidas de las sumas a mano. El sistema procesa la asistencia y calcula los pagos exactos (incluyendo deducciones de IHSS, RAP, ISR, ISSS o IGSS según tu país).',
+        '<strong>Todo centralizado en un clic:</strong> Permisos, vacaciones y constancias de trabajo se generan de forma automática basados en la asistencia real, sin que tengas que digitar nada dos veces.',
       ]),
-      'En pocas palabras, así es como te quitas el peso de encima'
+      'En pocas palabras, así es como eliminamos el reprocesamiento'
     ),
     liquidPanel(
       liquidParagraph(
-        'Está pensado para dueños, encargados o contadores de equipos de <strong>5 a 200 personas</strong> (en Honduras, El Salvador o Guatemala) que quieren tener todo el control de su gente en una sola pantalla, y que quieren empezar rápido (<strong>se configura en días, no en meses</strong>).'
+        'Está pensado exclusivamente para dueños, contadores o encargados de equipos de <strong>5 a 200 personas</strong> en la región que están cansados de ser el "puente humano" que traslada datos de un sistema a otro, y quieren recuperar la paz de sus semanas.'
       ),
-      '¿Para quién funciona mejor este truco?'
+      '¿Para quién funciona este truco?'
     ),
     liquidPanel(
-      `${liquidParagraph('Como te prometí: <strong>cero venta</strong>. No tienes que decidir nada hoy ni hablar con ningún vendedor si no quieres.')}
-      ${liquidParagraph('Pero si te da curiosidad ver si funcionaría en tu empresa o cómo se vería en tu empresa, aquí te dejo los enlaces directos:')}`,
+      `${liquidParagraph('Como leíste en el dossier: <strong>cero venta</strong>. No tienes que decidir nada hoy ni hablar con ningún vendedor molesto. Tu atención es valiosa.')}
+      ${liquidParagraph('Pero si tienes curiosidad de ver cómo luce el motor legal por dentro sin interactuar con humanos, aquí tienes los accesos directos:')}`,
       '¿Qué sigue ahora?'
     ),
     `<div style="text-align: center; margin: 18px 0;">
-      <a href="${activarUrl}" style="display: inline-block; background: linear-gradient(135deg, ${B.emailAccent}, #2563eb); color: white; padding: 12px 22px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 14px; margin: 0 6px 10px 6px;">Quiero ver cómo funciona</a>
-      <a href="${ventasUrl}" style="display: inline-block; background: transparent; color: ${B.emailAccent}; padding: 11px 22px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 14px; border: 2px solid ${B.emailAccent}; margin: 0 6px 10px 6px;">Ver precios sin compromiso</a>
+      <a href="${activarUrl}" style="display: inline-block; background: linear-gradient(135deg, ${B.emailAccent}, #2563eb); color: white; padding: 12px 22px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 14px; margin: 0 6px 10px 6px;">Quiero ver el motor en funcionamiento (30 seg)</a>
+      <a href="${ventasUrl}" style="display: inline-block; background: transparent; color: ${B.emailAccent}; padding: 11px 22px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 14px; border: 2px solid ${B.emailAccent}; margin: 0 6px 10px 6px;">Ver tablas de precios transparentes</a>
     </div>`,
-    liquidParagraph('Un saludo,<br /><strong>Equipo Humano SISU</strong>'),
+    liquidParagraph('Un saludo,<br /><strong>Jorge</strong> · Humano SISU'),
     liquidInfoBox(
-      'En los próximos días te voy a mandar <strong>5 correos breves</strong>. Te voy a contar sobre algunos errores súper comunes (y que cuestan dinero) que casi todo el mundo comete al organizar a su personal. ¡Nos leemos pronto!',
+      'Acabas de completar la <strong>Misión 0</strong>. En las próximas horas se activará la <strong>Misión 1</strong> en tu bandeja de entrada. Te voy a contar sobre "La trampa de: siempre lo hemos hecho así" y el costo invisible que estás pagando hoy por mantener procesos manuales. ¡Nos leemos pronto!',
       'neutral'
     ),
     `<p style="margin: 0; text-align: center; font-size: 12px; color: ${B.emailTextMuted}; line-height: 1.55;">

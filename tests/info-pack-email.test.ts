@@ -14,7 +14,7 @@ describe('info pack email (/info TOFU)', () => {
     assert.ok(INFO_PACK_SUBJECT.includes('truco'))
   })
 
-  it('includes truco body, benefits, and CTA links', () => {
+  it('includes reprocessing angle, benefits, and CTA links', () => {
     const text = buildInfoPackEmailText({
       nombre: 'Victor Obed Torres Paz',
       email: 'jorge7gomez@gmail.com',
@@ -22,15 +22,18 @@ describe('info pack email (/info TOFU)', () => {
     })
 
     assert.ok(text.startsWith('Hola Victor,'))
-    assert.ok(text.includes('reloj biométrico SISU'))
-    assert.ok(text.includes('Asistencia en tiempo real'))
-    assert.ok(text.includes('Los pagos se calculan solos'))
-    assert.ok(text.includes('Cero registros perdidos'))
+    assert.ok(text.includes('pseudo-digitalización'))
+    assert.ok(text.includes('reprocesamiento'))
+    assert.ok(text.includes('Conexión directa en la nube'))
+    assert.ok(text.includes('El motor legal calcula solo'))
+    assert.ok(text.includes('Todo centralizado en un clic'))
     assert.ok(text.includes('cero venta'))
-    assert.ok(text.includes('Quiero ver cómo funciona'))
+    assert.ok(text.includes('Quiero ver el motor en funcionamiento'))
     assert.ok(text.includes('/activar'))
     assert.ok(text.includes('/ventas'))
-    assert.ok(text.includes('5 correos breves'))
+    assert.ok(text.includes('Misión 0'))
+    assert.ok(text.includes('Misión 1'))
+    assert.ok(text.includes('Jorge · Humano SISU'))
     assert.ok(text.includes('unsubscribe?token=test-token'))
   })
 
@@ -43,7 +46,7 @@ describe('info pack email (/info TOFU)', () => {
     assert.equal(INFO_PACK_LEDGER_LABEL, 'Info Pack')
   })
 
-  it('html template includes truco copy, CTAs, and PD', () => {
+  it('html template includes reprocessing copy, CTAs, and PD', () => {
     const html = buildInfoPackEmailHtml({
       nombre: 'Victor Obed Torres Paz',
       email: 'jorge7gomez@gmail.com',
@@ -52,13 +55,15 @@ describe('info pack email (/info TOFU)', () => {
 
     assert.ok(html.includes('Humano SISU'))
     assert.ok(html.includes('linear-gradient'))
-    assert.ok(html.includes('reloj biométrico SISU'))
+    assert.ok(html.includes('pseudo-digitalización'))
+    assert.ok(html.includes('reprocesamiento'))
     assert.ok(html.includes('Hola Victor'))
-    assert.ok(html.includes('Quiero ver cómo funciona'))
-    assert.ok(html.includes('Ver precios sin compromiso'))
+    assert.ok(html.includes('Quiero ver el motor en funcionamiento'))
+    assert.ok(html.includes('Ver tablas de precios transparentes'))
     assert.ok(html.includes('/activar'))
     assert.ok(html.includes('/ventas'))
-    assert.ok(html.includes('5 correos breves'))
+    assert.ok(html.includes('Misión 0'))
+    assert.ok(html.includes('Misión 1'))
     assert.ok(html.includes('unsubscribe?token=test-token'))
   })
 })

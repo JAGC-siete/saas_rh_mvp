@@ -335,12 +335,22 @@ export default function SealedEnvelopeLead() {
                 ))}
 
                 <ul className="mt-5 space-y-2.5 border-t border-dashed border-amber-900/20 pt-4">
-                  {copy.revealed.bullets.map((item) => (
-                    <li key={item} className="flex gap-2.5 text-sm font-mono text-stone-700 leading-snug">
-                      <span className="text-amber-800 shrink-0 font-bold">▸</span>
-                      {item}
-                    </li>
-                  ))}
+                  {copy.revealed.bullets.map((item) => {
+                    const colonIdx = item.indexOf(': ')
+                    const label = colonIdx >= 0 ? item.slice(0, colonIdx) : item
+                    const detail = colonIdx >= 0 ? item.slice(colonIdx + 2) : ''
+                    return (
+                      <li key={item} className="flex gap-2.5 text-sm font-mono text-stone-700 leading-snug">
+                        <span className="text-amber-800 shrink-0 font-bold" aria-hidden>
+                          ✦
+                        </span>
+                        <span>
+                          <strong className="text-stone-900">{label}:</strong>
+                          {detail ? ` ${detail}` : ''}
+                        </span>
+                      </li>
+                    )
+                  })}
                 </ul>
 
                 <p className="mt-6 font-mono text-[9px] uppercase tracking-[0.25em] text-amber-900/45 text-center">

@@ -47,13 +47,13 @@ export const SEALED_ENVELOPE_COPY = {
     docRef: 'REF · HS-INT-001',
     title: 'El truco',
     body: [
-      'Digitaliza el registro de asistencia.',
-      'Un reloj biométrico anota quién llegó y a qué hora. El sistema calcula pagos, guarda permisos y genera constancias — sin que tú hagas las sumas a mano ni persigas datos en Excel o WhatsApp.',
+      'Muchos dueños de empresas confunden "digitalizar" con "automatizar". Compran un reloj biométrico y creen que el problema está resuelto. Pero si a fin de quincena todavía tienes que bajar los registros a una memoria USB, cargarlos a la computadora y pasarlos a un Excel para hacer los cálculos a mano, no te modernizaste; solo cambiaste el papel por una pantalla. El reprocesamiento de datos sigue absorbiendo tu tiempo.',
+      'El verdadero truco no es capturar el dato, es eliminar el intermediario humano. Al hacer que el registro sea digital y esté conectado directamente al motor legal, abres la puerta a la automatización absoluta. Los datos viajan solos: el sistema calcula deducciones al centavo, procesa faltas y genera constancias. Digitalizar es el puente; automatizar es lo que te permite delegar el 100% del trabajo aburrido en la tecnología.',
     ],
     bullets: [
-      'Asistencia en tiempo real desde tu celular o computadora.',
-      'Pagos calculados solos, con las reglas de tu país.',
-      'Permisos y datos del equipo en un solo lugar seguro.',
+      'Cero Reprocesamiento: Olvídate para siempre de las memorias USB, cables, archivos corruptos y dobles digitaciones.',
+      'Cálculo en la Sombra: El motor legal procesa horas, horas extra y leyes locales en tiempo real mientras tú duermes.',
+      'Delegación Absoluta: La tecnología trabaja de fondo y se encarga del papeleo; tú solo entras a revisar y aprobar.',
     ],
   },
 
