@@ -151,22 +151,30 @@ export function registerLiquidPageFooter(
 ): void {
   const brandLine = options.brandLine ?? 'Humano SISU · Sistema Hondureño de Recursos Humanos'
   const generatedAt = options.generatedAt
+  let painting = false
 
   const paint = () => {
-    const pageWidth = doc.page.width
-    const pageHeight = doc.page.height
-    const margin = 30
-    const footerY = pageHeight - margin - 8
-    const contentWidth = pageWidth - margin * 2
+    if (painting) return
+    painting = true
+    try {
+      const pageWidth = doc.page.width
+      const pageHeight = doc.page.height
+      const margin = 30
+      // Stay above PDFKit's bottom margin to avoid auto page-break → pageAdded recursion.
+      const footerY = pageHeight - PDF_FOOTER_RESERVE
+      const contentWidth = pageWidth - margin * 2
 
-    if (generatedAt) {
-      doc.fontSize(7).fillColor(PDF.footerMuted).text(`Fecha de generación: ${generatedAt}`, margin, footerY - 14, {
-        align: 'center',
-        width: contentWidth,
-        lineBreak: false,
-      })
+      if (generatedAt) {
+        doc.fontSize(7).fillColor(PDF.footerMuted).text(`Fecha de generación: ${generatedAt}`, margin, footerY - 12, {
+          align: 'center',
+          width: contentWidth,
+          lineBreak: false,
+        })
+      }
+      drawLiquidFooter(doc, brandLine, { y: footerY, fontSize: 7 })
+    } finally {
+      painting = false
     }
-    drawLiquidFooter(doc, brandLine, { y: footerY, fontSize: 7 })
   }
 
   doc.on('pageAdded', () => paint())
