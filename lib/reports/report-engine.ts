@@ -73,6 +73,23 @@ function getAttendanceRowValue(
   }
 }
 
+/** Mismo criterio que attendance_lists_filtered: nombre de empleado, luego fecha. */
+export function sortAttendanceRecordsForExport(attendance: any[], employees: any[]): any[] {
+  const employeeById = new Map(employees.map((e) => [e.id, e]))
+  const employeeName = (record: any) => {
+    const emp = record.employees || employeeById.get(record.employee_id)
+    return String(emp?.name ?? record.employee_id ?? '')
+  }
+
+  return [...attendance].sort((a, b) => {
+    const byName = employeeName(a).localeCompare(employeeName(b), 'es', { sensitivity: 'base' })
+    if (byName !== 0) return byName
+    const byDate = String(a.date ?? '').localeCompare(String(b.date ?? ''))
+    if (byDate !== 0) return byDate
+    return String(a.check_in ?? '').localeCompare(String(b.check_in ?? ''))
+  })
+}
+
 export function renderAttendanceRows(
   attendance: any[],
   employees: any[],
@@ -81,7 +98,8 @@ export function renderAttendanceRows(
   opts?: { timeFormat?: '24h' | '12h' }
 ): (string | number)[][] {
   const employeeById = new Map(employees.map((e) => [e.id, e]))
-  return attendance.map((r) =>
+  const sorted = sortAttendanceRecordsForExport(attendance, employees)
+  return sorted.map((r) =>
     columns.map((col) => getAttendanceRowValue(r, col, employeeById, fmt, opts?.timeFormat))
   )
 }

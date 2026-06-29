@@ -23,6 +23,7 @@ export async function fetchAttendanceReportDataForExport(
     .select('id, name, employee_code')
     .eq('company_id', companyId)
     .eq('status', 'active')
+    .order('name', { ascending: true })
 
   if (options.departmentId) {
     employeesQuery = employeesQuery.eq('department_id', options.departmentId)

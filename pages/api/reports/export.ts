@@ -789,7 +789,10 @@ async function generateAttendanceExcel(
       if (r.late_minutes && r.late_minutes > 5) s.late++
     }
 
-    summary.forEach(s => summarySheet.addRow(s))
+    const summaryRows = Array.from(summary.values()).sort((a, b) =>
+      String(a.employee).localeCompare(String(b.employee), 'es', { sensitivity: 'base' })
+    )
+    summaryRows.forEach((s) => summarySheet.addRow(s))
     
     summarySheet.getRow(1).font = { bold: true }
     summarySheet.getRow(1).fill = {
