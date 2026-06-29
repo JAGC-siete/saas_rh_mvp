@@ -6,7 +6,7 @@ export { mapPunchesToDay } from './punch-mapping'
 export { PUNCH_ANOMALY_TYPES, formatPunchAnomalyLabel } from './punch-mapping'
 export type { MappedPunchDay, PunchAnomalyType } from './punch-mapping'
 import { DateTime } from 'luxon'
-import { getScheduleTimesForDate } from './schedule-times'
+import { getScheduleTimesForDate, isRestDayForDate } from './schedule-times'
 import type { LegacyScheduleColumns } from './shift-config'
 import {
   loadEmployeeScheduleAssignments,
@@ -36,6 +36,7 @@ export type DailyCloseFlags = Record<string, unknown> & {
   daily_close_version?: number
   close_state?: 'draft' | 'finalized'
   admin_override?: boolean
+  daily_close_absent?: boolean
 }
 
 export interface AttendanceEventRow {
@@ -110,7 +111,7 @@ export async function generateDailyCloseReport(params: {
 
   const { data: employees, error: empErr } = await supabase
     .from('employees')
-    .select('id')
+    .select('id, work_schedule_id, attendance_required')
     .eq('company_id', companyId)
     .eq('status', 'active')
 
@@ -118,7 +119,16 @@ export async function generateDailyCloseReport(params: {
     throw new Error(`employees: ${empErr.message}`)
   }
 
-  const employeeIds = (employees || []).map((e: { id: string }) => e.id)
+  type DailyCloseEmployeeRow = {
+    id: string
+    work_schedule_id?: string | null
+    attendance_required?: boolean | null
+  }
+
+  const employeeRows = (employees || []) as DailyCloseEmployeeRow[]
+  const employeeIds = employeeRows.map((e) => e.id)
+  const employeeById = new Map(employeeRows.map((e) => [e.id, e]))
+
   if (employeeIds.length === 0) {
     return {
       companyId,
@@ -162,6 +172,42 @@ export async function generateDailyCloseReport(params: {
     recordByEmployee.set((r as { employee_id: string }).employee_id, r as Record<string, unknown>)
   }
 
+  const assignmentMap = await loadEmployeeScheduleAssignments({
+    supabase,
+    companyId,
+    employeeIds,
+    rangeFrom: localDate,
+    rangeTo: localDate,
+  })
+
+  const effectiveScheduleIdByEmployee = new Map<string, string | null>()
+  for (const emp of employeeRows) {
+    const eff = resolveEffectiveWorkScheduleIdFromAssignments({
+      assignments: assignmentMap.get(emp.id) || [],
+      date: localDate,
+      fallbackWorkScheduleId: emp.work_schedule_id,
+    })
+    effectiveScheduleIdByEmployee.set(emp.id, eff.found ? eff.workScheduleId : null)
+  }
+
+  const scheduleIds = Array.from(
+    new Set(
+      [...effectiveScheduleIdByEmployee.values()].filter((x): x is string => typeof x === 'string' && x.length > 0)
+    )
+  )
+  const scheduleById = new Map<string, WorkScheduleRow>()
+  if (scheduleIds.length > 0) {
+    const { data: schedData } = await supabase
+      .from('work_schedules')
+      .select(
+        'id, monday_start, monday_end, tuesday_start, tuesday_end, wednesday_start, wednesday_end, thursday_start, thursday_end, friday_start, friday_end, saturday_start, saturday_end, sunday_start, sunday_end, shift_config, break_duration'
+      )
+      .in('id', scheduleIds)
+    for (const s of (schedData || []) as WorkScheduleRow[]) {
+      scheduleById.set(s.id, s)
+    }
+  }
+
   const results: DailyCloseEmployeeResult[] = []
   let anomalies = 0
   let skipped_locked = 0
@@ -197,11 +243,89 @@ export async function generateDailyCloseReport(params: {
     }
 
     if (punches.length === 0) {
+      const emp = employeeById.get(employeeId)
+      if (emp?.attendance_required === false) {
+        results.push({
+          employeeId,
+          punchCount: 0,
+          anomalyTypes: [],
+          recordId: (existing?.id as string) || null,
+          skippedLocked: false,
+        })
+        continue
+      }
+
+      if (existing?.check_in) {
+        results.push({
+          employeeId,
+          punchCount: 0,
+          anomalyTypes: [],
+          recordId: existing.id as string,
+          skippedLocked: false,
+        })
+        continue
+      }
+
+      const effectiveScheduleId = effectiveScheduleIdByEmployee.get(employeeId) ?? null
+      const schedule = effectiveScheduleId ? scheduleById.get(effectiveScheduleId) ?? null : null
+      const isWorkDay = schedule ? !isRestDayForDate(schedule, localDate) : false
+
+      if (!isWorkDay) {
+        results.push({
+          employeeId,
+          punchCount: 0,
+          anomalyTypes: [],
+          recordId: (existing?.id as string) || null,
+          skippedLocked: false,
+        })
+        continue
+      }
+
+      const prevVersion =
+        typeof (existing?.flags as DailyCloseFlags | undefined)?.daily_close_version === 'number'
+          ? ((existing?.flags as DailyCloseFlags).daily_close_version as number)
+          : 0
+
+      const absentFlags: DailyCloseFlags = mergeFlags(existing?.flags as Record<string, unknown> | undefined, {
+        has_anomaly: false,
+        anomaly_types: [],
+        biometric_mode,
+        punch_count: 0,
+        daily_close_at: nowIso,
+        daily_close_version: prevVersion + 1,
+        daily_close_absent: true,
+      })
+
+      const absentRow = {
+        employee_id: employeeId,
+        date: localDate,
+        check_in: null,
+        check_out: null,
+        lunch_start: null,
+        lunch_end: null,
+        status: 'absent',
+        flags: absentFlags,
+        tz: timezone,
+        tz_offset_minutes: -360,
+        updated_at: nowIso,
+      }
+
+      const { data: upsertedAbsent, error: absentErr } = await supabase
+        .from('attendance_records')
+        .upsert(absentRow, { onConflict: 'employee_id,date' })
+        .select('id')
+        .maybeSingle()
+
+      if (absentErr) {
+        throw new Error(`upsert absent attendance_records: ${absentErr.message}`)
+      }
+
+      processed++
       results.push({
         employeeId,
         punchCount: 0,
         anomalyTypes: [],
-        recordId: (existing?.id as string) || null,
+        recordId: upsertedAbsent?.id ?? (existing?.id as string) || null,
         skippedLocked: false,
       })
       continue
