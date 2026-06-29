@@ -85,20 +85,19 @@ export async function buildVoucherFromRunLine(
   let customDeductionsList: Array<{ name: string; amount: number }> = []
 
   const brutoTotal = Number(lineData.eff_bruto) || 0
-  if (lineData.metadata) {
-    const calcResult = await calculatePayroll(
-      companyId,
-      brutoTotal,
-      lineData.metadata,
-      supabase
-    )
-    customDeductions = calcResult.totalDeduccionesAdicionales
-    customDeductionsList = await buildCustomDeductionsList(
-      companyId,
-      lineData.metadata,
-      brutoTotal,
-      supabase
-    )
+  const lineMetadata = (lineData.metadata as Record<string, unknown> | null) ?? {}
+
+  const calcResult = await calculatePayroll(companyId, brutoTotal, lineMetadata, supabase)
+  customDeductions = calcResult.totalDeduccionesAdicionales
+  customDeductionsList = await buildCustomDeductionsList(
+    companyId,
+    lineMetadata,
+    brutoTotal,
+    supabase
+  )
+
+  if (customDeductionsList.length === 0 && customDeductions > 0) {
+    customDeductionsList = [{ name: 'Deducciones adicionales', amount: customDeductions }]
   }
 
   const statutoryDeductions =

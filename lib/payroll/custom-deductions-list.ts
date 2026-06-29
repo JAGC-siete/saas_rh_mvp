@@ -76,21 +76,39 @@ export async function buildCustomDeductionsList(
   if (customFields && Object.keys(customFields).length > 0) {
     for (const [fieldName, fieldDef] of Object.entries(customFields)) {
       if (fieldDef.category !== 'deductions') continue
-      const amount =
-        parseAmount(calc.calculatedFields?.[fieldName]) || parseAmount(meta[fieldName])
+      const calculated = parseAmount(calc.calculatedFields?.[fieldName])
+      const fromMeta = parseAmount(meta[fieldName])
+      const amount = calculated > 0 ? calculated : fromMeta
       pushDeduction(formatFieldLabel(fieldName, fieldDef.label), amount)
     }
-    return list
+  } else {
+    for (const field of LEGACY_DEDUCTION_FIELDS) {
+      pushDeduction(field.label, parseAmount(meta[field.key]))
+    }
+
+    for (const [key, value] of Object.entries(meta)) {
+      if (METADATA_SKIP_KEYS.has(key) || key.startsWith('_')) continue
+      pushDeduction(formatFieldLabel(key), parseAmount(value))
+    }
   }
 
-  for (const field of LEGACY_DEDUCTION_FIELDS) {
-    pushDeduction(field.label, parseAmount(meta[field.key]))
-  }
+  const planIds = meta._deduction_plan_ids as string[] | undefined
+  if (planIds?.length && supabase) {
+    const { data: plans } = await supabase
+      .from('employee_deduction_plans')
+      .select('field_key, monto_por_plazo')
+      .in('id', planIds)
+      .eq('company_id', companyId)
 
-  // Respaldo: claves numéricas en metadata que no sean metadatos internos
-  for (const [key, value] of Object.entries(meta)) {
-    if (METADATA_SKIP_KEYS.has(key) || key.startsWith('_')) continue
-    pushDeduction(formatFieldLabel(key), parseAmount(value))
+    for (const plan of plans || []) {
+      const fieldKey = plan.field_key as string
+      const fieldDef = customFields?.[fieldKey]
+      const amount =
+        parseAmount(meta[fieldKey]) > 0
+          ? parseAmount(meta[fieldKey])
+          : parseAmount(plan.monto_por_plazo)
+      pushDeduction(formatFieldLabel(fieldKey, fieldDef?.label), amount)
+    }
   }
 
   return list

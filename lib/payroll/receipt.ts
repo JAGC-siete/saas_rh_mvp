@@ -11,8 +11,11 @@ import { defaultPdfPrimaryColor, PDF } from '../pdf/liquid-theme'
 export type { VoucherPdfOptions }
 
 const PAGE_WIDTH = 595.28
+/** A4 height — single page avoids PDFKit auto-pagination from underestimated dynamic height */
+const PAGE_HEIGHT = 841.89
 const MARGIN = 30
 const FOOTER_BLOCK = 32
+const LAYOUT_SAFETY_PADDING = 48
 
 export interface EmployeeReceiptInput {
   employee_code?: string
@@ -38,6 +41,20 @@ export interface EmployeeReceiptInput {
 function sectionVisible(id: string, options?: VoucherPdfOptions): boolean {
   if (!options?.visibleSections) return true
   return options.visibleSections.has(id)
+}
+
+/** Line items with amounts always appear on the receipt (config may hide the section label only). */
+function shouldShowCustomDeductionLines(
+  record: EmployeeReceiptInput,
+  options?: VoucherPdfOptions
+): boolean {
+  if (!record.custom_deductions?.length) return false
+  if (!options?.visibleSections) return true
+  if (options.visibleSections.has('custom_deductions')) return true
+  for (const id of options.visibleSections) {
+    if (id.startsWith('custom_')) return true
+  }
+  return true
 }
 
 function fieldLabel(id: string, fallback: string, options?: VoucherPdfOptions): string {
@@ -90,8 +107,8 @@ function buildReceiptLayout(
   const hasSeptimoDia = (record.septimo_dia ?? 0) > 0 && sectionVisible('septimo_dia', options)
   const showBaseSalary = sectionVisible('base_salary', options)
   const showEarnings = showBaseSalary || hasSeptimoDia
-  const customDeductionsCount =
-    sectionVisible('custom_deductions', options) ? record.custom_deductions?.length || 0 : 0
+  const showCustomDeductionLines = shouldShowCustomDeductionLines(record, options)
+  const customDeductionsCount = showCustomDeductionLines ? record.custom_deductions?.length || 0 : 0
   const visibleStatutory =
     (sectionVisible('ihss', options) ? 1 : 0) +
     (sectionVisible('rap', options) ? 1 : 0) +
@@ -127,7 +144,7 @@ function buildReceiptLayout(
     y += 15 + 30 + 10
   }
   if (showBank) {
-    y += 15 + 35 + 10
+    y += 15 + 45 + 10
   }
   if (showLegalNotes) {
     y += 12 + 10 + 10 + 10 + 15
@@ -137,8 +154,9 @@ function buildReceiptLayout(
   }
   y += 14
 
-  const pageHeight = Math.max(y + FOOTER_BLOCK + MARGIN, headerHeight + 120)
-  const footerY = pageHeight - FOOTER_BLOCK
+  const contentBottom = y + LAYOUT_SAFETY_PADDING
+  const pageHeight = Math.max(PAGE_HEIGHT, contentBottom + FOOTER_BLOCK + MARGIN * 2)
+  const footerY = pageHeight - MARGIN - FOOTER_BLOCK
 
   return {
     headerHeight,
@@ -206,6 +224,7 @@ export async function generateEmployeeReceiptPDF(
         size: [PAGE_WIDTH, layout.pageHeight],
         margin: MARGIN,
         autoFirstPage: true,
+        bufferPages: true,
         info: {
           Title: `Recibo de Nómina - ${record.employee_name || 'Empleado'} - ${periodDisplay}`,
           Author: 'Sistema Hondureño de Recursos Humanos',
@@ -392,7 +411,7 @@ export async function generateEmployeeReceiptPDF(
           writeAmount(doc, formatHNL(record.income_tax), deductionY, pageWidth)
           deductionY += 12
         }
-        if (sectionVisible('custom_deductions', options) && record.custom_deductions?.length) {
+        if (shouldShowCustomDeductionLines(record, options) && record.custom_deductions?.length) {
           record.custom_deductions.forEach((ded) => {
             doc.fontSize(9).text(`${ded.name}:`, MARGIN + 10, deductionY, { lineBreak: false })
             writeAmount(doc, formatHNL(ded.amount), deductionY, pageWidth)
@@ -481,6 +500,7 @@ export async function generateEmployeeReceiptPDF(
         doc.rect(300, yPos + 12, 200, 25).stroke('#000000')
       }
 
+      doc.switchToPage(0)
       doc.fontSize(7).fillColor('#666666').text(
         `Fecha de generación: ${formatDateTimeForHonduras(nowInHonduras())}`,
         MARGIN,
