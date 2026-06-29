@@ -6,7 +6,16 @@ import {
   type VoucherPdfOptions,
 } from './voucher-pdf-options'
 import { resolveCompanyLogoBuffer } from '../reports/resolve-company-logo'
-import { defaultPdfPrimaryColor, PDF } from '../pdf/liquid-theme'
+import {
+  defaultPdfPrimaryColor,
+  drawBrandedReceiptHeader,
+  drawLiquidFooter,
+  drawLiquidHighlightBox,
+  drawLiquidPanel,
+  drawLiquidSectionTitle,
+  drawLiquidTableHeader,
+  PDF,
+} from '../pdf/liquid-theme'
 
 export type { VoucherPdfOptions }
 
@@ -14,8 +23,11 @@ const PAGE_WIDTH = 595.28
 /** A4 height — single page avoids PDFKit auto-pagination from underestimated dynamic height */
 const PAGE_HEIGHT = 841.89
 const MARGIN = 30
-const FOOTER_BLOCK = 32
+const FOOTER_BLOCK = 36
 const LAYOUT_SAFETY_PADDING = 48
+const PAD = 12
+const ROW_H = 14
+const TABLE_HEADER_H = 20
 
 export interface EmployeeReceiptInput {
   employee_code?: string
@@ -87,7 +99,7 @@ function buildReceiptLayout(
   options: VoucherPdfOptions | undefined,
   hasLogo: boolean
 ): ReceiptLayout {
-  const headerHeight = hasLogo ? 72 : 60
+  const headerHeight = hasLogo ? 78 : 74
   const showEmployee =
     sectionVisible('emp_code', options) ||
     sectionVisible('emp_name', options) ||
@@ -125,32 +137,38 @@ function buildReceiptLayout(
   const showLegalNotes = sectionVisible('legal_notes', options)
   const showSignatures = sectionVisible('signatures', options)
 
-  let y = headerHeight + 20
+  let y = headerHeight + 18
 
   if (showEmployee) {
-    const boxHeight = Math.max(50, 16 + employeeRowCount * 14)
-    y += 18 + boxHeight + 10
+    const boxHeight = Math.max(54, PAD * 2 + employeeRowCount * ROW_H)
+    y += 16 + boxHeight + 12
   }
   if (showEarnings) {
-    const earningsHeight = 20 + (showBaseSalary ? 12 : 0) + (hasSeptimoDia ? 12 : 0)
-    y += 15 + Math.max(earningsHeight, 30) + 10
+    const earningsRows = (showBaseSalary ? 1 : 0) + (hasSeptimoDia ? 1 : 0)
+    const earningsHeight = TABLE_HEADER_H + PAD + earningsRows * ROW_H + PAD
+    y += 14 + Math.max(earningsHeight, 36) + 12
   }
   if (showDeductions) {
     const deductionsHeight =
-      20 + visibleStatutory * 12 + customDeductionsCount * 12 + (showTotalDeductions ? 15 : 0)
-    y += 15 + Math.max(deductionsHeight, 30) + 15
+      TABLE_HEADER_H +
+      PAD +
+      visibleStatutory * ROW_H +
+      customDeductionsCount * ROW_H +
+      (showTotalDeductions ? ROW_H + 8 : 0) +
+      PAD
+    y += 14 + Math.max(deductionsHeight, 36) + 14
   }
   if (showNet) {
-    y += 15 + 30 + 10
+    y += 14 + 42 + 12
   }
   if (showBank) {
-    y += 15 + 45 + 10
+    y += 14 + 48 + 12
   }
   if (showLegalNotes) {
-    y += 12 + 10 + 10 + 10 + 15
+    y += 12 + 12 + 10 + 10 + 14
   }
   if (showSignatures) {
-    y += 12 + 25 + 8
+    y += 12 + 28 + 10
   }
   y += 14
 
@@ -185,16 +203,81 @@ function writeAmount(
   text: string,
   y: number,
   pageWidth: number,
-  bold = false
+  options?: { bold?: boolean; color?: string }
 ) {
   const contentWidth = pageWidth - MARGIN * 2
-  if (bold) doc.font('Helvetica-Bold')
-  doc.fontSize(9).fillColor('#000000').text(text, MARGIN + 10, y, {
-    width: contentWidth - 20,
+  if (options?.bold) doc.font('Helvetica-Bold')
+  doc.fontSize(9).fillColor(options?.color ?? PDF.bodyText).text(text, MARGIN + PAD, y, {
+    width: contentWidth - PAD * 2,
     align: 'right',
     lineBreak: false,
   })
-  if (bold) doc.font('Helvetica')
+  if (options?.bold) doc.font('Helvetica')
+}
+
+function drawKeyValuePanel(
+  doc: any,
+  x: number,
+  y: number,
+  w: number,
+  rows: Array<{ label: string; value: string; x: number }>,
+  minHeight: number
+): number {
+  const h = Math.max(minHeight, PAD * 2 + rows.length * ROW_H)
+  drawLiquidPanel(doc, x, y, w, h)
+  rows.forEach((row, index) => {
+    const rowY = y + PAD + index * ROW_H
+    doc.font('Helvetica').fontSize(8.5).fillColor(PDF.bodyMuted).text(`${row.label}:`, row.x, rowY, {
+      lineBreak: false,
+    })
+    doc.font('Helvetica').fontSize(9).fillColor(PDF.bodyText).text(row.value, row.x + 78, rowY, {
+      lineBreak: false,
+    })
+  })
+  return y + h
+}
+
+function drawLineItemPanel(
+  doc: any,
+  x: number,
+  y: number,
+  w: number,
+  items: Array<{ label: string; amount: string; bold?: boolean }>,
+  totalRow?: { label: string; amount: string }
+): number {
+  const bodyRows = items.length + (totalRow ? 1 : 0)
+  const h = TABLE_HEADER_H + PAD + bodyRows * ROW_H + (totalRow ? 8 : PAD)
+  drawLiquidPanel(doc, x, y, w, h)
+
+  const colConcept = Math.floor(w * 0.62)
+  const colAmount = w - colConcept - 2
+  drawLiquidTableHeader(doc, x + 1, y + 1, [colConcept, colAmount], ['Concepto', 'Monto'], TABLE_HEADER_H - 2)
+
+  let rowY = y + TABLE_HEADER_H + 6
+  items.forEach((item, idx) => {
+    const stripe = idx % 2 === 1 ? PDF.tableStripe : PDF.white
+    doc.rect(x + 1, rowY - 2, w - 2, ROW_H).fill(stripe)
+    doc.font(item.bold ? 'Helvetica-Bold' : 'Helvetica').fontSize(9).fillColor(PDF.bodyText)
+    doc.text(item.label, x + PAD, rowY, { lineBreak: false })
+    writeAmount(doc, item.amount, rowY, doc.page.width, { bold: item.bold })
+    rowY += ROW_H
+  })
+
+  if (totalRow) {
+    rowY += 2
+    doc
+      .moveTo(x + PAD, rowY - 4)
+      .lineTo(x + w - PAD, rowY - 4)
+      .strokeColor(PDF.panelBorder)
+      .stroke()
+    doc.font('Helvetica-Bold').fontSize(9).fillColor(PDF.accentDark)
+    doc.text(totalRow.label, x + PAD, rowY, { lineBreak: false })
+    writeAmount(doc, totalRow.amount, rowY, doc.page.width, { bold: true, color: PDF.accentDark })
+    rowY += ROW_H
+  }
+
+  doc.font('Helvetica').fillColor(PDF.bodyText)
+  return y + h
 }
 
 export async function generateEmployeeReceiptPDF(
@@ -227,10 +310,10 @@ export async function generateEmployeeReceiptPDF(
         bufferPages: true,
         info: {
           Title: `Recibo de Nómina - ${record.employee_name || 'Empleado'} - ${periodDisplay}`,
-          Author: 'Sistema Hondureño de Recursos Humanos',
+          Author: 'Humano SISU',
           Subject: 'Recibo de Nómina Individual',
-          Keywords: 'recibo, nómina, empleado, Paragon, Honduras',
-          Creator: 'HR SaaS System',
+          Keywords: 'recibo, nómina, empleado, Honduras, Humano SISU',
+          Creator: 'Humano SISU',
         },
       })
 
@@ -245,68 +328,39 @@ export async function generateEmployeeReceiptPDF(
       })
 
       const pageWidth = doc.page.width
-      const { headerHeight, footerY } = layout
+      const { footerY } = layout
 
-      doc.rect(0, 0, pageWidth, headerHeight).fill(primaryColor)
-      doc.fillColor('white')
-
-      if (logoBuffer) {
-        doc.image(logoBuffer, pageWidth / 2 - 40, 8, { fit: [80, 36], align: 'center' })
-        doc.fontSize(10).text('Recibo de Nómina', MARGIN, 46, {
-          align: 'center',
-          width: contentWidth,
-          lineBreak: false,
-        })
-        doc.fontSize(9).text(periodDisplay, MARGIN, 58, {
-          align: 'center',
-          width: contentWidth,
-          lineBreak: false,
-        })
-      } else {
-        doc.fontSize(16).text(displayName, MARGIN, 12, {
-          align: 'center',
-          width: contentWidth,
-          lineBreak: false,
-        })
-        doc.fontSize(11).text('Recibo de Nómina', MARGIN, 32, {
-          align: 'center',
-          width: contentWidth,
-          lineBreak: false,
-        })
-        doc.fontSize(10).text(periodDisplay, MARGIN, 48, {
-          align: 'center',
-          width: contentWidth,
-          lineBreak: false,
-        })
-      }
-
-      doc.fillColor('#000000')
-      let yPos = headerHeight + 20
+      let yPos = drawBrandedReceiptHeader(doc, {
+        primaryColor,
+        companyName: displayName,
+        subtitle: periodDisplay,
+        logoBuffer,
+      })
 
       if (layout.showEmployee) {
-        doc.fontSize(11).text('INFORMACIÓN DEL EMPLEADO:', MARGIN, yPos, { lineBreak: false })
-        yPos += 18
+        drawLiquidSectionTitle(doc, 'Información del empleado', MARGIN, yPos)
+        yPos += 16
 
         const employeeRows: Array<{ label: string; value: string; x: number }> = []
         if (sectionVisible('emp_code', options)) {
           employeeRows.push({
             label: fieldLabel('emp_code', 'Código', options),
             value: record.employee_code || 'N/A',
-            x: MARGIN + 10,
+            x: MARGIN + PAD,
           })
         }
         if (sectionVisible('emp_name', options)) {
           employeeRows.push({
             label: fieldLabel('emp_name', 'Nombre', options),
             value: record.employee_name || 'N/A',
-            x: MARGIN + 10,
+            x: MARGIN + PAD,
           })
         }
         if (sectionVisible('department', options)) {
           employeeRows.push({
             label: fieldLabel('department', 'Departamento', options),
             value: record.department || 'N/A',
-            x: MARGIN + 10,
+            x: MARGIN + PAD,
           })
         }
         if (sectionVisible('position', options)) {
@@ -325,193 +379,166 @@ export async function generateEmployeeReceiptPDF(
         }
         if (sectionVisible('days_worked', options)) {
           employeeRows.push({
-            label: fieldLabel('days_worked', 'Días Trabajados', options),
+            label: fieldLabel('days_worked', 'Días trabajados', options),
             value: record.days_worked.toString(),
             x: 300,
           })
         }
 
-        const boxHeight = Math.max(50, 16 + layout.employeeRowCount * 14)
-        doc.rect(MARGIN, yPos, contentWidth, boxHeight).stroke('#000000')
-        employeeRows.forEach((row, index) => {
-          const rowY = yPos + 8 + index * 14
-          doc.fontSize(9).text(`${row.label}:`, row.x, rowY, { lineBreak: false })
-          doc.fontSize(9).text(row.value, row.x + 80, rowY, { lineBreak: false })
-        })
-        yPos += boxHeight + 10
+        const boxHeight = Math.max(54, PAD * 2 + layout.employeeRowCount * ROW_H)
+        yPos = drawKeyValuePanel(doc, MARGIN, yPos, contentWidth, employeeRows, boxHeight) + 12
       }
 
       if (layout.showEarnings) {
-        doc.fontSize(11).text('DETALLE DE INGRESOS:', MARGIN, yPos, { lineBreak: false })
-        yPos += 15
-        const earningsHeight =
-          20 + (layout.showBaseSalary ? 12 : 0) + (layout.hasSeptimoDia ? 12 : 0)
-        doc.rect(MARGIN, yPos, contentWidth, Math.max(earningsHeight, 30)).stroke('#000000')
-        let earnY = yPos + 8
-        doc.fontSize(9).text('Concepto:', MARGIN + 10, earnY, { lineBreak: false })
-        doc.fontSize(9).text('Monto:', MARGIN + 10, earnY, {
-          width: contentWidth - 20,
-          align: 'right',
-          lineBreak: false,
-        })
-        earnY += 12
+        drawLiquidSectionTitle(doc, 'Detalle de ingresos', MARGIN, yPos)
+        yPos += 14
+
+        const items: Array<{ label: string; amount: string }> = []
         if (layout.showBaseSalary) {
-          doc.fontSize(9).text(`${fieldLabel('base_salary', 'Salario Base', options)}:`, MARGIN + 10, earnY, {
-            lineBreak: false,
+          items.push({
+            label: `${fieldLabel('base_salary', 'Salario base', options)}`,
+            amount: formatHNL(record.base_salary),
           })
-          writeAmount(doc, formatHNL(record.base_salary), earnY, pageWidth)
-          earnY += 12
         }
         if (layout.hasSeptimoDia) {
-          doc.fontSize(9).text(`${fieldLabel('septimo_dia', 'Séptimo Día', options)}:`, MARGIN + 10, earnY, {
-            lineBreak: false,
+          items.push({
+            label: `${fieldLabel('septimo_dia', 'Séptimo día', options)}`,
+            amount: formatHNL(record.septimo_dia!),
           })
-          writeAmount(doc, formatHNL(record.septimo_dia!), earnY, pageWidth)
         }
-        yPos += Math.max(earningsHeight, 30) + 10
+
+        yPos = drawLineItemPanel(doc, MARGIN, yPos, contentWidth, items) + 12
       }
 
       if (layout.showDeductions) {
-        doc.fontSize(11).text('DETALLE DE DEDUCCIONES:', MARGIN, yPos, { lineBreak: false })
-        yPos += 15
+        drawLiquidSectionTitle(doc, 'Detalle de deducciones', MARGIN, yPos)
+        yPos += 14
 
-        const deductionsHeight =
-          20 +
-          layout.visibleStatutory * 12 +
-          layout.customDeductionsCount * 12 +
-          (layout.showTotalDeductions ? 15 : 0)
-
-        doc.rect(MARGIN, yPos, contentWidth, Math.max(deductionsHeight, 30)).stroke('#000000')
-        doc.fontSize(9).text('Concepto:', MARGIN + 10, yPos + 8, { lineBreak: false })
-        doc.fontSize(9).text('Monto:', MARGIN + 10, yPos + 8, {
-          width: contentWidth - 20,
-          align: 'right',
-          lineBreak: false,
-        })
-
-        let deductionY = yPos + 20
+        const items: Array<{ label: string; amount: string }> = []
         if (sectionVisible('ihss', options)) {
-          doc.fontSize(9).text(`${fieldLabel('ihss', 'IHSS', options)}:`, MARGIN + 10, deductionY, {
-            lineBreak: false,
+          items.push({
+            label: `${fieldLabel('ihss', 'IHSS', options)}`,
+            amount: formatHNL(record.social_security),
           })
-          writeAmount(doc, formatHNL(record.social_security), deductionY, pageWidth)
-          deductionY += 12
         }
         if (sectionVisible('rap', options)) {
-          doc.fontSize(9).text(`${fieldLabel('rap', 'RAP', options)}:`, MARGIN + 10, deductionY, {
-            lineBreak: false,
+          items.push({
+            label: `${fieldLabel('rap', 'RAP', options)}`,
+            amount: formatHNL(record.professional_tax),
           })
-          writeAmount(doc, formatHNL(record.professional_tax), deductionY, pageWidth)
-          deductionY += 12
         }
         if (sectionVisible('isr', options)) {
-          doc.fontSize(9).text(`${fieldLabel('isr', 'ISR', options)}:`, MARGIN + 10, deductionY, {
-            lineBreak: false,
+          items.push({
+            label: `${fieldLabel('isr', 'ISR', options)}`,
+            amount: formatHNL(record.income_tax),
           })
-          writeAmount(doc, formatHNL(record.income_tax), deductionY, pageWidth)
-          deductionY += 12
         }
         if (shouldShowCustomDeductionLines(record, options) && record.custom_deductions?.length) {
           record.custom_deductions.forEach((ded) => {
-            doc.fontSize(9).text(`${ded.name}:`, MARGIN + 10, deductionY, { lineBreak: false })
-            writeAmount(doc, formatHNL(ded.amount), deductionY, pageWidth)
-            deductionY += 12
+            items.push({ label: ded.name, amount: formatHNL(ded.amount) })
           })
         }
-        if (layout.showTotalDeductions) {
-          deductionY += 3
-          doc.font('Helvetica-Bold')
-          doc.fontSize(9).text(
-            `${fieldLabel('total_deductions', 'Total Deducciones', options)}:`,
-            MARGIN + 10,
-            deductionY,
-            { lineBreak: false }
-          )
-          writeAmount(doc, formatHNL(record.total_deductions), deductionY, pageWidth, true)
-          doc.font('Helvetica')
-          deductionY += 12
-        }
-        yPos = Math.max(yPos + Math.max(deductionsHeight, 30) + 15, deductionY + 15)
+
+        const totalRow = layout.showTotalDeductions
+          ? {
+              label: `${fieldLabel('total_deductions', 'Total deducciones', options)}`,
+              amount: formatHNL(record.total_deductions),
+            }
+          : undefined
+
+        yPos = drawLineItemPanel(doc, MARGIN, yPos, contentWidth, items, totalRow) + 14
       }
 
       if (layout.showNet) {
-        doc.fontSize(11).text('RESUMEN FINAL:', MARGIN, yPos, { lineBreak: false })
-        yPos += 15
-        doc.rect(MARGIN, yPos, contentWidth, 30).fillAndStroke('#f0f0f0', '#000000')
-        doc.font('Helvetica-Bold')
-        doc.fontSize(11).text(
-          `${fieldLabel('net_salary', 'TOTAL A RECIBIR', options)}:`,
-          MARGIN + 10,
-          yPos + 8,
-          { lineBreak: false }
-        )
-        doc.fontSize(13).text(formatHNL(record.net_salary), MARGIN + 10, yPos + 8, {
-          width: contentWidth - 20,
+        drawLiquidSectionTitle(doc, 'Resumen final', MARGIN, yPos)
+        yPos += 14
+
+        const netBoxH = 40
+        drawLiquidHighlightBox(doc, MARGIN, yPos, contentWidth, netBoxH, { variant: 'success' })
+        doc.font('Helvetica-Bold').fontSize(10).fillColor(PDF.successText)
+        doc.text(`${fieldLabel('net_salary', 'Total a recibir', options)}`, MARGIN + PAD, yPos + 10, {
+          lineBreak: false,
+        })
+        doc.fontSize(14).fillColor(PDF.success)
+        doc.text(formatHNL(record.net_salary), MARGIN + PAD, yPos + 10, {
+          width: contentWidth - PAD * 2,
           align: 'right',
           lineBreak: false,
         })
-        doc.font('Helvetica')
-        yPos += 40
+        doc.font('Helvetica').fillColor(PDF.bodyText)
+        yPos += netBoxH + 12
       }
 
       if (layout.showBank) {
-        doc.fontSize(11).text('INFORMACIÓN BANCARIA:', MARGIN, yPos, { lineBreak: false })
-        yPos += 15
-        doc.rect(MARGIN, yPos, contentWidth, 35).stroke('#000000')
+        drawLiquidSectionTitle(doc, 'Información bancaria', MARGIN, yPos)
+        yPos += 14
+
+        const bankBoxH = 48
+        drawLiquidPanel(doc, MARGIN, yPos, contentWidth, bankBoxH)
+
         if (layout.showBankName) {
-          doc.fontSize(9).text(`${fieldLabel('bank_name', 'Banco', options)}:`, MARGIN + 10, yPos + 8, {
-            lineBreak: false,
-          })
-          doc.fontSize(9).text(record.bank_name || 'No especificado', 120, yPos + 8, { lineBreak: false })
+          doc.font('Helvetica').fontSize(8.5).fillColor(PDF.bodyMuted)
+          doc.text(`${fieldLabel('bank_name', 'Banco', options)}:`, MARGIN + PAD, yPos + 10, { lineBreak: false })
+          doc.fontSize(9).fillColor(PDF.bodyText)
+          doc.text(record.bank_name || 'No especificado', MARGIN + 118, yPos + 10, { lineBreak: false })
         }
         if (layout.showBankAccount) {
-          doc.fontSize(9).text(`${fieldLabel('bank_account', 'Número de Cuenta', options)}:`, MARGIN + 10, yPos + 20, {
+          doc.font('Helvetica').fontSize(8.5).fillColor(PDF.bodyMuted)
+          doc.text(`${fieldLabel('bank_account', 'Cuenta bancaria', options)}:`, MARGIN + PAD, yPos + 26, {
             lineBreak: false,
           })
-          doc.fontSize(9).text(record.bank_account || 'No especificado', 120, yPos + 20, { lineBreak: false })
+          doc.fontSize(9).fillColor(PDF.bodyText)
+          doc.text(record.bank_account || 'No especificado', MARGIN + 118, yPos + 26, { lineBreak: false })
         }
         if (layout.showNet) {
-          doc.fontSize(9).text('Monto a Transferir:', 300, yPos + 8, { lineBreak: false })
-          writeAmount(doc, formatHNL(record.net_salary), yPos + 8, pageWidth)
+          doc.font('Helvetica').fontSize(8.5).fillColor(PDF.bodyMuted)
+          doc.text('Monto a transferir:', 300, yPos + 10, { lineBreak: false })
+          doc.fontSize(10).fillColor(PDF.accentDark)
+          writeAmount(doc, formatHNL(record.net_salary), yPos + 10, pageWidth, { bold: true, color: PDF.accentDark })
         }
-        yPos += 45
+
+        doc.font('Helvetica').fillColor(PDF.bodyText)
+        yPos += bankBoxH + 12
       }
 
       if (layout.showLegalNotes) {
-        doc.fontSize(9).text('NOTAS:', MARGIN, yPos, { lineBreak: false })
-        yPos += 12
-        doc.fontSize(8).text('• Este recibo es un documento oficial emitido por la empresa.', MARGIN, yPos, {
+        drawLiquidSectionTitle(doc, 'Notas', MARGIN, yPos)
+        yPos += 14
+        doc.font('Helvetica').fontSize(8).fillColor(PDF.bodyMuted)
+        doc.text('• Este recibo es un documento oficial emitido por la empresa.', MARGIN + 4, yPos, {
           lineBreak: false,
         })
-        yPos += 10
-        doc.fontSize(8).text('• Los montos están calculados según la legislación laboral de Honduras.', MARGIN, yPos, {
+        yPos += 11
+        doc.text('• Los montos están calculados según la legislación laboral de Honduras.', MARGIN + 4, yPos, {
           lineBreak: false,
         })
-        yPos += 10
-        doc.fontSize(8).text('• ¿Preguntas? Contacte a su manager de recursos humanos.', MARGIN, yPos, {
+        yPos += 11
+        doc.text('• ¿Preguntas? Contacte a su manager de recursos humanos.', MARGIN + 4, yPos, {
           lineBreak: false,
         })
-        yPos += 15
+        doc.fillColor(PDF.bodyText)
+        yPos += 14
       }
 
       if (layout.showSignatures) {
-        doc.fontSize(9).text('Firma del Empleado:', MARGIN, yPos, { lineBreak: false })
-        doc.rect(MARGIN, yPos + 12, 200, 25).stroke('#000000')
-        doc.fontSize(9).text('Firma del Autorizado:', 300, yPos, { lineBreak: false })
-        doc.rect(300, yPos + 12, 200, 25).stroke('#000000')
+        doc.font('Helvetica').fontSize(8.5).fillColor(PDF.bodyMuted)
+        doc.text('Firma del empleado', MARGIN, yPos, { lineBreak: false })
+        doc.text('Firma del autorizado', 300, yPos, { lineBreak: false })
+        drawLiquidPanel(doc, MARGIN, yPos + 12, 200, 28, { fill: PDF.white, radius: 6 })
+        drawLiquidPanel(doc, 300, yPos + 12, 200, 28, { fill: PDF.white, radius: 6 })
+        doc.fillColor(PDF.bodyText)
       }
 
       doc.switchToPage(0)
-      doc.fontSize(7).fillColor('#666666').text(
+      doc.fontSize(7).fillColor(PDF.footerMuted).text(
         `Fecha de generación: ${formatDateTimeForHonduras(nowInHonduras())}`,
         MARGIN,
-        footerY - 12,
+        footerY - 14,
         { align: 'center', width: contentWidth, lineBreak: false }
       )
-      doc.fontSize(7).fillColor(PDF.footerMuted).text('SISU: Sistema Hondureño de Recursos Humanos', MARGIN, footerY, {
-        align: 'center',
-        width: contentWidth,
-        lineBreak: false,
+      drawLiquidFooter(doc, 'Humano SISU · Sistema Hondureño de Recursos Humanos', {
+        y: footerY,
+        fontSize: 7,
       })
 
       doc.end()

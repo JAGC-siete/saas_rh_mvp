@@ -146,3 +146,59 @@ export function defaultPdfPrimaryColor(override?: string): string {
   if (override && /^#[0-9A-Fa-f]{6}$/.test(override)) return override
   return PDF.primaryDefault
 }
+
+/** Branded payroll receipt header (company name or logo + period). */
+export function drawBrandedReceiptHeader(
+  doc: PdfDoc,
+  options: {
+    primaryColor: string
+    companyName: string
+    title?: string
+    subtitle: string
+    logoBuffer?: Buffer | null
+  }
+): number {
+  const pageWidth = doc.page.width
+  const margin = 30
+  const contentWidth = pageWidth - margin * 2
+  const hasLogo = !!options.logoBuffer
+  const h = hasLogo ? 78 : 74
+  const title = options.title ?? 'Recibo de Nómina'
+
+  doc.rect(0, 0, pageWidth, h).fill(options.primaryColor)
+  doc.rect(0, h - 3, pageWidth, 3).fill(PDF.accent)
+  doc.fillColor(PDF.headerText)
+
+  if (hasLogo && options.logoBuffer) {
+    doc.image(options.logoBuffer, pageWidth / 2 - 42, 8, { fit: [84, 38], align: 'center' })
+    doc.font('Helvetica-Bold').fontSize(11).text(title, margin, 48, {
+      align: 'center',
+      width: contentWidth,
+      lineBreak: false,
+    })
+    doc.font('Helvetica').fontSize(9).fillColor('#bfdbfe').text(options.subtitle, margin, 62, {
+      align: 'center',
+      width: contentWidth,
+      lineBreak: false,
+    })
+  } else {
+    doc.font('Helvetica-Bold').fontSize(15).text(options.companyName, margin, 14, {
+      align: 'center',
+      width: contentWidth,
+      lineBreak: false,
+    })
+    doc.font('Helvetica').fontSize(11).text(title, margin, 36, {
+      align: 'center',
+      width: contentWidth,
+      lineBreak: false,
+    })
+    doc.fontSize(9).fillColor('#bfdbfe').text(options.subtitle, margin, 52, {
+      align: 'center',
+      width: contentWidth,
+      lineBreak: false,
+    })
+  }
+
+  doc.fillColor(PDF.bodyText).font('Helvetica')
+  return h + 18
+}
