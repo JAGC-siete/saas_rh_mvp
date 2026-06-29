@@ -3,7 +3,7 @@ import { Button } from '../ui/button'
 import { PreviewData } from './ReportBuilder'
 import { Download, Loader2, CheckCircle, FileSpreadsheet } from 'lucide-react'
 import type { ReportExportCapabilities } from '../../lib/reports/report-ui-capabilities'
-import { useCanExportReports } from '../../lib/hooks/useCanonicalPermissions'
+import { useCanExportReportsScope, type ExportPermissionScope } from '../../lib/hooks/useCanonicalPermissions'
 
 interface ExportBarProps {
   data: PreviewData
@@ -11,12 +11,20 @@ interface ExportBarProps {
   disabled?: boolean
   capabilities: ReportExportCapabilities
   onExportError?: (message: string) => void
+  exportScope?: ExportPermissionScope
 }
 
-export default function ExportBar({ data, onExport, disabled, capabilities, onExportError }: ExportBarProps) {
+export default function ExportBar({
+  data,
+  onExport,
+  disabled,
+  capabilities,
+  onExportError,
+  exportScope = 'full',
+}: ExportBarProps) {
   const [exporting, setExporting] = useState<'excel' | 'pdf' | 'csv' | null>(null)
   const [exported, setExported] = useState<'excel' | 'pdf' | 'csv' | null>(null)
-  const canExport = useCanExportReports()
+  const canExport = useCanExportReportsScope(exportScope)
 
   const handleExport = async (format: 'excel' | 'pdf' | 'csv') => {
     if (!canExport) return

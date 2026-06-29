@@ -682,6 +682,7 @@ export default function ReportBuilder() {
             data={previewData}
             onExport={handleExport}
             disabled={loading || !!error}
+            exportScope={activeTab === 'attendance' ? 'attendance' : 'full'}
             capabilities={
               activeTab === 'payroll' && (filters.payrollView ?? 'lines') === 'derived'
                 ? { excel: true, pdf: false, csv: true }
