@@ -2,6 +2,10 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import { requireCompanyAccess } from "../../../lib/auth/api-auth-fixed"
 import { generateConsolidatedPayrollPDF, type PlanillaItem } from '../../../lib/payroll/report'
 import { calculatePayroll } from '../../../lib/payroll-client-specific'
+import {
+  buildCustomDeductionsList,
+  formatCustomDeductionsNotes,
+} from '../../../lib/payroll/custom-deductions-list'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (!['POST', 'GET'].includes(req.method || '')) {
@@ -81,38 +85,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         let deductionsNotes = ''
         
         if (line.metadata && companyId) {
+          const effBruto = Number(line.eff_bruto) || 0
           const calcResult = await calculatePayroll(
             companyId,
-            Number(line.eff_bruto) || 0,
+            effBruto,
             line.metadata,
             supabase
           )
-          
+
           customDeductions = calcResult.totalDeduccionesAdicionales
-          
-          // Build notes for custom deductions
-          const deductionFields = [
-            { key: 'comedor', label: 'Comedor' },
-            { key: 'cooperativa_aportaciones', label: 'Coop. Aportaciones' },
-            { key: 'cooperativa_retirable', label: 'Coop. Retirable' },
-            { key: 'cooperativa_prestamo', label: 'Coop. Préstamo' },
-            { key: 'embargo_alimentos', label: 'Embargo' },
-            { key: 'prestamo_banrural', label: 'Préstamo BANRURAL' },
-            { key: 'prestamo_celular', label: 'Préstamo Celular' },
-            { key: 'anticipo_prestamo', label: 'Anticipo/Préstamo' },
-            { key: 'impuesto_vecinal', label: 'Impuesto Vecinal' }
-          ]
-          
-          const deductionItems: string[] = []
-          for (const field of deductionFields) {
-            const value = parseFloat(line.metadata[field.key] || '0')
-            if (value > 0) {
-              deductionItems.push(`${field.label}: L. ${value.toFixed(2)}`)
-            }
-          }
-          
+          const deductionItems = await buildCustomDeductionsList(
+            companyId,
+            line.metadata,
+            effBruto,
+            supabase
+          )
           if (deductionItems.length > 0) {
-            deductionsNotes = deductionItems.join('; ')
+            deductionsNotes = formatCustomDeductionsNotes(deductionItems)
           }
         }
 

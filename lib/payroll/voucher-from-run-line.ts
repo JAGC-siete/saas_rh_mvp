@@ -1,20 +1,6 @@
 import { calculatePayroll } from '../payroll-client-specific'
 import type { EmployeeReceiptInput } from './receipt'
-
-const METADATA_DEDUCTION_FIELDS = [
-  { key: 'comedor', label: 'Comedor' },
-  { key: 'cooperativa_aportaciones', label: 'Coop. Aportaciones' },
-  { key: 'cooperativa_retirable', label: 'Coop. Retirable' },
-  { key: 'cooperativa_prestamo', label: 'Coop. Préstamo' },
-  { key: 'embargo_alimentos', label: 'Embargo de Alimentos' },
-  { key: 'otras_deducciones_materiales', label: 'Materiales' },
-  { key: 'otras_deducciones_medicamentos', label: 'Medicamentos' },
-  { key: 'otras_deducciones_efectivo', label: 'Efectivo' },
-  { key: 'prestamo_banrural', label: 'Préstamo BANRURAL' },
-  { key: 'prestamo_celular', label: 'Préstamo Celular' },
-  { key: 'anticipo_prestamo', label: 'Anticipo/Préstamo' },
-  { key: 'impuesto_vecinal', label: 'Impuesto Vecinal' },
-] as const
+import { buildCustomDeductionsList } from './custom-deductions-list'
 
 export interface VoucherFromRunLineResult {
   record: EmployeeReceiptInput
@@ -98,21 +84,21 @@ export async function buildVoucherFromRunLine(
   let customDeductions = 0
   let customDeductionsList: Array<{ name: string; amount: number }> = []
 
+  const brutoTotal = Number(lineData.eff_bruto) || 0
   if (lineData.metadata) {
     const calcResult = await calculatePayroll(
       companyId,
-      Number(lineData.eff_bruto) || 0,
+      brutoTotal,
       lineData.metadata,
       supabase
     )
     customDeductions = calcResult.totalDeduccionesAdicionales
-
-    for (const field of METADATA_DEDUCTION_FIELDS) {
-      const value = parseFloat(lineData.metadata[field.key] || '0')
-      if (value > 0) {
-        customDeductionsList.push({ name: field.label, amount: value })
-      }
-    }
+    customDeductionsList = await buildCustomDeductionsList(
+      companyId,
+      lineData.metadata,
+      brutoTotal,
+      supabase
+    )
   }
 
   const statutoryDeductions =
@@ -123,7 +109,6 @@ export async function buildVoucherFromRunLine(
     Number(lineData.seventh_day_pay) ||
     Number((lineData.metadata as Record<string, unknown>)?.septimo_dia) ||
     0
-  const brutoTotal = Number(lineData.eff_bruto) || 0
   const baseSalaryForReceipt = septimoDia > 0 ? brutoTotal - septimoDia : brutoTotal
 
   const employeeCode = employee.employee_code || 'empleado'
