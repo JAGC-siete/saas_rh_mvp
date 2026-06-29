@@ -18,6 +18,7 @@ import {
 } from './billing/messages'
 import type { PayrollPdfGroupBy } from './payroll/pdf-layout'
 import type { VoucherPreviewData } from './payroll/voucher-preview'
+import type { PlanillaPreviewData } from './payroll/planilla-preview'
 
 // Generic API function with timeout and error handling
 async function api<T>(url: string, init?: RequestInit): Promise<T> {
@@ -98,6 +99,19 @@ export const payrollApi = {
     const data = await response.json().catch(() => ({}))
     if (!response.ok || !data?.success) {
       throw new Error(data?.error || data?.message || 'No se pudo cargar el comprobante')
+    }
+    return data.data
+  },
+
+  fetchPlanillaPreview: async (runId: string): Promise<{ preview: PlanillaPreviewData }> => {
+    const params = new URLSearchParams({ run_id: runId })
+    const response = await fetch(`/api/payroll/planilla-preview?${params.toString()}`, {
+      method: 'GET',
+      credentials: 'include',
+    })
+    const data = await response.json().catch(() => ({}))
+    if (!response.ok || !data?.success) {
+      throw new Error(data?.error || data?.message || 'No se pudo cargar la planilla')
     }
     return data.data
   },

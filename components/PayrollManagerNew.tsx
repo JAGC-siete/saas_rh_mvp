@@ -9,6 +9,7 @@ import CustomPayrollFieldsForm from './CustomPayrollFieldsForm'
 import DeductionPlansDashboard from './DeductionPlansDashboard'
 import { PayrollAccountingTab } from './accounting/PayrollAccountingTab'
 import VoucherPreviewModal from './payroll/VoucherPreviewModal'
+import PlanillaPreviewModal from './payroll/PlanillaPreviewModal'
 
 interface ModalState {
   lineId: string
@@ -467,13 +468,15 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
       />
 
       {/* Preflight AHC (overtime readiness) */}
-      {payroll.unifiedData && payroll.ahcPreflight && (
+      {payroll.unifiedData && (payroll.ahcPreflight || payroll.ahcPreflightError) && (
         <Card
           variant="liquid"
           className={`border ${
-            payroll.ahcPreflight.status === 'GREEN'
-              ? 'border-emerald-500/30 bg-emerald-500/10'
-              : 'border-amber-500/35 bg-amber-500/10'
+            payroll.ahcPreflightError
+              ? 'border-red-500/35 bg-red-500/10'
+              : payroll.ahcPreflight?.status === 'GREEN'
+                ? 'border-emerald-500/30 bg-emerald-500/10'
+                : 'border-amber-500/35 bg-amber-500/10'
           }`}
         >
           <CardContent className="pt-5 pb-5 flex flex-wrap items-start justify-between gap-4">
@@ -481,28 +484,38 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
               <div className="flex items-center gap-2">
                 <span
                   className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold ${
-                    payroll.ahcPreflight.status === 'GREEN'
-                      ? 'bg-emerald-500/20 text-emerald-200'
-                      : 'bg-amber-500/20 text-amber-200'
+                    payroll.ahcPreflightError
+                      ? 'bg-red-500/20 text-red-200'
+                      : payroll.ahcPreflight?.status === 'GREEN'
+                        ? 'bg-emerald-500/20 text-emerald-200'
+                        : 'bg-amber-500/20 text-amber-200'
                   }`}
                 >
-                  {payroll.ahcPreflight.status === 'GREEN'
-                    ? 'Horas calculadas'
-                    : 'Faltan horas por calcular'}
+                  {payroll.ahcPreflightError
+                    ? 'Error al verificar'
+                    : payroll.ahcPreflight?.status === 'GREEN'
+                      ? 'Horas calculadas'
+                      : 'Faltan horas por calcular'}
                 </span>
                 <span className="text-sm text-gray-200 font-medium">
                   Horas desde asistencia (incluye extras para nómina)
                 </span>
               </div>
-              <p className="text-xs text-gray-300">
-                Marcas completas (entrada/salida):{' '}
-                <span className="font-semibold">{payroll.ahcPreflight.completeRecords}</span> · Ya calculadas:{' '}
-                <span className="font-semibold">{payroll.ahcPreflight.ahcRecords}</span> · Por calcular:{' '}
-                <span className="font-semibold">{payroll.ahcPreflight.missingAHC}</span>
-              </p>
-              {payroll.ahcPreflight.recommendedAction && (
-                <p className="text-xs text-gray-400">{payroll.ahcPreflight.recommendedAction}</p>
-              )}
+              {payroll.ahcPreflightError ? (
+                <p className="text-xs text-red-200">{payroll.ahcPreflightError}</p>
+              ) : payroll.ahcPreflight ? (
+                <>
+                  <p className="text-xs text-gray-300">
+                    Marcas completas (entrada/salida):{' '}
+                    <span className="font-semibold">{payroll.ahcPreflight.completeRecords}</span> · Ya calculadas:{' '}
+                    <span className="font-semibold">{payroll.ahcPreflight.ahcRecords}</span> · Por calcular:{' '}
+                    <span className="font-semibold">{payroll.ahcPreflight.missingAHC}</span>
+                  </p>
+                  {payroll.ahcPreflight.recommendedAction && (
+                    <p className="text-xs text-gray-400">{payroll.ahcPreflight.recommendedAction}</p>
+                  )}
+                </>
+              ) : null}
             </div>
             <div className="flex items-center gap-2">
               <Button
@@ -514,7 +527,7 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
               >
                 {payroll.ahcPreflightLoading ? 'Verificando…' : 'Actualizar estado'}
               </Button>
-              {payroll.ahcPreflight.missingAHC > 0 && (
+              {payroll.ahcPreflight && payroll.ahcPreflight.missingAHC > 0 && (
                 <Button
                   type="button"
                   className="bg-brand-600 hover:bg-brand-700 text-white"
@@ -572,7 +585,7 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
           onGenerateVoucher={payroll.generateVoucher}
           onPreAuthorize={handlePreAuthorize}
           onAuthorize={payroll.authorizeRun}
-          onGeneratePDF={payroll.generatePDF}
+          onOpenPlanillaPreview={() => void payroll.openPlanillaPreview()}
           onSendEmail={() => payroll.sendEmail()}
           onEditCustomFields={handleEditCustomFields}
           canAdjustFixedDays={
@@ -665,6 +678,16 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
         downloading={payroll.voucherPreview.downloading}
         onClose={payroll.closeVoucherPreview}
         onDownload={payroll.downloadVoucherFromPreview}
+      />
+
+      <PlanillaPreviewModal
+        open={payroll.planillaPreview.open}
+        loading={payroll.planillaPreview.loading}
+        error={payroll.planillaPreview.error}
+        data={payroll.planillaPreview.data}
+        downloading={payroll.planillaPreview.downloading}
+        onClose={payroll.closePlanillaPreview}
+        onDownload={payroll.downloadPlanillaFromPreview}
       />
     </div>
   )

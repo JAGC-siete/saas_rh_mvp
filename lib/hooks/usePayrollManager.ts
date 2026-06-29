@@ -16,6 +16,7 @@ import {
   getPayrollDeductionModeLabel,
 } from '../payroll/deduction-mode'
 import type { VoucherPreviewData } from '../payroll/voucher-preview'
+import type { PlanillaPreviewData } from '../payroll/planilla-preview'
 
 type VoucherPreviewState = {
   open: boolean
@@ -31,6 +32,22 @@ const EMPTY_VOUCHER_PREVIEW: VoucherPreviewState = {
   loading: false,
   downloading: false,
   runLineId: null,
+  data: null,
+  error: null,
+}
+
+type PlanillaPreviewState = {
+  open: boolean
+  loading: boolean
+  downloading: boolean
+  data: PlanillaPreviewData | null
+  error: string | null
+}
+
+const EMPTY_PLANILLA_PREVIEW: PlanillaPreviewState = {
+  open: false,
+  loading: false,
+  downloading: false,
   data: null,
   error: null,
 }
@@ -63,6 +80,7 @@ export interface PayrollManagerState {
     recommendedAction?: string
   } | null
   ahcPreflightLoading?: boolean
+  ahcPreflightError?: string | null
 }
 
 // Action Types
@@ -76,6 +94,7 @@ export type PayrollManagerAction =
   | { type: 'SET_RUN_ID'; payload: string | undefined }
   | { type: 'SET_LOADED_INITIAL'; payload: boolean }
   | { type: 'SET_AHC_PREFLIGHT'; payload: PayrollManagerState['ahcPreflight'] }
+  | { type: 'SET_AHC_PREFLIGHT_ERROR'; payload: string | null }
   | { type: 'SET_AHC_PREFLIGHT_LOADING'; payload: boolean }
   | { type: 'CLEAR_ERROR' }
   | { type: 'RESET_STATE' }
@@ -101,7 +120,8 @@ const getInitialState = (): PayrollManagerState => {
     runId: undefined,
     hasLoadedInitialData: false,
     ahcPreflight: null,
-    ahcPreflightLoading: false
+    ahcPreflightLoading: false,
+    ahcPreflightError: null,
   }
 }
 
@@ -159,7 +179,10 @@ const payrollManagerReducer = (
       return { ...state, hasLoadedInitialData: action.payload }
 
     case 'SET_AHC_PREFLIGHT':
-      return { ...state, ahcPreflight: action.payload }
+      return { ...state, ahcPreflight: action.payload, ahcPreflightError: null }
+
+    case 'SET_AHC_PREFLIGHT_ERROR':
+      return { ...state, ahcPreflightError: action.payload }
 
     case 'SET_AHC_PREFLIGHT_LOADING':
       return { ...state, ahcPreflightLoading: action.payload }
@@ -186,6 +209,7 @@ export const usePayrollManager = () => {
     getPayrollDeductionModeLabel(PAYROLL_DEDUCTION_MODE_DEFAULT)
   )
   const [voucherPreview, setVoucherPreview] = useState<VoucherPreviewState>(EMPTY_VOUCHER_PREVIEW)
+  const [planillaPreview, setPlanillaPreview] = useState<PlanillaPreviewState>(EMPTY_PLANILLA_PREVIEW)
 
   const applyCompanyDeductionMode = useCallback((mode: TipoCalculo) => {
     const prev = companyDeductionModeRef.current
@@ -389,7 +413,12 @@ export const usePayrollManager = () => {
       const res = await fetch(`/api/payroll/preflight?${q.toString()}`, { credentials: 'include' })
       const json = await res.json().catch(() => ({}))
       if (!res.ok) {
+        const message =
+          (typeof json.message === 'string' && json.message) ||
+          (typeof json.error === 'string' && json.error) ||
+          `Error verificando horas de asistencia (${res.status})`
         dispatch({ type: 'SET_AHC_PREFLIGHT', payload: null })
+        dispatch({ type: 'SET_AHC_PREFLIGHT_ERROR', payload: message })
         return
       }
       dispatch({
@@ -402,6 +431,12 @@ export const usePayrollManager = () => {
           totalRecords: json.totalRecords ?? 0,
           recommendedAction: json.recommendedAction,
         },
+      })
+    } catch (e) {
+      dispatch({ type: 'SET_AHC_PREFLIGHT', payload: null })
+      dispatch({
+        type: 'SET_AHC_PREFLIGHT_ERROR',
+        payload: e instanceof Error ? e.message : 'Error de red al verificar horas de asistencia',
       })
     } finally {
       dispatch({ type: 'SET_AHC_PREFLIGHT_LOADING', payload: false })
@@ -847,6 +882,44 @@ export const usePayrollManager = () => {
     }
   }, [voucherPreview.runLineId, toast])
 
+  const openPlanillaPreview = useCallback(async () => {
+    if (!state.runId) {
+      toast.error('Error', 'No hay una corrida de nómina activa', 4000)
+      return
+    }
+    setPlanillaPreview({
+      open: true,
+      loading: true,
+      downloading: false,
+      data: null,
+      error: null,
+    })
+    try {
+      const { preview } = await payrollApi.fetchPlanillaPreview(state.runId)
+      setPlanillaPreview((prev) => ({ ...prev, loading: false, data: preview }))
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'No se pudo cargar la planilla'
+      setPlanillaPreview((prev) => ({ ...prev, loading: false, error: message }))
+    }
+  }, [state.runId, toast])
+
+  const closePlanillaPreview = useCallback(() => {
+    setPlanillaPreview(EMPTY_PLANILLA_PREVIEW)
+  }, [])
+
+  const downloadPlanillaFromPreview = useCallback(
+    async (groupBy: PayrollPdfGroupBy = 'none') => {
+      if (!state.runId) return
+      setPlanillaPreview((prev) => ({ ...prev, downloading: true }))
+      try {
+        await generatePDF(groupBy)
+      } finally {
+        setPlanillaPreview((prev) => ({ ...prev, downloading: false }))
+      }
+    },
+    [state.runId, generatePDF]
+  )
+
   // Auto-load data when period changes (client-side only)
   useEffect(() => {
     // Only run on client-side
@@ -959,6 +1032,10 @@ export const usePayrollManager = () => {
     closeVoucherPreview,
     downloadVoucherFromPreview,
     voucherPreview,
+    openPlanillaPreview,
+    closePlanillaPreview,
+    downloadPlanillaFromPreview,
+    planillaPreview,
     loadAhcPreflight,
     recalculateMissingAhc,
     

@@ -88,12 +88,13 @@ export async function generateConsolidatedPayrollPDF(
   },
   periodDates?: { period_start: string; period_end: string },
   reportVisual?: { primaryColor?: string },
-  layout?: { groupBy: PayrollPdfGroupBy }
+  layout?: { groupBy: PayrollPdfGroupBy; watermarkText?: string }
 ): Promise<Buffer> {
   return new Promise<Buffer>((resolve, reject) => {
     try {
       const PDFDocument = require('pdfkit')
       const pdfGroupBy: PayrollPdfGroupBy = layout?.groupBy ?? 'none'
+      const watermarkText = layout?.watermarkText?.trim() || ''
 
       const headerPrimary =
         defaultPdfPrimaryColor(reportVisual?.primaryColor)
@@ -188,6 +189,27 @@ export async function generateConsolidatedPayrollPDF(
           reject(e)
         }
       })
+
+      const drawWatermark = () => {
+        if (!watermarkText) return
+        const { width, height } = doc.page
+        doc.save()
+        doc.opacity(0.12)
+        doc.fillColor('#dc2626')
+        doc.fontSize(42)
+        doc.rotate(-35, { origin: [width / 2, height / 2] })
+        doc.text(watermarkText, 0, height / 2 - 20, {
+          align: 'center',
+          width,
+        })
+        doc.restore()
+        doc.opacity(1)
+      }
+
+      if (watermarkText) {
+        doc.on('pageAdded', () => drawWatermark())
+        drawWatermark()
+      }
 
       // ===== PAGE 1: HEADER & EXEC SUMMARY =====
       const pageWidth = doc.page.width
