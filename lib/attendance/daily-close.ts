@@ -325,7 +325,7 @@ export async function generateDailyCloseReport(params: {
         employeeId,
         punchCount: 0,
         anomalyTypes: [],
-        recordId: upsertedAbsent?.id ?? (existing?.id as string) || null,
+        recordId: upsertedAbsent?.id ?? ((existing?.id as string) || null),
         skippedLocked: false,
       })
       continue
