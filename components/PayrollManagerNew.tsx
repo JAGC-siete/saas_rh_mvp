@@ -24,8 +24,6 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
   const [showCustomFieldsModal, setShowCustomFieldsModal] = useState(false)
   const [modalState, setModalState] = useState<ModalState | null>(null)
   
-  // Payment frequency from company config (para mostrar "Deducción en dos pagos" solo cuando es quincenal)
-  const [paymentFrequency, setPaymentFrequency] = useState<string | null>(null)
   const [payrollApiConfig, setPayrollApiConfig] = useState<{
     legal_deductions?: { ihss?: boolean; rap?: boolean; isr?: boolean }
     custom_fields?: Record<string, unknown>
@@ -41,15 +39,13 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
     }
   }, [payroll.companyId, payroll.companyLoading])
 
-  // Fetch payment frequency for conditional 2PAGOS visibility
+  // Fetch company payroll config for legal deductions / custom fields
   useEffect(() => {
     if (!payroll.companyId) return
     fetch('/api/payroll/config')
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         const cfg = data?.config
-        const pf = cfg?.payment_frequency
-        setPaymentFrequency(pf ?? null)
         setPayrollApiConfig(
           cfg
             ? {
@@ -60,19 +56,9 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
         )
       })
       .catch(() => {
-        setPaymentFrequency(null)
         setPayrollApiConfig(null)
       })
   }, [payroll.companyId])
-
-  // Si frecuencia es mensual/semanal (no quincenal) y tipo es 2PAGOS, resetear a CON
-  useEffect(() => {
-    const notQuincenal = paymentFrequency === 'mensual' || paymentFrequency === 'monthly' ||
-      paymentFrequency === 'semanal' || paymentFrequency === 'weekly'
-    if (notQuincenal && payroll.filters.tipo === '2PAGOS') {
-      payroll.updateFilter('tipo', 'CON')
-    }
-  }, [paymentFrequency, payroll.filters.tipo, payroll.updateFilter])
 
   // Memoize total deducciones calculation to avoid recalculating on every render
   const totalDeducciones = useMemo(() => {
@@ -469,16 +455,14 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
         year={payroll.currentPeriod.year}
         month={payroll.currentPeriod.month}
         quincena={payroll.currentPeriod.quincena}
-        tipo={payroll.filters.tipo}
+        deductionModeLabel={payroll.deductionModeLabel}
         onYearChange={(year) => handleFilterChange('year', year)}
         onMonthChange={(month) => handleFilterChange('month', month)}
         onQuincenaChange={(quincena) => handleFilterChange('quincena', quincena)}
-        onTipoChange={(tipo) => handleFilterChange('tipo', tipo)}
         onPreview={handlePreview}
         onReset={payroll.resetFilters}
         loading={payroll.loading}
         canPreview={payroll.canPreview}
-        paymentFrequency={paymentFrequency as 'quincenal' | 'mensual' | 'semanal' | null}
       />
 
       {/* Preflight AHC (overtime readiness) */}

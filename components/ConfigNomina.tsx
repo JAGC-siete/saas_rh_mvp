@@ -11,36 +11,29 @@ interface ConfigNominaProps {
   year: number
   month: number
   quincena: number
-  tipo: string
+  deductionModeLabel?: string
   onYearChange: (year: number) => void
   onMonthChange: (month: number) => void
   onQuincenaChange: (quincena: number) => void
-  onTipoChange: (tipo: string) => void
   onPreview: () => void
   onReset: () => void
   loading?: boolean
   canPreview?: boolean
-  /** Frecuencia de pago de la empresa. "Deducción en dos pagos" solo visible cuando es quincenal/biweekly */
-  paymentFrequency?: 'quincenal' | 'biweekly' | 'mensual' | 'monthly' | 'semanal' | 'weekly' | null
 }
 
 export default function ConfigNomina({
   year,
   month,
   quincena,
-  tipo,
+  deductionModeLabel,
   onYearChange,
   onMonthChange,
   onQuincenaChange,
-  onTipoChange,
   onPreview,
   onReset,
   loading = false,
   canPreview = false,
-  paymentFrequency = null
 }: ConfigNominaProps) {
-  // 2PAGOS solo aplica a nómina quincenal (biweekly)
-  const isQuincenal = paymentFrequency === 'quincenal' || paymentFrequency === 'biweekly'
   const monthName = new Date(year, month - 1).toLocaleDateString('es-HN', { month: 'long' })
 
   return (
@@ -48,11 +41,11 @@ export default function ConfigNomina({
       <CardHeader>
         <CardTitle className="text-white text-xl font-semibold">Configuración de Nómina</CardTitle>
         <CardDescription className="text-gray-200 text-base">
-          Define los parámetros para generar la nómina (año, mes, quincena y tipo de deducciones)
+          Define el período para generar la nómina (año, mes y quincena)
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Año */}
           <div>
             <label htmlFor="year" className="block text-sm font-semibold text-white/90 mb-2">
@@ -142,46 +135,6 @@ export default function ConfigNomina({
               </SelectContent>
             </Select>
           </div>
-
-          {/* Tipo */}
-          <div>
-            <label htmlFor="tipo" className="block text-sm font-semibold text-white/90 mb-2">
-              Tipo
-            </label>
-            <Select
-              value={tipo}
-              onValueChange={onTipoChange}
-            >
-              <SelectTrigger className="w-full rounded-xl border border-white/20 bg-white/10
-                                        text-white data-[placeholder]:text-white/70
-                                        focus:outline-none focus:ring-2 focus:ring-indigo-400/60
-                                        hover:bg-white/15 transition-colors">
-                <SelectValue placeholder="Seleccionar tipo" />
-              </SelectTrigger>
-              <SelectContent className="backdrop-blur-md bg-white/10 text-white border border-white/20">
-                <SelectItem 
-                  value="CON" 
-                  className="text-white hover:bg-white/20 focus:bg-white/20"
-                >
-                  Con deducciones
-                </SelectItem>
-                <SelectItem 
-                  value="SIN" 
-                  className="text-white hover:bg-white/20 focus:bg-white/20"
-                >
-                  Sin deducciones
-                </SelectItem>
-                {isQuincenal && (
-                  <SelectItem 
-                    value="2PAGOS" 
-                    className="text-white hover:bg-white/20 focus:bg-white/20"
-                  >
-                    Deducción en dos pagos
-                  </SelectItem>
-                )}
-              </SelectContent>
-            </Select>
-          </div>
         </div>
 
         {/* Action Buttons */}
@@ -208,7 +161,14 @@ export default function ConfigNomina({
         {/* Current Selection Display */}
         <div className="mt-4 p-3 bg-white/5 rounded-lg border border-white/10">
           <div className="text-sm text-gray-200">
-            <span className="font-semibold">Período seleccionado:</span> {monthName} {year} - Quincena {quincena} - {tipo === 'CON' ? 'Con deducciones' : tipo === '2PAGOS' ? 'Deducción en dos pagos' : 'Sin deducciones'}
+            <span className="font-semibold">Período seleccionado:</span> {monthName} {year} - Quincena {quincena}
+            {deductionModeLabel && (
+              <>
+                {' '}
+                · <span className="font-semibold">Modo:</span> {deductionModeLabel}
+                <span className="text-gray-400"> (Parámetros)</span>
+              </>
+            )}
           </div>
         </div>
       </CardContent>

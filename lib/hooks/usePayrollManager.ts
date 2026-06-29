@@ -2,7 +2,7 @@
 // Consolidates all payroll state management into a single, cohesive system
 // Replaces the dual state system with a single source of truth
 
-import { useReducer, useCallback, useMemo, useEffect, useState } from 'react'
+import { useReducer, useCallback, useMemo, useEffect, useState, useRef } from 'react'
 import { useCompanyContext } from '../useCompanyContext'
 import { useToast } from '../toast'
 import { fetchUnifiedPayroll, getCurrentPeriod, UnifiedRow, UnifiedResumen } from '../payroll-unified'
@@ -10,7 +10,11 @@ import { usePayrollMetrics } from './usePayrollMetrics'
 import { payrollApi, mapPayrollError } from '../payroll-api'
 import { BULK_VOUCHER_EMAIL_TRIAL_MESSAGE } from '../billing/messages'
 import type { PayrollPdfGroupBy } from '../payroll/pdf-layout'
-import { PayrollFilters, UIRunStatus } from '../../types/payroll'
+import { PayrollFilters, UIRunStatus, TipoCalculo } from '../../types/payroll'
+import {
+  PAYROLL_DEDUCTION_MODE_DEFAULT,
+  getPayrollDeductionModeLabel,
+} from '../payroll/deduction-mode'
 
 // Unified State Interface
 export interface PayrollManagerState {
@@ -158,6 +162,45 @@ export const usePayrollManager = () => {
   const { companyId, loading: companyLoading } = useCompanyContext()
   const toast = useToast()
   const [commercialPlan, setCommercialPlan] = useState<string | null>(null)
+  const companyDeductionModeRef = useRef<TipoCalculo>(PAYROLL_DEDUCTION_MODE_DEFAULT)
+  const [deductionModeLabel, setDeductionModeLabel] = useState(
+    getPayrollDeductionModeLabel(PAYROLL_DEDUCTION_MODE_DEFAULT)
+  )
+
+  const applyCompanyDeductionMode = useCallback((mode: TipoCalculo) => {
+    const prev = companyDeductionModeRef.current
+    companyDeductionModeRef.current = mode
+    setDeductionModeLabel(getPayrollDeductionModeLabel(mode))
+    dispatch({ type: 'SET_FILTERS', payload: { tipo: mode } })
+    if (prev !== mode) {
+      dispatch({ type: 'SET_LOADED_INITIAL', payload: false })
+    }
+  }, [])
+
+  const loadCompanyPayrollConfig = useCallback(async () => {
+    if (!companyId) return
+    try {
+      const res = await fetch('/api/payroll/config')
+      if (!res.ok) return
+      const data = await res.json()
+      const mode = (data?.config?.payroll_deduction_mode ?? PAYROLL_DEDUCTION_MODE_DEFAULT) as TipoCalculo
+      applyCompanyDeductionMode(mode)
+    } catch {
+      // Mantener default
+    }
+  }, [companyId, applyCompanyDeductionMode])
+
+  useEffect(() => {
+    loadCompanyPayrollConfig()
+  }, [loadCompanyPayrollConfig])
+
+  useEffect(() => {
+    const onConfigUpdated = () => {
+      void loadCompanyPayrollConfig()
+    }
+    window.addEventListener('payrollConfigUpdated', onConfigUpdated)
+    return () => window.removeEventListener('payrollConfigUpdated', onConfigUpdated)
+  }, [loadCompanyPayrollConfig])
 
   // Metrics calculation
   const metrics = usePayrollMetrics(state.unifiedData?.rows || [])
@@ -203,30 +246,7 @@ export const usePayrollManager = () => {
         } 
       })
     }
-    
-    // If tipo changes, reload data to reflect the change
-    if (key === 'tipo' && companyId) {
-      try {
-        dispatch({ type: 'SET_LOADING', payload: true })
-        dispatch({ type: 'CLEAR_ERROR' })
-        
-        const data = await fetchUnifiedPayroll(
-          companyId,
-          state.currentPeriod.year,
-          state.currentPeriod.month,
-          state.currentPeriod.quincena,
-          state.filters.tipo
-        )
-        
-        dispatch({ type: 'SET_DATA', payload: data })
-      } catch (error: any) {
-        const errorMessage = error?.message || 'Error desconocido'
-        dispatch({ type: 'SET_ERROR', payload: `Error cargando datos: ${errorMessage}` })
-      } finally {
-        dispatch({ type: 'SET_LOADING', payload: false })
-      }
-    }
-  }, [state.currentPeriod, companyId])
+  }, [state.currentPeriod])
 
   const resetFilters = useCallback(() => {
     const newPeriod = getCurrentPeriod()
@@ -243,7 +263,7 @@ export const usePayrollManager = () => {
         year: newPeriod.year,
         month: newPeriod.month,
         quincena: newPeriod.quincena as 1 | 2,
-        tipo: 'CON'
+        tipo: companyDeductionModeRef.current,
       }
     })
   }, [])
@@ -254,7 +274,7 @@ export const usePayrollManager = () => {
 
     try {
       const response = await fetch(
-        `/api/payroll/draft?year=${state.filters.year}&month=${state.filters.month}&quincena=${state.filters.quincena}&tipo=${state.filters.tipo}`
+        `/api/payroll/draft?year=${state.filters.year}&month=${state.filters.month}&quincena=${state.filters.quincena}`
       )
 
       if (!response.ok) {
@@ -887,6 +907,7 @@ export const usePayrollManager = () => {
     // Filter Management
     updateFilter,
     resetFilters,
+    deductionModeLabel,
     
     // State Management
     setStatus,

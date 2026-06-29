@@ -2,6 +2,10 @@ import { NextApiRequest, NextApiResponse } from 'next'
 import { requireCompanyAccess } from '../../../lib/auth/api-auth-fixed'
 import { createAdminClient } from '../../../lib/supabase/server'
 import { parseOrdinaryHoursOverrideInput } from '../../../lib/payroll/ordinary-hours-override'
+import {
+  resolvePayrollDeductionMode,
+  validatePayrollDeductionModeForFrequency,
+} from '../../../lib/payroll/deduction-mode'
 import { userCanAccessFullSettings } from '../../../lib/security/settings-access'
 
 /**
@@ -124,6 +128,7 @@ async function getPayrollConfig(
     const paymentFrequency = pfCol ?? metadata.payment_frequency ?? 'biweekly'
     const mapFreqToFrontend = (v: string) =>
       v === 'mensual' ? 'monthly' : v === 'quincenal' ? 'biweekly' : v === 'semanal' ? 'weekly' : v
+    const payrollDeductionMode = resolvePayrollDeductionMode(metadata, paymentFrequency)
     const fs = (qcCol as any)?.first_start ?? 1
     const fe = (qcCol as any)?.first_end ?? 15
     const ss = (qcCol as any)?.second_start ?? 16
@@ -163,6 +168,7 @@ async function getPayrollConfig(
         isr: true,
         infop: false
       },
+      payroll_deduction_mode: payrollDeductionMode,
       payment_cut_dates: paymentCutDates,
       earning_impact_rules:
         metadata.earning_impact_rules && typeof metadata.earning_impact_rules === 'object'
@@ -212,6 +218,7 @@ async function upsertPayrollConfig(
       incomplete_record_default_hours = null,
       ordinary_hours_override: ordinary_hours_override_body,
       legal_deductions,
+      payroll_deduction_mode,
       payment_cut_dates,
       semanal_proration = 'proportional',
       pay_overtime: pay_overtime_body
@@ -299,6 +306,9 @@ async function upsertPayrollConfig(
     const mergedMetaFromBody =
       metadata && typeof metadata === 'object' && !Array.isArray(metadata) ? { ...priorMetadata, ...metadata } : { ...priorMetadata }
 
+    const resolvedPaymentFrequency =
+      payment_frequency || (mergedMetaFromBody.payment_frequency as string) || 'biweekly'
+
     const payrollMetadata: Record<string, unknown> = {
       ...mergedMetaFromBody,
       payment_frequency: payment_frequency || 'biweekly',
@@ -314,6 +324,25 @@ async function upsertPayrollConfig(
       ...(earning_impact_rules != null && typeof earning_impact_rules === 'object'
         ? { earning_impact_rules }
         : {})
+    }
+
+    if (Object.prototype.hasOwnProperty.call(body, 'payroll_deduction_mode')) {
+      const modeValidation = validatePayrollDeductionModeForFrequency(
+        payroll_deduction_mode,
+        resolvedPaymentFrequency
+      )
+      if (!modeValidation.ok) {
+        return res.status(400).json({
+          error: 'Modo de deducción inválido',
+          message: modeValidation.message,
+        })
+      }
+      payrollMetadata.payroll_deduction_mode = modeValidation.mode
+    } else {
+      payrollMetadata.payroll_deduction_mode = resolvePayrollDeductionMode(
+        payrollMetadata,
+        resolvedPaymentFrequency
+      )
     }
 
     if (Object.prototype.hasOwnProperty.call(body, 'ordinary_hours_override')) {
@@ -401,6 +430,7 @@ async function upsertPayrollConfig(
       calculation_mode: data.calculation_mode ?? meta.calculation_mode ?? 'daily',
       incomplete_record_default_hours: data.incomplete_record_default_hours ?? meta.incomplete_record_default_hours ?? null,
       legal_deductions: meta.legal_deductions || { ihss: true, rap: true, isr: true, infop: false },
+      payroll_deduction_mode: resolvePayrollDeductionMode(meta, pfRes),
       payment_cut_dates: cutDatesRes,
       semanal_proration: meta.semanal_proration || 'proportional',
       ordinary_hours_override:

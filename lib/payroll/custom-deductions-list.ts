@@ -35,6 +35,38 @@ const METADATA_SKIP_KEYS = new Set([
   '_deduction_plan_ids',
 ])
 
+const LEGACY_DEDUCTION_KEYS = new Set(
+  LEGACY_DEDUCTION_FIELDS.map((field) => field.key)
+)
+
+/** Claves de ingresos / sistema en metadata que no deben listarse como deducción en el PDF. */
+const NON_DEDUCTION_METADATA_KEYS = new Set([
+  ...METADATA_SKIP_KEYS,
+  'edited',
+  'pay_overtime',
+  'hours_worked',
+  'total_hours_worked',
+  'horas_extras',
+  'feriado_trabajado',
+  'estipendio_transporte',
+  'valor_hora_extra',
+  'descanso_por_turno_noche',
+  'doble_turno',
+  'pausa_almuerzo',
+  'incapacidad',
+  'dias_faltados',
+])
+
+function isDeductionMetadataKey(key: string): boolean {
+  if (NON_DEDUCTION_METADATA_KEYS.has(key) || key.startsWith('_')) return false
+  if (LEGACY_DEDUCTION_KEYS.has(key)) return true
+  return /^[a-z][a-z0-9_]{0,63}$/.test(key)
+}
+
+function resolveDeductionAmount(calculated: number, fromMeta: number): number {
+  return Math.max(calculated, fromMeta)
+}
+
 function parseAmount(value: unknown): number {
   if (value === undefined || value === null || value === '') return 0
   if (typeof value === 'number') return Number.isFinite(value) ? value : 0
@@ -78,8 +110,14 @@ export async function buildCustomDeductionsList(
       if (fieldDef.category !== 'deductions') continue
       const calculated = parseAmount(calc.calculatedFields?.[fieldName])
       const fromMeta = parseAmount(meta[fieldName])
-      const amount = calculated > 0 ? calculated : fromMeta
+      const amount = resolveDeductionAmount(calculated, fromMeta)
       pushDeduction(formatFieldLabel(fieldName, fieldDef.label), amount)
+    }
+
+    // Borradores editados pueden tener claves con monto que ya no están en custom_fields actuales
+    for (const [key, value] of Object.entries(meta)) {
+      if (!isDeductionMetadataKey(key) || customFields[key]) continue
+      pushDeduction(formatFieldLabel(key), parseAmount(value))
     }
   } else {
     for (const field of LEGACY_DEDUCTION_FIELDS) {
@@ -87,7 +125,7 @@ export async function buildCustomDeductionsList(
     }
 
     for (const [key, value] of Object.entries(meta)) {
-      if (METADATA_SKIP_KEYS.has(key) || key.startsWith('_')) continue
+      if (!isDeductionMetadataKey(key) || LEGACY_DEDUCTION_KEYS.has(key)) continue
       pushDeduction(formatFieldLabel(key), parseAmount(value))
     }
   }

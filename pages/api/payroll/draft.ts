@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { requireCompanyAccess } from "../../../lib/auth/api-auth-fixed"
 import { withReportsRateLimit } from '../../../lib/security/rate-limiting'
+import { resolvePayrollDeductionMode } from '../../../lib/payroll/deduction-mode'
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -15,7 +16,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       return res.status(400).json({ error: 'Company ID is required' })
     }
 
-    const { year, month, quincena, tipo } = req.query
+    const { year, month, quincena } = req.query
     
     // Validaciones
     if (!year || !month || !quincena) {
@@ -25,15 +26,22 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     const yearNum = parseInt(year as string)
     const monthNum = parseInt(month as string)
     const quincenaNum = parseInt(quincena as string)
-    const tipoParam = (tipo as string) || 'CON'
     
     if (![1, 2].includes(quincenaNum)) {
       return res.status(400).json({ error: 'Quincena inválida (debe ser 1 o 2)' })
     }
 
-    if (!['CON', 'SIN'].includes(tipoParam)) {
-      return res.status(400).json({ error: 'Tipo inválido (debe ser CON o SIN)' })
-    }
+    const { data: payrollConfig } = await supabase
+      .from('company_payroll_configs')
+      .select('metadata, payment_frequency')
+      .eq('company_id', companyId)
+      .eq('is_active', true)
+      .maybeSingle()
+
+    const payrollMetadata = payrollConfig?.metadata || {}
+    const paymentFrequency =
+      payrollConfig?.payment_frequency || payrollMetadata.payment_frequency || 'quincenal'
+    const tipoParam = resolvePayrollDeductionMode(payrollMetadata, paymentFrequency)
 
     // Buscar borrador existente para este período
     const { data: existingRun, error: runError } = await supabase

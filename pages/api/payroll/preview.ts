@@ -48,6 +48,7 @@ import {
   buildFixedPlanillaRowFromPersistedLine,
   buildHourlyPlanillaRowFromPersistedLine,
 } from '../../../lib/payroll/preview-preserve-line'
+import { resolvePayrollDeductionMode } from '../../../lib/payroll/deduction-mode'
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -75,28 +76,26 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       companyId: companyId 
     })
 
-    const { year, month, quincena, tipo } = req.query
+    const { year, month, quincena } = req.query
     
     secureLog('Parámetros recibidos para preview', { 
       hasYear: !!year, 
       hasMonth: !!month, 
-      hasQuincena: !!quincena, 
-      tipo: tipo 
+      hasQuincena: !!quincena,
     })
     
     // Validaciones
     if (!year || !month || !quincena) {
-      console.error('❌ ERROR - Parámetros faltantes:', { year, month, quincena, tipo })
+      console.error('❌ ERROR - Parámetros faltantes:', { year, month, quincena })
       return res.status(400).json({ 
         error: 'year, month, y quincena son requeridos',
-        received: { year, month, quincena, tipo }
+        received: { year, month, quincena }
       })
     }
     
     const yearNum = parseInt(year as string)
     const monthNum = parseInt(month as string)
     const quincenaNum = parseInt(quincena as string)
-    const tipoParam = tipo as string || 'CON'
     
     if (isNaN(yearNum) || isNaN(monthNum) || isNaN(quincenaNum)) {
       console.error('❌ ERROR - Parámetros inválidos (NaN):', { yearNum, monthNum, quincenaNum })
@@ -104,14 +103,6 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         error: 'Parámetros numéricos inválidos',
         received: { year, month, quincena },
         parsed: { yearNum, monthNum, quincenaNum }
-      })
-    }
-    
-    if (!['CON', 'SIN', '2PAGOS'].includes(tipoParam)) {
-      console.error('❌ ERROR - Tipo inválido:', tipoParam)
-      return res.status(400).json({ 
-        error: 'Tipo inválido (debe ser CON, SIN o 2PAGOS)',
-        received: tipoParam
       })
     }
 
@@ -146,6 +137,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       return 'biweekly'
     }
     const paymentFrequency = mapFreq(payrollConfig?.payment_frequency || payrollMetadata.payment_frequency || 'quincenal')
+    const tipoParam = resolvePayrollDeductionMode(payrollMetadata, paymentFrequency)
     const hasCustomQuincena = !!(qcCol && (qcCol.first_start != null || qcCol.first_end != null || qcCol.second_start != null || qcCol.second_end != null))
     const paymentCutDates = qcCol
       ? {

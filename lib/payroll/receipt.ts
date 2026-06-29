@@ -429,8 +429,9 @@ export async function generateEmployeeReceiptPDF(
           )
           writeAmount(doc, formatHNL(record.total_deductions), deductionY, pageWidth, true)
           doc.font('Helvetica')
+          deductionY += 12
         }
-        yPos += Math.max(deductionsHeight, 30) + 15
+        yPos = Math.max(yPos + Math.max(deductionsHeight, 30) + 15, deductionY + 15)
       }
 
       if (layout.showNet) {
