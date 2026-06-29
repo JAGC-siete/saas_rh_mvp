@@ -17,6 +17,7 @@ import {
   BULK_VOUCHER_EMAIL_TRIAL_MESSAGE,
 } from './billing/messages'
 import type { PayrollPdfGroupBy } from './payroll/pdf-layout'
+import type { VoucherPreviewData } from './payroll/voucher-preview'
 
 // Generic API function with timeout and error handling
 async function api<T>(url: string, init?: RequestInit): Promise<T> {
@@ -87,24 +88,34 @@ export const payrollApi = {
     return Promise.resolve({ url: `/api/payroll/generate-pdf-from-run?${params.toString()}` })
   },
 
-  // Generate voucher from run_line_id
-  generateVoucher: async (runLineId: string): Promise<{ url: string }> => {
-    // Call the new voucher endpoint which gets all data from run_line_id
-    const response = await fetch(`/api/payroll/receipt-voucher?run_line_id=${runLineId}`, {
+  // Preview voucher data for on-screen modal
+  fetchVoucherPreview: async (runLineId: string): Promise<{ preview: VoucherPreviewData }> => {
+    const params = new URLSearchParams({ run_line_id: runLineId })
+    const response = await fetch(`/api/payroll/voucher-preview?${params.toString()}`, {
       method: 'GET',
-      credentials: 'include'
+      credentials: 'include',
     })
-    
+    const data = await response.json().catch(() => ({}))
+    if (!response.ok || !data?.success) {
+      throw new Error(data?.error || data?.message || 'No se pudo cargar el comprobante')
+    }
+    return data.data
+  },
+
+  // Download voucher PDF from run_line_id
+  downloadVoucher: async (runLineId: string): Promise<void> => {
+    const response = await fetch(`/api/payroll/receipt-voucher?run_line_id=${encodeURIComponent(runLineId)}`, {
+      method: 'GET',
+      credentials: 'include',
+    })
+
     if (!response.ok) {
       const error = await response.json().catch(() => ({ error: 'Failed to generate voucher' }))
       throw new Error(error.error || error.message || 'Failed to generate voucher')
     }
-    
-    // Create blob URL for PDF download
+
     const blob = await response.blob()
     const blobUrl = URL.createObjectURL(blob)
-    
-    // Trigger download
     const link = document.createElement('a')
     link.href = blobUrl
     link.download = `voucher_${runLineId}.pdf`
@@ -112,9 +123,13 @@ export const payrollApi = {
     link.click()
     document.body.removeChild(link)
     URL.revokeObjectURL(blobUrl)
-    
-    return { url: blobUrl }
-  }
+  },
+
+  /** @deprecated Use downloadVoucher */
+  generateVoucher: async (runLineId: string): Promise<{ url: string }> => {
+    await payrollApi.downloadVoucher(runLineId)
+    return { url: '' }
+  },
 }
 
 // Error mapping for better UX

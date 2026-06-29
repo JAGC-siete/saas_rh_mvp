@@ -15,6 +15,25 @@ import {
   PAYROLL_DEDUCTION_MODE_DEFAULT,
   getPayrollDeductionModeLabel,
 } from '../payroll/deduction-mode'
+import type { VoucherPreviewData } from '../payroll/voucher-preview'
+
+type VoucherPreviewState = {
+  open: boolean
+  loading: boolean
+  downloading: boolean
+  runLineId: string | null
+  data: VoucherPreviewData | null
+  error: string | null
+}
+
+const EMPTY_VOUCHER_PREVIEW: VoucherPreviewState = {
+  open: false,
+  loading: false,
+  downloading: false,
+  runLineId: null,
+  data: null,
+  error: null,
+}
 
 // Unified State Interface
 export interface PayrollManagerState {
@@ -166,6 +185,7 @@ export const usePayrollManager = () => {
   const [deductionModeLabel, setDeductionModeLabel] = useState(
     getPayrollDeductionModeLabel(PAYROLL_DEDUCTION_MODE_DEFAULT)
   )
+  const [voucherPreview, setVoucherPreview] = useState<VoucherPreviewState>(EMPTY_VOUCHER_PREVIEW)
 
   const applyCompanyDeductionMode = useCallback((mode: TipoCalculo) => {
     const prev = companyDeductionModeRef.current
@@ -784,14 +804,48 @@ export const usePayrollManager = () => {
 
   const generateVoucher = useCallback(async (runLineId: string) => {
     try {
-      // The API function already handles the download
-      await payrollApi.generateVoucher(runLineId)
-      
-      toast.success('Voucher Generado', 'El voucher se ha descargado correctamente', 4000)
-    } catch (error: any) {
-      toast.error('Error Generando Voucher', 'No se pudo generar el voucher', 6000)
+      await payrollApi.downloadVoucher(runLineId)
+      toast.success('Voucher generado', 'El comprobante se descargó correctamente', 4000)
+    } catch {
+      toast.error('Error generando voucher', 'No se pudo generar el comprobante', 6000)
     }
   }, [toast])
+
+  const openVoucherPreview = useCallback(async (runLineId: string) => {
+    setVoucherPreview({
+      open: true,
+      loading: true,
+      downloading: false,
+      runLineId,
+      data: null,
+      error: null,
+    })
+    try {
+      const { preview } = await payrollApi.fetchVoucherPreview(runLineId)
+      setVoucherPreview((prev) => ({ ...prev, loading: false, data: preview }))
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'No se pudo cargar el comprobante'
+      setVoucherPreview((prev) => ({ ...prev, loading: false, error: message }))
+    }
+  }, [])
+
+  const closeVoucherPreview = useCallback(() => {
+    setVoucherPreview(EMPTY_VOUCHER_PREVIEW)
+  }, [])
+
+  const downloadVoucherFromPreview = useCallback(async () => {
+    const runLineId = voucherPreview.runLineId
+    if (!runLineId) return
+    setVoucherPreview((prev) => ({ ...prev, downloading: true }))
+    try {
+      await payrollApi.downloadVoucher(runLineId)
+      toast.success('Voucher generado', 'El PDF se descargó correctamente', 4000)
+    } catch {
+      toast.error('Error generando voucher', 'No se pudo descargar el PDF', 6000)
+    } finally {
+      setVoucherPreview((prev) => ({ ...prev, downloading: false }))
+    }
+  }, [voucherPreview.runLineId, toast])
 
   // Auto-load data when period changes (client-side only)
   useEffect(() => {
@@ -901,6 +955,10 @@ export const usePayrollManager = () => {
     sendEmail,
     generatePDF,
     generateVoucher,
+    openVoucherPreview,
+    closeVoucherPreview,
+    downloadVoucherFromPreview,
+    voucherPreview,
     loadAhcPreflight,
     recalculateMissingAhc,
     

@@ -8,6 +8,8 @@ import { Icon } from './Icon'
 interface PayrollHourlyTableProps {
   rows: UnifiedRow[]
   // eslint-disable-next-line no-unused-vars
+  onPreviewVoucher: (_lineId: string) => void
+  // eslint-disable-next-line no-unused-vars
   onGenerateVoucher: (_lineId: string) => void
   // eslint-disable-next-line no-unused-vars
   onEditCustomFields?: (_lineId: string, _metadata: any, _baseSalary: number, _employeeId?: string) => void
@@ -20,6 +22,7 @@ interface PayrollHourlyTableProps {
 
 export default function PayrollHourlyTable({
   rows,
+  onPreviewVoucher,
   onGenerateVoucher,
   onEditCustomFields,
   onResetLineRecalc,
@@ -125,10 +128,20 @@ export default function PayrollHourlyTable({
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => onGenerateVoucher(row.line_id || row.employee_id)}
-                          disabled={loading}
+                          onClick={() => onPreviewVoucher(row.line_id || row.employee_id)}
+                          disabled={loading || !row.line_id}
                           className="bg-white/10 border-white/30 text-white hover:bg-white/20"
-                          title="Descargar comprobante"
+                          title="Ver comprobante"
+                        >
+                          <Icon name="eye" className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => onGenerateVoucher(row.line_id || row.employee_id)}
+                          disabled={loading || !row.line_id}
+                          className="bg-white/10 border-white/30 text-white hover:bg-white/20"
+                          title="Descargar comprobante PDF"
                         >
                           <Icon name="download" className="h-4 w-4" />
                         </Button>

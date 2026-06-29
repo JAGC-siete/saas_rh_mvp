@@ -25,6 +25,8 @@ interface UnifiedPayrollTableProps {
   resumen: UnifiedResumen
   incompleteRecordsAlert?: IncompleteRecordAlert[]
   // eslint-disable-next-line no-unused-vars
+  onPreviewVoucher: (_lineId: string) => void
+  // eslint-disable-next-line no-unused-vars
   onGenerateVoucher: (_lineId: string) => void
   onPreAuthorize?: () => void
   onAuthorize: () => void
@@ -66,6 +68,7 @@ export default function UnifiedPayrollTable({
   rows,
   resumen,
   incompleteRecordsAlert = [],
+  onPreviewVoucher,
   onGenerateVoucher,
   onPreAuthorize,
   onAuthorize,
@@ -478,6 +481,7 @@ export default function UnifiedPayrollTable({
           <>
           <PayrollFixedTable
             rows={paginatedFixedRows}
+            onPreviewVoucher={onPreviewVoucher}
             onGenerateVoucher={onGenerateVoucher}
             onEditCustomFields={onEditCustomFields}
             canAdjustFixedDays={canAdjustFixedDays}
@@ -509,6 +513,7 @@ export default function UnifiedPayrollTable({
           <>
           <PayrollHourlyTable
             rows={paginatedHourlyRows}
+            onPreviewVoucher={onPreviewVoucher}
             onGenerateVoucher={onGenerateVoucher}
             onEditCustomFields={onEditCustomFields}
             onResetLineRecalc={onResetLineRecalc}

@@ -8,6 +8,7 @@ import ConfigNomina from './ConfigNomina'
 import CustomPayrollFieldsForm from './CustomPayrollFieldsForm'
 import DeductionPlansDashboard from './DeductionPlansDashboard'
 import { PayrollAccountingTab } from './accounting/PayrollAccountingTab'
+import VoucherPreviewModal from './payroll/VoucherPreviewModal'
 
 interface ModalState {
   lineId: string
@@ -567,6 +568,7 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
           rows={payroll.unifiedData.rows}
           resumen={payroll.unifiedData.resumen}
           incompleteRecordsAlert={payroll.unifiedData.incompleteRecordsAlert}
+          onPreviewVoucher={payroll.openVoucherPreview}
           onGenerateVoucher={payroll.generateVoucher}
           onPreAuthorize={handlePreAuthorize}
           onAuthorize={payroll.authorizeRun}
@@ -654,6 +656,16 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
           </div>
         </div>
       )}
+
+      <VoucherPreviewModal
+        open={payroll.voucherPreview.open}
+        loading={payroll.voucherPreview.loading}
+        error={payroll.voucherPreview.error}
+        data={payroll.voucherPreview.data}
+        downloading={payroll.voucherPreview.downloading}
+        onClose={payroll.closeVoucherPreview}
+        onDownload={payroll.downloadVoucherFromPreview}
+      />
     </div>
   )
 }
