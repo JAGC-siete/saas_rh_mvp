@@ -59,6 +59,11 @@ export interface PreviewResponse {
     employees: { employee_id: string; employee_name: string }[];
     message: string;
   };
+  preserved_edited_lines?: number;
+  preservedEditedSummary?: {
+    count: number;
+    message: string;
+  };
 }
 
 export interface EditRequest {
