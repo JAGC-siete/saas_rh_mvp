@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import { requireCompanyAccess } from '../../../lib/auth/api-auth-fixed'
 import { generateEmployeeReceiptPDF } from '../../../lib/payroll/receipt'
 import { buildVoucherFromRunLine } from '../../../lib/payroll/voucher-from-run-line'
+import { resolveCanonicalVoucherRunLineId } from '../../../lib/payroll/resolve-voucher-run-line'
 import { buildVoucherPdfOptions } from '../../../lib/payroll/voucher-pdf-options'
 import { resolveReportConfig } from '../../../lib/reports/column-resolver'
 
@@ -30,7 +31,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'run_line_id es requerido' })
     }
 
-    const voucherData = await buildVoucherFromRunLine(supabase, companyId, run_line_id)
+    const canonicalRunLineId = await resolveCanonicalVoucherRunLineId(
+      supabase,
+      companyId,
+      run_line_id
+    )
+
+    const voucherData = await buildVoucherFromRunLine(supabase, companyId, canonicalRunLineId)
     const resolvedConfig = await resolveReportConfig(companyId, 'voucher', supabase)
     const pdfOptions = buildVoucherPdfOptions(resolvedConfig)
 

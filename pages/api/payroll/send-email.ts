@@ -20,6 +20,7 @@ import {
 } from '../../../lib/emails/payroll-receipt-email'
 import { generateEmployeeReceiptPDF } from '../../../lib/payroll/receipt'
 import { buildVoucherFromRunLine } from '../../../lib/payroll/voucher-from-run-line'
+import { resolveCanonicalVoucherRunLineId } from '../../../lib/payroll/resolve-voucher-run-line'
 import { buildVoucherPdfOptions } from '../../../lib/payroll/voucher-pdf-options'
 import { resolveReportConfig } from '../../../lib/reports/column-resolver'
 
@@ -160,7 +161,16 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         }
 
         const periodo = `${run.year}-${run.month.toString().padStart(2, '0')} Q${run.quincena}`
-        const voucherData = await buildVoucherFromRunLine(supabase, userProfile.company_id, line.id)
+        const canonicalLineId = await resolveCanonicalVoucherRunLineId(
+          supabase,
+          userProfile.company_id,
+          line.id
+        )
+        const voucherData = await buildVoucherFromRunLine(
+          supabase,
+          userProfile.company_id,
+          canonicalLineId
+        )
         const pdfBuffer = await generateEmployeeReceiptPDF(
           voucherData.record,
           voucherData.periodo,

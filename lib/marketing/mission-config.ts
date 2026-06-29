@@ -324,21 +324,43 @@ export function buildMissionActivarUrl(leadToken: string): string {
   return `${site}/activar?${params.toString()}`
 }
 
+/** Header above mission choices in plain-text sequence emails. */
+export function buildMissionFooterHeader(mission: MissionDef, source?: string | null): string {
+  const prompt = isVentasMissionAudience(source)
+    ? 'Respuesta rápida (1 clic)'
+    : 'Pregunta rápida (1 clic)'
+  return `${mission.badge} · ${prompt}`
+}
+
+/** Removes mission question + choice links (+ trailing sign-off) before HTML rendering. */
+export function stripMissionTextFooter(text: string): string {
+  return text
+    .replace(
+      /\n\n?(?:(?:Nota #\d · )?(?:Campo · )?(?:Pregunta rápida|Respuesta rápida)[^\n]*\n[\s\S]*?\n\n— Jorge)/,
+      ''
+    )
+    .trim()
+}
+
+/** Avoid duplicating the HTML sign-off when plain text already ends with — Jorge. */
+export function stripTrailingSignOff(text: string): string {
+  return text.replace(/\n\n— Jorge\s*$/, '').trim()
+}
+
 export function buildMissionTextFooter(
   missionId: MissionId,
   leadToken: string,
   source?: string | null
 ): string {
   const mission = getMissionDef(missionId, source)
-  const footerLabel = isVentasMissionAudience(source)
-    ? 'Respuesta rápida (1 clic):'
-    : 'Campo · pregunta rápida (1 clic):'
-  const lines = ['', footerLabel, mission.question, '']
+  const lines = [buildMissionFooterHeader(mission, source), '', mission.question, '']
 
   for (const choice of mission.choices) {
-    lines.push(`→ ${choice.label}: ${buildMissionPageUrl(missionId, leadToken, choice.id)}`)
+    lines.push(`→ ${choice.label}`)
+    lines.push(buildMissionPageUrl(missionId, leadToken, choice.id))
+    lines.push('')
   }
 
-  lines.push('', '— Jorge')
-  return lines.join('\n')
+  lines.push('— Jorge')
+  return `\n\n${lines.join('\n')}`
 }

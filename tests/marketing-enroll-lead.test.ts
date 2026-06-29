@@ -118,7 +118,7 @@ describe('sendSequenceEmail welcome source (unit)', () => {
     assert.ok(info.startsWith('Hola Ana,'))
     assert.ok(info.includes('sistemas nuevos es complicado'))
     assert.ok(info.includes('WhatsApp como sistema operativo'))
-    assert.ok(infoWithMission.includes('Campo · pregunta'))
+    assert.ok(infoWithMission.includes('Nota #2 · Pregunta rápida'))
     assert.ok(ventas.includes('72 horas'))
     assert.ok(ventas.includes('20%'))
     assert.ok(activar.includes('encendiste el entorno'))

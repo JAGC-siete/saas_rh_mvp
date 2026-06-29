@@ -8,7 +8,10 @@ import {
 import { MARKETING_UNSUBSCRIBE_FOOTER_TEXT, buildUnsubscribeUrl } from './unsubscribe'
 import {
   buildMissionPageUrl,
+  buildMissionFooterHeader,
   getMissionDef,
+  stripMissionTextFooter,
+  stripTrailingSignOff,
   type MissionId,
 } from './mission-config'
 import { INFO_WELCOME_MISSION_TEASER } from './info-sequence-timing'
@@ -40,7 +43,7 @@ function missionChoiceButtons(missionId: MissionId, leadToken: string, source?: 
   return `
     <div style="margin: 28px 0 8px 0; padding: 20px 18px; border-radius: 16px; border: 1px solid rgba(251, 191, 36, 0.35); background: rgba(251, 191, 36, 0.06);">
       <p style="margin: 0 0 6px 0; font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #fcd34d;">
-        Campo · ${escapeHtml(mission.badge)}
+        ${escapeHtml(buildMissionFooterHeader(mission, source))}
       </p>
       <p style="margin: 0 0 16px 0; font-size: 16px; font-weight: 600; color: ${T.text}; line-height: 1.45;">
         ${escapeHtml(mission.question)}
@@ -71,7 +74,7 @@ function bodyTextToHtml(bodyText: string, stripTeaser = false): string {
   if (stripTeaser) {
     text = text.replace(new RegExp(`\\n\\n${INFO_WELCOME_MISSION_TEASER.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`), '').trim()
   }
-  const withoutMissionFooter = text.replace(/\n\nCampo · pregunta[\s\S]*?(?=\n\n— Jorge|$)/, '').trim()
+  const withoutMissionFooter = stripTrailingSignOff(stripMissionTextFooter(text))
   const blocks = withoutMissionFooter.split(/\n\n+/).filter(Boolean)
   return blocks
     .map((block) => {

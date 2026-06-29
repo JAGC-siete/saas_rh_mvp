@@ -12,7 +12,7 @@ import {
   SEQUENCE_CONTENT,
   SEQUENCE_STEP,
 } from './email-sequence-ledger'
-import { sequenceStepToMissionId } from './mission-config'
+import { sequenceStepToMissionId, stripTrailingSignOff } from './mission-config'
 import { normalizeLeadSource } from './email-sequence-ledger'
 import { getInfoSequenceSubject } from './info-field-notes-email'
 import { getActivarSequenceSubject } from './activar-field-notes-email'
@@ -83,7 +83,7 @@ export async function sendSequenceEmail(input: SendSequenceEmailInput): Promise<
     input.step === SEQUENCE_STEP.WELCOME
       ? buildWelcomeEmailHtml({
           subject,
-          bodyText: bodyText.replace(/\n\n— Jorge[\s\S]*?(?=\n\n---|$)/, '').trim(),
+          bodyText: stripTrailingSignOff(bodyText),
           unsubscribeToken: input.unsubscribeToken,
           showMissionTeaser: false,
           source: input.source,

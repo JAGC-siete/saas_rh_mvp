@@ -8,8 +8,7 @@ import {
   parseMetaTrackingPayload,
   sendMetaWebsiteConversionFireAndForget,
 } from '../../lib/analytics/metaCapiServer'
-
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+import { validateLeadEmail } from '../../lib/marketing/validate-lead-email'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -31,10 +30,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json(createErrorResponse('El email es requerido', 'VALIDATION_ERROR'))
     }
 
-    const trimmedEmail = email.trim().toLowerCase()
-    if (!EMAIL_REGEX.test(trimmedEmail)) {
-      return res.status(400).json(createErrorResponse('Por favor ingresa un email válido', 'VALIDATION_ERROR'))
+    const emailValidation = validateLeadEmail(email)
+    if (!emailValidation.ok) {
+      return res.status(400).json(createErrorResponse(emailValidation.message, 'VALIDATION_ERROR'))
     }
+    const trimmedEmail = emailValidation.email
 
     let phoneNorm: string | null = null
     if (typeof phone === 'string' && phone.trim()) {

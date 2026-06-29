@@ -28,7 +28,7 @@ describe('activar field notes email', () => {
     })
     assert.ok(text.includes('Hola Ana,'))
     assert.ok(text.includes('reprocesamiento'))
-    assert.ok(text.includes('Campo · pregunta'))
+    assert.ok(text.includes('Nota #1 · Pregunta rápida'))
     assert.ok(text.includes('Cruzar / mover datos'))
   })
 

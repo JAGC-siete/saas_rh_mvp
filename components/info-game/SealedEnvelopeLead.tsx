@@ -15,6 +15,7 @@ import {
   UNLOCK_PROGRESS,
   UNLOCK_PROGRESS_MAX,
 } from '../../lib/info-game/sealed-envelope-copy'
+import { leadEmailValidationMessage } from '../../lib/marketing/validate-lead-email'
 
 type PageStatus = 'intrigue' | 'unlocking' | 'revealed'
 
@@ -34,7 +35,10 @@ function computeErrors(fd: { nombre: string; email: string }): ValidationErrors 
   else if (nombre.length > 120) errors.nombre = 'El nombre es demasiado largo.'
 
   if (!email) errors.email = 'Indica tu correo; ahí te enviamos el Secreto y la Misión 2.'
-  else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.email = 'Correo no válido.'
+  else {
+    const emailError = leadEmailValidationMessage(email)
+    if (emailError) errors.email = emailError
+  }
 
   return errors
 }
@@ -42,7 +46,7 @@ function computeErrors(fd: { nombre: string; email: string }): ValidationErrors 
 function computeUnlockProgress(form: { nombre: string; email: string; phone: string; empresa: string }): number {
   let pct = 0
   if (form.nombre.trim()) pct += UNLOCK_PROGRESS.nombre
-  if (form.email.trim() && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) pct += UNLOCK_PROGRESS.email
+  if (form.email.trim() && !leadEmailValidationMessage(form.email)) pct += UNLOCK_PROGRESS.email
   if (form.phone.trim()) pct += UNLOCK_PROGRESS.phone
   if (form.empresa.trim()) pct += UNLOCK_PROGRESS.empresa
   return Math.min(UNLOCK_PROGRESS_MAX, pct)
