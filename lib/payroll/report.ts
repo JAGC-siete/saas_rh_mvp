@@ -4,13 +4,27 @@ import { statutoryDeductionLabels } from '../country/payroll-labels'
 import { formatDateForHonduras, nowInHonduras, formatDateTimeForHonduras } from '../timezone'
 import { formatPeriodRangeForDisplay } from './period-dates'
 import { resolveStatutoryDeductionColumns } from './statutory-deduction-columns'
+import { formatVoucherCompanyName } from './voucher-pdf-options'
+import type { BrandingConfig } from '../reports/report-config-schema'
+import { resolveCompanyLogoBuffer } from '../reports/resolve-company-logo'
 import {
   type PayrollPdfGroupBy,
   executiveBreakdownLabel,
   groupKeyForRow,
   groupPlanillaLikeRows
 } from './pdf-layout'
-import { defaultPdfPrimaryColor, PDF } from '../pdf/liquid-theme'
+import {
+  defaultPdfPrimaryColor,
+  drawBrandedReceiptHeader,
+  drawLiquidPanel,
+  drawLiquidSectionTitle,
+  drawLiquidTableHeader,
+  drawLiquidTableRowBackground,
+  PDF,
+  PDF_FOOTER_RESERVE,
+  registerLiquidPageFooter,
+  strokeLiquidTableCells,
+} from '../pdf/liquid-theme'
 
 export interface PlanillaItem {
   id: string
@@ -87,17 +101,24 @@ export async function generateConsolidatedPayrollPDF(
     country_code?: string
   },
   periodDates?: { period_start: string; period_end: string },
-  reportVisual?: { primaryColor?: string },
+  reportVisual?: { primaryColor?: string; branding?: BrandingConfig },
   layout?: { groupBy: PayrollPdfGroupBy; watermarkText?: string }
 ): Promise<Buffer> {
+  const headerPrimary = defaultPdfPrimaryColor(
+    reportVisual?.primaryColor ?? reportVisual?.branding?.primaryColor
+  )
+  const logoBuffer = await resolveCompanyLogoBuffer(reportVisual?.branding)
+  const displayCompanyName = formatVoucherCompanyName(
+    reportVisual?.branding,
+    companyName || 'SISTEMA HONDUREÑO DE RECURSOS HUMANOS'
+  )
+  const generatedAt = formatDateTimeForHonduras(nowInHonduras())
+
   return new Promise<Buffer>((resolve, reject) => {
     try {
       const PDFDocument = require('pdfkit')
       const pdfGroupBy: PayrollPdfGroupBy = layout?.groupBy ?? 'none'
       const watermarkText = layout?.watermarkText?.trim() || ''
-
-      const headerPrimary =
-        defaultPdfPrimaryColor(reportVisual?.primaryColor)
       
       // Configuración de payroll con valores por defecto
       const currency = payrollConfig?.currency || 'HNL'
@@ -171,12 +192,14 @@ export async function generateConsolidatedPayrollPDF(
         margin: 30,
         info: {
           Title: `${payrollTitle} - ${headerSubtitle}`,
-          Author: 'Sistema Hondureño de Recursos Humanos',
+          Author: displayCompanyName,
           Subject: payrollSubject,
-          Keywords: 'nómina, planilla, Paragon, Honduras',
-          Creator: 'HR SaaS System'
+          Keywords: 'nómina, planilla, Honduras, Humano SISU',
+          Creator: 'Humano SISU'
         }
       })
+
+      registerLiquidPageFooter(doc, { generatedAt })
 
       const buffers: Buffer[] = []
       doc.on('error', (err: Error) => reject(err))
@@ -213,23 +236,23 @@ export async function generateConsolidatedPayrollPDF(
 
       // ===== PAGE 1: HEADER & EXEC SUMMARY =====
       const pageWidth = doc.page.width
-      doc.rect(0, 0, pageWidth, 90).fill(headerPrimary)
-      doc.fillColor('white')
-      doc.fontSize(22).text(companyName || 'SISTEMA HONDUREÑO DE RECURSOS HUMANOS', 30, 20, { align: 'center', width: pageWidth - 60 })
-      doc.fontSize(13).text(payrollTitle, 30, 46, { align: 'center', width: pageWidth - 60 })
-      doc.fontSize(12).text(headerSubtitle, 30, 66, { align: 'center', width: pageWidth - 60 })
+      const margin = 30
+      let bodyY = drawBrandedReceiptHeader(doc, {
+        primaryColor: headerPrimary,
+        companyName: displayCompanyName,
+        title: payrollTitle,
+        subtitle: headerSubtitle,
+        logoBuffer,
+      })
 
-      // Body base styles
-      doc.fillColor('#0f172a')
-      doc.fontSize(11).text('INFORMACIÓN DEL PERÍODO:', 30, 110)
-      doc.fontSize(10).text(`Período: ${periodo}`, 30, 126)
-      doc.fontSize(10).text(`Rango: ${periodRangeDisplay ?? quincenaText}`, 30, 142)
-      doc.fontSize(10).text(`Fecha de generación: ${formatDateForHonduras(nowInHonduras())}`, 30, 158)
+      drawLiquidSectionTitle(doc, 'Información del período', margin, bodyY)
+      doc.font('Helvetica').fontSize(10).fillColor(PDF.bodyMuted).text(`Período: ${periodo}`, margin, bodyY + 16)
+      doc.fontSize(10).text(`Rango: ${periodRangeDisplay ?? quincenaText}`, margin, bodyY + 32)
+      doc.fontSize(10).text(`Fecha de generación: ${formatDateForHonduras(nowInHonduras())}`, margin, bodyY + 48)
       if (generatedByEmail) {
-        doc.fontSize(10).text(`Generado por: ${generatedByEmail}`, 30, 174)
+        doc.fontSize(10).text(`Generado por: ${generatedByEmail}`, margin, bodyY + 64)
       }
 
-      // Combine both arrays for totals
       const planillaAll = [...planillaFixed, ...planillaHourly]
       const totalGross = planillaAll.reduce((sum, row) => sum + row.total_earnings, 0)
       const totalDeductions = planillaAll.reduce((sum, row) => sum + row.total_deductions, 0)
@@ -238,16 +261,18 @@ export async function generateConsolidatedPayrollPDF(
       const totalFixed = planillaFixed.length
       const totalHourly = planillaHourly.length
 
-      doc.rect(30, 200, pageWidth - 60, 110).stroke()
-      doc.fontSize(12).text('RESUMEN EJECUTIVO', 40, 210)
-      doc.fontSize(9).text('Total Empleados:', 45, 232)
-      doc.fontSize(9).text(`${totalEmployees} (${totalFixed} fijos, ${totalHourly} por hora)`, 200, 232)
-      doc.fontSize(9).text('Total Salario Bruto:', 45, 248)
-      doc.fontSize(9).text(formatCurrency(totalGross), 200, 248)
-      doc.fontSize(9).text('Total Deducciones:', 45, 264)
-      doc.fontSize(9).text(formatCurrency(totalDeductions), 200, 264)
-      doc.fontSize(9).text('Total Salario Neto:', 45, 280)
-      doc.fontSize(9).text(formatCurrency(totalNet), 200, 280)
+      const summaryTop = bodyY + 88
+      const summaryBoxH = 110
+      drawLiquidPanel(doc, margin, summaryTop, pageWidth - margin * 2, summaryBoxH)
+      drawLiquidSectionTitle(doc, 'Resumen ejecutivo', margin + 8, summaryTop + 8)
+      doc.font('Helvetica').fontSize(9).fillColor(PDF.bodyMuted).text('Total Empleados:', margin + 14, summaryTop + 30)
+      doc.fontSize(9).fillColor(PDF.bodyText).text(`${totalEmployees} (${totalFixed} fijos, ${totalHourly} por hora)`, 200, summaryTop + 30)
+      doc.fontSize(9).fillColor(PDF.bodyMuted).text('Total Salario Bruto:', margin + 14, summaryTop + 46)
+      doc.fontSize(9).fillColor(PDF.bodyText).text(formatCurrency(totalGross), 200, summaryTop + 46)
+      doc.fontSize(9).fillColor(PDF.bodyMuted).text('Total Deducciones:', margin + 14, summaryTop + 62)
+      doc.fontSize(9).fillColor(PDF.bodyText).text(formatCurrency(totalDeductions), 200, summaryTop + 62)
+      doc.fontSize(9).fillColor(PDF.bodyMuted).text('Total Salario Neto:', margin + 14, summaryTop + 78)
+      doc.fontSize(9).fillColor(PDF.bodyText).text(formatCurrency(totalNet), 200, summaryTop + 78)
 
       const deptTotals: { [key: string]: { count: number, gross: number, net: number } } = {}
       const breakdownKey = pdfGroupBy === 'none' ? 'department' : pdfGroupBy
@@ -263,11 +288,19 @@ export async function generateConsolidatedPayrollPDF(
         deptTotals[key].gross += row.total_earnings
         deptTotals[key].net += row.total
       })
-      doc.fontSize(9).text(executiveBreakdownLabel(pdfGroupBy === 'none' ? 'department' : pdfGroupBy), 360, 232)
-      let deptY = 245
+      doc.fontSize(9).fillColor(PDF.bodyMuted).text(
+        executiveBreakdownLabel(pdfGroupBy === 'none' ? 'department' : pdfGroupBy),
+        360,
+        summaryTop + 30
+      )
+      let deptY = summaryTop + 44
       Object.entries(deptTotals).forEach(([dept, totals]) => {
-        if (deptY < 290) {
-          doc.fontSize(8).text(`${dept}: ${totals.count} emp. - ${formatCurrency(totals.net)}`, 360, deptY)
+        if (deptY < summaryTop + 92) {
+          doc.font('Helvetica').fontSize(8).fillColor(PDF.bodyText).text(
+            `${dept}: ${totals.count} emp. - ${formatCurrency(totals.net)}`,
+            360,
+            deptY
+          )
           deptY += 11
         }
       })
@@ -304,7 +337,7 @@ export async function generateConsolidatedPayrollPDF(
 
         doc.addPage()
         const tablePageWidth = doc.page.width
-        doc.fontSize(11).fillColor('#0f172a').text(title, 30, 24, { align: 'center', width: tablePageWidth - 60 })
+        drawLiquidSectionTitle(doc, title, 30, 24)
 
         const hasSeptimoDia = isHourly && planillaData.some((r) => (r.septimo_dia ?? 0) > 0)
         let baseHeaders: string[]
@@ -395,21 +428,8 @@ export async function generateConsolidatedPayrollPDF(
         const startX = 40
         const rowHeight = 15
 
-        const headerTextOpts = (i: number) => ({
-          width: colWidths[i] - 4,
-          align: 'center' as const,
-          lineBreak: false,
-          ellipsis: true
-        })
-
         const paintHeaderRow = (y: number): number => {
-          allHeaders.forEach((h, i) => {
-            const x = startX + colWidths.slice(0, i).reduce((a, b) => a + b, 0)
-            doc.rect(x, y, colWidths[i], rowHeight).fillAndStroke(headerPrimary, '#0f172a')
-            doc.fillColor('white')
-            doc.fontSize(7).text(h, x + 2, y + 3, headerTextOpts(i))
-            doc.fillColor('#0f172a')
-          })
+          drawLiquidTableHeader(doc, startX, y, colWidths, allHeaders, rowHeight)
           return y + rowHeight
         }
 
@@ -419,9 +439,10 @@ export async function generateConsolidatedPayrollPDF(
           const tableTotalGross = rows.reduce((sum, row) => sum + row.total_earnings, 0)
           const tableTotalDeductions = rows.reduce((sum, row) => sum + row.total_deductions, 0)
           const tableTotalNet = rows.reduce((sum, row) => sum + row.total, 0)
-          doc.rect(startX, y2, totalsWidth, rowHeight).fillAndStroke('#f3f4f6', '#0f172a')
-          doc.fontSize(8).fillColor('#0f172a').text('TOTALES:', startX + 4, y2 + 4)
-          doc.fontSize(8).text(formatCurrency(tableTotalGross), startX + totalsWidth * 0.45, y2 + 4)
+          drawLiquidTableRowBackground(doc, startX, y2, totalsWidth, rowHeight, 0)
+          strokeLiquidTableCells(doc, startX, y2, colWidths, rowHeight)
+          doc.font('Helvetica-Bold').fontSize(8).fillColor(PDF.accentDark).text('TOTALES:', startX + 4, y2 + 4)
+          doc.font('Helvetica').fontSize(8).fillColor(PDF.bodyText).text(formatCurrency(tableTotalGross), startX + totalsWidth * 0.45, y2 + 4)
           doc.fontSize(8).text(formatCurrency(tableTotalDeductions), startX + totalsWidth * 0.65, y2 + 4)
           doc.fontSize(8).text(formatCurrency(tableTotalNet), startX + totalsWidth * 0.82, y2 + 4)
           return y2 + rowHeight
@@ -430,13 +451,16 @@ export async function generateConsolidatedPayrollPDF(
         const paintDataRows = (rows: PlanillaItem[], yStart: number, continuationLabel: string): number => {
           let y = yStart
           let pageCount = 1
+          let rowIndex = 0
+          const bottomLimit = doc.page.height - 60 - PDF_FOOTER_RESERVE
           for (const row of rows) {
-            if (y > doc.page.height - 60) {
+            if (y > bottomLimit) {
               doc.addPage()
               y = 40
               pageCount++
-              doc.fontSize(8).fillColor('#475569').text(`${continuationLabel} - Página ${pageCount}`, 40, 20)
+              doc.font('Helvetica').fontSize(8).fillColor(PDF.bodyMuted).text(`${continuationLabel} - Página ${pageCount}`, 40, 20)
               y = paintHeaderRow(y)
+              rowIndex = 0
             }
 
             const values: string[] = []
@@ -515,12 +539,15 @@ export async function generateConsolidatedPayrollPDF(
               lineBreak: false,
               ellipsis: true
             })
+            const rowWidth = colWidths.reduce((a, b) => a + b, 0)
+            drawLiquidTableRowBackground(doc, startX, y, rowWidth, rowHeight, rowIndex)
+            strokeLiquidTableCells(doc, startX, y, colWidths, rowHeight)
             values.forEach((val, i) => {
               const x = startX + colWidths.slice(0, i).reduce((a, b) => a + b, 0)
-              doc.rect(x, y, colWidths[i], rowHeight).stroke()
-              doc.fontSize(7).fillColor('#0f172a').text(pdfText(val), x + 2, y + 3, cellOpts(i))
+              doc.font('Helvetica').fontSize(7).fillColor(PDF.bodyText).text(pdfText(val), x + 2, y + 3, cellOpts(i))
             })
             y += rowHeight
+            rowIndex += 1
           }
           return y
         }
@@ -536,11 +563,12 @@ export async function generateConsolidatedPayrollPDF(
           }
 
           if (pdfGroupBy !== 'none' && gkey !== '') {
-            doc.rect(40, y, tablePageWidth - 80, 18).fill('#e2e8f0')
-            doc.fillColor('#0f172a')
-            doc.fontSize(9).text(sectionBannerLabel(pdfGroupBy, gkey), 48, y + 5, {
+            drawLiquidPanel(doc, 40, y, tablePageWidth - 80, 18, { fill: PDF.panelBgAlt, radius: 6 })
+            doc.fillColor(PDF.accentDark)
+            doc.font('Helvetica-Bold').fontSize(9).text(sectionBannerLabel(pdfGroupBy, gkey), 48, y + 5, {
               width: tablePageWidth - 100
             })
+            doc.fillColor(PDF.bodyText).font('Helvetica')
             y += 22
           }
 
@@ -565,29 +593,24 @@ export async function generateConsolidatedPayrollPDF(
 
       // ===== PAGE 3: BANK DETAILS & NOTES =====
       doc.addPage()
-      const bankPageWidth = doc.page.width
-      doc.fontSize(14).fillColor('#0f172a').text('INFORMACIÓN BANCARIA Y NOTAS', 30, 24, { align: 'center', width: bankPageWidth - 60 })
+      drawLiquidSectionTitle(doc, 'Información bancaria y notas', 30, 24)
 
-      doc.fontSize(9).text('DETALLE BANCARIO PARA TRANSFERENCIAS:', 30, 60)
+      drawLiquidSectionTitle(doc, 'Detalle bancario para transferencias', 30, 52)
       const bankHeaders = ['Código', 'Nombre', 'Banco', 'Cuenta', 'Monto Neto']
       const bankColWidths = [70, 210, 120, 180, 120]
       const bankStartX = 40
-      let bankY = 60
+      let bankY = 68
       const bankRowHeight = 17
 
-      bankHeaders.forEach((h, i) => {
-        const x = bankStartX + bankColWidths.slice(0, i).reduce((a, b) => a + b, 0)
-        doc.rect(x, bankY, bankColWidths[i], bankRowHeight).fillAndStroke(headerPrimary, '#0f172a')
-        doc.fillColor('white')
-        doc.fontSize(8).text(h, x + 2, bankY + 4, { width: bankColWidths[i] - 4, align: 'center' })
-        doc.fillColor('#0f172a')
-      })
+      drawLiquidTableHeader(doc, bankStartX, bankY, bankColWidths, bankHeaders, bankRowHeight)
       bankY += bankRowHeight
 
+      let bankRowIndex = 0
       planillaAll.forEach((row) => {
-        if (bankY > doc.page.height - 60) {
+        if (bankY > doc.page.height - 60 - PDF_FOOTER_RESERVE) {
           doc.addPage()
           bankY = 40
+          bankRowIndex = 0
         }
         const bankValues = [
           row.id || '',
@@ -596,10 +619,12 @@ export async function generateConsolidatedPayrollPDF(
           row.bank_account || 'No especificado',
           formatCurrency(row.total)
         ]
+        const bankTableW = bankColWidths.reduce((a, b) => a + b, 0)
+        drawLiquidTableRowBackground(doc, bankStartX, bankY, bankTableW, bankRowHeight, bankRowIndex)
+        strokeLiquidTableCells(doc, bankStartX, bankY, bankColWidths, bankRowHeight)
         bankValues.forEach((val, i) => {
           const x = bankStartX + bankColWidths.slice(0, i).reduce((a, b) => a + b, 0)
-          doc.rect(x, bankY, bankColWidths[i], bankRowHeight).stroke()
-          doc.fontSize(8).fillColor('#0f172a').text(pdfText(val), x + 2, bankY + 4, {
+          doc.font('Helvetica').fontSize(8).fillColor(PDF.bodyText).text(pdfText(val), x + 2, bankY + 4, {
             width: bankColWidths[i] - 4,
             align: 'center',
             lineBreak: false,
@@ -607,10 +632,11 @@ export async function generateConsolidatedPayrollPDF(
           })
         })
         bankY += bankRowHeight
+        bankRowIndex += 1
       })
 
-      doc.fontSize(9).fillColor('#0f172a').text('NOTAS IMPORTANTES:', 40, bankY + 22)
-      doc.fontSize(8).fillColor('#334155').text('• Esta planilla ha sido generada automáticamente por el Sistema Hondureño de Recursos Humanos.', 40, bankY + 38)
+      drawLiquidSectionTitle(doc, 'Notas importantes', 40, bankY + 22)
+      doc.font('Helvetica').fontSize(8).fillColor(PDF.bodyMuted).text('• Esta planilla ha sido generada automáticamente por Humano SISU.', 40, bankY + 38)
       doc.fontSize(8).text('• Los montos están calculados según la legislación laboral de Honduras.', 40, bankY + 53)
       const dedLegend =
         dedLabels.secondarySocial === '—'
@@ -625,9 +651,6 @@ export async function generateConsolidatedPayrollPDF(
         )
       doc.fontSize(8).text('• Verificar que la información bancaria sea correcta antes de procesar pagos.', 40, bankY + 83)
       doc.fontSize(8).text('• Para consultas, contactar al departamento de recursos humanos.', 40, bankY + 98)
-
-      doc.fontSize(8).fillColor('#64748b').text('SISU: Sistema Hondureño de Recursos Humanos', 40, doc.page.height - 35, { align: 'center', width: bankPageWidth - 80 })
-      doc.fontSize(8).text(`Fecha de generación: ${formatDateTimeForHonduras(nowInHonduras())}`, 40, doc.page.height - 20, { align: 'center', width: bankPageWidth - 80 })
 
       doc.end()
     } catch (error) {

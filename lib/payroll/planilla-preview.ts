@@ -1,4 +1,5 @@
-import { statutoryDeductionLabels } from '../country/payroll-labels'
+import { statutoryDeductionLabels, type StatutoryDeductionLabels } from '../country/payroll-labels'
+import { normalizeCountryCode } from '../country/supported'
 import { formatPeriodRangeForDisplay } from './period-dates'
 import type { LoadedPlanillaFromRun } from './planilla-from-run'
 import type { PlanillaItem } from './report'
@@ -39,7 +40,7 @@ export type PlanillaPreviewData = {
   summary: PlanillaPreviewSummary
   fixedRows: PlanillaPreviewEmployeeRow[]
   hourlyRows: PlanillaPreviewEmployeeRow[]
-  dedLabels: { ihss: string; rap: string; isr: string }
+  dedLabels: StatutoryDeductionLabels
   defaultFilename: string
   defaultPdfGroupBy: string
 }
@@ -102,7 +103,7 @@ export function buildPlanillaPreviewPayload(loaded: LoadedPlanillaFromRun): Plan
   const fixedRows = planillaFixed.map(mapEmployeeRow)
   const hourlyRows = planillaHourly.map(mapEmployeeRow)
   const summary = mergeSummaries(buildSummary(fixedRows), buildSummary(hourlyRows))
-  const dedLabels = statutoryDeductionLabels(pdfPayrollConfig.country_code)
+  const dedLabels = statutoryDeductionLabels(normalizeCountryCode(pdfPayrollConfig.country_code))
   const groupSuffix = payrollPdfGroupByFilenameSuffix(loaded.defaultPdfGroupBy)
 
   return {

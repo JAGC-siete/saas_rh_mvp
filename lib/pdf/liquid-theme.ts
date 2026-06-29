@@ -125,6 +125,8 @@ export function drawLiquidTableHeader(
   doc.fillColor(PDF.bodyText).font('Helvetica')
 }
 
+export const PDF_FOOTER_RESERVE = 44
+
 export function drawLiquidFooter(
   doc: PdfDoc,
   text: string,
@@ -140,6 +142,60 @@ export function drawLiquidFooter(
     width: pageWidth - 60,
   })
   doc.fillColor(PDF.bodyText)
+}
+
+/** Stamp generation date + brand line on every page (multi-page reports). */
+export function registerLiquidPageFooter(
+  doc: PdfDoc,
+  options: { brandLine?: string; generatedAt?: string }
+): void {
+  const brandLine = options.brandLine ?? 'Humano SISU · Sistema Hondureño de Recursos Humanos'
+  const generatedAt = options.generatedAt
+
+  const paint = () => {
+    const pageWidth = doc.page.width
+    const pageHeight = doc.page.height
+    const margin = 30
+    const footerY = pageHeight - margin - 8
+    const contentWidth = pageWidth - margin * 2
+
+    if (generatedAt) {
+      doc.fontSize(7).fillColor(PDF.footerMuted).text(`Fecha de generación: ${generatedAt}`, margin, footerY - 14, {
+        align: 'center',
+        width: contentWidth,
+        lineBreak: false,
+      })
+    }
+    drawLiquidFooter(doc, brandLine, { y: footerY, fontSize: 7 })
+  }
+
+  doc.on('pageAdded', () => paint())
+  paint()
+}
+
+export function drawLiquidTableRowBackground(
+  doc: PdfDoc,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  rowIndex: number
+): void {
+  doc.rect(x, y, width, height).fill(rowIndex % 2 === 1 ? PDF.tableStripe : PDF.white)
+}
+
+export function strokeLiquidTableCells(
+  doc: PdfDoc,
+  x: number,
+  y: number,
+  colWidths: number[],
+  height: number
+): void {
+  let cx = x
+  for (const w of colWidths) {
+    doc.rect(cx, y, w, height).lineWidth(0.5).stroke(PDF.panelBorder)
+    cx += w
+  }
 }
 
 export function defaultPdfPrimaryColor(override?: string): string {

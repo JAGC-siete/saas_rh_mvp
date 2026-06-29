@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { normalizeCountryCode } from '../country/supported'
+import { normalizeCountryCode, type CountryCode } from '../country/supported'
 import { calculatePayroll, getCustomFields } from '../payroll-client-specific'
 import {
   buildCustomDeductionsList,
@@ -23,6 +23,14 @@ export type PayrollRunRecord = {
   status: string
 }
 
+export type PdfCustomFieldDef = {
+  label: string
+  type: 'number' | 'string' | 'boolean'
+  category: 'earnings' | 'deductions' | 'calculation_helper'
+  required: boolean
+  default: unknown
+}
+
 export type LoadedPlanillaFromRun = {
   payrollRun: PayrollRunRecord
   planillaFixed: PlanillaItem[]
@@ -35,9 +43,9 @@ export type LoadedPlanillaFromRun = {
     payment_frequency: string
     payment_cut_dates: Record<string, unknown>
     legal_deductions: { ihss?: boolean; rap?: boolean; isr?: boolean }
-    country_code: string
+    country_code: CountryCode
   }
-  pdfCustomFieldsConfig?: Record<string, unknown>
+  pdfCustomFieldsConfig?: Record<string, PdfCustomFieldDef | string>
   defaultPdfGroupBy: PayrollPdfGroupBy
   isDraftPreview: boolean
 }
@@ -220,10 +228,10 @@ export async function loadPlanillaFromRun(
           : String(pfRaw)
 
   const customFieldsConfig = await getCustomFields(companyId, supabase)
-  let pdfCustomFieldsConfig: Record<string, unknown> | undefined
+  let pdfCustomFieldsConfig: Record<string, PdfCustomFieldDef | string> | undefined
   if (customFieldsConfig) {
     if (payrollConfig?.custom_fields) {
-      pdfCustomFieldsConfig = payrollConfig.custom_fields as Record<string, unknown>
+      pdfCustomFieldsConfig = payrollConfig.custom_fields as Record<string, PdfCustomFieldDef | string>
     } else {
       pdfCustomFieldsConfig = {}
       for (const [fieldName, label] of Object.entries(customFieldsConfig)) {

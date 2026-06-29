@@ -1329,11 +1329,9 @@ async function generatePayrollPDF(
   const planillaFixed = planillaAll.filter(p => (p as any).pay_type !== 'hourly')
   const planillaHourly = planillaAll.filter(p => (p as any).pay_type === 'hourly')
 
-  const reportVisual =
-    resolvedConfig?.branding?.primaryColor &&
-    /^#[0-9A-Fa-f]{6}$/.test(resolvedConfig.branding.primaryColor)
-      ? { primaryColor: resolvedConfig.branding.primaryColor }
-      : undefined
+  const reportVisual = resolvedConfig?.branding
+    ? { branding: resolvedConfig.branding, primaryColor: resolvedConfig.branding.primaryColor }
+    : undefined
 
   const pdf = await generateConsolidatedPayrollPDF(
     planillaFixed,

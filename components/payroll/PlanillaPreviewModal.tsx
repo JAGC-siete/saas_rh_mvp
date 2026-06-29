@@ -72,9 +72,9 @@ function EmployeeTable({
                 {showHours ? 'Horas' : 'Días'}
               </th>
               <th className="px-3 py-2 font-medium text-right">Bruto</th>
-              <th className="px-3 py-2 font-medium text-right">{dedLabels.ihss}</th>
-              <th className="px-3 py-2 font-medium text-right">{dedLabels.rap}</th>
-              <th className="px-3 py-2 font-medium text-right">{dedLabels.isr}</th>
+              <th className="px-3 py-2 font-medium text-right">{dedLabels.primarySocial}</th>
+              <th className="px-3 py-2 font-medium text-right">{dedLabels.secondarySocial}</th>
+              <th className="px-3 py-2 font-medium text-right">{dedLabels.incomeTax}</th>
               <th className="px-3 py-2 font-medium text-right">Neto</th>
             </tr>
           </thead>

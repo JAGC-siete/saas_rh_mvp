@@ -46,7 +46,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       loaded.payrollRun.quincena,
       user?.email,
       loaded.companyName,
-      loaded.pdfCustomFieldsConfig as Record<string, unknown> | undefined,
+      loaded.pdfCustomFieldsConfig,
       loaded.pdfPayrollConfig,
       loaded.periodDates,
       undefined,

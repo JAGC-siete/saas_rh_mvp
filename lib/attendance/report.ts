@@ -1,6 +1,20 @@
 import { Buffer } from 'buffer'
-import { LIQUID } from '../brand/liquid-tokens'
+import { formatVoucherCompanyName } from '../payroll/voucher-pdf-options'
+import type { BrandingConfig } from '../reports/report-config-schema'
+import { resolveCompanyLogoBuffer } from '../reports/resolve-company-logo'
 import { formatDateForHonduras, nowInHonduras, formatDateTimeForHonduras, formatTimeDisplay, formatDateOnlyForHonduras } from '../timezone'
+import {
+  defaultPdfPrimaryColor,
+  drawBrandedReceiptHeader,
+  drawLiquidPanel,
+  drawLiquidSectionTitle,
+  drawLiquidTableHeader,
+  drawLiquidTableRowBackground,
+  PDF,
+  PDF_FOOTER_RESERVE,
+  registerLiquidPageFooter,
+  strokeLiquidTableCells,
+} from '../pdf/liquid-theme'
 
 export interface AttendanceItem {
   id: string
@@ -34,6 +48,8 @@ export interface AttendancePDFOptions {
   companyDisplayName?: string
   /** Color principal (#rrggbb) desde parámetros de reporte */
   primaryColor?: string
+  /** Branding completo (logo Storage, nombre legal, color) */
+  branding?: BrandingConfig
   /** Tabla de detalle dinámica (columnas configuradas); si no se envía, se usa el layout fijo histórico */
   detailTable?: { headers: string[]; rows: (string | number)[][] }
 }
@@ -68,14 +84,17 @@ export async function generateConsolidatedAttendancePDF(
   generatedByEmail?: string,
   options?: AttendancePDFOptions
 ): Promise<Buffer> {
+  const primaryColor = defaultPdfPrimaryColor(options?.primaryColor ?? options?.branding?.primaryColor)
+  const logoBuffer = await resolveCompanyLogoBuffer(options?.branding)
+  const companyName = formatVoucherCompanyName(
+    options?.branding,
+    (options?.companyDisplayName || 'Empresa').trim()
+  )
+  const generatedAt = formatDateTimeForHonduras(nowInHonduras())
+
   return new Promise<Buffer>((resolve, reject) => {
     try {
       const PDFDocument = require('pdfkit')
-      const headerColor = options?.primaryColor && /^#[0-9A-Fa-f]{6}$/.test(options.primaryColor)
-        ? options.primaryColor
-        : LIQUID.brand900
-      const companyName = (options?.companyDisplayName || 'Empresa').trim()
-      const companyLabel = companyName.toUpperCase()
 
       const doc = new PDFDocument({
         size: 'A4',
@@ -85,8 +104,8 @@ export async function generateConsolidatedAttendancePDF(
           Title: `Reporte de Asistencia - ${startDate} a ${endDate}`,
           Author: companyName,
           Subject: 'Reporte de Asistencia',
-          Keywords: 'asistencia, reporte, Honduras',
-          Creator: 'HR SaaS',
+          Keywords: 'asistencia, reporte, Honduras, Humano SISU',
+          Creator: 'Humano SISU',
         },
       })
 
@@ -106,52 +125,51 @@ export async function generateConsolidatedAttendancePDF(
         }
       })
 
-      const HEADER_BAND = 100
       const L = left()
       const W = innerW()
 
+      registerLiquidPageFooter(doc, { generatedAt })
+
       // ===== PAGE 1: HEADER & EXEC SUMMARY =====
-      doc.rect(0, 0, pageW(), HEADER_BAND).fill(headerColor)
-      doc.fillColor('white')
+      let blockY = drawBrandedReceiptHeader(doc, {
+        primaryColor,
+        companyName,
+        title: 'Reporte de Asistencia',
+        subtitle: `${startDate} a ${endDate}`,
+        logoBuffer,
+      })
 
-      let hy = 14
-      doc.fontSize(17)
-      const companyBlockH = doc.heightOfString(companyLabel, { width: W, align: 'center' })
-      doc.text(companyLabel, L, hy, { width: W, align: 'center', lineBreak: true })
-      hy += Math.min(companyBlockH, 52) + 8
+      drawLiquidSectionTitle(doc, 'Información de la empresa', L, blockY)
+      doc.font('Helvetica').fontSize(10).fillColor(PDF.bodyText).text(companyName, L, blockY + 16, {
+        width: 360,
+        lineBreak: true,
+      })
 
-      doc.fontSize(12).text(`REPORTE DE ASISTENCIA — ${startDate} a ${endDate}`, L, hy, { width: W, align: 'center' })
-
-      doc.fillColor('black')
-      let blockY = HEADER_BAND + 14
-
-      doc.fontSize(10).text('INFORMACIÓN DE LA EMPRESA:', L, blockY)
-      doc.fontSize(10).text(companyName, L, blockY + 14, { width: 360, lineBreak: true })
-
-      const afterCompanyY = blockY + 14 + doc.heightOfString(companyName, { width: 360 }) + 10
+      const afterCompanyY = blockY + 16 + doc.heightOfString(companyName, { width: 360 }) + 10
 
       const rightColX = L + Math.min(400, Math.floor(W * 0.48))
-      doc.fontSize(10).text('INFORMACIÓN DEL PERÍODO:', rightColX, blockY)
-      doc.fontSize(9).text(`Fecha inicio: ${startDate}`, rightColX, blockY + 14)
-      doc.fontSize(9).text(`Fecha fin: ${endDate}`, rightColX, blockY + 28)
-      doc.fontSize(9).text(`Fecha de generación: ${formatDateForHonduras(nowInHonduras())}`, rightColX, blockY + 42)
+      drawLiquidSectionTitle(doc, 'Información del período', rightColX, blockY)
+      doc.font('Helvetica').fontSize(9).fillColor(PDF.bodyMuted).text(`Fecha inicio: ${startDate}`, rightColX, blockY + 16)
+      doc.fontSize(9).text(`Fecha fin: ${endDate}`, rightColX, blockY + 30)
+      doc.fontSize(9).text(`Fecha de generación: ${formatDateForHonduras(nowInHonduras())}`, rightColX, blockY + 44)
       if (generatedByEmail) {
-        doc.fontSize(9).text(`Generado por: ${generatedByEmail}`, rightColX, blockY + 56)
+        doc.fontSize(9).text(`Generado por: ${generatedByEmail}`, rightColX, blockY + 58)
       }
 
       const summaryTop = Math.max(afterCompanyY, blockY + 72) + 8
-      doc.rect(L, summaryTop, W, 100).stroke()
-      doc.fontSize(12).text('RESUMEN EJECUTIVO', L + 5, summaryTop + 8)
-      doc.fontSize(10).text('Total Empleados:', L + 10, summaryTop + 28)
-      doc.fontSize(10).text(summary.total_employees.toString(), L + 200, summaryTop + 28)
-      doc.fontSize(10).text('Total Días Registrados:', L + 10, summaryTop + 43)
-      doc.fontSize(10).text(summary.total_days.toString(), L + 200, summaryTop + 43)
-      doc.fontSize(10).text('Total Horas Trabajadas:', L + 10, summaryTop + 58)
-      doc.fontSize(10).text(`${summary.total_hours_worked.toFixed(2)} hrs`, L + 200, summaryTop + 58)
-      doc.fontSize(10).text('Tasa de Asistencia:', L + 10, summaryTop + 73)
-      doc.fontSize(10).text(`${summary.attendance_rate.toFixed(1)}%`, L + 200, summaryTop + 73)
-      doc.fontSize(10).text('Tasa de Puntualidad:', L + 10, summaryTop + 88)
-      doc.fontSize(10).text(`${summary.punctuality_rate.toFixed(1)}%`, L + 200, summaryTop + 88)
+      const summaryBoxH = 100
+      drawLiquidPanel(doc, L, summaryTop, W, summaryBoxH)
+      drawLiquidSectionTitle(doc, 'Resumen ejecutivo', L + 8, summaryTop + 8)
+      doc.font('Helvetica').fontSize(10).fillColor(PDF.bodyMuted).text('Total Empleados:', L + 14, summaryTop + 28)
+      doc.fontSize(10).fillColor(PDF.bodyText).text(summary.total_employees.toString(), L + 204, summaryTop + 28)
+      doc.fontSize(10).fillColor(PDF.bodyMuted).text('Total Días Registrados:', L + 14, summaryTop + 43)
+      doc.fontSize(10).fillColor(PDF.bodyText).text(summary.total_days.toString(), L + 204, summaryTop + 43)
+      doc.fontSize(10).fillColor(PDF.bodyMuted).text('Total Horas Trabajadas:', L + 14, summaryTop + 58)
+      doc.fontSize(10).fillColor(PDF.bodyText).text(`${summary.total_hours_worked.toFixed(2)} hrs`, L + 204, summaryTop + 58)
+      doc.fontSize(10).fillColor(PDF.bodyMuted).text('Tasa de Asistencia:', L + 14, summaryTop + 73)
+      doc.fontSize(10).fillColor(PDF.bodyText).text(`${summary.attendance_rate.toFixed(1)}%`, L + 204, summaryTop + 73)
+      doc.fontSize(10).fillColor(PDF.bodyMuted).text('Tasa de Puntualidad:', L + 14, summaryTop + 88)
+      doc.fontSize(10).fillColor(PDF.bodyText).text(`${summary.punctuality_rate.toFixed(1)}%`, L + 204, summaryTop + 88)
 
       const deptTotals: { [key: string]: { count: number; hours: number; attendance: number } } = {}
       attendanceData.forEach((row) => {
@@ -164,13 +182,15 @@ export async function generateConsolidatedAttendancePDF(
         deptTotals[dept].attendance += row.status === 'present' ? 1 : 0
       })
 
-      doc.fontSize(10).text('TOTALES POR DEPARTAMENTO:', rightColX, summaryTop + 28)
+      drawLiquidSectionTitle(doc, 'Totales por departamento', rightColX, summaryTop + 28)
       let summaryDeptY = summaryTop + 44
       Object.entries(deptTotals).forEach(([dept, totals]) => {
         if (summaryDeptY < summaryTop + 92) {
           const attendanceRate = totals.count > 0 ? (totals.attendance / totals.count) * 100 : 0
           doc
+            .font('Helvetica')
             .fontSize(9)
+            .fillColor(PDF.bodyText)
             .text(`${dept}: ${totals.count} reg. — ${totals.hours.toFixed(1)}h — ${attendanceRate.toFixed(1)}%`, rightColX, summaryDeptY, {
               width: W - (rightColX - L) - 10,
               lineBreak: true,
@@ -181,22 +201,16 @@ export async function generateConsolidatedAttendancePDF(
 
       // ===== PAGE 2: ATTENDANCE TABLE =====
       doc.addPage()
-      doc.fontSize(14).text('DETALLE DE ASISTENCIA POR EMPLEADO', L, 28, { align: 'center', width: W })
+      drawLiquidSectionTitle(doc, 'Detalle de asistencia por empleado', L, 28)
 
       const tableInnerWidth = W
       const startX = L
-      let y = 58
+      let y = 52
       const headerRowH = 22
       const minDataRowH = 18
 
       const drawAttendanceHeaderRow = (headers: string[], colWidths: number[]) => {
-        headers.forEach((h, i) => {
-          const x = startX + colWidths.slice(0, i).reduce((a, b) => a + b, 0)
-          doc.rect(x, y, colWidths[i], headerRowH).fillAndStroke(headerColor, '#000')
-          doc.fillColor('white')
-          doc.fontSize(8).text(h, x + 3, y + 6, { width: colWidths[i] - 6, align: 'center', lineBreak: true })
-          doc.fillColor('black')
-        })
+        drawLiquidTableHeader(doc, startX, y, colWidths, headers, headerRowH)
         y += headerRowH
       }
 
@@ -232,7 +246,8 @@ export async function generateConsolidatedAttendancePDF(
       drawAttendanceHeaderRow(headers, colWidths)
 
       let pageCount = 1
-      const bottomSafe = pageH() - doc.page.margins.bottom - 24
+      const bottomSafe = pageH() - doc.page.margins.bottom - PDF_FOOTER_RESERVE
+      let rowIndex = 0
 
       dataRows.forEach((values) => {
         const cellHeights = values.map((val, i) => {
@@ -252,45 +267,44 @@ export async function generateConsolidatedAttendancePDF(
           drawAttendanceHeaderRow(headers, colWidths)
         }
 
+        drawLiquidTableRowBackground(doc, startX, y, tableInnerWidth, rowH, rowIndex)
+        strokeLiquidTableCells(doc, startX, y, colWidths, rowH)
+
         values.forEach((val, i) => {
           const x = startX + colWidths.slice(0, i).reduce((a, b) => a + b, 0)
-          doc.rect(x, y, colWidths[i], rowH).stroke()
-          doc.fillColor('black')
-          doc.fontSize(8)
+          doc.fillColor(PDF.bodyText)
+          doc.font('Helvetica').fontSize(8)
           const cw = colWidths[i] - 6
           const align = i === empColIdx ? 'left' : 'center'
           doc.text(String(val ?? ''), x + 3, y + 4, { width: cw, align, lineBreak: true })
         })
         y += rowH
+        rowIndex += 1
       })
 
       y += 6
-      doc.rect(startX, y, W, minDataRowH).fillAndStroke('#f3f4f6', '#000')
-      doc.fontSize(9).text('TOTALES:', startX + 6, y + 5)
-      doc.fontSize(9).text(`${summary.total_days} días`, startX + 220, y + 5)
+      drawLiquidTableRowBackground(doc, startX, y, tableInnerWidth, minDataRowH, 0)
+      strokeLiquidTableCells(doc, startX, y, colWidths, minDataRowH)
+      doc.font('Helvetica-Bold').fontSize(9).fillColor(PDF.accentDark).text('TOTALES:', startX + 6, y + 5)
+      doc.font('Helvetica').fontSize(9).fillColor(PDF.bodyText).text(`${summary.total_days} días`, startX + 220, y + 5)
       doc.fontSize(9).text(`${summary.total_hours_worked.toFixed(1)}h`, startX + 360, y + 5)
       doc.fontSize(9).text(`${summary.attendance_rate.toFixed(1)}%`, startX + 480, y + 5)
 
       // ===== PAGE 3: DEPARTMENT ANALYSIS & NOTES =====
       doc.addPage()
-      doc.fontSize(14).text('ANÁLISIS POR DEPARTAMENTO Y NOTAS', L, 28, { align: 'center', width: W })
+      drawLiquidSectionTitle(doc, 'Análisis por departamento y notas', L, 28)
 
-      doc.fontSize(10).text('ANÁLISIS POR DEPARTAMENTO:', L, 56)
+      drawLiquidSectionTitle(doc, 'Análisis por departamento', L, 52)
       const deptHeaders = ['Departamento', 'Registros', 'Horas Totales', 'Promedio/Día', 'Tasa Asistencia']
       const deptColWidths = columnWidthsForHeaders(deptHeaders, Math.min(520, W))
       const deptStartX = L
-      let deptY = 76
+      let deptY = 72
       const deptHeaderH = 20
 
-      deptHeaders.forEach((h, i) => {
-        const x = deptStartX + deptColWidths.slice(0, i).reduce((a, b) => a + b, 0)
-        doc.rect(x, deptY, deptColWidths[i], deptHeaderH).fillAndStroke(headerColor, '#000')
-        doc.fillColor('white')
-        doc.fontSize(8).text(h, x + 2, deptY + 5, { width: deptColWidths[i] - 4, align: 'center', lineBreak: true })
-        doc.fillColor('black')
-      })
+      drawLiquidTableHeader(doc, deptStartX, deptY, deptColWidths, deptHeaders, deptHeaderH)
       deptY += deptHeaderH
 
+      let deptRowIndex = 0
       Object.entries(deptTotals).forEach(([dept, totals]) => {
         if (deptY > bottomSafe - 40) {
           doc.addPage()
@@ -306,30 +320,33 @@ export async function generateConsolidatedAttendancePDF(
           `${attendanceRate.toFixed(1)}%`,
         ]
         const drh = 16
+        const deptTableW = deptColWidths.reduce((a, b) => a + b, 0)
+        drawLiquidTableRowBackground(doc, deptStartX, deptY, deptTableW, drh, deptRowIndex)
+        strokeLiquidTableCells(doc, deptStartX, deptY, deptColWidths, drh)
         deptValues.forEach((val, i) => {
           const x = deptStartX + deptColWidths.slice(0, i).reduce((a, b) => a + b, 0)
-          doc.rect(x, deptY, deptColWidths[i], drh).stroke()
-          doc.fontSize(8).text(val.toString(), x + 2, deptY + 4, { width: deptColWidths[i] - 4, align: 'center', lineBreak: true })
+          doc.font('Helvetica').fontSize(8).fillColor(PDF.bodyText).text(val.toString(), x + 2, deptY + 4, {
+            width: deptColWidths[i] - 4,
+            align: 'center',
+            lineBreak: true,
+          })
         })
         deptY += drh
+        deptRowIndex += 1
       })
 
-      doc.fontSize(10).text('MÉTRICAS CLAVE:', L, deptY + 18)
-      doc.fontSize(9).text(`• Tasa de Asistencia General: ${summary.attendance_rate.toFixed(1)}%`, L, deptY + 34)
+      drawLiquidSectionTitle(doc, 'Métricas clave', L, deptY + 18)
+      doc.font('Helvetica').fontSize(9).fillColor(PDF.bodyMuted).text(`• Tasa de Asistencia General: ${summary.attendance_rate.toFixed(1)}%`, L, deptY + 34)
       doc.fontSize(9).text(`• Tasa de Puntualidad: ${summary.punctuality_rate.toFixed(1)}%`, L, deptY + 49)
       doc.fontSize(9).text(`• Promedio de Horas por Día: ${summary.average_hours_per_day.toFixed(1)} horas`, L, deptY + 64)
       doc.fontSize(9).text(`• Total de Horas Extra: ${summary.total_overtime_hours.toFixed(1)} horas`, L, deptY + 79)
       doc.fontSize(9).text(`• Total de Minutos de Tardanza: ${summary.total_late_minutes} minutos`, L, deptY + 94)
 
-      doc.fontSize(10).text('NOTAS IMPORTANTES:', L, deptY + 118)
+      drawLiquidSectionTitle(doc, 'Notas importantes', L, deptY + 118)
       doc.fontSize(9).text('• Este reporte ha sido generado automáticamente por el sistema.', L, deptY + 134)
       doc.fontSize(9).text('• Los datos de asistencia provienen de los registros consolidados en el sistema.', L, deptY + 149)
       doc.fontSize(9).text('• Las horas extra dependen del horario y reglas configuradas para la empresa.', L, deptY + 164)
       doc.fontSize(9).text('• Para aclaraciones, contacte al área de recursos humanos de su organización.', L, deptY + 179)
-
-      const fy = pageH() - 36
-      doc.fontSize(8).text(`Documento generado automáticamente — ${companyName}`, L, fy, { align: 'center', width: W })
-      doc.fontSize(8).text(`Fecha de generación: ${formatDateTimeForHonduras(nowInHonduras())}`, L, fy + 12, { align: 'center', width: W })
 
       doc.end()
     } catch (error) {

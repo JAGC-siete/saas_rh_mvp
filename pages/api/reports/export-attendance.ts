@@ -421,6 +421,7 @@ async function exportToPDF(
       {
         companyDisplayName: companyDisplayName ?? undefined,
         primaryColor: primaryColor ?? undefined,
+        branding: resolvedConfig.branding,
         detailTable: { headers: detailHeaders, rows: detailRows }
       }
     )
