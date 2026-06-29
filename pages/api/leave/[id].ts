@@ -131,7 +131,7 @@ async function handleGetLeaveAttendanceSummary(
         employee_id,
         start_date,
         end_date,
-        employee:employees(${leaveEmployeeGateSelect})
+        employee:employees!leave_requests_employee_id_fkey(${leaveEmployeeGateSelect})
       `)
       .eq('id', leaveRequestId)
       .single()
@@ -185,7 +185,7 @@ async function handleUpdateLeaveRequest(
       .from('leave_requests')
       .select(`
         *,
-        employee:employees(${leaveEmployeeGateSelect})
+        employee:employees!leave_requests_employee_id_fkey(${leaveEmployeeGateSelect})
       `)
       .eq('id', leaveRequestId)
       .single()
@@ -279,7 +279,7 @@ async function handleDeleteLeaveRequest(
       .from('leave_requests')
       .select(`
         *,
-        employee:employees(
+        employee:employees!leave_requests_employee_id_fkey(
           company_id
         )
       `)
