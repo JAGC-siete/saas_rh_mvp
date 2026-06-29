@@ -17,6 +17,7 @@ export type PlanillaRow = {
   department?: string;
   line_id?: string;
   pay_type?: 'fixed' | 'hourly';
+  edited?: boolean;
   /** Horas extra (AHC diurno+nocturno+feriado) en el período — informativo en preview fijo */
   horas_extras?: number;
   // Campos específicos para hourly

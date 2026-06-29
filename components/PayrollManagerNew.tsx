@@ -8,15 +8,6 @@ import ConfigNomina from './ConfigNomina'
 import CustomPayrollFieldsForm from './CustomPayrollFieldsForm'
 import DeductionPlansDashboard from './DeductionPlansDashboard'
 import { PayrollAccountingTab } from './accounting/PayrollAccountingTab'
-import { calculatePayroll } from '../lib/payroll-client-specific'
-import { createClient } from '../lib/supabase/client'
-
-// Type definitions for better type safety
-interface CustomFieldData {
-  metadata: Record<string, unknown>
-  eff_bruto: number
-  eff_neto: number
-}
 
 interface ModalState {
   lineId: string
@@ -32,9 +23,6 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
   // Modal state for editing custom fields - combined into single state object
   const [showCustomFieldsModal, setShowCustomFieldsModal] = useState(false)
   const [modalState, setModalState] = useState<ModalState | null>(null)
-  
-  // Local state for preview-only custom fields changes (not persisted until authorization)
-  const [previewCustomFields, setPreviewCustomFields] = useState<Record<string, CustomFieldData>>({})
   
   // Payment frequency from company config (para mostrar "Deducción en dos pagos" solo cuando es quincenal)
   const [paymentFrequency, setPaymentFrequency] = useState<string | null>(null)
@@ -138,7 +126,7 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
     }
   }, [payroll])
 
-  // Handle pre-authorize - NOW PERSISTS custom fields to database using batch API (memoized)
+  // Marca la corrida como revisada (los campos personalizados ya se guardan al cerrar el modal)
   const handlePreAuthorize = useCallback(async () => {
     if (!payroll.runId) {
       alert('No hay corrida de nómina activa')
@@ -146,89 +134,10 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
     }
 
     try {
-      // First, persist all preview custom fields to database using batch endpoint
-      if (Object.keys(previewCustomFields).length > 0) {
-        const { companyId } = payroll
-        if (!companyId) {
-          throw new Error('Company ID no encontrado')
-        }
-
-        // Prepare batch updates - normalizar valores antes de enviar
-        const batchUpdates = Object.entries(previewCustomFields).map(([lineId, fieldData]) => {
-          // Normalizar metadata: asegurar que números sean números, no strings
-          const normalizedFields: Record<string, unknown> = {}
-          for (const [key, value] of Object.entries(fieldData.metadata || {})) {
-            if (value === '' || value === null || value === undefined) {
-              continue // Omitir valores vacíos
-            }
-            // Convertir strings numéricos a números
-            if (typeof value === 'string' && !isNaN(parseFloat(value)) && value.trim() !== '') {
-              normalizedFields[key] = parseFloat(value)
-            } else if (typeof value === 'string' && (value === 'true' || value === 'false')) {
-              normalizedFields[key] = value === 'true'
-            } else {
-              normalizedFields[key] = value
-            }
-          }
-          
-          return {
-            run_line_id: lineId,
-            custom_fields: normalizedFields
-          }
-        })
-        
-        console.log('🔍 DEBUG - Batch updates preparados:', JSON.stringify(batchUpdates, null, 2))
-
-        // Save all custom field changes in a single batch API call
-        const batchResponse = await fetch('/api/payroll/update-custom-fields-batch', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ updates: batchUpdates })
-        })
-
-        if (!batchResponse.ok) {
-          const error = await batchResponse.json()
-          
-          // Si hay detalles de validación, mostrarlos
-          if (error.details && Array.isArray(error.details)) {
-            const validationErrors = error.details.map((d: any) => 
-              `Línea ${d.run_line_id}: ${d.error}`
-            ).join('\n')
-            throw new Error(`Error guardando campos en batch:\n\n${validationErrors}`)
-          }
-          
-          throw new Error(`Error guardando campos en batch: ${error.error || error.message || 'Error desconocido'}`)
-        }
-
-        const batchData = await batchResponse.json()
-        
-        // Check if all updates were successful
-        if (!batchData.success) {
-          // Partial failure - show which ones failed
-          interface BatchResult {
-            run_line_id: string
-            success: boolean
-            error?: string
-          }
-          const failedUpdates = (batchData.results as BatchResult[] | undefined)?.filter((r) => !r.success) || []
-          if (failedUpdates.length > 0) {
-            const failedDetails = failedUpdates.map((r) => 
-              `Línea ${r.run_line_id}: ${r.error || 'Error desconocido'}`
-            ).join('\n')
-            throw new Error(`Error guardando algunos campos:\n\n${failedDetails}`)
-          }
-        }
-
-        console.log(`✅ Batch update successful: ${batchData.summary?.successful || 0} líneas actualizadas`)
-
-        // Clear preview fields after persisting
-        setPreviewCustomFields({})
-      }
-
-      // Then update status to 'edited'
       const response = await fetch('/api/payroll/pre-authorize', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ run_id: payroll.runId })
       })
 
@@ -238,22 +147,21 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
       }
 
       const data = await response.json()
-      
-      // Reload data to reflect persisted changes and new status
       await payroll.loadUnifiedData()
-      
-      alert(`Nómina consolidada exitosamente\n\n` +
-            `✓ Cambios guardados en base de datos\n` +
-            `Líneas editadas: ${data.summary.edited_lines}\n` +
-            `Con campos personalizados: ${data.summary.lines_with_metadata}\n` +
-            `Total Neto: L. ${data.summary.total_neto.toFixed(2)}\n\n` +
-            `Ya puede autorizar la nómina`)
+
+      alert(
+        `Nómina consolidada exitosamente\n\n` +
+          `Líneas editadas: ${data.summary.edited_lines}\n` +
+          `Con campos personalizados: ${data.summary.lines_with_metadata}\n` +
+          `Total Neto: L. ${data.summary.total_neto.toFixed(2)}\n\n` +
+          `Ya puede autorizar la nómina`
+      )
     } catch (error: unknown) {
       console.error('Error consolidando:', error)
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
       alert('Error al consolidar: ' + errorMessage)
     }
-  }, [payroll, previewCustomFields])
+  }, [payroll])
 
   // Handle edit custom fields (memoized)
   const handleEditCustomFields = useCallback((lineId: string, metadata: Record<string, unknown> | null, baseSalary: number, employeeId?: string) => {
@@ -283,116 +191,79 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
     [payroll]
   )
 
-  // Handle save custom fields - ONLY UPDATE PREVIEW (not persisted until authorization) (memoized)
+  const normalizeCustomFields = (metadata: Record<string, unknown>): Record<string, unknown> => {
+    const normalized: Record<string, unknown> = {}
+    for (const [key, value] of Object.entries(metadata)) {
+      if (value === '' || value === null || value === undefined) continue
+      if (typeof value === 'string' && !isNaN(parseFloat(value)) && value.trim() !== '') {
+        normalized[key] = parseFloat(value)
+      } else if (typeof value === 'string' && (value === 'true' || value === 'false')) {
+        normalized[key] = value === 'true'
+      } else {
+        normalized[key] = value
+      }
+    }
+    return normalized
+  }
+
+  const handleResetLineRecalc = useCallback(
+    async (runLineId: string) => {
+      const res = await fetch('/api/payroll/reset-line-recalc', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ run_line_id: runLineId }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        throw new Error(data.message || data.error || 'Error al preparar recálculo')
+      }
+      await payroll.generatePreview()
+    },
+    [payroll]
+  )
+
+  // Persist custom fields immediately when saving the modal
   const handleSaveCustomFields = useCallback(async (metadata: Record<string, unknown>) => {
     if (!modalState) {
       throw new Error('No hay estado de modal activo')
     }
 
-    try {
-      const companyId = payroll.companyId
-      if (!companyId) {
-        throw new Error('Company ID no encontrado')
-      }
-
-      // Find the row in current data
-      if (!payroll.unifiedData) {
-        throw new Error('No hay datos de planilla cargados')
-      }
-
-      const row = payroll.unifiedData.rows.find(
-        r => (r.line_id === modalState.lineId || r.employee_id === modalState.lineId)
-      )
-
-      if (!row) {
-        throw new Error('Línea de planilla no encontrada')
-      }
-
-      // Normalizar metadata: convertir strings a números donde sea necesario
-      const normalizedMetadata: Record<string, unknown> = {}
-      for (const [key, value] of Object.entries(metadata)) {
-        if (value === '' || value === null || value === undefined) {
-          // Omitir valores vacíos
-          continue
-        }
-        // Si es un string que parece número, convertirlo
-        if (typeof value === 'string' && !isNaN(parseFloat(value)) && value.trim() !== '') {
-          normalizedMetadata[key] = parseFloat(value)
-        } else if (typeof value === 'string' && (value === 'true' || value === 'false')) {
-          normalizedMetadata[key] = value === 'true'
-        } else {
-          normalizedMetadata[key] = value
-        }
-      }
-
-      // Calculate new totals using new calculation engine
-      const supabase = createClient()
-      const calcResult = await calculatePayroll(
-        companyId,
-        row.total_earnings || 0,
-        normalizedMetadata,
-        supabase
-      )
-      
-      const ingresosAdicionales = calcResult.totalIngresosAdicionales
-      const deduccionesAdicionales = calcResult.totalDeduccionesAdicionales
-
-      // Calculate new net
-      const baseBruto = row.total_earnings || 0
-      const statutoryDeductions = (row.IHSS || 0) + (row.RAP || 0) + (row.ISR || 0)
-      const newBruto = baseBruto + ingresosAdicionales
-      const newNeto = newBruto - statutoryDeductions - deduccionesAdicionales
-
-      // Update local preview state (NOT persisted to DB) - usar metadata normalizado
-      setPreviewCustomFields(prev => ({
-        ...prev,
-        [modalState.lineId]: {
-          metadata: normalizedMetadata,
-          eff_bruto: newBruto,
-          eff_neto: newNeto
-        }
-      }))
-
-      // Update local unified data for immediate preview
-      const updatedRows = payroll.unifiedData.rows.map(r => {
-        if (r.line_id === modalState.lineId || r.employee_id === modalState.lineId) {
-          return {
-            ...r,
-            total_earnings: newBruto,
-            total: newNeto,
-            metadata: normalizedMetadata
-          }
-        }
-        return r
-      })
-
-      // Recalculate resumen
-      const newResumen = updatedRows.reduce((acc, r) => {
-        acc.total_bruto += r.total_earnings || 0
-        acc.total_neto += r.total || 0
-        acc.total_deducciones.IHSS += r.IHSS || 0
-        acc.total_deducciones.RAP += r.RAP || 0
-        acc.total_deducciones.ISR += r.ISR || 0
-        return acc
-      }, {
-        empleados: updatedRows.length,
-        total_bruto: 0,
-        total_deducciones: { IHSS: 0, RAP: 0, ISR: 0, otros: 0 },
-        total_neto: 0,
-        total_dias_trabajados: payroll.unifiedData.resumen.total_dias_trabajados,
-        total_horas_extras: payroll.unifiedData.resumen.total_horas_extras
-      })
-
-      // Update state directly without API call
-      payroll.setUnifiedData({ rows: updatedRows, resumen: newResumen })
-
-      setShowCustomFieldsModal(false)
-      setModalState(null)
-    } catch (error: unknown) {
-      console.error('Error calculating custom fields:', error)
-      const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
-      alert('Error al calcular campos personalizados: ' + errorMessage)
+    if (!payroll.unifiedData) {
+      throw new Error('No hay datos de planilla cargados')
     }
+
+    const row = payroll.unifiedData.rows.find(
+      (r) => r.line_id === modalState.lineId || r.employee_id === modalState.lineId
+    )
+
+    if (!row?.line_id) {
+      throw new Error('Línea de planilla no encontrada. Genere preview primero.')
+    }
+
+    const custom_fields = normalizeCustomFields(metadata)
+
+    const res = await fetch('/api/payroll/update-custom-fields', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({
+        run_line_id: row.line_id,
+        custom_fields,
+      }),
+    })
+
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) {
+      const details = Array.isArray(data.details)
+        ? data.details.map((d: unknown) => String(d)).join('\n')
+        : ''
+      throw new Error(data.error || data.message || details || 'Error guardando campos personalizados')
+    }
+
+    await payroll.loadUnifiedData()
+    setShowCustomFieldsModal(false)
+    setModalState(null)
   }, [modalState, payroll])
 
   // Loading state while company is being loaded
@@ -722,6 +593,8 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
             !!payroll.runId && (payroll.status === 'draft' || payroll.status === 'edited')
           }
           onAdjustFixedDays={handleAdjustFixedDays}
+          onResetLineRecalc={handleResetLineRecalc}
+          canResetLineRecalc={payroll.status === 'draft' || payroll.status === 'edited'}
           loading={payroll.loading}
           canAuthorize={payroll.canAuthorize}
           canSend={payroll.canSend}

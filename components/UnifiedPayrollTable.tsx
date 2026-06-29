@@ -41,6 +41,8 @@ interface UnifiedPayrollTableProps {
     days_worked: number
     reason?: string
   }) => Promise<void>
+  onResetLineRecalc?: (_runLineId: string) => Promise<void>
+  canResetLineRecalc?: boolean
   loading?: boolean
   canAuthorize?: boolean
   canSend?: boolean
@@ -73,6 +75,8 @@ export default function UnifiedPayrollTable({
   canAdjustFixedDays = false,
   payrollRunStatus,
   onAdjustFixedDays,
+  onResetLineRecalc,
+  canResetLineRecalc = false,
   loading = false,
   // eslint-disable-next-line no-unused-vars
   canAuthorize: _canAuthorize = false,
@@ -479,6 +483,8 @@ export default function UnifiedPayrollTable({
             canAdjustFixedDays={canAdjustFixedDays}
             payrollRunStatus={status}
             onAdjustFixedDays={onAdjustFixedDays}
+            onResetLineRecalc={onResetLineRecalc}
+            canResetLineRecalc={canResetLineRecalc}
             loading={loading}
             hasCustom={hasCustom}
             statutoryDeductions={statutoryDeductionColumns}
@@ -505,6 +511,8 @@ export default function UnifiedPayrollTable({
             rows={paginatedHourlyRows}
             onGenerateVoucher={onGenerateVoucher}
             onEditCustomFields={onEditCustomFields}
+            onResetLineRecalc={onResetLineRecalc}
+            canResetLineRecalc={canResetLineRecalc}
             loading={loading}
             hasCustom={hasCustom}
             statutoryDeductions={statutoryDeductionColumns}

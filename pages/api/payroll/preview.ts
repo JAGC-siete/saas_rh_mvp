@@ -43,6 +43,11 @@ import {
 import { isRestDayForDate } from '../../../lib/attendance/schedule-times'
 import type { LegacyScheduleColumns } from '../../../lib/attendance/shift-config'
 import { fetchPaidLeaveCreditsByEmployee } from '../../../lib/leave/paid-leave-days'
+import {
+  shouldPreservePayrollLineOnPreview,
+  buildFixedPlanillaRowFromPersistedLine,
+  buildHourlyPlanillaRowFromPersistedLine,
+} from '../../../lib/payroll/preview-preserve-line'
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -614,6 +619,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     // Separar en dos arrays: fixed y hourly
     const planilla_fixed: any[] = []
     const planilla_hourly: any[] = []
+    let preservedEditedLines = 0
     
     // Función auxiliar para calcular horas trabajadas desde registros
     const calculateHoursWorked = (registros: any[]): number => {
@@ -635,7 +641,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     const { data: existingRunLinesForSkip } = await supabase
       .from('payroll_run_lines')
       .select(
-        'id, employee_id, metadata, eff_hours, eff_bruto, eff_ihss, eff_rap, eff_isr, eff_neto'
+        'id, employee_id, edited, metadata, eff_hours, eff_bruto, eff_ihss, eff_rap, eff_isr, eff_neto'
       )
       .eq('run_id', runId)
       .eq('company_id', companyId)
@@ -708,37 +714,24 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       if (effectivePayType === 'fixed') {
         // ========== EMPLEADOS FIJOS (FIXED) ==========
         const prevLine = existingLineByEmployee[emp.id]
-        const prevMeta = prevLine?.metadata as Record<string, unknown> | null | undefined
-        if (prevMeta != null && prevMeta.days_adjusted_at != null && prevLine) {
-          const effH = Number(prevLine.eff_hours) || 0
-          const effBruto = Number(prevLine.eff_bruto) || 0
-          const effIhss = Number(prevLine.eff_ihss) || 0
-          const effRap = Number(prevLine.eff_rap) || 0
-          const effIsr = Number(prevLine.eff_isr) || 0
-          const effNeto = Number(prevLine.eff_neto) || 0
-          const totalDed = effBruto - effNeto
-          planilla_fixed.push({
-            employee_id: emp.id,
-            id: emp.dni || emp.id,
-            name: emp?.name || 'Sin nombre',
-            bank: emp.bank_name || 'No especificado',
-            bank_account: emp.bank_account || 'No especificado',
-            department: departmentName,
-            base_salary: base_salary,
-            monthly_salary: base_salary,
-            days_worked: effH,
-            days_absent: Math.max(0, diasPeriodo - effH),
-            horas_extras: Math.round((ahcOvertimeByEmployee[emp.id] || 0) * 100) / 100,
-            total_earnings: Math.round(effBruto * 100) / 100,
-            IHSS: Math.round(effIhss * 100) / 100,
-            RAP: Math.round(effRap * 100) / 100,
-            ISR: Math.round(effIsr * 100) / 100,
-            total_deducciones: Math.round(Math.max(0, totalDed) * 100) / 100,
-            total: Math.round(effNeto * 100) / 100,
-            line_id: prevLine.id,
-            pay_type: 'fixed',
-            metadata: prevLine.metadata
-          })
+        if (shouldPreservePayrollLineOnPreview(prevLine)) {
+          preservedEditedLines += 1
+          planilla_fixed.push(
+            buildFixedPlanillaRowFromPersistedLine({
+              emp: {
+                id: emp.id,
+                dni: emp.dni,
+                name: emp.name,
+                bank_name: emp.bank_name,
+                bank_account: emp.bank_account,
+                base_salary,
+              },
+              departmentName,
+              prevLine,
+              horasExtras: ahcOvertimeByEmployee[emp.id] || 0,
+              diasPeriodo,
+            })
+          )
           continue
         }
 
@@ -940,6 +933,32 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         
       } else {
         // ========== EMPLEADOS POR HORA (HOURLY) ==========
+        const prevLineHourly = existingLineByEmployee[emp.id]
+        if (shouldPreservePayrollLineOnPreview(prevLineHourly)) {
+          preservedEditedLines += 1
+          const hourly_rate_preserved = base_salary / HONDURAS_LABOR_FACTOR
+          const days_worked_preserved = registros.length
+          planilla_hourly.push(
+            buildHourlyPlanillaRowFromPersistedLine({
+              emp: {
+                id: emp.id,
+                dni: emp.dni,
+                name: emp.name,
+                bank_name: emp.bank_name,
+                bank_account: emp.bank_account,
+                base_salary,
+              },
+              departmentName,
+              prevLine: prevLineHourly,
+              horasExtras: ahcOvertimeByEmployee[emp.id] || 0,
+              diasPeriodo,
+              daysWorked: days_worked_preserved,
+              hourlyRate: hourly_rate_preserved,
+            })
+          )
+          continue
+        }
+
         const completeRegistros = registros.filter((r: any) => r.check_in && r.check_out)
         const incompleteRegistros = registros.filter((r: any) => r.check_in && !r.check_out)
 
@@ -1286,7 +1305,15 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
               message: `${attendanceExemptIncluded.length} empleado(s) administrativo(s) incluido(s) sin asistencia (exento de checada).`,
             }
           : undefined,
-      incompleteRecordsAlert: incompleteRecordsAlert.length > 0 ? incompleteRecordsAlert : undefined
+      incompleteRecordsAlert: incompleteRecordsAlert.length > 0 ? incompleteRecordsAlert : undefined,
+      preserved_edited_lines: preservedEditedLines,
+      preservedEditedSummary:
+        preservedEditedLines > 0
+          ? {
+              count: preservedEditedLines,
+              message: `${preservedEditedLines} empleado(s) con edición manual conservaron sus montos. Use "Recalcular desde asistencia" en cada línea para actualizarlos.`,
+            }
+          : undefined,
     })
 
   } catch (error: any) {

@@ -1,5 +1,5 @@
 import { calculatePayroll } from '../payroll-client-specific'
-import { getCustomFieldsFromDB } from './payroll-calculation-engine'
+import { getCustomFieldsFromDB } from '../payroll-calculation-engine'
 
 /** Campos legacy hardcodeados (clientes antiguos sin custom_fields en BD). */
 const LEGACY_DEDUCTION_FIELDS = [

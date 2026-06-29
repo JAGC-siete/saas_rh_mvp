@@ -491,6 +491,12 @@ export const usePayrollManager = () => {
           response.attendanceExemptSummary.message,
           8000
         )
+      } else if (response?.preservedEditedSummary?.count) {
+        toast.warning(
+          'Líneas editadas conservadas',
+          response.preservedEditedSummary.message,
+          9000
+        )
       } else if (response?.incompleteRecordsAlert?.length) {
         toast.warning(
           'Marcas incompletas detectadas',

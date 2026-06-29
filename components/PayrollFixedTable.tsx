@@ -28,6 +28,8 @@ interface PayrollFixedTableProps {
     days_worked: number
     reason?: string
   }) => Promise<void>
+  onResetLineRecalc?: (_runLineId: string) => Promise<void>
+  canResetLineRecalc?: boolean
   loading?: boolean
   hasCustom?: boolean
   statutoryDeductions?: { ihss: boolean; rap: boolean; isr: boolean }
@@ -40,6 +42,8 @@ export default function PayrollFixedTable({
   canAdjustFixedDays = false,
   payrollRunStatus,
   onAdjustFixedDays,
+  onResetLineRecalc,
+  canResetLineRecalc = false,
   loading = false,
   hasCustom = false,
   statutoryDeductions = { ihss: true, rap: true, isr: true }
@@ -309,6 +313,32 @@ export default function PayrollFixedTable({
                           title="Editar campos personalizados"
                         >
                           <Icon name="edit" className="h-4 w-4" />
+                        </Button>
+                      )}
+                      {canResetLineRecalc && onResetLineRecalc && row.line_id &&
+                        ((row as any).edited || (row as any).metadata?.days_adjusted_at) && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={loading}
+                          className="bg-white/10 border-white/30 text-white hover:bg-white/20"
+                          title="Recalcular desde asistencia (quita ediciones manuales de esta línea)"
+                          onClick={async () => {
+                            if (
+                              !confirm(
+                                '¿Recalcular esta línea desde asistencia? Se perderán las ediciones manuales de este empleado.'
+                              )
+                            ) {
+                              return
+                            }
+                            try {
+                              await onResetLineRecalc(row.line_id!)
+                            } catch (e) {
+                              alert(e instanceof Error ? e.message : 'Error al recalcular')
+                            }
+                          }}
+                        >
+                          <Icon name="refresh" className="h-4 w-4" />
                         </Button>
                       )}
                     </div>
