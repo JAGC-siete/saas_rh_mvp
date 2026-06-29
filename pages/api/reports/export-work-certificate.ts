@@ -4,7 +4,13 @@ import { getHondurasTimestamp, formatDateForHonduras, nowInHonduras, parseDateOn
 import { createAdminClient } from '../../../lib/supabase/server'
 import { assertEmployeePortalEnabled } from '../../../lib/employee-portal/company-settings'
 import { canExportReports, EXPORT_REPORTS_FORBIDDEN } from '../../../lib/security/permissions'
-import { PDF } from '../../../lib/pdf/liquid-theme'
+import { resolveReportConfig } from '../../../lib/reports/column-resolver'
+import { formatVoucherCompanyName } from '../../../lib/payroll/voucher-pdf-options'
+import {
+  generateWorkCertificatePDFBuffer,
+  numberToWords,
+  type WorkCertificatePayload,
+} from '../../../lib/reports/work-certificate-pdf'
 import {
   calculateIHSS,
   calculateRAP,
@@ -12,28 +18,7 @@ import {
   type TaxConstants
 } from '../../../lib/tax/honduras-tax'
 
-interface WorkCertificateData {
-  employee: {
-    id: string
-    name: string
-    email: string
-    employee_code: string
-    dni: string
-    position: string
-    department_name: string
-    company_name: string
-    hire_date: string
-    termination_date: string | null
-    base_salary: number
-    status: string
-  }
-  certificateInfo: {
-    certificateType: string
-    requestDate: string
-    purpose: string
-    additionalInfo?: string
-  }
-}
+type WorkCertificateData = WorkCertificatePayload
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -103,12 +88,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const taxYear = nowInHonduras().getFullYear()
     const taxConstants = await getTaxBracketsForYear(taxYear, 'HND')
+    const resolvedConfig = companyId
+      ? await resolveReportConfig(companyId, 'work_certificate', supabase)
+      : null
 
     // Generar reporte según formato
     if (format === 'pdf') {
-      await generateWorkCertificatePDF(res, certificateData, includeDeductions, taxConstants)
+      const pdf = await generateWorkCertificatePDFBuffer(certificateData, taxConstants, {
+        branding: resolvedConfig?.branding,
+        includeDeductions,
+      })
+      res.setHeader('Content-Type', 'application/pdf')
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename=constancia_laboral_${certificateData.employee.employee_code}_${getHondurasTimestamp().split('T')[0]}.pdf`
+      )
+      res.send(pdf)
     } else {
-      generateWorkCertificateCSV(res, certificateData, includeDeductions, taxConstants)
+      generateWorkCertificateCSV(res, certificateData, includeDeductions, taxConstants, resolvedConfig?.branding)
     }
 
   } catch (error) {
@@ -280,262 +277,27 @@ function calcularRAPConstancia(salarioBase: number, constants: TaxConstants): nu
   return Math.round(calculateRAP(salarioBase, constants) * 100) / 100
 }
 
-// Formatear fecha en formato español completo (DOS de ENERO)
 function formatDateInWords(date: Date): string {
   const day = date.getDate()
   const month = date.toLocaleDateString('es-ES', { month: 'long' }).toUpperCase()
   const dayInWords = numberToWords(day)
-  
-  // Capitalizar primera letra
   const dayCapitalized = dayInWords.charAt(0).toUpperCase() + dayInWords.slice(1)
-  
   return `${dayCapitalized} de ${month}`
-}
-
-function generateWorkCertificatePDF(
-  res: NextApiResponse,
-  certificateData: WorkCertificateData,
-  includeDeductions: boolean = true,
-  taxConstants: TaxConstants
-) {
-  return new Promise<void>((resolve, reject) => {
-    try {
-      const PDFDocument = require('pdfkit')
-      const doc = new PDFDocument({
-        size: 'A4',
-        margins: {
-          top: 50,
-          bottom: 50,
-          left: 50,
-          right: 50
-        }
-      })
-
-      const buffers: Buffer[] = []
-      doc.on('data', (chunk: Buffer) => buffers.push(chunk))
-      doc.on('end', () => {
-        try {
-          const pdf = Buffer.concat(buffers)
-          res.setHeader('Content-Type', 'application/pdf')
-          res.setHeader('Content-Disposition', `attachment; filename=constancia_laboral_${certificateData.employee.employee_code}_${getHondurasTimestamp().split('T')[0]}.pdf`)
-          res.send(pdf)
-          resolve()
-        } catch (e) {
-          reject(e)
-        }
-      })
-      doc.on('error', (error: Error) => {
-        reject(error)
-      })
-
-    // ==== Branding consistente (header y colores) ====
-    const pageWidth = doc.page.width
-    const pageHeight = doc.page.height
-    const primary = PDF.primaryDefault
-    const textColor = PDF.bodyText
-
-    // Header bar
-    doc.rect(0, 0, pageWidth, 80).fill(primary)
-    doc.fillColor('white')
-      .font('Helvetica-Bold').fontSize(16)
-      .text((certificateData.employee.company_name || 'SISTEMA HONDUREÑO DE RECURSOS HUMANOS').toUpperCase(), 30, 20, { align: 'center', width: pageWidth - 60 })
-    doc.font('Helvetica').fontSize(12)
-      .text('Constancia Laboral', 30, 46, { align: 'center', width: pageWidth - 60 })
-
-    // Reset base text color
-    doc.fillColor(textColor)
-
-    // Título principal
-    doc.moveDown(3)
-    doc.fontSize(16)
-       .font('Helvetica-Bold')
-       .text('CONSTANCIA LABORAL', { align: 'center' })
-       .moveDown(1.5)
-
-    // Cuerpo principal - Formato exacto según especificación
-    doc.fontSize(12)
-       .font('Helvetica')
-    
-    // Construir el texto principal según el formato exacto
-    const hireDate = /^\d{4}-\d{2}-\d{2}$/.test(certificateData.employee.hire_date)
-      ? parseDateOnlyAsHonduras(certificateData.employee.hire_date)
-      : new Date(certificateData.employee.hire_date)
-    const hireDateFormatted = formatDateInWords(hireDate)
-
-    // Determinar período: si está activo "hasta la fecha", si no está activo mostrar fecha fin
-    const isActive = certificateData.employee.status === 'active'
-    let periodText = ''
-    if (isActive) {
-      periodText = `desde el ${hireDateFormatted} de ${hireDate.getFullYear()} hasta la fecha`
-    } else if (certificateData.employee.termination_date) {
-      const terminationDate = /^\d{4}-\d{2}-\d{2}$/.test(certificateData.employee.termination_date)
-        ? parseDateOnlyAsHonduras(certificateData.employee.termination_date)
-        : new Date(certificateData.employee.termination_date)
-      const terminationDateFormatted = formatDateInWords(terminationDate)
-      periodText = `desde el ${hireDateFormatted} de ${hireDate.getFullYear()} hasta el ${terminationDateFormatted} de ${terminationDate.getFullYear()}`
-    } else {
-      periodText = `desde el ${hireDateFormatted} de ${hireDate.getFullYear()} hasta la fecha`
-    }
-
-    // Formateador de moneda consistente
-    const formatHNL = (n: number) => `L. ${Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-    // Convertir salario a palabras
-    const salaryInWords = numberToWords(certificateData.employee.base_salary)
-    const salaryFormatted = formatHNL(certificateData.employee.base_salary)
-    
-    // Construir texto principal
-    let mainText = `Por medio de la presente, ${certificateData.employee.company_name.toUpperCase()} S. de R.L. certifica que ${certificateData.employee.name}, con Documento Nacional de Identificación No. ${certificateData.employee.dni}, se desempeña en esta empresa bajo contrato permanente, ocupando el cargo de "${certificateData.employee.position}" ${periodText}, con un salario mensual de ${salaryFormatted} (${salaryInWords} lempiras exactos)`
-    
-    if (includeDeductions) {
-      mainText += ', con las siguientes deducciones:'
-    } else {
-      mainText += '.'
-    }
-
-    doc.text(mainText, { align: 'justify' })
-       .moveDown(1.5)
-
-    // Tabla de deducciones (solo si includeDeductions es true)
-    if (includeDeductions) {
-      // Calcular deducciones mensuales
-      const ihssMonthly = calcularIHSSConstancia(certificateData.employee.base_salary, taxConstants)
-      const rapMonthly = calcularRAPConstancia(certificateData.employee.base_salary, taxConstants)
-      const totalDeductions = ihssMonthly + rapMonthly
-      const netSalary = certificateData.employee.base_salary - totalDeductions
-
-      const tableTop = doc.y
-      const rowHeight = 25
-      const labelWidth = 220
-      const valueWidth = 180
-      const startX = 60
-
-      // Fila 1: Salario base
-      doc.fontSize(11)
-         .font('Helvetica')
-         .text('Salario base', startX, tableTop, { width: labelWidth })
-      doc.font('Helvetica-Bold')
-         .text(`${salaryFormatted}`, startX + labelWidth, tableTop, { width: valueWidth })
-      
-      // Fila 2: Deducciones
-      const deductionsY = tableTop + rowHeight
-      doc.font('Helvetica')
-         .text('Deducciones (RAP / IHSS)', startX, deductionsY, { width: labelWidth })
-      doc.font('Helvetica-Bold')
-         .text(`${formatHNL(totalDeductions)}`, startX + labelWidth, deductionsY, { width: valueWidth })
-      
-      // Fila 3: Total
-      const totalY = deductionsY + rowHeight
-      doc.font('Helvetica')
-         .text('Total', startX, totalY, { width: labelWidth })
-      doc.font('Helvetica-Bold')
-         .text(`${formatHNL(netSalary)}`, startX + labelWidth, totalY, { width: valueWidth })
-
-      doc.moveDown(2)
-    }
-
-    // Tras la tabla, PDFKit deja `doc.x` al final de la última celda de valor; el siguiente `.text()`
-    // sin x explícito continúa desde ahí y desplaza el párrafo hacia la derecha.
-    const marginLeft = doc.page.margins.left
-    const marginRight = doc.page.margins.right
-    const textWidth = pageWidth - marginLeft - marginRight
-    doc.x = marginLeft
-
-    // Información de emisión
-    const currentDate = nowInHonduras()
-    const day = currentDate.getDate()
-    const dayInWords = numberToWords(day)
-    const monthInWords = currentDate.toLocaleDateString('es-ES', { month: 'long' }).toUpperCase()
-    const yearInWords = numberToWords(currentDate.getFullYear())
-    
-    // Usar "al" para día 1, "a los" para el resto
-    const dayPrefix = day === 1 ? 'al' : 'a los'
-    const daySuffix = day === 1 ? 'día' : 'días'
-
-    doc.fontSize(11)
-       .font('Helvetica')
-       .text(
-         `Esta constancia se emite a solicitud del interesado para los fines que estime convenientes. Extendida en Tegucigalpa, M.D.C., ${dayPrefix} ${dayInWords} ${daySuffix} del mes de ${monthInWords} del año ${yearInWords}.`,
-         marginLeft,
-         doc.y,
-         { width: textWidth, align: 'justify' }
-       )
-
-    // Footer SISU
-    doc.fontSize(8).fillColor('#64748b')
-      .text('SISU: Sistema Hondureño de Recursos Humanos', 30, pageHeight - 30, { align: 'center', width: pageWidth - 60 })
-
-    // Finalizar documento
-      doc.end()
-
-    } catch (error) {
-      reject(error)
-    }
-  })
-}
-
-// Función auxiliar para convertir números a palabras (mejorada para números grandes)
-function numberToWords(num: number): string {
-  // Redondear a entero para conversión
-  const intNum = Math.floor(num)
-  
-  const units = ['', 'uno', 'dos', 'tres', 'cuatro', 'cinco', 'seis', 'siete', 'ocho', 'nueve']
-  const teens = ['diez', 'once', 'doce', 'trece', 'catorce', 'quince', 'dieciséis', 'diecisiete', 'dieciocho', 'diecinueve']
-  const tens = ['', '', 'veinte', 'treinta', 'cuarenta', 'cincuenta', 'sesenta', 'setenta', 'ochenta', 'noventa']
-  const hundreds = ['', 'ciento', 'doscientos', 'trescientos', 'cuatrocientos', 'quinientos', 'seiscientos', 'setecientos', 'ochocientos', 'novecientos']
-
-  if (intNum === 0) return 'cero'
-  if (intNum < 10) return units[intNum]
-  if (intNum < 20) return teens[intNum - 10]
-  if (intNum < 100) {
-    if (intNum % 10 === 0) return tens[Math.floor(intNum / 10)]
-    if (intNum < 30 && intNum > 20) {
-      return 'veinti' + units[intNum % 10]
-    }
-    return tens[Math.floor(intNum / 10)] + ' y ' + units[intNum % 10]
-  }
-  if (intNum < 1000) {
-    if (intNum === 100) return 'cien'
-    if (intNum % 100 === 0) return hundreds[Math.floor(intNum / 100)]
-    return hundreds[Math.floor(intNum / 100)] + ' ' + numberToWords(intNum % 100)
-  }
-  if (intNum < 1000000) {
-    if (intNum === 1000) return 'mil'
-    if (intNum < 2000) {
-      const remainder = intNum % 1000
-      return remainder === 0 ? 'mil' : 'mil ' + numberToWords(remainder)
-    }
-    if (intNum % 1000 === 0) {
-      const thousands = Math.floor(intNum / 1000)
-      return thousands === 1 ? 'mil' : numberToWords(thousands) + ' mil'
-    }
-    const thousands = Math.floor(intNum / 1000)
-    const remainder = intNum % 1000
-    const thousandsText = thousands === 1 ? 'mil' : numberToWords(thousands) + ' mil'
-    return remainder === 0 ? thousandsText : thousandsText + ' ' + numberToWords(remainder)
-  }
-  
-  // Para números muy grandes (millones), simplificar
-  if (intNum < 1000000000) {
-    const millions = Math.floor(intNum / 1000000)
-    const remainder = intNum % 1000000
-    const millionsText = millions === 1 ? 'un millón' : numberToWords(millions) + ' millones'
-    return remainder === 0 ? millionsText : millionsText + ' ' + numberToWords(remainder)
-  }
-  
-  return intNum.toString() // Fallback para números extremadamente grandes
 }
 
 function generateWorkCertificateCSV(
   res: NextApiResponse,
   certificateData: WorkCertificateData,
   includeDeductions: boolean = true,
-  taxConstants: TaxConstants
+  taxConstants: TaxConstants,
+  branding?: { legalName?: string; useLegalSuffix?: boolean }
 ) {
   try {
+    const legalCompanyName = formatVoucherCompanyName(branding, certificateData.employee.company_name)
     let csvContent = 'CONSTANCIA LABORAL\n\n'
     
     // Información de la empresa
-    csvContent += `Empresa,${certificateData.employee.company_name} S. de R.L.\n`
+    csvContent += `Empresa,${legalCompanyName}\n`
     csvContent += `Fecha de emisión,${formatDateForHonduras(nowInHonduras())}\n\n`
     
     // Datos del empleado
