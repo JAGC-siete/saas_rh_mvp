@@ -538,6 +538,7 @@ export default function AttendanceDashboardApp() {
             <KpiCards
               presentes={kpis?.presentes ?? 0}
               ausentes={kpis?.ausentes ?? 0}
+              permisosPagados={kpis?.permisos_pagados ?? 0}
               temprano={kpis?.tempranos ?? 0}
               tarde={kpis?.tardes ?? 0}
               presetLabel={` ${getPresetLabel(preset)}`}

@@ -34,6 +34,7 @@ import {
   shouldPayOvertimeToEmployee
 } from '../../../lib/payroll/overtime-pay'
 import { createEmployeeSalaryClient } from '../../../lib/security/employee-data-access'
+import { fetchPaidLeaveCreditsByEmployee } from '../../../lib/leave/paid-leave-days'
 
 interface PlanillaItem {
   id: string
@@ -378,23 +379,46 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     console.log(`Procesando nómina para ${empleadosParaNomina.length} empleados`)
 
+    const payrollEmployeeIds = empleadosParaNomina.map((e: any) => e.id)
+    let paidLeaveCreditsByEmployee = new Map<string, number>()
+    if (payrollEmployeeIds.length > 0 && companyId) {
+      try {
+        paidLeaveCreditsByEmployee = await fetchPaidLeaveCreditsByEmployee(
+          supabase,
+          companyId,
+          fechaInicio,
+          fechaFin,
+          payrollEmployeeIds
+        )
+      } catch (paidLeaveErr) {
+        console.error('Error obteniendo créditos de permisos pagados:', paidLeaveErr)
+        return res.status(500).json({
+          error: 'Error obteniendo permisos pagados para nómina',
+          message: paidLeaveErr instanceof Error ? paidLeaveErr.message : String(paidLeaveErr),
+        })
+      }
+    }
+
     // Calcular planilla con CÁLCULOS 3 CAPAS
     const planilla: PlanillaItem[] = await Promise.all(empleadosParaNomina.map(async (emp: any) => {
-      const registros = attendanceRecords.filter((record: any) => 
-        record.employee_id === emp.id && 
-        record.check_in && 
-        record.check_out)
-      
       const effectivePayType = resolveEffectivePayType(emp.pay_type, companyCalculationMode)
+      const registros = attendanceRecords.filter((record: any) => {
+        if (record.employee_id !== emp.id || !record.check_in) return false
+        if (effectivePayType === 'fixed') return true
+        return Boolean(record.check_out)
+      })
+
+      const paidLeaveCredits = paidLeaveCreditsByEmployee.get(emp.id) || 0
       const fixedDays = resolveFixedDaysWorkedForPayroll(
         effectivePayType,
         emp.attendance_required,
         registros.length,
-        diasPeriodo
+        diasPeriodo,
+        paidLeaveCredits
       )
       const days_worked =
         effectivePayType === 'fixed' ? fixedDays.daysWorked : registros.length
-      const days_absent = diasPeriodo - days_worked
+      const days_absent = Math.max(0, diasPeriodo - days_worked)
       const late_days = calcularTardanzas(registros)
       
       const base_salary = Number(emp.base_salary) || 0

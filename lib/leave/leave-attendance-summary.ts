@@ -19,7 +19,7 @@ export function enumerateCalendarDays(fromStr: string, toStr: string): string[] 
 
 export type LeaveAttendanceSummaryDay = {
   date: string
-  summary: 'sin_datos' | 'presente' | 'ausente'
+  summary: 'sin_datos' | 'presente' | 'ausente' | 'permiso_pagado'
   has_check_in: boolean
   record_status: string | null
 }
@@ -38,6 +38,8 @@ export async function fetchLeaveAttendanceSummaryForRange(
     employee_id: string
     start_date: string
     end_date: string
+    leave_status?: string
+    leave_is_paid?: boolean
   }
 ): Promise<{ ok: true; data: LeaveAttendanceSummaryPayload } | { ok: false; status: number; error: string }> {
   const from = params.start_date.slice(0, 10)
@@ -71,9 +73,20 @@ export async function fetchLeaveAttendanceSummaryForRange(
     byDate.set(key, { check_in: row.check_in ?? null, status: row.status ?? null })
   }
 
+  const isApprovedPaidLeave =
+    params.leave_status === 'approved' && params.leave_is_paid !== false
+
   const days: LeaveAttendanceSummaryDay[] = daysList.map((date) => {
     const row = byDate.get(date)
     if (!row) {
+      if (isApprovedPaidLeave && date >= from && date <= to) {
+        return {
+          date,
+          summary: 'permiso_pagado' as const,
+          has_check_in: false,
+          record_status: 'paid_leave',
+        }
+      }
       return {
         date,
         summary: 'sin_datos' as const,
@@ -83,9 +96,11 @@ export async function fetchLeaveAttendanceSummaryForRange(
     }
     const has_check_in = !!row.check_in
     const st = (row.status || '').toLowerCase()
-    let summary: 'sin_datos' | 'presente' | 'ausente'
+    let summary: 'sin_datos' | 'presente' | 'ausente' | 'permiso_pagado'
     if (has_check_in) {
       summary = 'presente'
+    } else if (isApprovedPaidLeave) {
+      summary = 'permiso_pagado'
     } else if (st === 'absent') {
       summary = 'ausente'
     } else {
@@ -119,7 +134,14 @@ export async function fetchLeaveAttendanceSummaryForRequest(
 ): Promise<{ ok: true; data: LeaveAttendanceSummaryPayload } | { ok: false; status: number; error: string }> {
   const { data: currentRequest, error: fetchError } = await supabase
     .from('leave_requests')
-    .select('id, employee_id, start_date, end_date')
+    .select(`
+      id,
+      employee_id,
+      start_date,
+      end_date,
+      status,
+      leave_type:leave_types(is_paid)
+    `)
     .eq('id', leaveRequestId)
     .single()
 
@@ -140,5 +162,7 @@ export async function fetchLeaveAttendanceSummaryForRequest(
     employee_id: currentRequest.employee_id,
     start_date: currentRequest.start_date,
     end_date: currentRequest.end_date,
+    leave_status: currentRequest.status,
+    leave_is_paid: (currentRequest as { leave_type?: { is_paid?: boolean } }).leave_type?.is_paid,
   })
 }

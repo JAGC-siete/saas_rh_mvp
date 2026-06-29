@@ -214,6 +214,7 @@ export default function LeaveRequestsTable({
                       'inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs border',
                       d.summary === 'presente' && 'bg-emerald-500/15 border-emerald-400/40 text-emerald-100',
                       d.summary === 'ausente' && 'bg-red-500/15 border-red-400/40 text-red-100',
+                      d.summary === 'permiso_pagado' && 'bg-violet-500/15 border-violet-400/40 text-violet-100',
                       d.summary === 'sin_datos' && 'bg-gray-500/15 border-gray-400/30 text-gray-200'
                     )}
                     title={d.record_status || undefined}

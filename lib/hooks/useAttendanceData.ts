@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react'
 interface AttendanceKPIs {
   presentes: number
   ausentes: number
+  permisos_pagados?: number
   tempranos: number
   tardes: number
   total_empleados?: number
@@ -46,7 +47,8 @@ interface AttendanceData {
 
 const DEFAULT_KPIS: AttendanceKPIs = { 
   presentes: 0, 
-  ausentes: 0, 
+  ausentes: 0,
+  permisos_pagados: 0,
   tempranos: 0, 
   tardes: 0,
   total_empleados: 0

@@ -40,13 +40,28 @@ export function resolveFixedDaysWorkedForPayroll(
   effectivePayType: EffectivePayType,
   attendanceRequired: boolean | null | undefined,
   registrosCount: number,
-  diasPeriodo: number
-): { daysWorked: number; includedWithoutAttendance: boolean } {
+  diasPeriodo: number,
+  paidLeaveCredits = 0
+): {
+  daysWorked: number
+  includedWithoutAttendance: boolean
+  paidLeaveDays: number
+} {
   if (isFixedAttendanceExempt(effectivePayType, attendanceRequired)) {
-    return { daysWorked: diasPeriodo, includedWithoutAttendance: true }
+    return { daysWorked: diasPeriodo, includedWithoutAttendance: true, paidLeaveDays: 0 }
   }
-  const daysWorked = registrosCount > 0 ? registrosCount : diasPeriodo
-  return { daysWorked, includedWithoutAttendance: false }
+
+  const attendanceDays = registrosCount > 0 ? registrosCount : 0
+  const paidLeaveDays = Math.max(0, Number(paidLeaveCredits) || 0)
+  let daysWorked: number
+
+  if (attendanceDays + paidLeaveDays > 0) {
+    daysWorked = Math.min(diasPeriodo, attendanceDays + paidLeaveDays)
+  } else {
+    daysWorked = diasPeriodo
+  }
+
+  return { daysWorked, includedWithoutAttendance: false, paidLeaveDays }
 }
 
 export function parseAttendanceRequiredInput(value: unknown): boolean {

@@ -11,6 +11,7 @@ import type { KpiFilter } from '../../lib/attendance/kpi-filter'
 interface KpiCardsProps {
   presentes: number
   ausentes: number
+  permisosPagados?: number
   temprano: number
   tarde: number
   presetLabel?: string
@@ -22,6 +23,7 @@ interface KpiCardsProps {
 export default function KpiCards({
   presentes,
   ausentes,
+  permisosPagados = 0,
   temprano,
   tarde,
   presetLabel = '',
@@ -39,6 +41,7 @@ export default function KpiCards({
     activeRing: string
     Icon: typeof CheckCircleIcon
     pulse?: boolean
+    filterable?: boolean
   }[] = [
     {
       id: 'presentes',
@@ -61,6 +64,19 @@ export default function KpiCards({
       Icon: XCircleIcon,
       pulse: ausentes > 0,
     },
+    ...(permisosPagados > 0
+      ? [{
+          id: 'all' as KpiFilter,
+          label: 'Permiso pagado',
+          value: permisosPagados,
+          color: 'text-violet-400',
+          bgColor: 'bg-violet-500/10',
+          borderColor: 'border-violet-500/30',
+          activeRing: 'ring-violet-400/50',
+          Icon: CheckCircleIcon,
+          filterable: false,
+        }]
+      : []),
     {
       id: 'temprano',
       label: 'Temprano',
@@ -83,8 +99,8 @@ export default function KpiCards({
     },
   ]
 
-  const handleClick = (id: KpiFilter) => {
-    if (!onFilterChange) return
+  const handleClick = (id: KpiFilter, filterable = true) => {
+    if (!onFilterChange || !filterable) return
     onFilterChange(activeFilter === id ? 'all' : id)
   }
 
@@ -106,13 +122,14 @@ export default function KpiCards({
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
       {items.map((k) => {
-        const isActive = activeFilter === k.id
+        const isActive = k.filterable !== false && activeFilter === k.id
+        const canFilter = onFilterChange && k.filterable !== false
         return (
           <motion.div
-            key={k.id}
+            key={`${k.id}-${k.label}`}
             layout
-            whileHover={{ scale: onFilterChange ? 1.02 : 1 }}
-            whileTap={{ scale: onFilterChange ? 0.98 : 1 }}
+            whileHover={{ scale: canFilter ? 1.02 : 1 }}
+            whileTap={{ scale: canFilter ? 0.98 : 1 }}
           >
             <Card
               variant="liquid"
@@ -120,15 +137,15 @@ export default function KpiCards({
                 isActive
                   ? `${k.borderColor} ring-2 ${k.activeRing}`
                   : `${k.borderColor} hover:border-white/25`
-              } ${onFilterChange ? 'cursor-pointer' : ''} ${k.pulse && !isActive ? 'animate-pulse-slow' : ''}`}
-              onClick={() => handleClick(k.id)}
-              role={onFilterChange ? 'button' : undefined}
-              aria-pressed={onFilterChange ? isActive : undefined}
-              tabIndex={onFilterChange ? 0 : undefined}
+              } ${canFilter ? 'cursor-pointer' : ''} ${k.pulse && !isActive ? 'animate-pulse-slow' : ''}`}
+              onClick={() => handleClick(k.id, k.filterable !== false)}
+              role={canFilter ? 'button' : undefined}
+              aria-pressed={canFilter ? isActive : undefined}
+              tabIndex={canFilter ? 0 : undefined}
               onKeyDown={(e) => {
-                if (onFilterChange && (e.key === 'Enter' || e.key === ' ')) {
+                if (canFilter && (e.key === 'Enter' || e.key === ' ')) {
                   e.preventDefault()
-                  handleClick(k.id)
+                  handleClick(k.id, k.filterable !== false)
                 }
               }}
             >

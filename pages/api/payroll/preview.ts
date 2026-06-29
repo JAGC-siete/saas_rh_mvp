@@ -42,6 +42,7 @@ import {
 } from '../../../lib/attendance/resolve-schedule-batch'
 import { isRestDayForDate } from '../../../lib/attendance/schedule-times'
 import type { LegacyScheduleColumns } from '../../../lib/attendance/shift-config'
+import { fetchPaidLeaveCreditsByEmployee } from '../../../lib/leave/paid-leave-days'
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -409,6 +410,25 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       }
     }
 
+    let paidLeaveCreditsByEmployee = new Map<string, number>()
+    if (employeeIds.length > 0) {
+      try {
+        paidLeaveCreditsByEmployee = await fetchPaidLeaveCreditsByEmployee(
+          supabase,
+          companyId,
+          fechaInicio,
+          fechaFin,
+          employeeIds
+        )
+      } catch (paidLeaveErr) {
+        console.error('Error obteniendo créditos de permisos pagados:', paidLeaveErr)
+        return res.status(500).json({
+          error: 'Error obteniendo permisos pagados para nómina',
+          details: paidLeaveErr instanceof Error ? paidLeaveErr.message : String(paidLeaveErr),
+        })
+      }
+    }
+
     // attendance_hours_calculation:
     // (1) Tracking overtime hours — ALL employees (columna Horas extra AHC); independent of calculation_mode.
     // (2) Hour aggregates for bruto — only effectivePayType === 'hourly' (inherits pay_type null from company).
@@ -722,13 +742,16 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           continue
         }
 
-        const { daysWorked: days_worked, includedWithoutAttendance } = resolveFixedDaysWorkedForPayroll(
-          effectivePayType,
-          emp.attendance_required,
-          registros.length,
-          diasPeriodo
-        )
-        const days_absent = diasPeriodo - days_worked
+        const paidLeaveCredits = paidLeaveCreditsByEmployee.get(emp.id) || 0
+        const { daysWorked: days_worked, includedWithoutAttendance, paidLeaveDays } =
+          resolveFixedDaysWorkedForPayroll(
+            effectivePayType,
+            emp.attendance_required,
+            registros.length,
+            diasPeriodo,
+            paidLeaveCredits
+          )
+        const days_absent = Math.max(0, diasPeriodo - days_worked)
 
         // Capa 3: Días Extra/Especial (festivo o descanso con asistencia)
         let days_extra = 0
@@ -834,6 +857,12 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
               }
             : {}),
           ...(includedWithoutAttendance ? { included_without_attendance: true } : {}),
+          ...(paidLeaveDays > 0
+            ? {
+                paid_leave_days: paidLeaveDays,
+                notes_paid_leave: `${paidLeaveDays} día(s) permiso con goce (sin marca)`,
+              }
+            : {}),
         })
 
         // Insertar línea en payroll_run_lines
