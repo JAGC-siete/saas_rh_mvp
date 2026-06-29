@@ -2,7 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next'
 import { createClient } from '../../../lib/supabase/server'
 import { authenticateUser } from '../../../lib/auth-helpers'
 import { getHondurasTime, formatDateOnlyForHonduras } from '../../../lib/timezone'
-import { canExportReports, EXPORT_REPORTS_FORBIDDEN } from '../../../lib/security/permissions'
+import { canExportAttendanceReports, EXPORT_REPORTS_FORBIDDEN } from '../../../lib/security/permissions'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -11,7 +11,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     // 🔒 AUTENTICACIÓN REQUERIDA CON MISMOS PERMISOS QUE PAYROLL
-    const authResult = await authenticateUser(req, res, ['can_view_reports', 'can_manage_attendance'])
+    const authResult = await authenticateUser(req, res, [])
     
     if (!authResult.success) {
       return res.status(401).json({ 
@@ -21,7 +21,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const { user, userProfile } = authResult
-    if (!canExportReports(userProfile?.role, userProfile)) {
+    if (!canExportAttendanceReports(userProfile?.role, userProfile)) {
       return res.status(EXPORT_REPORTS_FORBIDDEN.status).json(EXPORT_REPORTS_FORBIDDEN.body)
     }
     const supabase = createClient(req, res)

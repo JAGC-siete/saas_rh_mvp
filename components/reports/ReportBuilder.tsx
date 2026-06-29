@@ -7,6 +7,8 @@ import ExportBar from './ExportBar'
 import { formatTimeDisplay, parseDateOnlyAsHonduras, HONDURAS_TIMEZONE } from '../../lib/timezone'
 import { useCompanyContext } from '../../lib/useCompanyContext'
 import { useReportsExport } from '../../lib/hooks/useReportsExport'
+import { useAuth } from '../../lib/auth'
+import { allowedReportTypesForUser } from '../../lib/security/report-access'
 import { downloadPreviewAsCsv } from '../../lib/reports/download-preview-csv'
 import {
   Calendar,
@@ -86,6 +88,17 @@ function formatHnl(n: number | string | null | undefined): string {
 
 export default function ReportBuilder() {
   const { companyId, loading: companyLoading } = useCompanyContext()
+  const { userProfile } = useAuth()
+  const allowedReportTypes = useMemo(
+    () => allowedReportTypesForUser(userProfile?.role, userProfile?.permissions),
+    [userProfile?.role, userProfile?.permissions]
+  )
+  const visibleTabs = useMemo(() => {
+    if (allowedReportTypes === 'all') return TAB_CONFIG
+    const allowed = new Set(allowedReportTypes)
+    return TAB_CONFIG.filter((tab) => allowed.has(tab.id))
+  }, [allowedReportTypes])
+
   const [activeTab, setActiveTab] = useState<ReportType>('attendance')
   const [filters, setFilters] = useState<ReportFilters>(() => ({
     reportType: 'attendance',
@@ -97,6 +110,13 @@ export default function ReportBuilder() {
   const [previewData, setPreviewData] = useState<PreviewData | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (visibleTabs.length === 0) return
+    if (!visibleTabs.some((tab) => tab.id === activeTab)) {
+      setActiveTab(visibleTabs[0].id as ReportType)
+    }
+  }, [visibleTabs, activeTab])
 
   useEffect(() => {
     setFilters((prev) => ({
@@ -608,7 +628,7 @@ export default function ReportBuilder() {
       </div>
 
       <div className="flex gap-2 border-b border-white/10 overflow-x-auto">
-        {TAB_CONFIG.map((tab) => {
+        {visibleTabs.map((tab) => {
           const Icon = tab.icon
           const isActive = activeTab === tab.id
 

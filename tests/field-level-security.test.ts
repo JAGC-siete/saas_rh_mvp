@@ -84,7 +84,7 @@ describe('field-level-security-read', () => {
     assert.equal(canExportReports('manager', { permissions: {} }), false)
     assert.equal(
       canExportReports('manager', { permissions: { can_export_reports: true } }),
-      true
+      false
     )
   })
 

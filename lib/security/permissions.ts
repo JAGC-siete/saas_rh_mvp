@@ -3,6 +3,8 @@
  * Define roles, permisos y validaciones de seguridad
  */
 
+import { normalizePermissionsToCanonical } from './canonical-permissions'
+
 export interface Permission {
   id: string
   name: string
@@ -116,6 +118,20 @@ export const PERMISSIONS: Record<string, Permission> = {
     id: 'can_export_reports',
     name: 'Exportar Reportes',
     description: 'Puede exportar reportes en diferentes formatos',
+    category: 'reports',
+    level: 'write'
+  },
+  'can_view_attendance_reports': {
+    id: 'can_view_attendance_reports',
+    name: 'Ver reportes de asistencia',
+    description: 'Puede ver y previsualizar reportes de asistencia',
+    category: 'reports',
+    level: 'read'
+  },
+  'can_export_attendance_reports': {
+    id: 'can_export_attendance_reports',
+    name: 'Exportar reportes de asistencia',
+    description: 'Puede exportar reportes de asistencia (PDF, Excel, CSV)',
     category: 'reports',
     level: 'write'
   },
@@ -399,15 +415,47 @@ function readRawPermissions(userProfile: unknown): Record<string, unknown> {
 }
 
 /**
- * Determina si un usuario puede exportar reportes.
- * Regla: rol con privilegio (super_admin/company_admin/admin/hr_manager/manager)
- * O permiso explícito `can_export_reports: true` en user_profiles.permissions.
+ * Determina si un usuario puede exportar reportes (nómina, empleados, etc.).
+ * Managers solo obtienen exportación completa vía roles elevados, no por JSON genérico.
  */
 export function canExportReports(role: string | undefined | null, userProfile: unknown): boolean {
   const normalized = (role || '').toString().trim().toLowerCase()
   if (EXPORT_REPORTS_ALLOWED_ROLES.has(normalized)) return true
+  if (normalized === 'manager') return false
   const raw = readRawPermissions(userProfile)
   return raw.can_export_reports === true
+}
+
+/**
+ * Determina si un usuario puede exportar reportes de asistencia.
+ * Incluye exportación completa (roles con canExportReports) o permiso explícito de asistencia.
+ */
+export function canExportAttendanceReports(role: string | undefined | null, userProfile: unknown): boolean {
+  if (canExportReports(role, userProfile)) return true
+  const raw = readRawPermissions(userProfile)
+  if (raw.can_export_attendance_reports === true) return true
+  const canonical = normalizePermissionsToCanonical(role, raw)
+  return canonical.can_export_attendance_reports === true
+}
+
+/**
+ * Determina si un usuario puede ver/previsualizar reportes de asistencia.
+ */
+export function canViewAttendanceReports(role: string | undefined | null, userProfile: unknown): boolean {
+  if (canExportReports(role, userProfile)) return true
+  const raw = readRawPermissions(userProfile)
+  if (raw.can_view_attendance_reports === true || raw.can_export_attendance_reports === true) return true
+  const canonical = normalizePermissionsToCanonical(role, raw)
+  return canonical.can_view_attendance_reports === true || canonical.can_export_attendance_reports === true
+}
+
+export const ATTENDANCE_REPORTS_FORBIDDEN = {
+  status: 403 as const,
+  body: {
+    error: 'Permisos insuficientes',
+    code: 'CANT_VIEW_ATTENDANCE_REPORTS',
+    message: 'No tiene permisos para reportes de asistencia',
+  },
 }
 
 /**

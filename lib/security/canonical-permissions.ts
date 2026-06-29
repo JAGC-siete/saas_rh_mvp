@@ -13,6 +13,8 @@ export type CanonicalPermissionKey =
   | 'can_authorize_payroll'
   | 'can_view_reports'
   | 'can_export_reports'
+  | 'can_view_attendance_reports'
+  | 'can_export_attendance_reports'
   | 'can_view_settings'
   | 'can_manage_settings'
   | 'can_create_work_schedules'
@@ -43,6 +45,8 @@ function emptyCanonical(): CanonicalPermissions {
     can_authorize_payroll: false,
     can_view_reports: false,
     can_export_reports: false,
+    can_view_attendance_reports: false,
+    can_export_attendance_reports: false,
     can_view_settings: false,
     can_manage_settings: false,
     can_create_work_schedules: false,
@@ -78,6 +82,7 @@ const LEGACY_TO_CANONICAL: Array<{ when: string; set: CanonicalPermissionKey; va
   { when: 'manage_attendance', set: 'can_manage_attendance' },
   { when: 'manage_payroll', set: 'can_manage_payroll' },
   { when: 'manage_reports', set: 'can_export_reports' },
+  { when: 'attendance_reports', set: 'can_view_attendance_reports' },
 
   // already canonical variants (pass-through is handled separately)
 ]
@@ -159,6 +164,8 @@ export function canonicalPermissionsForRole(role: unknown): Partial<CanonicalPer
       'can_view_departments',
       'can_view_attendance',
       'can_manage_attendance',
+      'can_view_attendance_reports',
+      'can_export_attendance_reports',
       'can_view_own_profile',
       'can_view_own_attendance',
       'can_request_leave',
@@ -207,19 +214,28 @@ export function normalizePermissionsToCanonical(
   if (base.can_manage_attendance) base.can_view_attendance = true
   if (base.can_manage_payroll) base.can_view_payroll = true
   if (base.can_export_reports) base.can_view_reports = true
+  if (base.can_export_attendance_reports) base.can_view_attendance_reports = true
   if (base.can_edit_salary) base.can_view_salary = true
 
-  // 4) Manager: sin nómina ni reportes aunque el JSON legacy active payroll/reports
+  // 4) Manager: sin nómina ni reportes generales; reportes de asistencia por defecto del rol
   if (normalizeRole(role) === 'manager') {
     base.can_view_payroll = false
     base.can_manage_payroll = false
     base.can_authorize_payroll = false
-    base.can_view_reports = false
-    base.can_export_reports = false
     base.can_view_settings = false
     base.can_manage_settings = false
     base.can_view_salary = false
     base.can_edit_salary = false
+    base.can_view_reports = false
+    base.can_export_reports = false
+
+    if (input.can_view_attendance_reports === false) {
+      base.can_view_attendance_reports = false
+    }
+    if (input.can_export_attendance_reports === false) {
+      base.can_export_attendance_reports = false
+      base.can_view_attendance_reports = false
+    }
   }
 
   return base

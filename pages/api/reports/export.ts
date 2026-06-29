@@ -14,7 +14,7 @@ import { reportFormatForCountry } from '../../../lib/country/payroll-labels'
 import { createEmployeeSalaryClient } from '../../../lib/security/employee-data-access'
 import { createAdminClient } from '../../../lib/supabase/server'
 import { resolveFieldAccessContext } from '../../../lib/security/field-access'
-import { canExportReports, EXPORT_REPORTS_FORBIDDEN } from '../../../lib/security/permissions'
+import { canExportReports, canExportAttendanceReports, EXPORT_REPORTS_FORBIDDEN } from '../../../lib/security/permissions'
 import { applyFieldAccessToReportData } from '../../../lib/security/apply-field-access-to-report'
 
 interface ReportData {
@@ -47,24 +47,28 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     const { supabase, companyId, role, user: authUser, userProfile } = authResult
     user = authUser
 
-    if (!canExportReports(role, userProfile)) {
+    const body = req.body
+    format = body.format
+    dateFilter = body.dateFilter
+    reportType = body.reportType
+
+    if (reportType === 'attendance') {
+      if (!canExportAttendanceReports(role, userProfile)) {
+        return res.status(EXPORT_REPORTS_FORBIDDEN.status).json(EXPORT_REPORTS_FORBIDDEN.body)
+      }
+    } else if (!canExportReports(role, userProfile)) {
       return res.status(EXPORT_REPORTS_FORBIDDEN.status).json(EXPORT_REPORTS_FORBIDDEN.body)
     }
 
     const fieldCtx = await resolveFieldAccessContext(userProfile, createAdminClient())
 
-    console.log('🔐 Usuario autenticado para reportes:', { 
-      userId: user.id, 
-      role: role,
-      companyId: companyId 
+    console.log('🔐 Usuario autenticado para reportes:', {
+      userId: user.id,
+      role,
+      companyId,
     })
-
-    const body = req.body
-    format = body.format
-    dateFilter = body.dateFilter
-    reportType = body.reportType
     
-    // Validaciones
+    // Validaciones (reportType/format ya asignados arriba)
     if (!reportType || !['attendance', 'payroll', 'employees'].includes(reportType)) {
       return res.status(400).json({ error: 'Tipo de reporte inválido (permitidos: attendance, payroll, employees)' })
     }

@@ -15,7 +15,7 @@ import {
 } from '../../../lib/security/export-security'
 import { formatTimeDisplay, formatDateOnlyForHonduras } from '../../../lib/timezone'
 import { assertEmployeePortalEnabled } from '../../../lib/employee-portal/company-settings'
-import { canExportReports, EXPORT_REPORTS_FORBIDDEN } from '../../../lib/security/permissions'
+import { canExportAttendanceReports, EXPORT_REPORTS_FORBIDDEN } from '../../../lib/security/permissions'
 import { resolveReportConfig } from '../../../lib/reports/column-resolver'
 import type { ResolvedReportConfig } from '../../../lib/reports/column-resolver'
 import { renderAttendanceRows } from '../../../lib/reports/report-engine'
@@ -75,7 +75,7 @@ async function exportAttendanceHandler(req: NextApiRequest, res: NextApiResponse
         })
       }
       employee_id = userProfile.employee_id
-    } else if (!canExportReports(role, userProfile)) {
+    } else if (!canExportAttendanceReports(role, userProfile)) {
       return res.status(EXPORT_REPORTS_FORBIDDEN.status).json(EXPORT_REPORTS_FORBIDDEN.body)
     }
 

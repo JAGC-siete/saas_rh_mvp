@@ -29,6 +29,7 @@ import NotificationBell from './ui/NotificationBell'
 import HelpButton from './support/HelpButton'
 import { normalizePermissionsToCanonical } from '../lib/security/canonical-permissions'
 import { canAccessPayrollNavigation } from '../lib/auth/role-access'
+import { canAccessReportsModule } from '../lib/security/report-access'
 
 interface DashboardLayoutProps {
   children: React.ReactNode
@@ -139,7 +140,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             attendance: !!canonical.can_view_attendance,
             leave: !!canonical.can_request_leave,
             payroll: showPayrollSidebarGroup && !!(canonical.can_view_payroll || canonical.can_manage_payroll),
-            reports: showPayrollSidebarGroup && !!canonical.can_view_reports,
+            reports: canAccessReportsModule(normalizedRole, rawPermissions),
             gamification: true,
             settings: !!(canonical.can_view_settings || canonical.can_create_work_schedules),
             admin: isAdmin,
@@ -248,7 +249,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           attendance: !!canonical.can_view_attendance,
           leave: !!canonical.can_request_leave,
           payroll: showPayrollSidebarGroup && !!(canonical.can_view_payroll || canonical.can_manage_payroll),
-          reports: showPayrollSidebarGroup && !!canonical.can_view_reports,
+          reports: canAccessReportsModule(normalizedRole, rawPermissions),
           gamification: true,
           settings: !!(canonical.can_view_settings || canonical.can_create_work_schedules),
           admin: isAdmin,
