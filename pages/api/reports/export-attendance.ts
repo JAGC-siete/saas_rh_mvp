@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { requireCompanyAccess } from "../../../lib/auth/api-auth-fixed"
-import { getCompanyData } from '../../../lib/helpers/company-filter'
+import { fetchAttendanceReportDataForExport } from '../../../lib/reports/fetch-attendance-report-data'
 import { generateConsolidatedAttendancePDF, type AttendanceItem, type AttendanceSummary } from '../../../lib/attendance/report'
 import ExcelJS from 'exceljs'
 import { withInputValidation, createSecureErrorResponse } from '../../../lib/security/input-validation'
@@ -79,71 +79,22 @@ async function exportAttendanceHandler(req: NextApiRequest, res: NextApiResponse
       return res.status(EXPORT_REPORTS_FORBIDDEN.status).json(EXPORT_REPORTS_FORBIDDEN.body)
     }
 
-    // Obtener empleados de la empresa usando getCompanyData
-    const { data: employees, error: empError } = await getCompanyData(
-      supabase,
-      'employees',
+    const { employees, attendance: records } = await fetchAttendanceReportDataForExport(
       companyId,
-      'id, name, employee_code',
-      { status: 'active', ...(departmentId ? { department_id: departmentId } : {}) }
-    )
-    
-    if (empError) {
-      console.error('Error obteniendo empleados', { error: empError.message })
-      return res.status(500).json({ error: 'Error obteniendo empleados' })
-    }
-    
-    let employeeIds = (employees || []).map((e: any) => e.id)
-    if (employeeIdsInput.length > 0) {
-      const allow = new Set(employeeIdsInput)
-      employeeIds = employeeIds.filter((id: string) => allow.has(id))
-    }
-
-    // Construir consulta de asistencia con filtros de seguridad
-    let attendanceQuery = supabase
-      .from('attendance_records')
-      .select(`
-        *,
-        employees!attendance_records_employee_id_fkey(
-          name,
-          employee_code,
-          role,
-          company_id,
-          departments!employees_department_id_fkey(name)
-        )
-      `)
-      .gte('date', startDate)
-      .lte('date', endDate)
-
-    // Aplicar filtro de empresa
-    if (employeeIds.length > 0) {
-      attendanceQuery = attendanceQuery.in('employee_id', employeeIds)
-    } else {
-      // Forzar vacío si no hay empleados para esa empresa
-      attendanceQuery = attendanceQuery.eq('employee_id', '__none__')
-    }
-
-    // Filtrar por empleado específico si se proporciona
-    if (employee_id) {
-      // Verificar que el empleado pertenece a la empresa
-      if (!employeeIds.includes(employee_id)) {
-        return res.status(403).json({
-          error: 'Acceso denegado',
-          message: 'Empleado no pertenece a tu empresa'
-        })
+      startDate,
+      endDate,
+      {
+        employeeId: employee_id,
+        departmentId,
+        employeeIds: employeeIdsInput.length > 0 ? employeeIdsInput : undefined,
       }
-      attendanceQuery = attendanceQuery.eq('employee_id', employee_id)
-    }
+    )
 
-    const { data: records, error } = await attendanceQuery
-    if (error) {
-      console.error('Error obteniendo registros de asistencia:', {
-        message: error.message,
-        code: (error as { code?: string }).code,
-        details: (error as { details?: unknown }).details,
-        hint: (error as { hint?: string }).hint,
+    if (employee_id && role !== 'employee' && !employees.some((e) => e.id === employee_id)) {
+      return res.status(403).json({
+        error: 'Acceso denegado',
+        message: 'Empleado no pertenece a tu empresa',
       })
-      return res.status(500).json({ error: 'Error obteniendo registros de asistencia' })
     }
 
     const resolvedConfig = await resolveReportConfig(companyId, 'attendance', supabase)

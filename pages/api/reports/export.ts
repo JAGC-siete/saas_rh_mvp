@@ -13,6 +13,7 @@ import { normalizeCountryCode, type CountryCode } from '../../../lib/country/sup
 import { reportFormatForCountry } from '../../../lib/country/payroll-labels'
 import { createEmployeeSalaryClient } from '../../../lib/security/employee-data-access'
 import { createAdminClient } from '../../../lib/supabase/server'
+import { fetchAttendanceReportDataForExport } from '../../../lib/reports/fetch-attendance-report-data'
 import { resolveFieldAccessContext } from '../../../lib/security/field-access'
 import { canExportReports, canExportAttendanceReports, EXPORT_REPORTS_FORBIDDEN } from '../../../lib/security/permissions'
 import { applyFieldAccessToReportData } from '../../../lib/security/apply-field-access-to-report'
@@ -596,56 +597,17 @@ function generateCSVReport(
 // ===== FUNCIONES PARA OBTENER DATOS ESPECÍFICOS =====
 
 async function generateAttendanceReportData(supabase: any, dateFilter: any, companyId: string | null) {
-  // Obtener empleados
-  let employeesQuery = supabase
-    .from('employees')
-    .select('id, name, dni, employee_code, department_id, departments:department_id(name), status')
-    .eq('status', 'active')
-    .order('name')
-
-  if (companyId) {
-    employeesQuery = employeesQuery.eq('company_id', companyId)
+  if (!companyId) {
+    return { employees: [], attendance: [], dateFilter }
   }
 
-  const { data: employees, error: empError } = await employeesQuery
-  if (empError) {
-    console.error('Error obteniendo empleados:', empError)
-    throw new Error(`Error obteniendo empleados: ${empError.message}`)
-  }
+  const { employees, attendance } = await fetchAttendanceReportDataForExport(
+    companyId,
+    dateFilter.startDate,
+    dateFilter.endDate
+  )
 
-  // Obtener IDs de empleados para filtrar asistencia
-  const employeeIds = (employees || []).map((e: any) => e.id)
-
-  // Obtener registros de asistencia con filtro por employee_ids de la empresa
-  let attendanceQuery = supabase
-    .from('attendance_records')
-    .select(`
-      *,
-      employees!attendance_records_employee_id_fkey(
-        id,
-        name,
-        employee_code,
-        company_id
-      )
-    `)
-    .gte('date', dateFilter.startDate)
-    .lte('date', dateFilter.endDate)
-
-  // Filtrar por employee_ids de la empresa (más seguro que usar !inner join)
-  if (companyId && employeeIds.length > 0) {
-    attendanceQuery = attendanceQuery.in('employee_id', employeeIds)
-  } else if (companyId && employeeIds.length === 0) {
-    // Si no hay empleados para la empresa, devolver array vacío
-    attendanceQuery = attendanceQuery.eq('employee_id', '__none__')
-  }
-
-  const { data: attendance, error: attError } = await attendanceQuery
-  if (attError) {
-    console.error('Error obteniendo registros de asistencia:', attError)
-    throw new Error(`Error obteniendo asistencia: ${attError.message}`)
-  }
-
-  return { employees: employees || [], attendance: attendance || [], dateFilter }
+  return { employees, attendance, dateFilter }
 }
 
 async function generatePayrollReportData(supabase: any, dateFilter: any, companyId: string | null) {
