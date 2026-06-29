@@ -35,7 +35,7 @@ const METADATA_SKIP_KEYS = new Set([
   '_deduction_plan_ids',
 ])
 
-const LEGACY_DEDUCTION_KEYS = new Set(
+const LEGACY_DEDUCTION_KEYS = new Set<string>(
   LEGACY_DEDUCTION_FIELDS.map((field) => field.key)
 )
 
