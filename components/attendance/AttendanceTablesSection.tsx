@@ -15,6 +15,7 @@ interface AttendanceTablesSectionProps {
   late: AttendanceRow[]
   outsideSchedule: AttendanceRow[]
   presetLabel: string
+  preset?: string
   onSelectEmployee: (_employeeId: string, _employeeName: string) => void
   kpiFilter?: KpiFilter
 }
@@ -25,9 +26,11 @@ export default function AttendanceTablesSection({
   late,
   outsideSchedule,
   presetLabel,
+  preset = 'today',
   onSelectEmployee,
   kpiFilter = 'all',
 }: AttendanceTablesSectionProps) {
+  const showAbsenceDates = preset !== 'today'
   const mappedTab = kpiFilterToTab(kpiFilter)
   const [tab, setTab] = useState<TabId>(mappedTab ?? 'absent')
 
@@ -92,6 +95,7 @@ export default function AttendanceTablesSection({
                   data={absent}
                   title={`Ausentes ${presetLabel}`}
                   onSelect={onSelectEmployee}
+                  showDate={showAbsenceDates}
                 />
               </div>
             )}

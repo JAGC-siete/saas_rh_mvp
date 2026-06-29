@@ -611,6 +611,7 @@ export default function AttendanceDashboardApp() {
             late={late}
             outsideSchedule={outsideSchedule}
             presetLabel={getPresetLabel(preset)}
+            preset={preset}
             onSelectEmployee={handleEmployeeClick}
             kpiFilter={kpiFilter}
           />
