@@ -909,15 +909,29 @@ export const usePayrollManager = () => {
 
   const downloadPlanillaFromPreview = useCallback(
     async (groupBy: PayrollPdfGroupBy = 'none') => {
-      if (!state.runId) return
+      const runId = planillaPreview.data?.runId || state.runId
+      if (!runId) {
+        toast.error('Error', 'No hay una corrida de nómina activa', 4000)
+        return
+      }
       setPlanillaPreview((prev) => ({ ...prev, downloading: true }))
       try {
-        await generatePDF(groupBy)
+        await payrollApi.downloadPlanillaPdf(runId, {
+          groupBy,
+          defaultFilename: planillaPreview.data?.defaultFilename,
+        })
+        toast.success('PDF Generado', 'El PDF se ha descargado correctamente', 4000)
+      } catch (error: unknown) {
+        const message =
+          error instanceof Error && error.message.trim()
+            ? error.message
+            : 'No se pudo generar el PDF'
+        toast.error('Error Generando PDF', message, 6000)
       } finally {
         setPlanillaPreview((prev) => ({ ...prev, downloading: false }))
       }
     },
-    [state.runId, generatePDF]
+    [planillaPreview.data, state.runId, toast]
   )
 
   // Auto-load data when period changes (client-side only)

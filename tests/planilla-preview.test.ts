@@ -1,6 +1,7 @@
 import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
 import { buildPlanillaPreviewPayload } from '../lib/payroll/planilla-preview'
+import { resolvePlanillaDaysWorked } from '../lib/payroll/planilla-from-run'
 import type { LoadedPlanillaFromRun } from '../lib/payroll/planilla-from-run'
 
 const sampleLoaded: LoadedPlanillaFromRun = {
@@ -54,9 +55,20 @@ describe('buildPlanillaPreviewPayload', () => {
     assert.equal(preview.companyName, 'Enlace')
     assert.equal(preview.isDraftPreview, true)
     assert.equal(preview.fixedRows.length, 1)
+    assert.equal(preview.fixedRows[0]?.daysWorked, 15)
     assert.equal(preview.summary.employees, 1)
     assert.equal(preview.summary.totalNet, 7179.19)
     assert.ok(preview.periodRange.includes('2026'))
     assert.ok(preview.defaultFilename.includes('planilla_2026-06_q2'))
+  })
+})
+
+describe('resolvePlanillaDaysWorked', () => {
+  it('uses eff_hours as days for fixed employees', () => {
+    assert.equal(resolvePlanillaDaysWorked('fixed', 15), 15)
+  })
+
+  it('converts eff_hours to days for hourly employees', () => {
+    assert.equal(resolvePlanillaDaysWorked('hourly', 80), 10)
   })
 })

@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { requireCompanyAccess } from '../../../lib/auth/api-auth-fixed'
+import { canDownloadPayrollPlanillaPdf, PAYROLL_PLANILLA_PDF_FORBIDDEN } from '../../../lib/security/permissions'
 import { loadPlanillaFromRun } from '../../../lib/payroll/planilla-from-run'
 import { buildPlanillaPreviewPayload } from '../../../lib/payroll/planilla-preview'
 import { createSuccessResponse, createErrorResponse } from '../../../lib/security/api-responses'
@@ -16,9 +17,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json(createErrorResponse('Company ID es requerido', 'VALIDATION_ERROR'))
     }
 
-    if (!['super_admin', 'company_admin', 'hr_manager'].includes(role)) {
-      return res.status(403).json(
-        createErrorResponse('No tiene permisos para ver la planilla', 'FORBIDDEN')
+    if (!canDownloadPayrollPlanillaPdf(role)) {
+      return res.status(PAYROLL_PLANILLA_PDF_FORBIDDEN.status).json(
+        createErrorResponse(PAYROLL_PLANILLA_PDF_FORBIDDEN.body.message, 'FORBIDDEN')
       )
     }
 

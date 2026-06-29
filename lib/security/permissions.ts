@@ -415,6 +415,24 @@ function readRawPermissions(userProfile: unknown): Record<string, unknown> {
 }
 
 /**
+ * Descarga de planilla consolidada desde corrida (preview / PDF).
+ * Mismo criterio que voucher-preview y planilla-preview — no requiere can_export_reports.
+ */
+export function canDownloadPayrollPlanillaPdf(role: string | undefined | null): boolean {
+  const normalized = (role || '').toString().trim().toLowerCase()
+  return ['super_admin', 'company_admin', 'hr_manager', 'admin'].includes(normalized)
+}
+
+export const PAYROLL_PLANILLA_PDF_FORBIDDEN = {
+  status: 403 as const,
+  body: {
+    error: 'Permisos insuficientes',
+    code: 'CANT_DOWNLOAD_PAYROLL_PLANILLA',
+    message: 'No tiene permisos para descargar la planilla',
+  },
+}
+
+/**
  * Determina si un usuario puede exportar reportes (nómina, empleados, etc.).
  * Managers solo obtienen exportación completa vía roles elevados, no por JSON genérico.
  */

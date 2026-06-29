@@ -215,18 +215,22 @@ export async function generateConsolidatedPayrollPDF(
 
       const drawWatermark = () => {
         if (!watermarkText) return
-        const { width, height } = doc.page
-        doc.save()
-        doc.opacity(0.12)
-        doc.fillColor('#dc2626')
-        doc.fontSize(42)
-        doc.rotate(-35, { origin: [width / 2, height / 2] })
-        doc.text(watermarkText, 0, height / 2 - 20, {
-          align: 'center',
-          width,
-        })
-        doc.restore()
-        doc.opacity(1)
+        try {
+          const { width, height } = doc.page
+          doc.save()
+          doc.opacity(0.12)
+          doc.fillColor('#dc2626')
+          doc.fontSize(42)
+          doc.rotate(-35, { origin: [width / 2, height / 2] })
+          doc.text(watermarkText, 0, height / 2 - 20, {
+            align: 'center',
+            width,
+          })
+          doc.restore()
+          doc.opacity(1)
+        } catch (watermarkErr) {
+          console.warn('payroll PDF watermark skipped:', watermarkErr)
+        }
       }
 
       if (watermarkText) {
@@ -654,7 +658,11 @@ export async function generateConsolidatedPayrollPDF(
 
       doc.end()
     } catch (error) {
-      reject(error)
+      reject(
+        error instanceof Error
+          ? error
+          : new Error(error != null ? String(error) : 'Error generando PDF de planilla')
+      )
     }
   })
 }

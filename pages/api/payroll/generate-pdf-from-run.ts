@@ -1,6 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { requireCompanyAccess } from '../../../lib/auth/api-auth-fixed'
-import { canExportReports, EXPORT_REPORTS_FORBIDDEN } from '../../../lib/security/permissions'
+import {
+  canDownloadPayrollPlanillaPdf,
+  PAYROLL_PLANILLA_PDF_FORBIDDEN,
+} from '../../../lib/security/permissions'
 import { generateConsolidatedPayrollPDF } from '../../../lib/payroll/report'
 import {
   parsePayrollPdfGroupByQuery,
@@ -9,6 +12,13 @@ import {
 } from '../../../lib/payroll/pdf-layout'
 import { withPayrollRateLimit } from '../../../lib/security/rate-limiting'
 import { loadPlanillaFromRun } from '../../../lib/payroll/planilla-from-run'
+import { resolveReportConfig } from '../../../lib/reports/column-resolver'
+
+function toErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof Error && error.message.trim()) return error.message
+  if (typeof error === 'string' && error.trim()) return error
+  return fallback
+}
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -18,18 +28,18 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { run_id, group_by } = req.query
 
   if (!run_id || typeof run_id !== 'string') {
-    return res.status(400).json({ error: 'run_id es requerido' })
+    return res.status(400).json({ error: 'run_id es requerido', message: 'run_id es requerido' })
   }
 
   try {
-    const { supabase, companyId, role, user, userProfile } = await requireCompanyAccess(req, res)
+    const { supabase, companyId, role, user } = await requireCompanyAccess(req, res)
 
     if (!companyId) {
-      return res.status(400).json({ error: 'Company ID es requerido' })
+      return res.status(400).json({ error: 'Company ID es requerido', message: 'Company ID es requerido' })
     }
 
-    if (!canExportReports(role, userProfile)) {
-      return res.status(EXPORT_REPORTS_FORBIDDEN.status).json(EXPORT_REPORTS_FORBIDDEN.body)
+    if (!canDownloadPayrollPlanillaPdf(role)) {
+      return res.status(PAYROLL_PLANILLA_PDF_FORBIDDEN.status).json(PAYROLL_PLANILLA_PDF_FORBIDDEN.body)
     }
 
     const groupByQuery = parsePayrollPdfGroupByQuery(group_by)
@@ -38,6 +48,19 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
     const loaded = await loadPlanillaFromRun(supabase, companyId, run_id, groupByOverride)
     const pdfGroupBy = loaded.defaultPdfGroupBy
+
+    let reportVisual: { primaryColor?: string; branding?: Record<string, unknown> } | undefined
+    try {
+      const resolvedConfig = await resolveReportConfig(companyId, 'payroll', supabase)
+      if (resolvedConfig?.branding) {
+        reportVisual = {
+          primaryColor: resolvedConfig.branding.primaryColor,
+          branding: resolvedConfig.branding,
+        }
+      }
+    } catch (configErr) {
+      console.warn('generate-pdf-from-run: branding config skipped', configErr)
+    }
 
     const pdf = await generateConsolidatedPayrollPDF(
       loaded.planillaFixed,
@@ -49,12 +72,19 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       loaded.pdfCustomFieldsConfig,
       loaded.pdfPayrollConfig,
       loaded.periodDates,
-      undefined,
+      reportVisual,
       {
         groupBy: pdfGroupBy,
-        watermarkText: loaded.isDraftPreview ? 'VISTA PREVIA — NO AUTORIZADA' : undefined,
+        watermarkText: loaded.isDraftPreview ? 'VISTA PREVIA - NO AUTORIZADA' : undefined,
       }
     )
+
+    if (!pdf?.length) {
+      return res.status(500).json({
+        error: 'Error generando PDF',
+        message: 'El PDF generado está vacío',
+      })
+    }
 
     const groupSuffix = payrollPdfGroupByFilenameSuffix(pdfGroupBy)
     const draftSuffix = loaded.isDraftPreview ? '_borrador' : ''
@@ -65,15 +95,15 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     )
     return res.send(pdf)
   } catch (error: unknown) {
-    const err = error instanceof Error ? error : new Error(String(error))
+    const message = toErrorMessage(error, 'Error generando PDF de planilla')
     console.error('Error generando PDF desde run:', {
       run_id,
-      message: err.message,
-      stack: err.stack,
+      message,
+      error,
     })
     return res.status(500).json({
       error: 'Error interno del servidor',
-      message: err.message || 'Error desconocido',
+      message,
     })
   }
 }

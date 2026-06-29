@@ -24,29 +24,65 @@ import type { PlanillaPreviewData } from './payroll/planilla-preview'
 async function api<T>(url: string, init?: RequestInit): Promise<T> {
   const ctrl = new AbortController()
   const id = setTimeout(() => ctrl.abort(), 20_000) // 20 second timeout
-  
+
   try {
     const response = await fetch(url, {
       ...init,
       signal: ctrl.signal,
       headers: {
         'Content-Type': 'application/json',
-        ...(init?.headers || {})
-      }
+        ...(init?.headers || {}),
+      },
     })
-    
+
     const data = await response.json()
-    
+
     if (!response.ok || data?.ok === false) {
       throw {
         status: response.status,
-        ...data
+        ...data,
       } as PayrollError
     }
-    
+
     return data as T
   } finally {
     clearTimeout(id)
+  }
+}
+
+function parsePdfApiError(body: unknown, status: number): string {
+  if (body && typeof body === 'object') {
+    const record = body as Record<string, unknown>
+    if (typeof record.message === 'string' && record.message.trim()) return record.message
+    if (typeof record.error === 'string' && record.error.trim()) return record.error
+  }
+  return `Error ${status} al generar PDF`
+}
+
+function triggerBlobDownload(blob: Blob, filename: string) {
+  const blobUrl = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = blobUrl
+  link.download = filename
+  link.rel = 'noopener'
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  window.setTimeout(() => URL.revokeObjectURL(blobUrl), 120_000)
+}
+
+function filenameFromContentDisposition(cd: string | null): string | null {
+  if (!cd) return null
+  const m =
+    cd.match(/filename\*=UTF-8''([^;]+)/i)?.[1] ||
+    cd.match(/filename="([^"]+)"/)?.[1] ||
+    cd.match(/filename=([^;]+)/)?.[1]
+  if (!m) return null
+  const raw = m.trim().replace(/^["']|["']$/g, '')
+  try {
+    return decodeURIComponent(raw)
+  } catch {
+    return raw
   }
 }
 
@@ -114,6 +150,59 @@ export const payrollApi = {
       throw new Error(data?.error || data?.message || 'No se pudo cargar la planilla')
     }
     return data.data
+  },
+
+  downloadPlanillaPdf: async (
+    runId: string,
+    options?: { groupBy?: PayrollPdfGroupBy; defaultFilename?: string }
+  ): Promise<void> => {
+    const params = new URLSearchParams({ run_id: runId })
+    const gb = options?.groupBy
+    if (gb && gb !== 'none') {
+      params.set('group_by', gb)
+    }
+
+    const response = await fetch(`/api/payroll/generate-pdf-from-run?${params.toString()}`, {
+      method: 'GET',
+      credentials: 'include',
+    })
+
+    if (!response.ok) {
+      const errorBody = await response.json().catch(() => ({}))
+      throw new Error(parsePdfApiError(errorBody, response.status))
+    }
+
+    const buf = await response.arrayBuffer()
+    const bytes = new Uint8Array(buf)
+    const looksPdf =
+      bytes.length >= 4 &&
+      bytes[0] === 0x25 &&
+      bytes[1] === 0x50 &&
+      bytes[2] === 0x44 &&
+      bytes[3] === 0x46
+    const contentType = (response.headers.get('Content-Type') || '').toLowerCase()
+    const typedAsPdf = contentType.includes('application/pdf')
+
+    if (!looksPdf && !typedAsPdf) {
+      const text = new TextDecoder().decode(bytes.slice(0, 4096))
+      let parsed: unknown = null
+      try {
+        parsed = JSON.parse(text)
+      } catch {
+        parsed = null
+      }
+      throw new Error(parsePdfApiError(parsed, response.status))
+    }
+
+    if (bytes.length === 0) {
+      throw new Error('El PDF recibido está vacío')
+    }
+
+    const filename =
+      filenameFromContentDisposition(response.headers.get('Content-Disposition')) ||
+      options?.defaultFilename ||
+      `planilla_${runId}.pdf`
+    triggerBlobDownload(new Blob([buf], { type: 'application/pdf' }), filename)
   },
 
   // Download voucher PDF from run_line_id

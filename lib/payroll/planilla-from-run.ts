@@ -13,6 +13,15 @@ import {
 } from './period-dates'
 import type { PlanillaItem } from './report'
 
+/** eff_hours on payroll_run_lines stores days for fixed employees and clock hours for hourly. */
+export function resolvePlanillaDaysWorked(
+  payType: 'fixed' | 'hourly' | string,
+  effHours: number
+): number {
+  if (payType === 'hourly') return effHours / 8
+  return effHours
+}
+
 export type PayrollRunRecord = {
   id: string
   company_id: string
@@ -131,7 +140,7 @@ export async function loadPlanillaFromRun(
         position: (employees?.role as string | null) ?? null,
         role: (employees?.role as string | null) ?? null,
         monthly_salary: Number(employees?.base_salary) || 0,
-        days_worked: totalHours / 8,
+        days_worked: resolvePlanillaDaysWorked(payType, totalHours),
         days_absent: 0,
         late_days: 0,
         total_earnings: Number(line.eff_bruto) || 0,
