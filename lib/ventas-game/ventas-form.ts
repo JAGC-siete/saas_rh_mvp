@@ -66,10 +66,11 @@ export function ventasCompanyErrors(fd: QuotationRequest): VentasValidationError
 }
 
 export function ventasDeliveryErrors(fd: QuotationRequest): VentasValidationErrors {
-  const full = computeVentasErrors(fd)
-  return {
-    contact_email: full.contact_email,
-  }
+  const e: VentasValidationErrors = {}
+  const email = (fd.contact_email || '').trim()
+  if (!email) e.contact_email = 'Indique un correo; ahí le enviamos la propuesta.'
+  else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) e.contact_email = 'Correo no válido.'
+  return e
 }
 
 export const VENTAS_COUNTRY_LABEL: Record<CountryCode, string> = {
