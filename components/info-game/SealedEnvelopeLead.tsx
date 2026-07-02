@@ -16,6 +16,7 @@ import {
   UNLOCK_PROGRESS_MAX,
 } from '../../lib/info-game/sealed-envelope-copy'
 import { leadEmailValidationMessage } from '../../lib/marketing/validate-lead-email'
+import { hasValidationErrors } from '../../lib/forms/validation-errors'
 
 type PageStatus = 'intrigue' | 'unlocking' | 'revealed'
 
@@ -64,16 +65,13 @@ export default function SealedEnvelopeLead() {
   const handleInputChange = (field: keyof typeof formData, value: string) => {
     const next = { ...formData, [field]: value }
     setFormData(next)
-    setErrors((prev) => {
-      const computed = computeErrors(next)
-      return prev.submit ? { ...computed, submit: undefined } : computed
-    })
+    setErrors(computeErrors(next))
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     const allErrors = computeErrors(formData)
-    if (Object.keys(allErrors).length > 0) {
+    if (hasValidationErrors(allErrors)) {
       setErrors(allErrors)
       return
     }

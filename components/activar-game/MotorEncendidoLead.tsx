@@ -21,6 +21,7 @@ import {
   type ActivarFormData,
   type ActivarValidationErrors,
 } from '../../lib/activar-game/activar-form'
+import { hasValidationErrors, omitValidationField } from '../../lib/forms/validation-errors'
 import type { ActivarUtmContext } from '../../lib/activar-game/activar-utm-context'
 import { MOTOR_ENCENDIDO_COPY } from '../../lib/activar-game/motor-encendido-copy'
 import { isCountryCode, type CountryCode } from '../../lib/country/supported'
@@ -109,7 +110,7 @@ export default function MotorEncendidoLead({ utmContext = {}, initialCountryCode
   const patchForm = (patch: Partial<ActivarFormData>) => {
     const next = { ...formData, ...patch }
     setFormData(next)
-    setErrors((prev) => (prev.submit ? { ...prev, submit: undefined } : prev))
+    setErrors((prev) => (prev.submit ? omitValidationField(prev, 'submit') : prev))
   }
 
   const handleEmpleadosChange = (value: number) => {
@@ -124,7 +125,7 @@ export default function MotorEncendidoLead({ utmContext = {}, initialCountryCode
 
   const goAccount = () => {
     const e = activarStep1Errors(formData)
-    if (Object.keys(e).length > 0) {
+    if (hasValidationErrors(e)) {
       setErrors(e)
       return
     }
@@ -134,7 +135,7 @@ export default function MotorEncendidoLead({ utmContext = {}, initialCountryCode
 
   const goConfirm = () => {
     const e = activarStep2Errors(formData)
-    if (Object.keys(e).length > 0) {
+    if (hasValidationErrors(e)) {
       setErrors(e)
       return
     }
@@ -144,7 +145,7 @@ export default function MotorEncendidoLead({ utmContext = {}, initialCountryCode
 
   const handleSubmit = async () => {
     const allErrors = computeActivarErrors(formData)
-    if (Object.keys(allErrors).length > 0) {
+    if (hasValidationErrors(allErrors)) {
       setErrors(allErrors)
       return
     }

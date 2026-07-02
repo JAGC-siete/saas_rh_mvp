@@ -37,6 +37,7 @@ import {
   VENTAS_SECTOR_OPTIONS,
   type VentasValidationErrors,
 } from '../../lib/ventas-game/ventas-form'
+import { hasValidationErrors, omitValidationField } from '../../lib/forms/validation-errors'
 
 type WizardStep = 'intro' | 'scope' | 'company' | 'delivery' | 'success'
 
@@ -104,7 +105,7 @@ export default function CotizacionGuiadaLead({
 
   const patchForm = (patch: Partial<QuotationRequest>) => {
     setFormData((prev) => ({ ...prev, ...patch }))
-    setErrors((prev) => (prev.submit ? { ...prev, submit: undefined } : prev))
+    setErrors((prev) => (prev.submit ? omitValidationField(prev, 'submit') : prev))
   }
 
   const goScope = () => {
@@ -114,7 +115,7 @@ export default function CotizacionGuiadaLead({
 
   const goCompany = () => {
     const e = ventasScopeErrors(formData)
-    if (Object.keys(e).length > 0) {
+    if (hasValidationErrors(e)) {
       setErrors(e)
       return
     }
@@ -124,7 +125,7 @@ export default function CotizacionGuiadaLead({
 
   const goDelivery = () => {
     const e = ventasCompanyErrors(formData)
-    if (Object.keys(e).length > 0) {
+    if (hasValidationErrors(e)) {
       setErrors(e)
       return
     }
@@ -134,7 +135,7 @@ export default function CotizacionGuiadaLead({
 
   const handleSubmit = async () => {
     const all = computeVentasErrors(formData)
-    if (Object.keys(all).length > 0) {
+    if (hasValidationErrors(all)) {
       setErrors(all)
       return
     }
@@ -548,7 +549,7 @@ export default function CotizacionGuiadaLead({
                     <button
                       type="button"
                       onClick={handleSubmit}
-                      disabled={isLoading || Object.keys(ventasDeliveryErrors(formData)).length > 0}
+                      disabled={isLoading || hasValidationErrors(ventasDeliveryErrors(formData))}
                       className="flex-1 btn-shiny bg-brand-500 hover:bg-brand-600 text-white py-3 rounded-xl font-semibold inline-flex items-center justify-center disabled:opacity-50"
                     >
                       {isLoading ? (
