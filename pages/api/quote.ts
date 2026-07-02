@@ -497,7 +497,6 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
         monthlySoftwareTotal: quote.monthly_software_total,
         monthlyHardwareFee: quote.monthly_hardware_fee,
         annualTotal: quote.annual_total,
-        sentAt,
       })
 
       await (supabase as any)

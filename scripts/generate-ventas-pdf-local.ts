@@ -20,7 +20,7 @@ const TERMINALS_COUNT = 1
 
 async function main() {
   const supabase = createAdminClient()
-  const { configRow, currency, tiers, promoCodes } = await loadActiveVentasConfig(supabase as any)
+  const { configId, currency, tiers, promoCodes } = await loadActiveVentasConfig(supabase as any)
   const tier = resolveTierByEmployees(tiers, EMPLOYEES_COUNT)
   if (!tier) throw new Error(`No pricing tier for ${EMPLOYEES_COUNT} employees`)
 
@@ -68,7 +68,7 @@ async function main() {
   writeFileSync(OUT_PATH, pdf)
 
   console.log('=== Live config_ventas (active) ===')
-  console.log(`  id: ${configRow?.id ?? 'fallback'}`)
+  console.log(`  id: ${configId ?? 'fallback'}`)
   console.log(`  promo codes: ${promoCodes.map((p) => p.code).join(', ') || 'legacy'}`)
   console.log(`  tier for ${EMPLOYEES_COUNT} employees: ${tier.min_employees}–${tier.max_employees} @ ${tier.price}`)
   console.log('')
