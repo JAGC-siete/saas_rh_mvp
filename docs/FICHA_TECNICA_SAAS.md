@@ -47,7 +47,7 @@ SaaS multi-tenant para gestión de RRHH orientado al mercado hondureño. Cubre a
 
 | Servicio | Descripción |
 |----------|-------------|
-| **Hikvision (integración)** | SDK + API routes en Next.js para comunicación segura con dispositivos Hikvision (ver `docs/HIKVISION_PROXY_INTEGRATED.md`) |
+| **Hikvision (integración)** | SDK integrado + API routes en Next.js para comunicación directa con dispositivos y worker BullMQ para sincronización de empleados (ver `docs/ARQUITECTURA_INGESTA_ASISTENCIA.md`) |
 | **Supabase Edge Functions** | create-user-profile, process-payroll (payroll-calculation se invoca desde b2c-dashboard pero puede ejecutarse en API routes) |
 
 ---
@@ -218,7 +218,7 @@ SaaS multi-tenant para gestión de RRHH orientado al mercado hondureño. Cubre a
 
 | Marca | Protocolo | Endpoints |
 |-------|-----------|-----------|
-| **Hikvision** | ISAPI (proxy) | `hikvision-proxy` + `/api/hikvision/*` + `POST /api/webhooks/attendance` |
+| **Hikvision** | ISAPI (SDK integrado) | `/api/admin/devices/*`, `/api/hikvision/*`, `POST /api/webhooks/attendance` |
 
 ---
 
@@ -278,7 +278,7 @@ saas-proyecto/
 │   ├── migrations/    # SQL migrations
 │   └── functions/     # Edge Functions
 ├── services/
-│   └── hikvision-proxy/
+│   └── hikvision-proxy/  # Worker BullMQ de sincronización de empleados (no es un proxy HTTP)
 ├── docs/              # Documentación
 └── scripts/           # Utilidades, auditoría, staging
 ```
@@ -304,4 +304,6 @@ saas-proyecto/
 - `docs/ONBOARDING_SAAS_POR_CAPAS.md` — Capas de configuración
 - `docs/RAILWAY_STAGING_SETUP.md` — Staging en Railway
 - `docs/ONBOARDING_ASISTENCIA_ACTUAL.md` — Proceso asistencia
-- `docs/HIKVISION_*` — Dispositivos biométricos
+- `docs/ARQUITECTURA_INGESTA_ASISTENCIA.md` — Flujo de ingesta y sincronización de dispositivos
+- `docs/HIKVISION_CONNECTION_ANALYSIS.md` — Análisis de conectividad ISAPI
+- `docs/HIKVISION_READINESS_CHECKLIST.md` — Checklist de preparación de dispositivos
