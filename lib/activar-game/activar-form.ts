@@ -79,11 +79,25 @@ export function activarStep1Errors(fd: ActivarFormData): ActivarValidationErrors
 }
 
 export function activarStep2Errors(fd: ActivarFormData): ActivarValidationErrors {
-  const full = computeActivarErrors(fd)
-  return {
-    contactoEmail: full.contactoEmail,
-    empresa: full.empresa,
+  const e: ActivarValidationErrors = {}
+
+  const vEmail = fd.contactoEmail.trim()
+  if (!vEmail) {
+    e.contactoEmail = 'Necesitamos tu email para enviarte la llave de acceso.'
+  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(vEmail)) {
+    e.contactoEmail = 'El formato del email no es válido. Ejemplo: nombre@empresa.com'
   }
+
+  const vEmpresa = fd.empresa.trim()
+  if (!vEmpresa) {
+    e.empresa = 'Ingresa el nombre de tu empresa o negocio.'
+  } else if (vEmpresa.length < 2) {
+    e.empresa = 'El nombre debe tener al menos 2 caracteres.'
+  } else if (vEmpresa.length > 100) {
+    e.empresa = 'El nombre no puede tener más de 100 caracteres.'
+  }
+
+  return e
 }
 
 export const COUNTRY_LABEL: Record<CountryCode, string> = {
