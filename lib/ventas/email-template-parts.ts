@@ -1,8 +1,7 @@
 import type { QuotationQuote } from './types'
-import { buildQuotationPlanSummary, buildUrgencyPriceDisplay } from './quote-display'
+import { buildQuotationPlanSummary } from './quote-display'
 import { getVentasModalityDefinition } from './modality-includes'
 import { VENTAS_BRAND as B, buildTerminalsDisplayLabel } from './brand-styles'
-import { formatUrgencyOfferExpiryFriendly } from './urgency-offer'
 
 export function escapeVentasHtml(v: string): string {
   return v
@@ -81,27 +80,12 @@ export function buildPriceCardHtml(params: {
   const modalityLabel = getVentasModalityDefinition(params.quote.billing_modality).label
 
   let inner = ''
-  if (summary.urgency.isActive) {
-    const priceDisplay = buildUrgencyPriceDisplay({ quote: params.quote, summary })
-
-    if (priceDisplay) {
-      inner += `<p style="margin: 0 0 4px 0; font-size: 12px; color: ${B.emailTextMuted};">${escapeVentasHtml(priceDisplay.listPriceLabel)}</p>`
-      inner += `<p style="margin: 0 0 12px 0; font-size: 14px; color: ${B.emailTextMuted}; text-decoration: line-through;">${escapeVentasHtml(priceDisplay.listPriceValue)}</p>`
-      inner += `<p style="margin: 0 0 8px 0; font-size: 13px; font-weight: bold; color: ${B.emailTextSoft};">${escapeVentasHtml(priceDisplay.investmentLabel)}</p>`
-      inner += `<p style="margin: 0 0 8px 0; font-size: 26px; font-weight: bold; color: ${B.accent}; line-height: 1.2;">${escapeVentasHtml(priceDisplay.totalValue)}</p>`
-      inner += `<p style="margin: 0; font-size: 13px; color: ${B.accentDark};">${escapeVentasHtml(priceDisplay.savingsText)}</p>`
-    }
-  } else {
-    for (const line of summary.lines) {
-      inner += `<p style="margin: 0 0 6px 0; font-size: 13px; color: ${B.emailTextSoft};">${escapeVentasHtml(line.label)}: ${escapeVentasHtml(line.value)}</p>`
-    }
-    inner += `<p style="margin: 8px 0 4px 0; font-size: 24px; font-weight: bold; color: ${B.accent};">${escapeVentasHtml(summary.totalValue)}</p>`
-    inner += `<p style="margin: 0; font-size: 13px; font-weight: bold; color: ${B.emailText};">${escapeVentasHtml(summary.totalLabel)}</p>`
+  for (const line of summary.lines) {
+    const isDiscount = line.variant === 'discount'
+    inner += `<p style="margin: 0 0 6px 0; font-size: 13px; color: ${isDiscount ? B.accentDark : B.emailTextSoft}; font-weight: ${isDiscount ? 'bold' : 'normal'};">${escapeVentasHtml(line.label)}: ${escapeVentasHtml(line.value)}</p>`
   }
-
-  const expiryBlock = summary.expiryText
-    ? `<div style="background: ${B.urgencyBg}; border: 1px solid ${B.urgencyBorder}; border-radius: 8px; padding: 10px 12px; margin: 14px 0 0 0; text-align: center; font-size: 12px; color: ${B.urgencyText}; font-weight: bold;">⏳ Oferta vigente hasta el ${escapeVentasHtml(formatUrgencyOfferExpiryFriendly(summary.urgency.expiresAt))} (hora Honduras)</div>`
-    : ''
+  inner += `<p style="margin: 8px 0 4px 0; font-size: 24px; font-weight: bold; color: ${B.accent};">${escapeVentasHtml(summary.totalValue)}</p>`
+  inner += `<p style="margin: 0; font-size: 13px; font-weight: bold; color: ${B.emailText};">${escapeVentasHtml(summary.totalLabel)}</p>`
 
   const pdfNote = showPdfNote
     ? `<p style="margin: 14px 0 0 0; font-size: 12px; color: ${B.emailTextMuted};">Comparativa de modalidades, condiciones y datos bancarios: PDF adjunto.</p>`
@@ -112,7 +96,6 @@ export function buildPriceCardHtml(params: {
       <p style="margin: 0 0 4px 0; font-size: 11px; font-weight: bold; color: ${B.emailAccent}; text-transform: uppercase; letter-spacing: 0.05em;">Inversión</p>
       <p style="margin: 0 0 14px 0; font-size: 12px; color: ${B.emailTextMuted};">${escapeVentasHtml(modalityLabel)}</p>
       ${inner}
-      ${expiryBlock}
       ${pdfNote}
     </div>
   `

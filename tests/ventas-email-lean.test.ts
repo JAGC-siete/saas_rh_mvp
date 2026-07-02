@@ -16,6 +16,7 @@ const quote: QuotationQuote = {
   monthly_total: 5416.67,
   coupon_applied: true,
   discount_pct_applied: 0.45,
+  coupon_code_applied: 'gastro2026',
   terminals_count: 1,
 }
 
@@ -27,7 +28,7 @@ describe('ventas lean quotation email', () => {
     clientDni: '0510199100731',
   }
 
-  it('html focuses on total, expiry and WhatsApp CTA', () => {
+  it('html shows coupon breakdown and WhatsApp CTA', () => {
     const html = generateVentasQuotationEmailHTML({
       quote,
       contactName: 'Carlos',
@@ -40,11 +41,10 @@ describe('ventas lean quotation email', () => {
 
     assert.match(html, /COTIZACIÓN ANUAL/)
     assert.match(html, /# de terminales/)
-    assert.match(html, /Precio anual con 1 terminal incluida/)
-    assert.match(html, /Ahorro exclusivo por contratación temprana/)
-    assert.match(html, /Oferta vigente hasta/)
+    assert.match(html, /Cupón promocional «gastro2026»/)
     assert.match(html, /Continuar por WhatsApp/)
     assert.match(html, /PDF adjunto/)
+    assert.doesNotMatch(html, /contratación temprana/)
     assert.doesNotMatch(html, /Datos Bancarios/)
     assert.doesNotMatch(html, /Referencia —/)
   })
@@ -61,9 +61,9 @@ describe('ventas lean quotation email', () => {
     })
 
     assert.match(text, /# de terminales:/)
-    assert.match(text, /Precio anual con 1 terminal incluida:/)
-    assert.match(text, /Ahorro exclusivo por contratación temprana/)
+    assert.match(text, /Cupón promocional «gastro2026»/)
     assert.match(text, /proceso%20de%20contrataci/i)
+    assert.doesNotMatch(text, /contratación temprana/)
     assert.doesNotMatch(text, /comprobante del 50%/)
     assert.doesNotMatch(text, /Número de cuenta BAC/)
   })

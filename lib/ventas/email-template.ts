@@ -1,20 +1,18 @@
 import type { CurrencyCode, QuotationQuote } from './types'
-import { buildQuotationPlanSummary, buildUrgencyPriceDisplay } from './quote-display'
+import { buildQuotationPlanSummary } from './quote-display'
 import type { VentasBankDetails } from './bank-details'
 import {
   buildQuotationAcquisitionWhatsAppText,
   buildVentasSupportWhatsAppUrl,
 } from './bank-details'
-import { buildUrgencyOfferPitchText } from './modality-includes'
-import { buildVentasRefLabel } from './brand-styles'
-import { formatUrgencyOfferExpiryFriendly } from './urgency-offer'
+import { buildVentasRefLabel, buildTerminalsDisplayLabel } from './brand-styles'
 import {
   buildClientFichaHtml,
   buildEmailHeaderBlock,
   buildPriceCardHtml,
   escapeVentasHtml,
 } from './email-template-parts'
-import { VENTAS_BRAND as B, buildTerminalsDisplayLabel } from './brand-styles'
+import { VENTAS_BRAND as B } from './brand-styles'
 import { getVentasModalityDefinition } from './modality-includes'
 import { wrapLiquidEmailFragment } from '../emails/liquid-layout'
 
@@ -27,26 +25,12 @@ function firstNameFromContact(contactName?: string): string {
 export function generateVentasQuotationEmailSubject(params: {
   contactName?: string
   companyName?: string
-  discountAmount: number
-  currency: CurrencyCode
-  urgencyActive?: boolean
 }): string {
   const company = params.companyName?.trim()
-  if (params.urgencyActive === false) {
-    const firstName = firstNameFromContact(params.contactName)
-    return firstName
-      ? `Tu cotización Humano SISU, ${firstName}`
-      : company
-        ? `Tu cotización de Humano SISU para ${company} está lista`
-        : 'Tu cotización Humano SISU'
-  }
-  if (company) {
-    return `Tu cotización de Humano SISU para ${company} está lista (Descuento de 72h aplicado)`
-  }
   const firstName = firstNameFromContact(params.contactName)
-  return firstName
-    ? `Tu cotización Humano SISU está lista, ${firstName} (Descuento de 72h aplicado)`
-    : 'Tu cotización Humano SISU está lista (Descuento de 72h aplicado)'
+  if (firstName) return `Tu cotización Humano SISU, ${firstName}`
+  if (company) return `Tu cotización de Humano SISU para ${company} está lista`
+  return 'Tu cotización Humano SISU'
 }
 
 export function generateVentasQuotationEmailHTML(params: {
@@ -79,10 +63,6 @@ export function generateVentasQuotationEmailHTML(params: {
   const quoteLabel = isAnnual ? 'COTIZACIÓN ANUAL' : 'COTIZACIÓN MENSUAL'
   const refLabel = buildVentasRefLabel(companyName, contactName)
 
-  const urgencyPitch = summary.urgency.isActive
-    ? `<p style="margin: 0 0 16px 0; line-height: 1.55; color: ${B.emailTextSoft}; font-size: 15px; font-family: Montserrat, Arial, Helvetica, sans-serif;">${escapeVentasHtml(buildUrgencyOfferPitchText(quote.billing_modality))}</p>`
-    : ''
-
   const body = `
       ${buildEmailHeaderBlock(quoteLabel, refLabel)}
       ${buildClientFichaHtml({
@@ -94,7 +74,6 @@ export function generateVentasQuotationEmailHTML(params: {
         isAnnual,
       })}
       <p style="margin: 0 0 14px 0; font-size: 18px; line-height: 1.4; font-weight: bold; color: ${B.emailText};">${opening}</p>
-      ${urgencyPitch}
       ${buildPriceCardHtml({ quote, sentAt, now })}
       <div style="text-align: center; margin: 8px 0 0 0;">
         <a href="${supportWhatsAppUrl}" style="display: inline-block; padding: 14px 28px; background-color: ${B.accent}; color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 15px; font-family: Montserrat, Arial, Helvetica, sans-serif;">Continuar por WhatsApp</a>
@@ -140,28 +119,13 @@ export function generateVentasQuotationEmailText(params: {
     '',
     opening,
     '',
+    modalityLabel,
   ]
 
-  if (summary.urgency.isActive) {
-    lines.push(buildUrgencyOfferPitchText(quote.billing_modality), '')
-    const priceDisplay = buildUrgencyPriceDisplay({ quote, summary })
-    if (priceDisplay) {
-      lines.push(
-        `${priceDisplay.listPriceLabel}: ${priceDisplay.listPriceValue}`,
-        priceDisplay.investmentLabel,
-        priceDisplay.totalValue,
-        priceDisplay.savingsText,
-        '',
-        `⏳ Oferta vigente hasta el ${formatUrgencyOfferExpiryFriendly(summary.urgency.expiresAt)} (hora Honduras)`
-      )
-    }
-  } else {
-    lines.push(`${modalityLabel}`)
-    for (const line of summary.lines) {
-      lines.push(`${line.label}: ${line.value}`)
-    }
-    lines.push(`${summary.totalLabel}: ${summary.totalValue}`)
+  for (const line of summary.lines) {
+    lines.push(`${line.label}: ${line.value}`)
   }
+  lines.push(`${summary.totalLabel}: ${summary.totalValue}`)
 
   lines.push('', 'Comparativa de modalidades, condiciones y datos bancarios: PDF adjunto.')
 

@@ -8,12 +8,12 @@ import { maskEmail, normalizeSoftPhone } from '../../lib/privacy'
 import { notificationManager } from '../../lib/notification-providers'
 import { getResendFromContact } from '../../lib/resend-from'
 import type { QuotationRequest, QuotationResponse, VentasPricingTier, CurrencyCode } from '../../lib/ventas/types'
-import { clampInt, normalizeCouponCode, resolveTierByEmployees, roundMoney } from '../../lib/ventas/pricing'
+import { clampInt, resolveTierByEmployees, roundMoney } from '../../lib/ventas/pricing'
 import { hardwareFeeMonthly, ventasTooManyTerminalsErrorMessage } from '../../lib/ventas/modality-includes'
+import { loadActiveVentasConfig, resolveSubmittedPromo } from '../../lib/ventas/load-ventas-config'
 import { generateVentasQuotationPDF } from '../../lib/ventas/pdf'
 import { generateVentasQuotationEmailHTML, generateVentasQuotationEmailSubject, generateVentasQuotationEmailText } from '../../lib/ventas/email-template'
 import { generateVentasActivationEmailHTML, generateVentasActivationEmailSubject } from '../../lib/ventas/activation-email'
-import { buildQuotationPlanSummary } from '../../lib/ventas/quote-display'
 import {
   generateVentasBankDetailsEmailHTML,
   generateVentasBankDetailsEmailSubject,
@@ -38,8 +38,6 @@ import { getHondurasTimestamp } from '../../lib/timezone'
 import { addDays } from 'date-fns'
 
 const FALLBACK_CURRENCY: CurrencyCode = 'HNL'
-const FALLBACK_COUPON_CODE = 'gastro2026'
-const FALLBACK_COUPON_DISCOUNT_PCT = 0.45
 const FALLBACK_TIERS: VentasPricingTier[] = [
   { min_employees: 1, max_employees: 30, price: 65000, is_active: true, sort_order: 10 },
   { min_employees: 31, max_employees: 50, price: 74000, is_active: true, sort_order: 20 },
@@ -230,7 +228,6 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
 
   const phoneNorm = normalizeSoftPhone(body.phone)
   const couponSubmitted = typeof body.coupon_code === 'string' ? body.coupon_code : ''
-  const couponSubmittedNorm = normalizeCouponCode(couponSubmitted)
 
   const contactName = typeof body.contact_name === 'string' ? body.contact_name.trim() : ''
   const companyName = typeof body.company_name === 'string' ? body.company_name.trim() : ''
@@ -251,42 +248,30 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
   try {
     const supabase = createAdminClient()
 
-    // Load active config + tiers (private)
-    const { data: configRow, error: configErr } = await (supabase as any)
-      .from('config_ventas')
-      .select('id, currency, coupon_code, coupon_discount_pct')
-      .eq('is_active', true)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle()
-
-    if (configErr) {
-      logger.warn('Error leyendo config_ventas, usando fallback', { error: configErr.message })
-    }
-
-    const configId: string | null = configRow?.id || null
-    const currency: CurrencyCode =
-      (configRow?.currency as CurrencyCode) || FALLBACK_CURRENCY
-    const couponCode = normalizeCouponCode(configRow?.coupon_code || FALLBACK_COUPON_CODE)
-    const discountPct = Number(configRow?.coupon_discount_pct ?? FALLBACK_COUPON_DISCOUNT_PCT)
-
-    let tiers: VentasPricingTier[] = FALLBACK_TIERS
-    let pricingTierId: string | null = null
-
-    if (configId) {
-      const { data: tiersRows, error: tiersErr } = await (supabase as any)
-        .from('config_ventas_pricing_tiers')
-        .select('id, min_employees, max_employees, price, is_active, sort_order')
-        .eq('config_id', configId)
-        .eq('is_active', true)
-        .order('sort_order', { ascending: true })
-
-      if (tiersErr) {
-        logger.warn('Error leyendo config_ventas_pricing_tiers, usando fallback', { error: tiersErr.message })
-      } else if (Array.isArray(tiersRows) && tiersRows.length > 0) {
-        tiers = tiersRows
+    let ventasConfig
+    try {
+      ventasConfig = await loadActiveVentasConfig(supabase as any)
+    } catch (configLoadErr: any) {
+      logger.warn('Error leyendo config ventas, usando fallback', { error: configLoadErr?.message })
+      ventasConfig = {
+        configId: null,
+        currency: FALLBACK_CURRENCY,
+        tiers: FALLBACK_TIERS,
+        promoCodes: [],
       }
     }
+
+    const { configId, currency, tiers, promoCodes } = ventasConfig
+    const promo = resolveSubmittedPromo({
+      promoCodes,
+      submittedRaw: couponSubmitted,
+    })
+    const couponSubmittedNorm = promo.submittedNorm
+    const isCouponValid = promo.isCouponValid
+    const discountPctApplied = promo.discountPctApplied
+    const couponCodeApplied = promo.couponCodeApplied
+
+    let pricingTierId: string | null = null
 
     const tier = resolveTierByEmployees(tiers, employeesCount)
     if (!tier) {
@@ -295,8 +280,6 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
     pricingTierId = (tier as any).id || null
 
     const annualSubtotal = roundMoney(Number(tier.price))
-    const isCouponValid = !!couponSubmittedNorm && couponSubmittedNorm === couponCode
-    const discountPctApplied = isCouponValid ? discountPct : 0
     const annualDiscountAmount = roundMoney(annualSubtotal * discountPctApplied)
     const annualTotal = roundMoney(annualSubtotal - annualDiscountAmount)
 
@@ -319,6 +302,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
       monthly_total: monthlyTotal,
       coupon_applied: isCouponValid,
       discount_pct_applied: discountPctApplied,
+      coupon_code_applied: couponCodeApplied,
       tier: { min_employees: tier.min_employees, max_employees: tier.max_employees },
       billing_modality: billingModality,
       terminals_count: terminalsForPricing,
@@ -390,8 +374,6 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
     })
 
     const sentAt = new Date()
-    const planSummary = buildQuotationPlanSummary({ quote, sentAt })
-    const urgencyOffer = planSummary.urgency
 
     const bankDetails = getVentasBankDetailsFromEnv()
 
@@ -428,9 +410,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
     })
     const subject = generateVentasQuotationEmailSubject({
       contactName,
-      discountAmount: urgencyOffer.discountAmount,
-      currency,
-      urgencyActive: urgencyOffer.isActive,
+      companyName,
     })
     const filename = `cotizacion-sisu-${quote.tier.min_employees}-${quote.tier.max_employees}.pdf`
 
@@ -472,11 +452,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
       .update({
         status: 'sent',
         email_message_id: (result as any)?.id || null,
-        meta: {
-          ...meta,
-          urgency_offer_expires_at: urgencyOffer.expiresAt.toISOString(),
-          urgency_offer_discount_pct: 0.2,
-        },
+        meta,
       })
       .eq('id', quoteId)
 
@@ -606,16 +582,6 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
       message: 'Cotización enviada a su correo',
       quote_id: quoteId,
       quote,
-      urgency_offer: {
-        is_active: urgencyOffer.isActive,
-        quoted_total: urgencyOffer.quotedTotal,
-        discount_amount: urgencyOffer.softwareDiscountAmount,
-        discounted_total: urgencyOffer.discountedTotal,
-        expires_at: urgencyOffer.expiresAt.toISOString(),
-        software_list_total: urgencyOffer.softwareListTotal,
-        hardware_total: urgencyOffer.hardwareTotal,
-        software_discount_amount: urgencyOffer.softwareDiscountAmount,
-      },
     })
   } catch (error: any) {
     const duration = Date.now() - startTime

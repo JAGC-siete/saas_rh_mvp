@@ -47,7 +47,7 @@ export interface QuotationUrgencyBreakdown extends UrgencyOffer {
   softwareOfferTotal: number
 }
 
-/** Oferta 72 h: 20% solo sobre software; hardware se suma sin descuento. */
+/** Oferta 72 h desactivada — conservamos el tipo por compatibilidad interna. */
 export function computeQuotationUrgencyOffer(params: {
   billingModality: 'annual' | 'monthly'
   monthlySoftwareTotal: number
@@ -57,48 +57,25 @@ export function computeQuotationUrgencyOffer(params: {
   now?: Date
 }): QuotationUrgencyBreakdown {
   const sentAt = params.sentAt ?? new Date()
-  const now = params.now ?? new Date()
   const expiresAt = new Date(sentAt.getTime() + URGENCY_OFFER_DURATION_MS)
   const isMonthly = params.billingModality === 'monthly'
-
-  if (isMonthly) {
-    const softwareListTotal = roundMoney(params.monthlySoftwareTotal)
-    const hardwareTotal = roundMoney(params.monthlyHardwareFee)
-    const quotedTotal = roundMoney(softwareListTotal + hardwareTotal)
-
-    return {
-      isActive: false,
-      quotedTotal,
-      discountAmount: 0,
-      discountedTotal: quotedTotal,
-      expiresAt,
-      sentAt,
-      softwareListTotal,
-      hardwareTotal,
-      softwareDiscountAmount: 0,
-      softwareOfferTotal: softwareListTotal,
-    }
-  }
-
-  const softwareListTotal = roundMoney(params.annualTotal)
-  const hardwareTotal = 0
-  const softwareDiscountAmount = roundMoney(softwareListTotal * URGENCY_OFFER_DISCOUNT_PCT)
-  const softwareOfferTotal = roundMoney(softwareListTotal - softwareDiscountAmount)
-  const quotedTotal = softwareListTotal
-  const discountedTotal = softwareOfferTotal
-  const offerWindowOpen = now.getTime() < expiresAt.getTime()
+  const softwareListTotal = roundMoney(
+    isMonthly ? params.monthlySoftwareTotal : params.annualTotal
+  )
+  const hardwareTotal = roundMoney(isMonthly ? params.monthlyHardwareFee : 0)
+  const quotedTotal = roundMoney(softwareListTotal + hardwareTotal)
 
   return {
-    isActive: offerWindowOpen,
+    isActive: false,
     quotedTotal,
-    discountAmount: softwareDiscountAmount,
-    discountedTotal,
+    discountAmount: 0,
+    discountedTotal: quotedTotal,
     expiresAt,
     sentAt,
     softwareListTotal,
     hardwareTotal,
-    softwareDiscountAmount,
-    softwareOfferTotal,
+    softwareDiscountAmount: 0,
+    softwareOfferTotal: softwareListTotal,
   }
 }
 

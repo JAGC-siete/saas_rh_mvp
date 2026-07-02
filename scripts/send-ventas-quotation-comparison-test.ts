@@ -88,9 +88,7 @@ async function sendQuotationDryRun(params: {
   })
   const subject = `[DRY RUN ${label}] ${generateVentasQuotationEmailSubject({
     contactName,
-    discountAmount: planSummary.urgency.discountAmount,
-    currency: quote.currency,
-    urgencyActive: planSummary.urgency.isActive,
+    companyName,
   })}`
 
   const { Resend } = await import('resend')

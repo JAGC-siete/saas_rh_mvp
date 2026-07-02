@@ -16,9 +16,19 @@ export interface VentasConfig {
   is_active: boolean
   currency: CurrencyCode
   coupon_code: string | null
-  /** 0.45 means 45% */
+  /** 0.45 means 45% — legacy; prefer promo_codes */
   coupon_discount_pct: number | null
+  promo_codes?: VentasPromoCodeRef[]
   tiers: VentasPricingTier[]
+}
+
+export interface VentasPromoCodeRef {
+  id?: string
+  code: string
+  discount_pct: number
+  label?: string | null
+  is_active?: boolean
+  sort_order?: number
 }
 
 export interface QuotationRequest {
@@ -52,6 +62,8 @@ export interface QuotationQuote {
   monthly_total: number
   coupon_applied: boolean
   discount_pct_applied: number
+  /** Código normalizado del cupón aplicado (si coupon_applied). */
+  coupon_code_applied?: string | null
   tier: { min_employees: number; max_employees: number }
   billing_modality: 'annual' | 'monthly'
   terminals_count: number

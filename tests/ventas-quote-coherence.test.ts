@@ -36,13 +36,20 @@ describe('ventas quote coherence', () => {
     process.env = envBackup
   })
 
-  it('annual primary keeps 72h discount on software only', () => {
+  it('annual quote shows coupon breakdown when applied', () => {
     const sentAt = new Date('2026-05-22T12:00:00.000Z')
     const annualQuote: QuotationQuote = {
       ...monthlyQuote,
       billing_modality: 'annual',
+      annual_subtotal: 76500,
+      annual_discount_amount: 15300,
+      annual_total: 61200,
+      monthly_software_total: 5100,
       monthly_hardware_fee: 0,
-      monthly_total: 5416.67,
+      monthly_total: 5100,
+      coupon_applied: true,
+      discount_pct_applied: 0.2,
+      coupon_code_applied: 'aghas',
     }
     const summary = buildQuotationPlanSummary({ quote: annualQuote, sentAt, now: sentAt })
     const text = generateVentasQuotationEmailText({
@@ -54,17 +61,15 @@ describe('ventas quote coherence', () => {
       now: sentAt,
     })
 
-    assert.equal(summary.urgency.isActive, true)
-    assert.equal(summary.urgency.softwareDiscountAmount, 15300)
-    assert.equal(summary.urgency.discountedTotal, 61200)
-    assert.match(text, /verdaderamente queremos ayudarte/)
-    assert.match(text, /Precio anual con 2 terminales incluidas: L\.\s?76,500\.00 \/ año/)
-    assert.match(text, /Tu inversión anual total hoy/)
-    assert.match(text, /L\.\s?61,200\.00 \/ año/)
-    assert.match(text, /Ahorro exclusivo por contratación temprana: L\.\s?15,300\.00/)
+    assert.equal(summary.urgency.isActive, false)
+    assert.match(text, /Cupón promocional «aghas»/)
+    assert.match(text, /Precio Software \(lista\): L\.\s?76,500\.00 \/ año/)
+    assert.match(text, /Total anual cotizado: L\.\s?61,200\.00 \/ año/)
+    assert.doesNotMatch(text, /Ahorro exclusivo por contratación temprana/)
+    assert.doesNotMatch(text, /verdaderamente queremos ayudarte/)
   })
 
-  it('monthly quote has no 72h early-contract discount', () => {
+  it('monthly quote has no early-contract discount', () => {
     const sentAt = new Date('2026-05-22T12:00:00.000Z')
     const summary = buildQuotationPlanSummary({ quote: monthlyQuote, sentAt, now: sentAt })
     const text = generateVentasQuotationEmailText({
@@ -77,8 +82,6 @@ describe('ventas quote coherence', () => {
     })
 
     assert.equal(summary.urgency.isActive, false)
-    assert.equal(summary.urgency.softwareDiscountAmount, 0)
-    assert.equal(summary.urgency.discountedTotal, 8196.66)
     assert.match(text, /Precio Software: L\.\s?6,375\.00 \/ mes/)
     assert.match(text, /Servicio de Continuidad de Hardware \(2 Terminales\): L\.\s?1,821\.66 \/ mes/)
     assert.match(text, /Total mensual cotizado: L\.\s?8,196\.66 \/ mes/)

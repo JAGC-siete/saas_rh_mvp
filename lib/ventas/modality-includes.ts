@@ -146,9 +146,11 @@ export function buildMonthlyPricingBreakdownLines(quote: QuotationQuote, fmt: (n
     `- Continuidad de hardware: ${fmt(quote.monthly_hardware_fee)} / mes`,
   ]
   if (quote.coupon_applied) {
-    lines.push(
-      `- Descuento por cupón (aplicado al software anual, prorrateado al mes): −${fmt(quote.annual_discount_amount / 12)} / mes`
-    )
+    const couponName = quote.coupon_code_applied?.trim()
+    const label = couponName
+      ? `Descuento por cupón «${couponName}» (aplicado al software anual, prorrateado al mes)`
+      : 'Descuento por cupón (aplicado al software anual, prorrateado al mes)'
+    lines.push(`- ${label}: −${fmt(quote.annual_discount_amount / 12)} / mes`)
   }
   lines.push(`- Total mensual cotizado: ${fmt(quote.monthly_total)} / mes`)
   lines.push(buildTerminalsPricingNote({ modality: 'monthly', terminalsCount: quote.terminals_count }))
@@ -171,7 +173,9 @@ export function buildModalityPerksSummaryLines(modality: VentasBillingModality):
 export function buildAnnualPricingBreakdownLines(quote: QuotationQuote, fmt: (n: number) => string): string[] {
   const lines: string[] = [`- Subtotal anual (licencia): ${fmt(quote.annual_subtotal)} / año`]
   if (quote.coupon_applied) {
-    lines.push(`- Descuento por cupón: −${fmt(quote.annual_discount_amount)} / año`)
+    const couponName = quote.coupon_code_applied?.trim()
+    const label = couponName ? `Descuento por cupón «${couponName}»` : 'Descuento por cupón'
+    lines.push(`- ${label}: −${fmt(quote.annual_discount_amount)} / año`)
   }
   lines.push(`- Total anual cotizado: ${fmt(quote.annual_total)} / año`)
   lines.push(buildTerminalsPricingNote({ modality: 'annual', terminalsCount: quote.terminals_count }))

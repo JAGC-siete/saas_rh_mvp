@@ -11,9 +11,8 @@ import {
 import { Card, CardContent } from '../ui/card'
 import BorderBeam from '../landing/BorderBeam'
 import WizardStepProgress from '../funnel/WizardStepProgress'
-import type { QuotationQuote, QuotationRequest, QuotationResponse, QuotationUrgencyOffer } from '../../lib/ventas/types'
+import type { QuotationQuote, QuotationRequest, QuotationResponse } from '../../lib/ventas/types'
 import { buildQuotationPlanSummary } from '../../lib/ventas/quote-display'
-import { formatUrgencyOfferExpiry, urgencyOfferCtaText } from '../../lib/ventas/urgency-offer'
 import { VENTAS_MAX_AUTO_QUOTE_TERMINALS } from '../../lib/ventas/modality-includes'
 import {
   buildQuotationAcquisitionWhatsAppText,
@@ -81,7 +80,6 @@ export default function CotizacionGuiadaLead({
   const [errors, setErrors] = useState<VentasValidationErrors>({})
   const [formData, setFormData] = useState<QuotationRequest>(() => defaultForm(initialCountryCode))
   const [quote, setQuote] = useState<QuotationQuote | null>(null)
-  const [urgencyOffer, setUrgencyOffer] = useState<QuotationUrgencyOffer | null>(null)
 
   const headline = utmContext.headline ?? copy.intro.headline
   const subheadline = utmContext.subheadline ?? copy.intro.subheadline
@@ -177,7 +175,6 @@ export default function CotizacionGuiadaLead({
 
       const responseQuote = (data as QuotationResponse).quote || null
       setQuote(responseQuote)
-      setUrgencyOffer((data as QuotationResponse).urgency_offer || null)
       trackQuotationSubmit({
         eventId: metaEventId,
         email: quotationPayload.contact_email,
@@ -223,19 +220,6 @@ export default function CotizacionGuiadaLead({
           {quote && (
             <Card variant="liquid" className="mb-8 text-left">
               <CardContent className="p-6 sm:p-8">
-                {urgencyOffer?.is_active && (
-                  <div className="mb-6 rounded-xl border border-amber-400/30 bg-amber-500/10 p-4">
-                    <p className="text-sm text-amber-100">
-                      <strong>{urgencyOfferCtaText()}</strong>
-                    </p>
-                    <p className="mt-2 text-xs text-amber-200/80">
-                      Válida hasta el{' '}
-                      <strong>{formatUrgencyOfferExpiry(new Date(urgencyOffer.expires_at))}</strong> (hora de
-                      Honduras).
-                    </p>
-                  </div>
-                )}
-
                 <h2 className="text-xl font-bold text-white mb-4">Resumen de inversión</h2>
                 <div className="space-y-2 text-brand-200 text-sm">
                   <p>

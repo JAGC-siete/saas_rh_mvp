@@ -105,10 +105,10 @@ export function buildQuotationPlanSummary(params: {
   now?: Date
   /** Override displayed modality (e.g. alternate plan in comparison block). */
   billingModality?: 'annual' | 'monthly'
-  /** When false, always show list price (no 72 h offer). Default true. */
+  /** When false, always show list price (no 72 h offer). Default false — oferta temprana desactivada. */
   applyUrgencyOffer?: boolean
 }): QuotationPlanSummary {
-  const { quote, sentAt = new Date(), now, billingModality, applyUrgencyOffer = true } = params
+  const { quote, sentAt = new Date(), now, billingModality, applyUrgencyOffer = false } = params
   const fmt = (n: number) => formatMoney(quote.currency, n)
   const resolvedModality = billingModality ?? quote.billing_modality
   const isMonthly = resolvedModality === 'monthly'
@@ -162,12 +162,42 @@ export function buildQuotationPlanSummary(params: {
   }
 
   const quotedTotal = isMonthly ? resolveMonthlyTotal(quote) : quote.annual_total
-  const lines: PlanSummaryLine[] = [
-    {
+  const lines: PlanSummaryLine[] = []
+
+  if (quote.coupon_applied && quote.annual_discount_amount > 0) {
+    const pctLabel = Math.round((quote.discount_pct_applied || 0) * 100)
+    const couponName = quote.coupon_code_applied?.trim()
+    const couponLabel = couponName
+      ? `Cupón promocional «${couponName}» (−${pctLabel}%)`
+      : `Descuento promocional (−${pctLabel}%)`
+
+    if (isMonthly) {
+      lines.push({
+        label: 'Precio Software (lista)',
+        value: `${fmt(quote.monthly_software_total + quote.annual_discount_amount / 12)} / ${periodLabel}`,
+      })
+      lines.push({
+        label: couponLabel,
+        value: `−${fmt(quote.annual_discount_amount / 12)} / ${periodLabel}`,
+        variant: 'discount',
+      })
+    } else {
+      lines.push({
+        label: 'Precio Software (lista)',
+        value: `${fmt(quote.annual_subtotal)} / ${periodLabel}`,
+      })
+      lines.push({
+        label: couponLabel,
+        value: `−${fmt(quote.annual_discount_amount)} / ${periodLabel}`,
+        variant: 'discount',
+      })
+    }
+  } else {
+    lines.push({
       label: 'Precio Software',
       value: `${fmt(isMonthly ? quote.monthly_software_total : quote.annual_total)} / ${periodLabel}`,
-    },
-  ]
+    })
+  }
 
   if (isMonthly && monthlyHardwareFee > 0) {
     lines.push({

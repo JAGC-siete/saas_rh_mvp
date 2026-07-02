@@ -2,13 +2,11 @@ import { Buffer } from 'buffer'
 import type { QuotationQuote } from './types'
 import {
   buildQuotationPlanSummary,
-  buildUrgencyPriceDisplay,
   getContractIncludesLabels,
 } from './quote-display'
 import type { VentasBankDetails } from './bank-details'
 import { buildModalityComparison } from './modality-comparison'
 import { getVentasModalityDefinition } from './modality-includes'
-import { formatUrgencyOfferExpiryFriendly } from './urgency-offer'
 import { buildTerminalsDisplayLabel, buildVentasRefLabel } from './brand-styles'
 import { PDF_TYPE as TYPE, VENTAS_PDF_THEME as T } from './pdf-theme'
 
@@ -110,17 +108,8 @@ export async function generateVentasQuotationPDF(params: {
         note: truncateText(modalityComparison.equivalentNote || modalityComparison.footnote, 120),
       })
 
-      const urgencyY = comparisonY + 56
-      if (planSummary.urgency.isActive && planSummary.expiryText) {
-        drawUrgencyStripe(doc, {
-          y: urgencyY,
-          contentW,
-          expiryFriendly: formatUrgencyOfferExpiryFriendly(planSummary.urgency.expiresAt),
-        })
-      }
-
       drawFooter(doc, {
-        y: planSummary.urgency.isActive ? urgencyY + 38 : comparisonY + 58,
+        y: comparisonY + 58,
         contentW,
         bankDetails,
         isAnnual,
@@ -274,47 +263,20 @@ function drawPriceCard(
   const innerX = MARGIN + 16
   let cursorY = y + 48
 
-  if (planSummary.urgency.isActive) {
-    const priceDisplay = buildUrgencyPriceDisplay({ quote, summary: planSummary })
-
-    if (priceDisplay) {
-      doc.fillColor(T.textMuted).font('Helvetica').fontSize(TYPE.label).text(priceDisplay.listPriceLabel, innerX, cursorY, {
+  for (const line of planSummary.lines) {
+    const isDiscount = line.variant === 'discount'
+    doc
+      .fillColor(isDiscount ? T.accentDark : T.textBody)
+      .font(isDiscount ? 'Helvetica-Bold' : 'Helvetica')
+      .fontSize(TYPE.body)
+      .text(`${line.label}: ${line.value}`, innerX, cursorY, {
         width: contentW - 32,
       })
-      drawStrikethroughValue(doc, priceDisplay.listPriceValue, innerX, cursorY + 11, contentW - 32)
-      cursorY += 28
-
-      doc.fillColor(T.textBody).font('Helvetica-Bold').fontSize(TYPE.value).text(
-        priceDisplay.investmentLabel,
-        innerX,
-        cursorY,
-        { width: contentW - 32 }
-      )
-      cursorY += 18
-
-      doc.fillColor(T.accent).font('Helvetica-Bold').fontSize(TYPE.price).text(
-        priceDisplay.totalValue,
-        innerX,
-        cursorY,
-        { width: contentW - 32 }
-      )
-      doc.fillColor(T.accentDark).font('Helvetica').fontSize(TYPE.savings).text(
-        priceDisplay.savingsText,
-        innerX,
-        cursorY + 28,
-        { width: contentW - 32 }
-      )
-    }
-  } else {
-    for (const line of planSummary.lines) {
-      doc.fillColor(T.textBody).font('Helvetica').fontSize(TYPE.body).text(`${line.label}: ${line.value}`, innerX, cursorY, {
-        width: contentW - 32,
-      })
-      cursorY += 14
-    }
-    doc.fillColor(T.accent).font('Helvetica-Bold').fontSize(TYPE.price).text(planSummary.totalValue, innerX, cursorY + 6)
-    doc.fillColor(T.text).font('Helvetica').fontSize(TYPE.value).text(planSummary.totalLabel, innerX, cursorY + 30)
+    cursorY += 14
   }
+
+  doc.fillColor(T.accent).font('Helvetica-Bold').fontSize(TYPE.price).text(planSummary.totalValue, innerX, cursorY + 6)
+  doc.fillColor(T.text).font('Helvetica').fontSize(TYPE.value).text(planSummary.totalLabel, innerX, cursorY + 30)
 }
 
 function drawComparisonStrip(
@@ -336,19 +298,6 @@ function drawComparisonStrip(
   doc.fillColor(T.textMuted).font('Helvetica').fontSize(TYPE.label).text(note, MARGIN + 12, y + 34, {
     width: contentW - 24,
   })
-}
-
-function drawUrgencyStripe(doc: PDFKit.PDFDocument, params: { y: number; contentW: number; expiryFriendly: string }) {
-  const { y, contentW, expiryFriendly } = params
-
-  doc.roundedRect(MARGIN, y, contentW, 28, 6).fill(T.urgencyBg)
-  doc.roundedRect(MARGIN, y, contentW, 28, 6).lineWidth(0.8).stroke(T.urgencyBorder)
-  doc.fillColor(T.urgencyText).font('Helvetica-Bold').fontSize(TYPE.body).text(
-    `⏳ Oferta vigente hasta el ${expiryFriendly} (hora Honduras)`,
-    MARGIN + 12,
-    y + 9,
-    { width: contentW - 24, align: 'center' }
-  )
 }
 
 function drawFooter(
@@ -440,18 +389,6 @@ function drawFooter(
     { width: contentW,
       align: 'center' }
   )
-}
-
-function drawStrikethroughValue(
-  doc: PDFKit.PDFDocument,
-  value: string,
-  x: number,
-  y: number,
-  maxWidth: number
-) {
-  doc.fillColor(T.textMuted).font('Helvetica').fontSize(TYPE.value).text(value, x, y, { width: maxWidth })
-  const textWidth = Math.min(doc.widthOfString(value), maxWidth)
-  doc.save().lineWidth(0.9).strokeColor(T.textLight).moveTo(x, y + 5).lineTo(x + textWidth, y + 5).stroke().restore()
 }
 
 function truncateText(text: string, maxLen: number): string {
