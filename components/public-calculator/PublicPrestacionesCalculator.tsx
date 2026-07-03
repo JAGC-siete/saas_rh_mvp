@@ -403,6 +403,7 @@ export default function PublicPrestacionesCalculator({ config }: { config: Publi
             preavisoGozado: result.metadata.preavisoGozado,
           },
           rubros: result.rubros,
+          reservaLaboralDisclaimer: result.metadata.reservaLaboralDisclaimer,
         }),
       })
       const data = await response.json()

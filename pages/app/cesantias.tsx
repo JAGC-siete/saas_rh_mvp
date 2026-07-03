@@ -611,10 +611,17 @@ export default function CesantiasPage() {
                           <span className="text-gray-400">14to mes proporcional:</span>
                           <span>{formatCurrency(result.rubros.decimoCuarto)}</span>
                         </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-400">Reserva laboral:</span>
+                          <span>{formatCurrency(result.rubros.reservaLaboralEnTotal)}</span>
+                        </div>
                         <div className="border-t border-white/10 mt-2 pt-2 flex justify-between font-semibold text-white">
                           <span>Total a pagar:</span>
                           <span>{formatCurrency(result.rubros.totalPagar)}</span>
                         </div>
+                        <p className="text-xs text-gray-500 mt-3 leading-relaxed">
+                          {result.metadata.reservaLaboralDisclaimer}
+                        </p>
                       </div>
                     </div>
                   </div>

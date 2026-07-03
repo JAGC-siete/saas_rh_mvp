@@ -17,8 +17,10 @@ export interface PrestacionesReportData {
     vacaciones: number
     aguinaldo: number
     decimoCuarto: number
+    reservaLaboralEnTotal: number
     totalPagar: number
   }
+  reservaLaboralDisclaimer?: string
 }
 
 export async function generatePrestacionesReportPDF(
@@ -101,11 +103,12 @@ export async function generatePrestacionesReportPDF(
         { label: 'Cesantía (neta)', amount: data.rubros.cesantiaNeta },
         { label: 'Vacaciones', amount: data.rubros.vacaciones },
         { label: '13vo proporcional', amount: data.rubros.aguinaldo },
-        { label: '14vo proporcional', amount: data.rubros.decimoCuarto }
+        { label: '14vo proporcional', amount: data.rubros.decimoCuarto },
+        { label: 'Reserva laboral', amount: data.rubros.reservaLaboralEnTotal },
       ]
 
       rows.forEach((r) => {
-        if (y > pageHeight - 120) {
+        if (y > pageHeight - 160) {
           doc.addPage()
           y = 30
         }
@@ -117,6 +120,19 @@ export async function generatePrestacionesReportPDF(
         })
         y += 32
       })
+
+      if (data.reservaLaboralDisclaimer) {
+        y += 8
+        if (y > pageHeight - 100) {
+          doc.addPage()
+          y = 30
+        }
+        doc.fontSize(8).fillColor('#666666').text(data.reservaLaboralDisclaimer, 30, y, {
+          width: pageWidth - 60,
+          align: 'left',
+        })
+        y += 36
+      }
 
       // Footer
       const footerY = pageHeight - 60

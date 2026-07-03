@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { parseDateYmd } from './thirteenth-fourteenth/calendar'
 
 export const motivoSalidaEnum = z.enum([
   'RENUNCIA',
@@ -42,8 +43,8 @@ export const cesantiasRequestSchema = z.object({
   })
 }).superRefine((val, ctx) => {
   const { fechaIngreso, fechaEgreso } = val.datosManuales
-  const start = new Date(fechaIngreso)
-  const end = new Date(fechaEgreso)
+  const start = parseDateYmd(fechaIngreso)
+  const end = parseDateYmd(fechaEgreso)
 
   if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
     ctx.addIssue({

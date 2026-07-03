@@ -41,6 +41,7 @@ Este aporte es exclusivamente patronal. El empleador debe depositar el **4.0%** 
 
 - **Techo de Cotización 2026:** L 57,896.16 (basado en 3 salarios mínimos de referencia).
 - **Riesgo:** Si un empleado gana más del techo, la aportación se detiene en L 57,896.16.
+- **En liquidación:** el saldo de la cuenta RAP se trata como compensación de cesantía (despido injustificado) o como prima de antigüedad (renuncia y otras causas). Si no se conoce el saldo efectivo, una estimación orientativa es `salario ordinario × 4% × meses comerciales laborados`; ese valor puede diferir del monto depositado en el RAP (criterio de la calculadora pública STSS). Detalle técnico: `docs/prestaciones-honduras-motor-stss.md`.
 
 ### B. Fondo de Vivienda e Inclusión Financiera
 

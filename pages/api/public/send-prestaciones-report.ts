@@ -44,8 +44,11 @@ interface SendPrestacionesReportRequest {
     vacaciones: number
     aguinaldo: number
     decimoCuarto: number
+    reservaLaboralEstimada?: number
+    reservaLaboralEnTotal: number
     totalPagar: number
   }
+  reservaLaboralDisclaimer?: string
 }
 
 async function sendEmailWithResend(
@@ -150,6 +153,12 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       })
     }
 
+    const reservaLaboralEnTotal = Number(body.rubros.reservaLaboralEnTotal) || 0
+    const reservaLaboralDisclaimer =
+      typeof body.reservaLaboralDisclaimer === 'string' && body.reservaLaboralDisclaimer.trim()
+        ? body.reservaLaboralDisclaimer.trim()
+        : undefined
+
     const pdfBuffer = await generatePrestacionesReportPDF({
       salarioBaseMensual: body.datosManuales.salarioBaseMensual,
       salarioPromedioMensual: body.datosManuales.salarioPromedioMensual,
@@ -158,7 +167,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       antiguedadTexto: body.datosManuales.antiguedadTexto,
       motivoSalida: body.parametros.motivoSalida,
       preavisoGozado: body.parametros.preavisoGozado,
-      rubros: body.rubros,
+      reservaLaboralDisclaimer,
+      rubros: {
+        ...body.rubros,
+        reservaLaboralEnTotal,
+      },
     })
 
     const html = generatePrestacionesEmailHTML({
@@ -171,6 +184,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       audience: calcAudience ?? undefined,
       useGodfatherFunnel,
       godfatherKeyword,
+      reservaLaboralDisclaimer,
       rubros: {
         preaviso: body.rubros.preaviso,
         cesantiaBruta: body.rubros.cesantiaBruta,
@@ -179,6 +193,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         vacaciones: body.rubros.vacaciones,
         aguinaldo: body.rubros.aguinaldo,
         decimoCuarto: body.rubros.decimoCuarto,
+        reservaLaboralEnTotal,
       },
     })
 

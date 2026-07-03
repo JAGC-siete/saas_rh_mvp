@@ -42,7 +42,9 @@ Existe la creencia errónea de que si un empleado es despedido o renuncia el 15 
 
 **La Regla de la Proporcionalidad:** La ley manda a pagar la parte proporcional exacta. El derecho se devenga día a día.
 
-- **Cálculo correcto:** Debe dividir los días acumulados desde el inicio del periodo hasta la fecha de terminación entre 360 días.
+- **Cálculo correcto:** `(salario mensual ÷ 360) × días del período`, con año comercial de 360 días y conteo inclusivo de la fecha de ingreso (o inicio del período) hasta la fecha de egreso.
+- **Fechas:** usar el día civil real (no un parseo UTC de `YYYY-MM-DD` que en Honduras puede restar un día).
+- **Fuentes:** [Guía STSS de cálculos de prestaciones](https://www.trabajo.gob.hn/wp-content/uploads/2017/11/guiacalculo.pdf), Decreto 112-82 (13vo), Decreto 135-94 y su reglamento (14vo).
 
 Omitir la proporcionalidad del 13vo y 14vo en un finiquito es el detonante principal de las demandas laborales en Honduras. Un finiquito legalmente blindado debe incluir estos dos conceptos calculados al centavo.
 

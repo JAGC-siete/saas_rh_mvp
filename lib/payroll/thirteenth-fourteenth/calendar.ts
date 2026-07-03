@@ -8,6 +8,31 @@ interface CommercialDate {
   day: number
 }
 
+/**
+ * Parse YYYY-MM-DD as a civil calendar date in local time.
+ * Avoids `new Date('YYYY-MM-DD')` UTC midnight, which shifts the day in UTC−6.
+ */
+export function parseDateYmd(ymd: string): Date {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(ymd.trim())
+  if (!match) return new Date(NaN)
+  const year = Number(match[1])
+  const month = Number(match[2])
+  const day = Number(match[3])
+  if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) {
+    return new Date(NaN)
+  }
+  if (month < 1 || month > 12 || day < 1 || day > 31) return new Date(NaN)
+  const date = new Date(year, month - 1, day)
+  if (
+    date.getFullYear() !== year ||
+    date.getMonth() !== month - 1 ||
+    date.getDate() !== day
+  ) {
+    return new Date(NaN)
+  }
+  return date
+}
+
 function toCommercialDate(date: Date): CommercialDate {
   return {
     year: date.getFullYear(),

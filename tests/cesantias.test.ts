@@ -1,7 +1,12 @@
 import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
-import { calcularLiquidacionHonduras } from '../lib/payroll/cesantias'
+import {
+  calcularLiquidacionHonduras,
+  RESERVA_LABORAL_DISCLAIMER,
+  vacationProportionalDivisor,
+} from '../lib/payroll/cesantias'
 import { CesantiasRequestInput } from '../lib/payroll/cesantias-schema'
+import { parseDateYmd, diffDays360 } from '../lib/payroll/thirteenth-fourteenth/calendar'
 
 const buildInput = (overrides: Partial<CesantiasRequestInput>): CesantiasRequestInput => ({
   empleadoId: undefined,
@@ -71,7 +76,19 @@ describe('Cálculo de cesantías Honduras', () => {
     assert.equal(result.tiempos.totalDias, 1 * 360 + 4 * 30)
   })
 
-  it('no paga preaviso ni cesantía en renuncia, pero sí derechos adquiridos', () => {
+  it('parseDateYmd no pierde un día en zonas UTC−6', () => {
+    const d = parseDateYmd('2026-07-18')
+    assert.equal(d.getFullYear(), 2026)
+    assert.equal(d.getMonth(), 6)
+    assert.equal(d.getDate(), 18)
+
+    const jan1 = parseDateYmd('2026-01-01')
+    const jul18 = parseDateYmd('2026-07-18')
+    assert.equal(diffDays360(jan1, jul18), 198)
+    assert.equal(diffDays360(parseDateYmd('2026-07-01'), jul18), 18)
+  })
+
+  it('no paga preaviso ni cesantía en renuncia, pero sí derechos adquiridos y reserva', () => {
     const input = buildInput({
       parametrosCalculo: {
         motivoSalida: 'RENUNCIA'
@@ -82,8 +99,64 @@ describe('Cálculo de cesantías Honduras', () => {
     assert.ok(Math.abs(result.rubros.preaviso - 0) < 0.01)
     assert.ok(Math.abs(result.rubros.cesantiaBruta - 0) < 0.01)
     assert.ok(Math.abs(result.rubros.cesantiaNeta - 0) < 0.01)
-    // Derechos adquiridos deben ser mayores que cero
     assert.ok(result.rubros.vacaciones + result.rubros.aguinaldo + result.rubros.decimoCuarto > 0)
+    assert.ok(result.rubros.reservaLaboralEnTotal > 0)
+    assert.ok(result.rubros.totalPagar > result.rubros.vacaciones + result.rubros.aguinaldo + result.rubros.decimoCuarto)
+    assert.equal(result.metadata.reservaLaboralDisclaimer, RESERVA_LABORAL_DISCLAIMER)
+  })
+
+  it('renuncia con menos de 1 año paga vacaciones proporcionales (divisor 36)', () => {
+    const result = calcularLiquidacionHonduras({
+      datosManuales: {
+        salarioBaseMensual: 16000,
+        salarioPromedioMensual: 18666.6,
+        fechaIngreso: '2025-10-20',
+        fechaEgreso: '2026-07-18',
+      },
+      parametrosCalculo: { motivoSalida: 'RENUNCIA' },
+    })
+
+    assert.equal(result.tiempos.anos, 0)
+    assert.equal(result.tiempos.totalDias, 269)
+    assert.equal(vacationProportionalDivisor(0), 36)
+    // 269/36 × (18666.60/30) = 4649.37
+    assert.ok(Math.abs(result.rubros.vacaciones - 4649.37) < 0.02)
+  })
+
+  it('alinea con caso STSS cálculo 5,380,240 (renuncia)', () => {
+    const result = calcularLiquidacionHonduras({
+      datosManuales: {
+        salarioBaseMensual: 16000,
+        salarioPromedioMensual: 18666.6,
+        fechaIngreso: '2025-10-20',
+        fechaEgreso: '2026-07-18',
+      },
+      parametrosCalculo: {
+        motivoSalida: 'RENUNCIA',
+        montoRapAcumulado: 0,
+        preavisoGozado: false,
+      },
+    })
+
+    assert.equal(result.tiempos.anos, 0)
+    assert.equal(result.tiempos.meses, 8)
+    assert.equal(result.tiempos.dias, 29)
+    assert.equal(result.tiempos.totalDias, 269)
+    assert.equal(result.tiempos.diasAnoNatural, 198)
+    assert.equal(result.tiempos.diasDesdeJulio, 18)
+
+    assert.ok(Math.abs(result.rubros.preaviso - 0) < 0.01)
+    assert.ok(Math.abs(result.rubros.cesantiaBruta - 0) < 0.01)
+    assert.ok(Math.abs(result.rubros.cesantiaNeta - 0) < 0.01)
+    assert.ok(Math.abs(result.rubros.vacaciones - 4649.37) < 0.02)
+    // STSS redondea diario a 533.33 → 8799.95; motor usa 16000/360×198 = 8800.00
+    assert.ok(Math.abs(result.rubros.aguinaldo - 8800) < 0.05)
+    assert.ok(Math.abs(result.rubros.decimoCuarto - 800) < 0.01)
+    assert.ok(Math.abs(result.rubros.reservaLaboralEstimada - 5738.67) < 0.02)
+    assert.ok(Math.abs(result.rubros.reservaLaboralEnTotal - 5738.67) < 0.02)
+    // STSS total 19987.99; diferencia ≤0.05 por redondeo del 13vo
+    assert.ok(Math.abs(result.rubros.totalPagar - 19988.04) < 0.05)
+    assert.equal(result.metadata.reservaLaboralUsaSaldoReal, false)
   })
 
   it('calcula preaviso y cesantía completa en despido injustificado', () => {
@@ -100,7 +173,12 @@ describe('Cálculo de cesantías Honduras', () => {
 
     assert.ok(result.rubros.preaviso > 0)
     assert.ok(result.rubros.cesantiaBruta > 0)
-    assert.ok(Math.abs(result.rubros.cesantiaNeta - result.rubros.cesantiaBruta) < 0.01)
+    // Sin saldo RAP real, la estimación se aplica contra cesantía
+    assert.ok(result.rubros.rapAplicado > 0)
+    assert.ok(result.rubros.rapAplicado <= result.rubros.cesantiaBruta)
+    assert.ok(
+      Math.abs(result.rubros.cesantiaNeta - (result.rubros.cesantiaBruta - result.rubros.rapAplicado)) < 0.01
+    )
     assert.ok(
       result.rubros.totalPagar >
       result.rubros.vacaciones + result.rubros.aguinaldo + result.rubros.decimoCuarto
@@ -165,7 +243,7 @@ describe('Cálculo de cesantías Honduras', () => {
     assert.ok(Math.abs(falle.rubros.cesantiaBruta - full.rubros.cesantiaBruta * 0.75) < 0.01)
   })
 
-  it('aplica correctamente compensación RAP a la cesantía', () => {
+  it('aplica correctamente compensación RAP real a la cesantía sin doble conteo', () => {
     const input: CesantiasRequestInput = {
       ...buildInput({}),
       parametrosCalculo: {
@@ -181,6 +259,40 @@ describe('Cálculo de cesantías Honduras', () => {
     assert.ok(result.rubros.rapAplicado > 0)
     assert.ok(result.rubros.rapAplicado <= result.rubros.cesantiaBruta)
     assert.ok(Math.abs(result.rubros.cesantiaNeta - (result.rubros.cesantiaBruta - result.rubros.rapAplicado)) < 0.01)
+    assert.equal(result.metadata.reservaLaboralUsaSaldoReal, true)
+    // Exceso RAP (si saldo > cesantía) entra al total; no se suma el RAP ya aplicado otra vez
+    assert.ok(
+      Math.abs(
+        result.rubros.reservaLaboralEnTotal -
+          Math.max(0, 20000 - result.rubros.rapAplicado)
+      ) < 0.01
+    )
+  })
+
+  it('en despido, RAP estimado no se suma completo además de compensar cesantía', () => {
+    const result = calcularLiquidacionHonduras(buildInput({
+      parametrosCalculo: {
+        motivoSalida: 'DESPIDO_INJUSTIFICADO',
+        montoRapAcumulado: 0,
+      }
+    } as any))
+
+    assert.ok(result.rubros.cesantiaBruta > 0)
+    assert.ok(result.rubros.rapAplicado > 0)
+    // reservaLaboralEnTotal solo es el exceso sobre cesantía
+    assert.ok(
+      Math.abs(
+        result.rubros.reservaLaboralEnTotal -
+          Math.max(0, result.rubros.reservaLaboralEstimada - result.rubros.rapAplicado)
+      ) < 0.01
+    )
+    const expectedTotal =
+      result.rubros.preaviso +
+      result.rubros.cesantiaNeta +
+      result.rubros.vacaciones +
+      result.rubros.aguinaldo +
+      result.rubros.decimoCuarto +
+      result.rubros.reservaLaboralEnTotal
+    assert.ok(Math.abs(result.rubros.totalPagar - expectedTotal) < 0.01)
   })
 })
-

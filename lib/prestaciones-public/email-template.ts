@@ -34,7 +34,9 @@ export interface PrestacionesEmailData {
     vacaciones: number
     aguinaldo: number
     decimoCuarto: number
+    reservaLaboralEnTotal: number
   }
+  reservaLaboralDisclaimer?: string
 }
 
 export function generatePrestacionesEmailSubject(): string {
@@ -70,6 +72,7 @@ export function generatePrestacionesEmailHTML(data: PrestacionesEmailData): stri
     { label: 'Vacaciones', value: fmt(data.rubros.vacaciones) },
     { label: '13vo proporcional', value: fmt(data.rubros.aguinaldo) },
     { label: '14vo proporcional', value: fmt(data.rubros.decimoCuarto) },
+    { label: 'Reserva laboral', value: fmt(data.rubros.reservaLaboralEnTotal) },
   ])
 
   const isEmpresa = data.audience === 'empresa'
@@ -132,6 +135,9 @@ export function generatePrestacionesEmailHTML(data: PrestacionesEmailData): stri
       '<strong>Nota:</strong> Estimación orientativa según normativa laboral de Honduras (año comercial 360 días). Puede variar según salario promedio real, extras y condiciones del caso.',
       'warning'
     ),
+    data.reservaLaboralDisclaimer
+      ? liquidInfoBox(`<strong>Reserva laboral:</strong> ${data.reservaLaboralDisclaimer}`, 'warning')
+      : '',
     ...godfatherBlocks,
     ...empresaPitch,
     ...employeeSharePitch,

@@ -1,11 +1,47 @@
 import Decimal from 'decimal.js'
 import { z } from 'zod'
 import { CesantiasRequestInput, motivoSalidaEnum } from './cesantias-schema'
-import { diffDays360, DIAS_ANO_COMERCIAL, DIAS_MES_COMERCIAL } from './thirteenth-fourteenth/calendar'
+import {
+  diffDays360,
+  DIAS_ANO_COMERCIAL,
+  DIAS_MES_COMERCIAL,
+  parseDateYmd,
+} from './thirteenth-fourteenth/calendar'
 import { calculateLiquidation13vo14vo } from './thirteenth-fourteenth/calculate'
 
-export { DIAS_MES_COMERCIAL, DIAS_ANO_COMERCIAL } from './thirteenth-fourteenth/calendar'
+export { DIAS_MES_COMERCIAL, DIAS_ANO_COMERCIAL, parseDateYmd } from './thirteenth-fourteenth/calendar'
 export const CESANTIA_MAX_ANOS = 25
+
+/** Aporte patronal RAP al Fondo de Reserva Laboral (capitalización individual). */
+export const RESERVA_LABORAL_RATE = 0.04
+
+/**
+ * Disclaimer alineado a la calculadora pública STSS.
+ * @see https://www.trabajo.gob.hn/wp-content/uploads/2017/11/guiacalculo.pdf
+ */
+export const RESERVA_LABORAL_DISCLAIMER =
+  'El concepto de reserva laboral está calculado en base al salario de los últimos 6 meses conforme la información proporcionada por el usuario. Este valor puede variar en relación con el monto efectivo depositado en el RAP.'
+
+/**
+ * Divisores STSS para vacaciones proporcionales del año incompleto.
+ * Año 1→36, año 2→30, año 3→24, año 4+→18.
+ * @see Guía STSS: https://www.trabajo.gob.hn/wp-content/uploads/2017/11/guiacalculo.pdf
+ */
+export function vacationProportionalDivisor(anosCompletos: number): number {
+  if (anosCompletos <= 0) return 36
+  if (anosCompletos === 1) return 30
+  if (anosCompletos === 2) return 24
+  return 18
+}
+
+/** Días de vacaciones del último año completo (Art. 346 CT). */
+export function vacationDaysForCompletedYears(anosCompletos: number): number {
+  if (anosCompletos >= 4) return 20
+  if (anosCompletos === 3) return 15
+  if (anosCompletos === 2) return 12
+  if (anosCompletos >= 1) return 10
+  return 0
+}
 
 export type MotivoSalida = z.infer<typeof motivoSalidaEnum>
 
@@ -33,6 +69,8 @@ export interface RubrosLiquidacion {
   aguinaldo: number
   decimoCuarto: number
   rapAplicado: number
+  reservaLaboralEstimada: number
+  reservaLaboralEnTotal: number
   totalPagar: number
 }
 
@@ -44,6 +82,8 @@ export interface LiquidacionResult {
     motivoSalida: MotivoSalida
     preavisoGozado: boolean
     salaryAverageMode: 'real_6m' | 'manual_avg' | 'proxy_14_12'
+    reservaLaboralDisclaimer: string
+    reservaLaboralUsaSaldoReal: boolean
   }
 }
 
@@ -123,8 +163,22 @@ function calcularSalarioPromedioMensualArt123(input: CesantiasRequestInput): {
   return { salarioPromedioMensual: proxy, mode: 'proxy_14_12' }
 }
 
+/**
+ * Base ordinaria para estimar aportes RAP (4%).
+ * No usa el promedio Art. 123 (que incluye 50% de 13°/14°).
+ */
+function resolverBaseReservaLaboral(input: CesantiasRequestInput): number {
+  const { salarioBaseMensual, salariosUltimos6Meses } = input.datosManuales
+  if (Array.isArray(salariosUltimos6Meses) && salariosUltimos6Meses.length > 0) {
+    const valid = salariosUltimos6Meses.filter((x) => typeof x === 'number' && Number.isFinite(x) && x >= 0)
+    if (valid.length > 0) {
+      return new Decimal(valid.reduce((acc, x) => acc + x, 0)).div(valid.length).toNumber()
+    }
+  }
+  return salarioBaseMensual
+}
+
 function calcularDiasPreaviso(totalDiasLaborados: number): number {
-  // Convertir a años aproximados para la tabla de preaviso
   const anos = totalDiasLaborados / DIAS_ANO_COMERCIAL
 
   if (totalDiasLaborados < 90) return 1 // 24 horas
@@ -134,32 +188,36 @@ function calcularDiasPreaviso(totalDiasLaborados: number): number {
   return 60
 }
 
+/**
+ * Vacaciones en liquidación según guía STSS:
+ * - Último año completo (si aplica): días Art. 346 × salario promedio diario
+ * - Año incompleto: días_fracción ÷ divisor × salario promedio diario
+ *
+ * Distinto del goce en empleados activos (requiere año completo, Art. 346).
+ * @see https://www.trabajo.gob.hn/wp-content/uploads/2017/11/guiacalculo.pdf
+ */
 function calcularVacacionesProporcionales(
-  salarioBaseDiario: Decimal,
+  salarioPromedioDiario: Decimal,
   tiempos: TiemposLaborados
 ): Decimal {
-  const anosServicio = tiempos.anos
-  let diasVacacionesAnuales = 0
+  const totalDias = Math.max(0, tiempos.totalDias)
+  if (totalDias <= 0) return new Decimal(0)
 
-  if (anosServicio >= 4) {
-    diasVacacionesAnuales = 20
-  } else if (anosServicio === 3) {
-    diasVacacionesAnuales = 15
-  } else if (anosServicio === 2) {
-    diasVacacionesAnuales = 12
-  } else if (anosServicio >= 1) {
-    diasVacacionesAnuales = 10
-  }
+  const anosCompletos = tiempos.anos
+  const diasFraccion = totalDias % DIAS_ANO_COMERCIAL
+  const divisor = vacationProportionalDivisor(anosCompletos)
 
-  if (diasVacacionesAnuales === 0) {
-    return new Decimal(0)
-  }
+  const vacCompletas =
+    anosCompletos >= 1
+      ? new Decimal(vacationDaysForCompletedYears(anosCompletos)).mul(salarioPromedioDiario)
+      : new Decimal(0)
 
-  const diasPeriodo = Math.min(tiempos.totalDias, DIAS_ANO_COMERCIAL)
-  return new Decimal(diasVacacionesAnuales)
-    .div(DIAS_ANO_COMERCIAL)
-    .mul(diasPeriodo)
-    .mul(salarioBaseDiario)
+  const vacProporcionales =
+    diasFraccion > 0
+      ? new Decimal(diasFraccion).div(divisor).mul(salarioPromedioDiario)
+      : new Decimal(0)
+
+  return vacCompletas.plus(vacProporcionales)
 }
 
 function calcularCesantia(
@@ -249,14 +307,13 @@ export function calcularLiquidacionHonduras(
   const { salarioBaseMensual, fechaIngreso, fechaEgreso } = input.datosManuales
   const { motivoSalida, montoRapAcumulado = 0, preavisoGozado = false } = input.parametrosCalculo
 
-  const ingresoDate = new Date(fechaIngreso)
-  const egresoDate = new Date(fechaEgreso)
+  const ingresoDate = parseDateYmd(fechaIngreso)
+  const egresoDate = parseDateYmd(fechaEgreso)
 
   const avg = calcularSalarioPromedioMensualArt123(input)
   const bases = calcularBasesSalariales(salarioBaseMensual, avg.salarioPromedioMensual)
   const tiempos = calcularAntiguedad360(ingresoDate, egresoDate)
 
-  const salarioBaseDiarioDec = new Decimal(bases.salarioBaseDiario)
   const salarioPromedioMensualDec = new Decimal(bases.salarioPromedioMensual)
   const salarioPromedioDiarioDec = new Decimal(bases.salarioPromedioDiario)
 
@@ -275,13 +332,13 @@ export function calcularLiquidacionHonduras(
   const factorCesantiaDec = calcularFactorCesantiaPorMotivo(input, tiempos)
   const cesantiaBrutaDec = cesantiaBaseDec.mul(factorCesantiaDec)
 
-  // Vacaciones
+  // Vacaciones (guía STSS: SPD + divisores)
   const vacacionesDec = calcularVacacionesProporcionales(
-    salarioBaseDiarioDec,
+    salarioPromedioDiarioDec,
     tiempos
   )
 
-  // 13er y 14to
+  // 13er y 14to (salario base, año comercial 360)
   const { aguinaldo, decimoCuarto } = calculateLiquidation13vo14vo(
     bases.salarioBaseMensual,
     tiempos.diasAnoNatural,
@@ -290,12 +347,28 @@ export function calcularLiquidacionHonduras(
   const aguinaldoDec = new Decimal(aguinaldo)
   const decimoCuartoDec = new Decimal(decimoCuarto)
 
-  // Compensación RAP (solo cuando hay cesantía calculada)
+  // Reserva laboral estimada (4% sobre salario ordinario × meses comerciales)
+  const baseReserva = resolverBaseReservaLaboral(input)
+  const reservaLaboralEstimadaDec = new Decimal(baseReserva)
+    .mul(RESERVA_LABORAL_RATE)
+    .mul(new Decimal(tiempos.totalDias).div(DIAS_MES_COMERCIAL))
+
+  const usaSaldoReal = typeof montoRapAcumulado === 'number' && montoRapAcumulado > 0
+  const saldoRapDec = usaSaldoReal
+    ? new Decimal(montoRapAcumulado)
+    : reservaLaboralEstimadaDec
+
+  // RAP: en despido compensa cesantía; en renuncia (u otros sin cesantía) va al total como prima.
   let rapAplicadoDec = new Decimal(0)
   let cesantiaNetaDec = cesantiaBrutaDec
-  if (cesantiaBrutaDec.greaterThan(0) && montoRapAcumulado > 0) {
-    rapAplicadoDec = Decimal.min(cesantiaBrutaDec, new Decimal(montoRapAcumulado))
+  let reservaLaboralEnTotalDec = new Decimal(0)
+
+  if (cesantiaBrutaDec.greaterThan(0)) {
+    rapAplicadoDec = Decimal.min(cesantiaBrutaDec, saldoRapDec)
     cesantiaNetaDec = cesantiaBrutaDec.sub(rapAplicadoDec)
+    reservaLaboralEnTotalDec = Decimal.max(0, saldoRapDec.sub(rapAplicadoDec))
+  } else {
+    reservaLaboralEnTotalDec = saldoRapDec
   }
 
   const totalPagarDec = preavisoDec
@@ -303,6 +376,7 @@ export function calcularLiquidacionHonduras(
     .plus(vacacionesDec)
     .plus(aguinaldoDec)
     .plus(decimoCuartoDec)
+    .plus(reservaLaboralEnTotalDec)
 
   const rubros: RubrosLiquidacion = {
     cesantiaBruta: cesantiaBrutaDec.toDecimalPlaces(2).toNumber(),
@@ -312,6 +386,8 @@ export function calcularLiquidacionHonduras(
     aguinaldo: aguinaldoDec.toDecimalPlaces(2).toNumber(),
     decimoCuarto: decimoCuartoDec.toDecimalPlaces(2).toNumber(),
     rapAplicado: rapAplicadoDec.toDecimalPlaces(2).toNumber(),
+    reservaLaboralEstimada: reservaLaboralEstimadaDec.toDecimalPlaces(2).toNumber(),
+    reservaLaboralEnTotal: reservaLaboralEnTotalDec.toDecimalPlaces(2).toNumber(),
     totalPagar: totalPagarDec.toDecimalPlaces(2).toNumber()
   }
 
@@ -322,8 +398,9 @@ export function calcularLiquidacionHonduras(
     metadata: {
       motivoSalida,
       preavisoGozado,
-      salaryAverageMode: avg.mode
+      salaryAverageMode: avg.mode,
+      reservaLaboralDisclaimer: RESERVA_LABORAL_DISCLAIMER,
+      reservaLaboralUsaSaldoReal: usaSaldoReal
     }
   }
 }
-

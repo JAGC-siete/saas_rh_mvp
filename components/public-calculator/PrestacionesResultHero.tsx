@@ -50,6 +50,11 @@ const BREAKDOWN_ROWS: Array<{
     label: '14vo mes proporcional',
     help: 'Proporcional del 14vo desde julio (año 360).',
   },
+  {
+    key: 'reservaLaboralEnTotal',
+    label: 'Reserva laboral',
+    help: 'Estimación del saldo RAP (4% sobre salario ordinario). Puede diferir del monto efectivo depositado.',
+  },
 ]
 
 type Props = {
@@ -115,6 +120,7 @@ export default function PrestacionesResultHero({ result, incluirRAP, disclaimer 
         </div>
       </div>
 
+      <p className="text-xs text-brand-300/80">{result.metadata.reservaLaboralDisclaimer}</p>
       <p className="text-xs text-brand-300/80">{disclaimer}</p>
     </div>
   )

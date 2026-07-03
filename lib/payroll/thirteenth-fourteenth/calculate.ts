@@ -3,12 +3,13 @@ import {
   DIAS_ANO_COMERCIAL,
   MIN_DAYS_14AVO_ANNUAL,
   formatDateISO,
+  parseDateYmd,
   resolveBenefitPeriodDays,
 } from './calendar'
 import type { BenefitCalculateRequest } from './schema'
 
 export { DIAS_MES_COMERCIAL, DIAS_ANO_COMERCIAL, MIN_DAYS_14AVO_ANNUAL } from './calendar'
-export { diffDays360, resolvePeriod13, resolvePeriod14 } from './calendar'
+export { diffDays360, parseDateYmd, resolvePeriod13, resolvePeriod14 } from './calendar'
 
 export interface BenefitCalculationResult {
   tipo: '13AVO' | '14AVO'
@@ -47,8 +48,8 @@ export function calculateProportional14(salarioMensual: number, diasEnPeriodo: n
 }
 
 export function calculateBenefit(input: BenefitCalculateRequest): BenefitCalculationResult {
-  const ingreso = new Date(input.fechaIngreso)
-  const calculo = new Date(input.fechaCalculo)
+  const ingreso = parseDateYmd(input.fechaIngreso)
+  const calculo = parseDateYmd(input.fechaCalculo)
   const modoCalculo = input.modoCalculo ?? 'proporcional'
 
   const period = resolveBenefitPeriodDays(
