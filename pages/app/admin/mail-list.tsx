@@ -10,7 +10,8 @@ import {
   marketingStepLabel,
   type MarketingLeadStatus,
 } from '../../../lib/marketing/admin-present'
-import { Mail, CheckCircle, Clock, XCircle, Download, Search } from 'lucide-react'
+import { useNotificationContext } from '../../../components/NotificationProvider'
+import { Mail, CheckCircle, Clock, XCircle, Download, Search, Trash2, UserX } from 'lucide-react'
 
 interface MarketingLead {
   id: string
@@ -34,6 +35,7 @@ interface Pagination {
 type StatusFilter = 'all' | MarketingLeadStatus
 
 export default function MailListPage() {
+  const { addNotification } = useNotificationContext()
   const [leads, setLeads] = useState<MarketingLead[]>([])
   const [availableSources, setAvailableSources] = useState<string[]>([])
   const [pagination, setPagination] = useState<Pagination>({
@@ -44,6 +46,8 @@ export default function MailListPage() {
   })
   const [loading, setLoading] = useState(true)
   const [exporting, setExporting] = useState(false)
+  const [deletingLeadId, setDeletingLeadId] = useState<string | null>(null)
+  const [unsubscribingLeadId, setUnsubscribingLeadId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
@@ -101,6 +105,99 @@ export default function MailListPage() {
   useEffect(() => {
     fetchLeads()
   }, [fetchLeads])
+
+  const handleUnsubscribeLead = async (lead: MarketingLead) => {
+    if (
+      !confirm(
+        `¿Desuscribir "${lead.email}"?\n\nDejará de recibir emails de la secuencia. El registro se conserva en el listado.`
+      )
+    ) {
+      return
+    }
+
+    try {
+      setUnsubscribingLeadId(lead.id)
+      setError(null)
+
+      const res = await fetch(`/api/admin/mail-list/${encodeURIComponent(lead.id)}`, {
+        method: 'PATCH',
+        credentials: 'include',
+      })
+
+      const data = await res.json().catch(() => ({}))
+
+      if (!res.ok) {
+        throw new Error(data.error || 'No se pudo desuscribir el lead')
+      }
+
+      const unsubscribedAt =
+        data.data?.unsubscribed_at ?? new Date().toISOString()
+
+      setLeads(prev =>
+        prev.map(item =>
+          item.id === lead.id
+            ? { ...item, status: 'unsubscribed', unsubscribed_at: unsubscribedAt }
+            : item
+        )
+      )
+
+      addNotification({
+        type: 'success',
+        title: 'Lead desuscrito',
+        message: `${lead.email} ya no recibirá emails de la secuencia`,
+      })
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'No se pudo desuscribir el lead'
+      setError(message)
+      addNotification({ type: 'error', title: 'Error', message })
+    } finally {
+      setUnsubscribingLeadId(null)
+    }
+  }
+
+  const handleDeleteLead = async (lead: MarketingLead) => {
+    if (
+      !confirm(
+        `¿Eliminar el lead "${lead.email}"?\n\nSe borrará el registro y su historial de emails. Esta acción no se puede deshacer.`
+      )
+    ) {
+      return
+    }
+
+    try {
+      setDeletingLeadId(lead.id)
+      setError(null)
+
+      const res = await fetch(`/api/admin/mail-list/${encodeURIComponent(lead.id)}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      })
+
+      const data = await res.json().catch(() => ({}))
+
+      if (!res.ok) {
+        throw new Error(data.error || 'No se pudo eliminar el lead')
+      }
+
+      setLeads(prev => prev.filter(item => item.id !== lead.id))
+      setPagination(prev => ({
+        ...prev,
+        total: Math.max(0, prev.total - 1),
+      }))
+
+      addNotification({
+        type: 'success',
+        title: 'Lead eliminado',
+        message: `${lead.email} fue eliminado de la secuencia`,
+      })
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'No se pudo eliminar el lead'
+      setError(message)
+      addNotification({ type: 'error', title: 'Error', message })
+    } finally {
+      setDeletingLeadId(null)
+    }
+  }
 
   const handleExportCSV = async () => {
     try {
@@ -263,6 +360,9 @@ export default function MailListPage() {
                           <th className="px-6 py-3 text-left text-xs font-medium text-white/80 uppercase">
                             Último email
                           </th>
+                          <th className="px-6 py-3 text-right text-xs font-medium text-white/80 uppercase">
+                            Acciones
+                          </th>
                         </tr>
                       </thead>
                       <tbody className="bg-white/5 divide-y divide-white/10">
@@ -298,6 +398,36 @@ export default function MailListPage() {
                               ) : (
                                 <span className="text-white/40">-</span>
                               )}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                {lead.status !== 'unsubscribed' && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleUnsubscribeLead(lead)}
+                                    disabled={
+                                      unsubscribingLeadId === lead.id || deletingLeadId === lead.id
+                                    }
+                                    className="border-amber-400/40 text-amber-100 hover:bg-amber-500/20"
+                                    title="Desuscribir lead"
+                                  >
+                                    <UserX className="h-4 w-4" />
+                                  </Button>
+                                )}
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleDeleteLead(lead)}
+                                  disabled={
+                                    deletingLeadId === lead.id || unsubscribingLeadId === lead.id
+                                  }
+                                  className="border-red-400/40 text-red-100 hover:bg-red-500/20"
+                                  title="Eliminar lead"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
                             </td>
                           </tr>
                         ))}
