@@ -1,3 +1,5 @@
+import { deductionCalculatorPublicPath } from '../marketing/calculator-public-paths'
+
 export const LANDING_NAV_LINKS = [
   { href: '/#como-funciona', label: 'Cómo funciona' },
   { href: '/#servicios', label: 'Servicios' },
@@ -13,19 +15,19 @@ export const CALCULATOR_MENU_ITEMS = [
     featured: false,
   },
   {
-    href: '/calculadora-deducciones',
+    href: deductionCalculatorPublicPath('HND'),
     title: 'Honduras · Seguro Social · RAP · ISR',
     subtitle: 'Calculadora deducciones (HNL)',
     featured: 'hn' as const,
   },
   {
-    href: '/calculadora-deducciones-el-salvador',
+    href: deductionCalculatorPublicPath('SLV'),
     title: 'El Salvador · Seguro Social · AFP · ISR',
     subtitle: 'Calculadora sueldo neto (USD)',
     featured: false,
   },
   {
-    href: '/calculadora-deducciones-guatemala',
+    href: deductionCalculatorPublicPath('GTM'),
     title: 'Guatemala · Seguro Social · ISR',
     subtitle: 'Calculadora sueldo neto (GTQ)',
     featured: false,
@@ -39,8 +41,8 @@ export const CALCULATOR_MENU_ITEMS = [
 ] as const
 
 export const CALCULATOR_MOBILE_LINKS = [
-  { href: '/calculadora-deducciones', label: 'Honduras · Seguro Social / RAP / ISR' },
-  { href: '/calculadora-deducciones-el-salvador', label: 'El Salvador · Seguro Social / AFP / ISR' },
-  { href: '/calculadora-deducciones-guatemala', label: 'Guatemala · Seguro Social / ISR' },
+  { href: deductionCalculatorPublicPath('HND'), label: 'Honduras · Seguro Social / RAP / ISR' },
+  { href: deductionCalculatorPublicPath('SLV'), label: 'El Salvador · Seguro Social / AFP / ISR' },
+  { href: deductionCalculatorPublicPath('GTM'), label: 'Guatemala · Seguro Social / ISR' },
   { href: '/calculadora-prestaciones', label: 'Prestaciones laborales (cesantía, preaviso, vacaciones…)' },
 ] as const

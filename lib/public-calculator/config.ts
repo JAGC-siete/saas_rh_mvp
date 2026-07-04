@@ -1,5 +1,6 @@
 import type { CountryCode } from '../country/supported'
 import type { FAQItem } from '../seo/schema'
+import { deductionCalculatorPublicPath } from '../marketing/calculator-public-paths'
 
 export type PublicCalculatorDeductionKey = 'ihss' | 'rap' | 'afp' | 'infop' | 'isr'
 
@@ -127,8 +128,8 @@ const BASE = 'https://humanosisu.net'
 export const PUBLIC_CALCULATOR_CONFIGS: Record<CountryCode, PublicCalculatorConfig> = {
   HND: {
     countryCode: 'HND',
-    path: '/calculadora-deducciones',
-    canonicalUrl: `${BASE}/calculadora-deducciones`,
+    path: deductionCalculatorPublicPath('HND'),
+    canonicalUrl: `${BASE}${deductionCalculatorPublicPath('HND')}`,
     contactStorageKey: 'public_deducciones_contact_hnd_v1',
     locale: 'es-HN',
     currency: 'HNL',
@@ -270,8 +271,8 @@ export const PUBLIC_CALCULATOR_CONFIGS: Record<CountryCode, PublicCalculatorConf
       }
     ],
     relatedCalculators: [
-      { href: '/calculadora-deducciones-el-salvador', label: 'Calculadora El Salvador' },
-      { href: '/calculadora-deducciones-guatemala', label: 'Calculadora Guatemala' },
+      { href: deductionCalculatorPublicPath('SLV'), label: 'Calculadora El Salvador' },
+      { href: deductionCalculatorPublicPath('GTM'), label: 'Calculadora Guatemala' },
       { href: '/suscripcion', label: 'Newsletter nómina y RRHH' },
     ],
     breadcrumbLabel: 'Deducciones Honduras',
@@ -311,8 +312,8 @@ export const PUBLIC_CALCULATOR_CONFIGS: Record<CountryCode, PublicCalculatorConf
   },
   SLV: {
     countryCode: 'SLV',
-    path: '/calculadora-deducciones-el-salvador',
-    canonicalUrl: `${BASE}/calculadora-deducciones-el-salvador`,
+    path: deductionCalculatorPublicPath('SLV'),
+    canonicalUrl: `${BASE}${deductionCalculatorPublicPath('SLV')}`,
     contactStorageKey: 'public_deducciones_contact_slv_v1',
     locale: 'es-SV',
     currency: 'USD',
@@ -430,8 +431,8 @@ export const PUBLIC_CALCULATOR_CONFIGS: Record<CountryCode, PublicCalculatorConf
       { question: '¿El sueldo neto incluye Seguro Social y AFP?', answer: 'Sí. Puedes activar o desactivar cada rubro. El neto es salario bruto menos Seguro Social, AFP e ISR seleccionados.' }
     ],
     relatedCalculators: [
-      { href: '/calculadora-deducciones', label: 'Calculadora Honduras' },
-      { href: '/calculadora-deducciones-guatemala', label: 'Calculadora Guatemala' },
+      { href: deductionCalculatorPublicPath('HND'), label: 'Calculadora Honduras' },
+      { href: deductionCalculatorPublicPath('GTM'), label: 'Calculadora Guatemala' },
       { href: '/suscripcion', label: 'Newsletter nómina y RRHH' },
     ],
     breadcrumbLabel: 'Deducciones El Salvador',
@@ -444,8 +445,8 @@ export const PUBLIC_CALCULATOR_CONFIGS: Record<CountryCode, PublicCalculatorConf
   },
   GTM: {
     countryCode: 'GTM',
-    path: '/calculadora-deducciones-guatemala',
-    canonicalUrl: `${BASE}/calculadora-deducciones-guatemala`,
+    path: deductionCalculatorPublicPath('GTM'),
+    canonicalUrl: `${BASE}${deductionCalculatorPublicPath('GTM')}`,
     contactStorageKey: 'public_deducciones_contact_gtm_v1',
     locale: 'es-GT',
     currency: 'GTQ',
@@ -560,8 +561,8 @@ export const PUBLIC_CALCULATOR_CONFIGS: Record<CountryCode, PublicCalculatorConf
       { question: '¿La calculadora incluye Seguro Social?', answer: 'Sí. El rubro de Seguro Social (IGSS) usa la tasa obrero configurada en los parámetros legales del SaaS para Guatemala.' }
     ],
     relatedCalculators: [
-      { href: '/calculadora-deducciones', label: 'Calculadora Honduras' },
-      { href: '/calculadora-deducciones-el-salvador', label: 'Calculadora El Salvador' },
+      { href: deductionCalculatorPublicPath('HND'), label: 'Calculadora Honduras' },
+      { href: deductionCalculatorPublicPath('SLV'), label: 'Calculadora El Salvador' },
       { href: '/suscripcion', label: 'Newsletter nómina y RRHH' },
     ],
     breadcrumbLabel: 'Deducciones Guatemala',

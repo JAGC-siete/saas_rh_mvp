@@ -7,6 +7,7 @@ import SchemaMarkup from '../components/SEO/SchemaMarkup'
 import RelatedGuides from '../components/SEO/RelatedGuides'
 import { generateWebPageSchema, generateFAQPageSchema } from '../lib/seo/schema'
 import { CheckCircleIcon, XMarkIcon } from '@heroicons/react/24/outline'
+import { deductionCalculatorPublicPath } from '../lib/marketing/calculator-public-paths'
 
 export default function DeduccionesHondurasPage() {
   const pageTitle = getPageTitle('deduccionesHonduras')
@@ -132,7 +133,7 @@ export default function DeduccionesHondurasPage() {
               Activar gratis hoy - Sin tarjeta de crédito
             </Link>
             <Link
-              href="/calculadora-deducciones"
+              href={deductionCalculatorPublicPath('HND')}
               className="px-5 sm:px-6 py-2.5 sm:py-3 bg-green-600 text-white rounded-xl font-semibold text-sm sm:text-base hover:bg-green-700 transition-colors shadow-sm"
             >
               Probar Calculadora Gratis
@@ -304,7 +305,7 @@ export default function DeduccionesHondurasPage() {
               Comenzar Prueba Gratis
             </Link>
             <Link
-              href="/calculadora-deducciones"
+              href={deductionCalculatorPublicPath('HND')}
               className="px-6 sm:px-8 py-3 sm:py-4 bg-green-600 text-white rounded-xl font-semibold text-base sm:text-lg hover:bg-green-700 transition-colors shadow-sm"
             >
               Probar Calculadora

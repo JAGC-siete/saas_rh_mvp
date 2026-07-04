@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
+import { deductionCalculatorPublicPath } from '../lib/marketing/calculator-public-paths'
 
 interface MainHeaderProps {
   /** Si es true, el header tendrá efecto de scroll (transparente -> sólido) */
@@ -158,7 +159,7 @@ export default function MainHeader({ enableScrollEffect = false, fixed = true }:
                       </Link>
                       <div className="h-px bg-white/10" />
                       <Link
-                        href="/calculadora-deducciones"
+                        href={deductionCalculatorPublicPath('HND')}
                         role="menuitem"
                         className="block px-4 py-3 text-sm text-brand-100 hover:bg-white/10 transition-colors"
                         onClick={() => setIsCalculatorMenuOpen(false)}
@@ -176,7 +177,7 @@ export default function MainHeader({ enableScrollEffect = false, fixed = true }:
                         </div>
                       </Link>
                       <Link
-                        href="/calculadora-deducciones-el-salvador"
+                        href={deductionCalculatorPublicPath('SLV')}
                         role="menuitem"
                         className="block px-4 py-3 text-sm text-brand-100 hover:bg-white/10 transition-colors"
                         onClick={() => setIsCalculatorMenuOpen(false)}
@@ -185,7 +186,7 @@ export default function MainHeader({ enableScrollEffect = false, fixed = true }:
                         <div className="text-xs text-brand-200/80 mt-0.5">Calculadora sueldo neto (USD)</div>
                       </Link>
                       <Link
-                        href="/calculadora-deducciones-guatemala"
+                        href={deductionCalculatorPublicPath('GTM')}
                         role="menuitem"
                         className="block px-4 py-3 text-sm text-brand-100 hover:bg-white/10 transition-colors"
                         onClick={() => setIsCalculatorMenuOpen(false)}
@@ -314,7 +315,7 @@ export default function MainHeader({ enableScrollEffect = false, fixed = true }:
               {isCalculatorMobileOpen && (
                 <div className="pl-3 pr-2 pb-2 space-y-1">
                   <Link
-                    href="/calculadora-deducciones"
+                    href={deductionCalculatorPublicPath('HND')}
                     className="block px-3 py-2 text-sm font-medium text-brand-200/90 hover:text-white hover:bg-brand-800/20 rounded-md transition-colors"
                     onClick={() => {
                       setIsCalculatorMobileOpen(false)
@@ -324,7 +325,7 @@ export default function MainHeader({ enableScrollEffect = false, fixed = true }:
                     Honduras · Seguro Social / RAP / ISR
                   </Link>
                   <Link
-                    href="/calculadora-deducciones-el-salvador"
+                    href={deductionCalculatorPublicPath('SLV')}
                     className="block px-3 py-2 text-sm font-medium text-brand-200/90 hover:text-white hover:bg-brand-800/20 rounded-md transition-colors"
                     onClick={() => {
                       setIsCalculatorMobileOpen(false)
@@ -334,7 +335,7 @@ export default function MainHeader({ enableScrollEffect = false, fixed = true }:
                     El Salvador · Seguro Social / AFP / ISR
                   </Link>
                   <Link
-                    href="/calculadora-deducciones-guatemala"
+                    href={deductionCalculatorPublicPath('GTM')}
                     className="block px-3 py-2 text-sm font-medium text-brand-200/90 hover:text-white hover:bg-brand-800/20 rounded-md transition-colors"
                     onClick={() => {
                       setIsCalculatorMobileOpen(false)

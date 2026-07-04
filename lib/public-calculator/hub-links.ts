@@ -1,5 +1,6 @@
 /** Enlaces del cluster de calculadoras — hub & spoke para SEO interno. */
 import { INFO_FUNNEL_PUBLIC_PATH } from '../marketing/info-funnel-path'
+import { deductionCalculatorPublicPath } from '../marketing/calculator-public-paths'
 
 export const CALCULATOR_HUB_LINKS = {
   hub: { href: '/calculadora', label: 'Todas las calculadoras laborales' },
@@ -16,19 +17,19 @@ export const CALCULATOR_HUB_LINKS = {
   landing: { href: '/#como-funciona', label: 'Automatizar nómina con Humano SISU' },
   deductions: [
     {
-      href: '/calculadora-deducciones',
+      href: deductionCalculatorPublicPath('HND'),
       country: 'Honduras',
       title: 'Seguro Social, RAP e ISR',
       subtitle: 'Deducciones en lempiras (HNL)',
     },
     {
-      href: '/calculadora-deducciones-el-salvador',
+      href: deductionCalculatorPublicPath('SLV'),
       country: 'El Salvador',
       title: 'Seguro Social, AFP e ISR',
       subtitle: 'Sueldo neto en dólares (USD)'
     },
     {
-      href: '/calculadora-deducciones-guatemala',
+      href: deductionCalculatorPublicPath('GTM'),
       country: 'Guatemala',
       title: 'Seguro Social e ISR',
       subtitle: 'Sueldo neto en quetzales (GTQ)'

@@ -1,6 +1,7 @@
 import { GetServerSideProps } from 'next'
 import { recursosAdapter } from '../lib/recursos'
 import { INFO_FUNNEL_PUBLIC_PATH } from '../lib/marketing/info-funnel-path'
+import { deductionCalculatorPublicPath } from '../lib/marketing/calculator-public-paths'
 
 interface SitemapUrl {
   loc: string
@@ -75,7 +76,7 @@ const publicPages: SitemapUrl[] = [
     priority: 0.7
   },
   {
-    loc: '/calculadora-deducciones',
+    loc: deductionCalculatorPublicPath('HND'),
     changefreq: 'monthly',
     priority: 0.7
   },
@@ -86,12 +87,12 @@ const publicPages: SitemapUrl[] = [
     lastmod: new Date().toISOString().split('T')[0]
   },
   {
-    loc: '/calculadora-deducciones-el-salvador',
+    loc: deductionCalculatorPublicPath('SLV'),
     changefreq: 'monthly',
     priority: 0.75
   },
   {
-    loc: '/calculadora-deducciones-guatemala',
+    loc: deductionCalculatorPublicPath('GTM'),
     changefreq: 'monthly',
     priority: 0.75
   },

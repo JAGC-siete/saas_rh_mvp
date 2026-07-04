@@ -85,9 +85,12 @@ SaaS multi-tenant para gestión de RRHH orientado al mercado hondureño. Cubre a
 ### 4.1 Asistencia
 
 - **Marcas:** `attendance_events` (eventos crudos) → `attendance_records` (registros procesados)
+- **Arquitectura 3 capas:** (1) Cálculo agnóstico — tope 8h regular; (2) Cumplimiento — puntualidad cuando hay horario efectivo; (3) Nómina — días laborados o horas según `pay_type`. Ver `docs/ARQUITECTURA_ASISTENCIA_3_CAPAS.md`.
+- **Horarios flexibles:** asignaciones temporales via `employee_schedule_assignments` (rotación por fecha, `repeat_weekly`, `repeat_weekdays`); resolución en `resolveEffectiveWorkScheduleId` con fallback a `employees.work_schedule_id`
 - **Lógica Best Fit:** umbral 1.5 h (90 min) para coincidir con horario; webhook Hikvision usa ventana ±1 h para entrada/salida
 - **Prevención duplicados:** ventana de 15 minutos
 - **Horas:** `attendance_hours_calculation` (horas normales, extras diurnas/nocturnas/feriado)
+- **Cierre diario:** `generateDailyCloseReport` procesa `raw_punch` biométricos; soporta empleados sin horario preasignado (Capa Base 8h)
 - **Fuentes:** webhook Hikvision (`/api/webhooks/attendance`), registro manual
 
 ### 4.2 Nómina
@@ -153,7 +156,7 @@ SaaS multi-tenant para gestión de RRHH orientado al mercado hondureño. Cubre a
 | **Core** | companies, user_profiles, organization_members, departments |
 | **Empleados** | employees, employee_aliases, employee_invitations, employee_files |
 | **Asistencia** | attendance_events, attendance_records, attendance_stage |
-| **Horarios** | work_schedules |
+| **Horarios** | work_schedules, employee_schedule_assignments |
 | **Nómina** | payroll_runs, payroll_run_lines, payroll_records, payroll_adjustments, payroll_uploads |
 | **Legal** | labor_laws, tax_brackets |
 | **Permisos** | leave_requests, leave_types |

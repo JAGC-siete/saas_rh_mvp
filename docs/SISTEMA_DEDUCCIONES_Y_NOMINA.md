@@ -23,6 +23,18 @@ Para evitar fallos en la emisión del salario, el sistema utiliza dos modos de r
 - **`exact`**: Exige una fila activa para el año exacto en `payroll_statutory_params`. (Uso en tests y auditoría).
 - **`fallback`**: Si no hay configuración para el año actual, busca el año activo más reciente. (Uso en producción para evitar interrupción de nómina).
 
+### Trazabilidad Contable
+
+Todo cálculo generado por el motor de deducciones es trazable hasta el generador de asientos contables, garantizando que cada retención legal tenga un correlativo exacto en la contabilidad de la empresa.
+
+**Pipeline:** `statutory-deductions-compute.ts` → `payroll_run_lines.eff_*` → `journal-generator.ts`
+
+- **Origen de retenciones:** montos IHSS/RAP/ISR (u homólogos por país) en `payroll_run_lines`, calculados por `lib/payroll/statutory-deductions-compute.ts`.
+- **Puente de trazabilidad:** `lib/accounting/payroll-statutory-trace.ts` define `PAYROLL_STATUTORY_PIPELINE` y construye el bloque `statutory` con parámetros fiscales, totales de retención y año tributario.
+- **Persistencia:** al autorizar nómina, `journal-generator.ts` escribe asientos en `journal_entries` con `source_reference.statutory` (trace, retention_totals, pipeline).
+
+Detalle del módulo contable: ver `docs/ACCOUNTING_MODULE_HONDURAS.md` (sección Trazabilidad).
+
 ---
 
 ## 3. Deducciones Personalizadas (Planes de Pago)

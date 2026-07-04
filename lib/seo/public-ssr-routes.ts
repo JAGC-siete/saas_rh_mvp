@@ -4,6 +4,10 @@
  */
 
 import { INFO_FUNNEL_PUBLIC_PATH } from '../marketing/info-funnel-path'
+import {
+  ALL_DEDUCTION_CALCULATOR_INTERNAL_PATHS,
+  ALL_DEDUCTION_CALCULATOR_PUBLIC_PATHS,
+} from '../marketing/calculator-public-paths'
 
 const PUBLIC_SSR_EXACT = new Set([
   '/',
@@ -21,9 +25,8 @@ const PUBLIC_SSR_EXACT = new Set([
   '/terminos-de-servicio',
   '/suscripcion',
   '/calculadora',
-  '/calculadora-deducciones',
-  '/calculadora-deducciones-el-salvador',
-  '/calculadora-deducciones-guatemala',
+  ...ALL_DEDUCTION_CALCULATOR_PUBLIC_PATHS,
+  ...ALL_DEDUCTION_CALCULATOR_INTERNAL_PATHS,
   '/calculadora-prestaciones',
   '/calculadora-aguinaldo-honduras',
   '/calculadora-catorceavo-honduras',

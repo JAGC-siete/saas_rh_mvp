@@ -1,4 +1,5 @@
 import type { FAQItem } from '../seo/schema'
+import { deductionCalculatorPublicPath } from '../marketing/calculator-public-paths'
 
 export type BenefitTipo = '13AVO' | '14AVO'
 
@@ -141,7 +142,7 @@ export const PUBLIC_BENEFIT_CONFIGS: Record<BenefitTipo, PublicBenefitCalculator
     relatedCalculators: [
       { href: '/calculadora-catorceavo-honduras', label: 'Calculadora Catorceavo' },
       { href: '/calculadora-prestaciones', label: 'Calculadora de finiquito' },
-      { href: '/calculadora-deducciones', label: 'Calculadora de deducciones' },
+      { href: deductionCalculatorPublicPath('HND'), label: 'Calculadora de deducciones' },
       { href: '/suscripcion', label: 'Newsletter nómina y RRHH' },
       {
         href: '/recursos/cumplimiento-legal-errores-13vo-14vo-salario',
@@ -217,7 +218,7 @@ export const PUBLIC_BENEFIT_CONFIGS: Record<BenefitTipo, PublicBenefitCalculator
     relatedCalculators: [
       { href: '/calculadora-aguinaldo-honduras', label: 'Calculadora Aguinaldo' },
       { href: '/calculadora-prestaciones', label: 'Calculadora de finiquito' },
-      { href: '/calculadora-deducciones', label: 'Calculadora de deducciones' },
+      { href: deductionCalculatorPublicPath('HND'), label: 'Calculadora de deducciones' },
       { href: '/suscripcion', label: 'Newsletter nómina y RRHH' },
       {
         href: '/recursos/cumplimiento-legal-errores-13vo-14vo-salario',
