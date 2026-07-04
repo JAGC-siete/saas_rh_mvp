@@ -1,7 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { requireSuperAdminWithAudit } from '../../../../../lib/auth/api-guards'
-import { createSuccessResponse, createErrorResponse, createValidationErrorResponse } from '../../../../../lib/security/api-responses'
-import { logger } from '../../../../../lib/logger'
+import { requireSuperAdminWithAudit } from '../../../../lib/auth/api-guards'
+import { createSuccessResponse, createErrorResponse, createValidationErrorResponse } from '../../../../lib/security/api-responses'
+import { logger } from '../../../../lib/logger'
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
