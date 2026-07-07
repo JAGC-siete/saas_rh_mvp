@@ -92,6 +92,8 @@ module.exports = {
         'fade-in': 'fade-in 0.35s ease-out forwards',
         'elastic-up': 'elastic-up 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) forwards',
         'critical-pulse': 'critical-pulse 2s ease-in-out infinite',
+        'chest-float': 'chest-float 4.5s ease-in-out infinite',
+        'chest-glow': 'chest-glow 4.2s ease-in-out infinite',
       },
       keyframes: {
         'mesh-flow': {
@@ -114,6 +116,14 @@ module.exports = {
         'critical-pulse': {
           '0%, 100%': { opacity: '1' },
           '50%': { opacity: '0.55' },
+        },
+        'chest-float': {
+          '0%, 100%': { transform: 'translateY(0) rotate(0deg)' },
+          '50%': { transform: 'translateY(-14px) rotate(0.8deg)' },
+        },
+        'chest-glow': {
+          '0%, 100%': { opacity: '0.2', transform: 'translateX(-50%) scaleX(0.85)' },
+          '50%': { opacity: '0.55', transform: 'translateX(-50%) scaleX(1.15)' },
         },
       },
       dropShadow: {

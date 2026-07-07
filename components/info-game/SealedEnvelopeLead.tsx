@@ -5,6 +5,7 @@ import { Button } from '../ui/button'
 import BorderBeam from '../landing/BorderBeam'
 import { CalcCheckIcon } from '../public-calculator/CalculatorUiIcons'
 import InfoProgressRail from './InfoProgressRail'
+import FloatingChest from './FloatingChest'
 import {
   buildMetaApiTrackingFields,
   createMetaEventId,
@@ -162,14 +163,7 @@ export default function SealedEnvelopeLead() {
             </div>
             <BorderBeam className="mb-6">
               <div className="glass-modern rounded-2xl border border-amber-500/25 p-8 sm:p-10 text-center bg-gradient-to-b from-amber-500/5 to-transparent">
-                <motion.div
-                  className="text-5xl sm:text-6xl mb-4"
-                  aria-hidden
-                  animate={{ y: [0, -6, 0], scale: [1, 1.03, 1] }}
-                  transition={{ repeat: Infinity, duration: 3.5, ease: 'easeInOut' }}
-                >
-                  ✉️
-                </motion.div>
+                <FloatingChest className="mb-4" size="lg" />
                 <p className="text-xs font-semibold tracking-widest text-amber-300/90 mb-2">
                   {copy.intrigue.envelopeLabel}
                 </p>
