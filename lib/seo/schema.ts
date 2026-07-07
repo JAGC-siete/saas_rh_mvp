@@ -2,6 +2,8 @@
  * Schema.org JSON-LD generators for SEO
  */
 
+import { SOCIAL_SAME_AS } from '../marketing/social-links'
+
 const BASE_URL = 'https://humanosisu.net'
 
 export interface OrganizationSchema {
@@ -40,9 +42,7 @@ export function generateOrganizationSchema(): OrganizationSchema {
       areaServed: ['SV', 'GT', 'HN'],
       availableLanguage: 'Spanish'
     },
-    sameAs: [
-      // Add social media profiles if available
-    ]
+    sameAs: SOCIAL_SAME_AS,
   }
 }
 

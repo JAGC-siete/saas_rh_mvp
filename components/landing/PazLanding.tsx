@@ -4,6 +4,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import SchemaMarkup from '../SEO/SchemaMarkup'
 import { generateFAQPageSchema, generateWebPageSchema } from '../../lib/seo/schema'
+import { PAZ_SOCIAL_LINKS, SOCIAL_LINKS } from '../../lib/marketing/social-links'
 
 const PAGE_TITLE = 'La forma pacífica de cerrar planilla | Humano SISU'
 const PAGE_DESCRIPTION =
@@ -81,12 +82,6 @@ const FAQS = [
   },
 ]
 
-const SOCIAL_LINKS = [
-  { label: 'Instagram', href: 'https://instagram.com/humanosisu' },
-  { label: 'LinkedIn', href: 'https://linkedin.com/company/humanosisu' },
-  { label: 'YouTube', href: 'https://youtube.com/@humanosisu' },
-]
-
 function scrollToVideo() {
   document.getElementById('paz-video')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
 }
@@ -151,7 +146,7 @@ export default function PazLanding() {
             <span className="text-sm opacity-75">(45 seg de serenidad)</span>
           </button>
           <div className="flex flex-wrap items-center justify-center gap-2">
-            {SOCIAL_LINKS.map((link) => (
+            {PAZ_SOCIAL_LINKS.map((link) => (
               <a
                 key={link.label}
                 href={link.href}
@@ -184,7 +179,7 @@ export default function PazLanding() {
               className="paz-play-btn"
               aria-label="Reproducir meditación"
               onClick={() =>
-                window.open('https://youtube.com/@humanosisu', '_blank', 'noopener,noreferrer')
+                window.open(SOCIAL_LINKS.youtube, '_blank', 'noopener,noreferrer')
               }
             >
               <svg width="20" height="24" viewBox="0 0 20 24" fill="currentColor" aria-hidden="true">
