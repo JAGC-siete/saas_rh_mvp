@@ -66,7 +66,7 @@ export default function RoleSelector({
                 {opt.icon}
               </span>
               <div className="font-semibold text-lg">{opt.title}</div>
-              <p className="text-sm mt-2 opacity-90 leading-relaxed">{opt.body}</p>
+              {opt.body ? <p className="text-sm mt-2 opacity-90 leading-relaxed">{opt.body}</p> : null}
             </button>
           )
           return active ? (

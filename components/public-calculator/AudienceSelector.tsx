@@ -40,7 +40,7 @@ export default function AudienceSelector({ config, audience, onSelect }: Props) 
               aria-pressed={active}
             >
               <div className="font-semibold text-lg">{opt.title}</div>
-              <p className="text-sm mt-2 opacity-90">{opt.body}</p>
+              {opt.body ? <p className="text-sm mt-2 opacity-90">{opt.body}</p> : null}
             </button>
           )
         })}

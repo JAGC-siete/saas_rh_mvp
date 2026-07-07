@@ -803,7 +803,9 @@ export default function PublicDeductionCalculator({ config }: { config: PublicCa
                       ) : (
                         <div className="glass-modern rounded-xl p-6 border border-cyan-500/30 text-center">
                           <h3 className="text-xl font-bold text-white mb-2">{config.conversion.inlineTitle}</h3>
-                          <p className="text-brand-200/90 mb-4">{b2b.audience.bossBody}</p>
+                          {b2b.audience.bossBody ? (
+                            <p className="text-brand-200/90 mb-4">{b2b.audience.bossBody}</p>
+                          ) : null}
                           <ConversionButtons campaign="post-calc" />
                         </div>
                       )}
