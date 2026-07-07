@@ -1329,6 +1329,58 @@ export type Database = {
           },
         ]
       }
+      employee_habits: {
+        Row: {
+          active: boolean
+          company_id: string
+          created_at: string
+          employee_id: string
+          habit_id: number
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          company_id: string
+          created_at?: string
+          employee_id: string
+          habit_id: number
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          company_id?: string
+          created_at?: string
+          employee_id?: string
+          habit_id?: number
+          id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_habits_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_habits_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_habits_habit_id_fkey"
+            columns: ["habit_id"]
+            isOneToOne: false
+            referencedRelation: "habit_definitions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employee_invitations: {
         Row: {
           accepted_at: string | null
@@ -1572,6 +1624,91 @@ export type Database = {
             columns: ["work_schedule_id"]
             isOneToOne: false
             referencedRelation: "work_schedules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      habit_definitions: {
+        Row: {
+          area: string
+          created_at: string
+          description: string | null
+          icon: string
+          id: number
+          is_active: boolean
+          name: string
+          points_per_completion: number
+          sort_order: number
+        }
+        Insert: {
+          area: string
+          created_at?: string
+          description?: string | null
+          icon?: string
+          id?: number
+          is_active?: boolean
+          name: string
+          points_per_completion?: number
+          sort_order?: number
+        }
+        Update: {
+          area?: string
+          created_at?: string
+          description?: string | null
+          icon?: string
+          id?: number
+          is_active?: boolean
+          name?: string
+          points_per_completion?: number
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      habit_logs: {
+        Row: {
+          company_id: string
+          created_at: string
+          employee_id: string
+          habit_id: number
+          id: string
+          log_date: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          employee_id: string
+          habit_id: number
+          id?: string
+          log_date?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          employee_id?: string
+          habit_id?: number
+          id?: string
+          log_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "habit_logs_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "habit_logs_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "habit_logs_habit_id_fkey"
+            columns: ["habit_id"]
+            isOneToOne: false
+            referencedRelation: "habit_definitions"
             referencedColumns: ["id"]
           },
         ]

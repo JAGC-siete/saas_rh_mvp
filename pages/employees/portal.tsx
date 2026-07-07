@@ -24,8 +24,10 @@ import {
   ArrowRightOnRectangleIcon,
   CalendarDaysIcon,
   ChartBarIcon,
-  DocumentTextIcon
+  DocumentTextIcon,
+  SparklesIcon
 } from '@heroicons/react/24/outline'
+import HabitTracker from '../../components/employee-portal/HabitTracker'
 import { clientLogger } from '../../lib/logger-client'
 import EmployeePermissionForm from '../../components/employee-portal/EmployeePermissionForm'
 import EmployeePermissionHistory from '../../components/employee-portal/EmployeePermissionHistory'
@@ -608,7 +610,7 @@ export default function EmployeePortal() {
   const [vacationSummary, setVacationSummary] = useState<VacationSummary | null>(null)
   const [performanceEvaluations, setPerformanceEvaluations] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<'profile' | 'attendance' | 'permissions' | 'payroll' | 'performance'>('profile')
+  const [activeTab, setActiveTab] = useState<'profile' | 'attendance' | 'permissions' | 'payroll' | 'performance' | 'habits'>('profile')
   const [showPermissionForm, setShowPermissionForm] = useState(false)
   const [isSubmittingPermission, setIsSubmittingPermission] = useState(false)
   const [fabMenuOpen, setFabMenuOpen] = useState(false)
@@ -1244,7 +1246,8 @@ export default function EmployeePortal() {
             { id: 'attendance', label: 'Asistencia', icon: ClockIcon },
             { id: 'permissions', label: 'Permisos', icon: DocumentTextIcon },
             { id: 'payroll', label: 'Recibos de pago', icon: CurrencyDollarIcon },
-            { id: 'performance', label: 'Desempeño', icon: ChartBarIcon }
+            { id: 'performance', label: 'Desempeño', icon: ChartBarIcon },
+            { id: 'habits', label: 'Hábitos', icon: SparklesIcon }
           ].map((tab) => (
             <button
               key={tab.id}
@@ -1538,6 +1541,21 @@ export default function EmployeePortal() {
                     ))}
                   </div>
                 )}
+              </CardContent>
+            </Card>
+          )}
+
+          {activeTab === 'habits' && (
+            <Card variant="liquid">
+              <CardHeader>
+                <CardTitle className="text-white">Hábitos</CardTitle>
+                <CardDescription className="text-gray-300">
+                  Construye hábitos en inteligencia emocional, finanzas, aprendizaje y nutrición.
+                  Marca tu progreso diario y gana puntos por tu constancia.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <HabitTracker />
               </CardContent>
             </Card>
           )}
