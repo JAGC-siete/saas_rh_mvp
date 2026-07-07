@@ -37,7 +37,7 @@ describe('marketing welcome greetings by source', () => {
     assert.ok(!ventas.includes(WELCOME_BODY_AFTER_GREETING))
 
     const activar = buildWelcomeText('activar')
-    assert.ok(activar.includes('Encendiste el motor'))
+    assert.ok(activar.includes('Tocaste las nubes'))
     assert.ok(activar.includes('— Jorge'))
     assert.ok(!activar.includes(WELCOME_BODY_AFTER_GREETING))
 

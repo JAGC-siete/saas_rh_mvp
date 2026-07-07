@@ -4,7 +4,7 @@ import { buildMissionTextFooter } from './mission-config'
 export const ACTIVAR_ONBOARDING_LEDGER_LABEL = 'Activar Trial'
 
 const ACTIVAR_FIELD_NOTE_SUBJECTS: Record<number, string> = {
-  0: 'Nota #0: tu entorno ya corre — el primer paso tarda 4 minutos',
+  0: 'Nota #0: ya tocás las nubes — el primer paso tarda 4 minutos',
   1: 'Nota #1: la diferencia entre digitalizar y dejar de reprocesar',
   2: 'Nota #2: "esto va a tomar meses" (spoiler: ya encendiste)',
   3: 'Nota #3: el error que no sale hasta que alguien pregunta',
@@ -27,9 +27,9 @@ export function buildActivarWelcomeText(): string {
   return [
     'Hola,',
     '',
-    'Encendiste el motor — eso ya te separa de quien sigue cruzando Excel a mano.',
+    'Tocaste las nubes — eso ya te separa de quien sigue cruzando Excel a mano.',
     '',
-    'Hoy solo una cosa: entrá con las credenciales que te mandé y mirá una nómina de prueba calcularse sola. Sin configurar nada raro.',
+    'Hoy solo una cosa: entrá con las credenciales que te mandé y mirá una nómina de prueba calcularse sola. Sin configurar nada raro. Alcanzá la paz en 4 minutos.',
     '',
     'Si no ves el correo, buscá jorgearturo@humanosisu.net (revisá spam).',
     '',

@@ -12,6 +12,7 @@ import '../styles/landing.css'
 import '../styles/landing-liquid.css'
 import '../styles/paz-landing.css'
 import '../styles/viernes-landing.css'
+import '../styles/activar-landing.css'
 
 // Load environment variables at the top level
 if (typeof window === 'undefined') {

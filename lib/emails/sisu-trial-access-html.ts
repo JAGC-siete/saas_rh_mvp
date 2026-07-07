@@ -9,7 +9,7 @@ import { MARKETING_UNSUBSCRIBE_FOOTER_TEXT } from '../marketing/unsubscribe'
 import { escapeHtml, wrapLiquidEmail } from './liquid-layout'
 
 export const SISU_TRIAL_WARNING_TEXT =
-  '⚠️ Acceso exclusivo y limitado: prueba gratuita por 7 días. SISU se integra con un biométrico en tiempo real y libera a tu equipo para enfocarse en lo que mueve tu empresa.'
+  '☁️ Acceso exclusivo y limitado: prueba gratuita por 7 días. SISU integra biométrico en tiempo real para que tu equipo deje el Excel atrás y alcance la paz operativa.'
 
 const WHATSAPP_CONTRATAR_URL = `https://wa.me/50432226773?text=${encodeURIComponent('deseo contratar')}`
 
@@ -88,9 +88,9 @@ export type BuildSisuTrialAccessEmailHtmlInput = {
 function heroTitle(input: BuildSisuTrialAccessEmailHtmlInput): string {
   const name = escapeHtml(input.nombre || 'Equipo')
   if (input.variant === 'lead_invite') {
-    return `${name}, te invitamos a SISU`
+    return `${name}, te invitamos a tocar el cielo`
   }
-  return `${name}, te damos la bienvenida a SISU`
+  return `${name}, ya podés tocar el cielo`
 }
 
 function credentialsBlock(input: BuildSisuTrialAccessEmailHtmlInput): string {
@@ -119,7 +119,7 @@ function ctaBlock(input: BuildSisuTrialAccessEmailHtmlInput): string {
       `${process.env.NEXT_PUBLIC_SITE_URL || 'https://humanosisu.net'}/activar`
     return `
       <div class="cta">
-        <a href="${escapeHtml(activarUrl)}">Activar mi acceso gratuito</a>
+        <a href="${escapeHtml(activarUrl)}">Tocar las nubes</a>
         <p>Si el botón no funciona, copia este enlace en tu navegador: ${escapeHtml(activarUrl)}</p>
       </div>`
   }
@@ -127,16 +127,16 @@ function ctaBlock(input: BuildSisuTrialAccessEmailHtmlInput): string {
   const loginUrl = input.loginUrl || `${process.env.NEXT_PUBLIC_SITE_URL || 'https://humanosisu.net'}/app/login`
   return `
     <div class="cta">
-      <a href="${escapeHtml(loginUrl)}">Entrar al panel</a>
+      <a href="${escapeHtml(loginUrl)}">Tocar el cielo</a>
       <p>Si el botón no funciona, copia este enlace en tu navegador: ${escapeHtml(loginUrl)}</p>
     </div>`
 }
 
 function featuresSectionTitle(input: BuildSisuTrialAccessEmailHtmlInput): string {
   if (input.variant === 'lead_invite') {
-    return 'Descubrí SISU: Tu prueba gratuita te espera'
+    return 'Descubrí SISU: tu cielo de prueba te espera'
   }
-  return 'Explora SISU: Tu entorno exclusivo ya está listo'
+  return 'Tu cielo privado ya está listo'
 }
 
 function footerNote(input: BuildSisuTrialAccessEmailHtmlInput): string {
@@ -148,7 +148,7 @@ function footerNote(input: BuildSisuTrialAccessEmailHtmlInput): string {
 
 export function buildSisuTrialAccessEmailHtml(input: BuildSisuTrialAccessEmailHtmlInput): string {
   const heroSubtitle =
-    'El sistema regional de recursos humanos para El Salvador, Guatemala y Honduras, diseñado para transformar la forma en que gestionás tu equipo. Acceso exclusivo ilimitado gratuito por 7 días.'
+    'La ayuda está a tan solo un paso. El descanso es real, y también la plataforma. Accedé a tu entorno de prueba en El Salvador, Guatemala y Honduras — 7 días gratis para alcanzar la paz contable.'
 
   const bodyHtml = `
     ${credentialsBlock(input)}
@@ -183,7 +183,7 @@ export function buildSisuTrialAccessEmailHtml(input: BuildSisuTrialAccessEmailHt
   return wrapLiquidEmail({
     title: heroTitle(input),
     subtitle: heroSubtitle,
-    badge: 'Acceso Exclusivo',
+    badge: 'Activa SISU',
     bodyHtml,
     footerNote: footerNote(input),
     extraCss: TRIAL_EXTRA_CSS,
@@ -195,7 +195,7 @@ export function getSisuTrialAccessEmailSubject(input: {
   empresa?: string
 }): string {
   if (input.variant === 'lead_invite') {
-    return 'Te invitamos a SISU — prueba gratuita por 7 días'
+    return 'Te invitamos a tocar el cielo — prueba gratuita por 7 días'
   }
-  return `🎉 ¡Bienvenido a SISU! - ${input.empresa || 'Tu empresa'}`
+  return `☁️ Toca el cielo — credenciales para ${input.empresa || 'tu empresa'}`
 }

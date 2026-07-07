@@ -10,7 +10,7 @@ import {
 describe('activar field notes email', () => {
   it('welcome text is onboarding-focused', () => {
     const text = buildActivarWelcomeText()
-    assert.ok(text.includes('Encendiste el motor'))
+    assert.ok(text.includes('Tocaste las nubes'))
     assert.ok(text.includes('— Jorge'))
     assert.ok(!text.includes('Equipo Humano SISU'))
   })

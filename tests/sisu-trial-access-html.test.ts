@@ -16,14 +16,14 @@ describe('sisu-trial-access-html', () => {
       loginUrl: 'https://humanosisu.net/app/login',
     })
 
-    assert.ok(html.includes('Delia, te damos la bienvenida a SISU'))
+    assert.ok(html.includes('Delia, ya podés tocar el cielo'))
     assert.ok(html.includes('Credenciales seguras'))
     assert.ok(html.includes('gerencia@example.com'))
     assert.ok(html.includes('SISU117846'))
-    assert.ok(html.includes('Entrar al panel'))
+    assert.ok(html.includes('Tocar el cielo'))
     assert.ok(html.includes(SISU_TRIAL_WARNING_TEXT))
     assert.ok(html.includes('biométrico'))
-    assert.ok(!html.includes('te invitamos a SISU'))
+    assert.ok(!html.includes('te invitamos a tocar el cielo'))
   })
 
   it('lead_invite uses invitamos title, activar CTA, no credentials', () => {
@@ -34,8 +34,8 @@ describe('sisu-trial-access-html', () => {
       unsubscribeUrl: 'https://humanosisu.net/api/mail-list/unsubscribe?token=abc',
     })
 
-    assert.ok(html.includes('Delia, te invitamos a SISU'))
-    assert.ok(html.includes('Activar mi acceso gratuito'))
+    assert.ok(html.includes('Delia, te invitamos a tocar el cielo'))
+    assert.ok(html.includes('Tocar las nubes'))
     assert.ok(html.includes('https://humanosisu.net/activar'))
     assert.ok(html.includes('Descubrí SISU'))
     assert.ok(html.includes(SISU_TRIAL_WARNING_TEXT))
@@ -52,7 +52,7 @@ describe('sisu-trial-access-html', () => {
 
   it('subjects differ by variant', () => {
     assert.ok(
-      getSisuTrialAccessEmailSubject({ variant: 'lead_invite' }).includes('invitamos')
+      getSisuTrialAccessEmailSubject({ variant: 'lead_invite' }).includes('tocar el cielo')
     )
     assert.ok(
       getSisuTrialAccessEmailSubject({ variant: 'trial_welcome', empresa: 'Acme' }).includes('Acme')

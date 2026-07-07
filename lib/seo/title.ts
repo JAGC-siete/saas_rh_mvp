@@ -47,7 +47,7 @@ export function generateTitle(options: TitleOptions = {}): string {
  */
 export const pageTitles = {
   home: 'Humano SISU | Software de Recursos Humanos y Control de Asistencia | HN, SV, GT',
-  activate: 'Activar Cuenta | Nómina y asistencia regional | Humano SISU',
+  activate: 'Activa SISU | Toca el cielo | Humano SISU',
   affiliates: 'Programa de Afiliados | Humano SISU',
   calculator: 'Calculadora ISR Honduras y Calculadora RAP | IHSS · Humano SISU',
   calculatorSlv: 'Calculadora ISR El Salvador | ISSS, AFP y sueldo neto | Humano SISU',

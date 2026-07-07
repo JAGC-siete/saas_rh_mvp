@@ -3,10 +3,8 @@ import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
   ArrowLeftIcon,
-  BoltIcon,
   CheckCircleIcon,
-  CpuChipIcon,
-  RocketLaunchIcon,
+  CloudIcon,
 } from '@heroicons/react/24/outline'
 import { Card, CardContent } from '../ui/card'
 import BorderBeam from '../landing/BorderBeam'
@@ -57,7 +55,7 @@ type Props = {
   initialCountryCode?: CountryCode
 }
 
-const ACTIVAR_WIZARD_STEPS: [string, string, string] = ['Calibrar', 'Acceso', 'Encender']
+const ACTIVAR_WIZARD_STEPS: [string, string, string] = [...MOTOR_ENCENDIDO_COPY.wizardSteps]
 
 function wizardStepIndex(step: WizardStep): number {
   if (step === 'intrigue') return 0
@@ -245,7 +243,7 @@ export default function MotorEncendidoLead({ utmContext = {}, initialCountryCode
           <CardContent className="p-6 sm:p-8 lg:p-10 relative z-10">
             <WizardStepProgress
               step={wizardStep}
-              title="Encender el motor"
+              title={copy.progressTitle}
               stepLabels={ACTIVAR_WIZARD_STEPS}
               gradientClass="from-cyan-500 to-brand-500"
             />
@@ -259,16 +257,20 @@ export default function MotorEncendidoLead({ utmContext = {}, initialCountryCode
                   exit={{ opacity: 0, y: -8 }}
                   className="text-center"
                 >
-                  <span className="inline-block px-3 py-1 mb-4 text-xs font-medium rounded-full bg-brand-500/20 text-brand-200 border border-brand-500/30">
+                  <span className="inline-block px-3 py-1 mb-6 text-xs font-medium rounded-full bg-brand-500/20 text-brand-200 border border-brand-500/30">
                     {copy.badge}
                   </span>
-                  <CpuChipIcon className="w-14 h-14 text-cyan-400 mx-auto mb-4" />
-                  <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-4 leading-tight">
+                  <p className="activar-serif activar-hero-eyebrow text-white mb-3">
+                    {copy.intrigue.eyebrow}
+                  </p>
+                  <h1 className="activar-serif activar-hero-title italic text-white mb-6">
                     {headline}
                   </h1>
-                  <p className="text-brand-300 mb-8 max-w-lg mx-auto">{subheadline}</p>
+                  <p className="activar-hero-body text-brand-200/90 mb-10 max-w-md mx-auto font-sans">
+                    {subheadline}
+                  </p>
 
-                  <div className="flex justify-center gap-3 mb-8">
+                  <div className="flex justify-center gap-3 mb-10">
                     {copy.intrigue.motorLabels.map((label, i) => (
                       <div key={label} className="flex flex-col items-center gap-2">
                         <div
@@ -284,9 +286,9 @@ export default function MotorEncendidoLead({ utmContext = {}, initialCountryCode
                   <button
                     type="button"
                     onClick={goConfig}
-                    className="w-full sm:w-auto btn-shiny bg-brand-500 hover:bg-brand-600 text-white px-8 py-4 rounded-xl font-semibold inline-flex items-center justify-center transition-all"
+                    className="w-full sm:w-auto activar-cta-cloud px-8 py-4 rounded-xl font-semibold inline-flex items-center justify-center transition-all"
                   >
-                    <RocketLaunchIcon className="h-5 w-5 mr-2" />
+                    <CloudIcon className="h-5 w-5 mr-2" />
                     {copy.intrigue.cta}
                   </button>
                 </motion.div>
@@ -385,7 +387,7 @@ export default function MotorEncendidoLead({ utmContext = {}, initialCountryCode
                     </div>
 
                     <div>
-                      <label className="block text-white font-medium mb-2">Email donde quieres la llave *</label>
+                      <label className="block text-white font-medium mb-2">{copy.step2.emailLabel}</label>
                       <input
                         type="email"
                         value={formData.contactoEmail}
@@ -495,7 +497,7 @@ export default function MotorEncendidoLead({ utmContext = {}, initialCountryCode
                         </>
                       ) : (
                         <>
-                          <BoltIcon className="h-5 w-5 mr-2" />
+                          <CloudIcon className="h-5 w-5 mr-2" />
                           {copy.step3.submit}
                         </>
                       )}
