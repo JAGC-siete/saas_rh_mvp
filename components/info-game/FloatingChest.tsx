@@ -1,3 +1,9 @@
+import dynamic from 'next/dynamic'
+import { useEffect, useState } from 'react'
+import FloatingChestSvg from './FloatingChestSvg'
+
+const FloatingChestCanvas = dynamic(() => import('./FloatingChestCanvas'), { ssr: false })
+
 type FloatingChestProps = {
   className?: string
   size?: 'sm' | 'md' | 'lg'
@@ -9,79 +15,54 @@ const SIZE_CLASS = {
   lg: 'h-52 w-64',
 } as const
 
-/** Bronze treasure chest with a gentle hover — inspired by railway.com/peace, no background. */
+/** Bronze treasure chest — canvas sprite with SVG fallback for SSR and reduced motion. */
 export default function FloatingChest({ className = '', size = 'md' }: FloatingChestProps) {
+  const [mounted, setMounted] = useState(false)
+  const [reducedMotion, setReducedMotion] = useState(false)
+  const [canvasReady, setCanvasReady] = useState(false)
+  const [canvasFailed, setCanvasFailed] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)')
+    const update = () => setReducedMotion(mq.matches)
+    update()
+    mq.addEventListener('change', update)
+    return () => mq.removeEventListener('change', update)
+  }, [])
+
+  const useSvg = !mounted || reducedMotion || canvasFailed
+
   return (
-    <div className={`relative mx-auto ${SIZE_CLASS[size]} ${className}`}>
+    <div
+      className={`relative mx-auto animate-elastic-up ${SIZE_CLASS[size]} ${className}`}
+      role="img"
+      aria-label="Cofre secreto flotando"
+    >
       <div
-        className="absolute bottom-0 left-1/2 h-5 w-4/5 rounded-full bg-amber-400/30 blur-2xl animate-chest-glow"
+        className="absolute bottom-0 left-1/2 h-5 w-4/5 -translate-x-1/2 rounded-full bg-amber-400/30 blur-2xl animate-chest-glow"
         aria-hidden
       />
 
-      <div role="img" aria-label="Cofre secreto flotando" className="relative z-10 animate-chest-float">
-        <svg
-          viewBox="0 0 240 200"
-          className="h-full w-full drop-shadow-[0_14px_32px_rgba(180,120,40,0.5)]"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <defs>
-            <linearGradient id="fc-body" x1="30" y1="95" x2="210" y2="185" gradientUnits="userSpaceOnUse">
-              <stop stopColor="#6E4520" />
-              <stop offset="0.35" stopColor="#B07830" />
-              <stop offset="0.7" stopColor="#D4A24C" />
-              <stop offset="1" stopColor="#5C3818" />
-            </linearGradient>
-            <linearGradient id="fc-lid" x1="20" y1="20" x2="220" y2="100" gradientUnits="userSpaceOnUse">
-              <stop stopColor="#8B5A2B" />
-              <stop offset="0.5" stopColor="#E8C06A" />
-              <stop offset="1" stopColor="#6B4423" />
-            </linearGradient>
-            <linearGradient id="fc-metal" x1="0" y1="0" x2="1" y2="1">
-              <stop stopColor="#F5E6A8" />
-              <stop offset="0.5" stopColor="#C9A04A" />
-              <stop offset="1" stopColor="#8B6914" />
-            </linearGradient>
-            <radialGradient id="fc-glow" cx="50%" cy="50%" r="50%">
-              <stop stopColor="#FDE68A" stopOpacity="0.95" />
-              <stop offset="0.5" stopColor="#F59E0B" stopOpacity="0.4" />
-              <stop offset="1" stopColor="#78350F" stopOpacity="0" />
-            </radialGradient>
-          </defs>
-
-          <ellipse cx="120" cy="138" rx="58" ry="22" fill="url(#fc-glow)" />
-
-          <rect x="38" y="108" width="164" height="72" rx="7" fill="url(#fc-body)" stroke="#4A2E12" strokeWidth="2" />
-          <path d="M38 120 H202" stroke="#3D2510" strokeWidth="1" opacity="0.4" />
-
-          <rect x="38" y="108" width="14" height="72" rx="3" fill="#4A3010" opacity="0.5" />
-          <rect x="188" y="108" width="14" height="72" rx="3" fill="#4A3010" opacity="0.5" />
-
-          <circle cx="72" cy="144" r="14" fill="url(#fc-metal)" stroke="#5C3A1A" strokeWidth="1.5" />
-          <ellipse cx="72" cy="144" rx="9" ry="7" fill="none" stroke="#4A3010" strokeWidth="2.5" />
-          <circle cx="72" cy="144" r="3.5" fill="#3D2510" />
-
-          <circle cx="120" cy="144" r="14" fill="url(#fc-metal)" stroke="#5C3A1A" strokeWidth="1.5" />
-          <ellipse cx="120" cy="144" rx="9" ry="7" fill="none" stroke="#4A3010" strokeWidth="2.5" />
-          <circle cx="120" cy="144" r="3.5" fill="#3D2510" />
-
-          <circle cx="168" cy="144" r="14" fill="url(#fc-metal)" stroke="#5C3A1A" strokeWidth="1.5" />
-          <ellipse cx="168" cy="144" rx="9" ry="7" fill="none" stroke="#4A3010" strokeWidth="2.5" />
-          <circle cx="168" cy="144" r="3.5" fill="#3D2510" />
-
-          <g transform="translate(120 108) rotate(-72) translate(-120 -78)">
-            <rect x="32" y="48" width="176" height="52" rx="6" fill="url(#fc-lid)" stroke="#4A2E12" strokeWidth="2" />
-            <path d="M32 60 H208" stroke="#3D2510" strokeWidth="1" opacity="0.35" />
-          </g>
-
-          <path
-            d="M120 22 C108 22 100 32 100 44 C100 56 108 66 120 66 C132 66 140 56 140 44 C140 32 132 22 120 22 Z"
-            fill="url(#fc-metal)"
-            stroke="#5C3A1A"
-            strokeWidth="1.5"
-          />
-          <path d="M120 66 V88" stroke="url(#fc-metal)" strokeWidth="5" strokeLinecap="round" />
-        </svg>
+      <div className={`relative z-10 h-full w-full ${useSvg ? 'animate-chest-float' : ''}`}>
+        {useSvg ? (
+          <FloatingChestSvg />
+        ) : (
+          <>
+            <div
+              className={`absolute inset-0 transition-opacity duration-300 ${
+                canvasReady ? 'pointer-events-none opacity-0' : 'opacity-100'
+              }`}
+              aria-hidden={canvasReady}
+            >
+              <FloatingChestSvg />
+            </div>
+            <FloatingChestCanvas
+              onReady={() => setCanvasReady(true)}
+              onError={() => setCanvasFailed(true)}
+            />
+          </>
+        )}
       </div>
     </div>
   )
