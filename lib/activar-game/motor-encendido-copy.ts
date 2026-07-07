@@ -23,15 +23,15 @@ export const MOTOR_ENCENDIDO_COPY = {
   },
 
   step2: {
-    title: '¿A dónde mandamos la llave?',
+    title: '¿A dónde mandamos las llaves del cielo?',
     subtitle: 'Empresa y correo donde llegarán tus credenciales.',
-    emailLabel: 'Email para tus credenciales *',
+    emailLabel: 'Email para recibir las llaves *',
   },
 
   step3: {
-    title: 'Último paso antes del cielo',
+    title: 'Último paso antes de tocar el cielo',
     subtitle: 'Opcional: WhatsApp solo si quieres ayuda con el biométrico.',
-    submit: 'Tocar el cielo',
+    submit: 'Enviame las llaves',
     submitting: 'Preparando nubes y creando empleados de prueba…',
     checkbox:
       'Quiero subir al entorno ahora. Entiendo que se generará información ficticia para evaluar la automatización.',
@@ -39,10 +39,10 @@ export const MOTOR_ENCENDIDO_COPY = {
   },
 
   success: {
-    title: (name: string) => `Ya tocás las nubes, ${name}`,
-    body: (country: string, empresa: string, empleados: number) =>
-      `Tu cielo en ${country} está listo para ${empresa} — ${empleados} empleado${empleados === 1 ? '' : 's'} de prueba con leyes locales cargadas. Alcanzá la paz contable desde hoy.`,
-    emailHint: 'Revisá tu correo (y spam). Ahí están tus credenciales para tocar el cielo.',
+    title: (name: string) => `Las llaves al cielo han sido enviadas, ${name}`,
+    body: (_country: string, empresa: string, empleados: number) =>
+      `Tu paraíso de RRHH está listo para ${empresa} — ${empleados} empleado${empleados === 1 ? '' : 's'} de prueba con legislación local. Disfruta del cielo hoy en la tierra.`,
+    emailHint: 'Revisá tu correo (y spam).',
     biometricHint:
       '¿Quieres conectar tu reloj biométrico? Respondé al correo y te guiamos sin costo hacia la paz operativa.',
   },
