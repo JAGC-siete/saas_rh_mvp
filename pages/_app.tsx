@@ -10,6 +10,7 @@ import { isPublicMarketingRoute } from '../lib/seo/public-ssr-routes'
 import '../styles/globals.css'
 import '../styles/landing.css'
 import '../styles/landing-liquid.css'
+import '../styles/paz-landing.css'
 
 // Load environment variables at the top level
 if (typeof window === 'undefined') {
