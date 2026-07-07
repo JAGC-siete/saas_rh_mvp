@@ -24,6 +24,7 @@ const PUBLIC_SSR_EXACT = new Set([
   '/politicadeprivacidad',
   '/terminos-de-servicio',
   '/suscripcion',
+  '/paz',
   '/calculadora',
   ...ALL_DEDUCTION_CALCULATOR_PUBLIC_PATHS,
   ...ALL_DEDUCTION_CALCULATOR_INTERNAL_PATHS,

@@ -69,6 +69,7 @@ export const pageTitles = {
   implementacion48h: 'Automatiza asistencia y payroll | Ahorra horas | Humano SISU',
   deduccionesHonduras: 'IHSS, RAP, ISR automático | Sin cálculos manuales | Humano SISU',
   recursos: 'Recursos | Automatización RH y nómina local | Humano SISU',
+  paz: 'La forma pacífica de cerrar planilla | Humano SISU',
 }
 
 /**

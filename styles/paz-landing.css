@@ -1,0 +1,279 @@
+/* Humano SISU — Paz (zen-parodia, inspirado en Railway Peace) */
+
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap');
+
+.paz-page {
+  --paz-bg: #f4f1ea;
+  --paz-bg-soft: #ebe6dc;
+  --paz-ink: #1c2b1c;
+  --paz-ink-muted: #4a5c4a;
+  --paz-sage: #5c7a5c;
+  --paz-sage-light: #8faa8f;
+  --paz-accent: #2d4a2d;
+  --paz-border: rgba(28, 43, 28, 0.12);
+
+  min-height: 100vh;
+  background: var(--paz-bg);
+  color: var(--paz-ink);
+  font-family: 'DM Sans', system-ui, sans-serif;
+}
+
+.paz-serif {
+  font-family: 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
+}
+
+.paz-grain {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.35;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.08'/%3E%3C/svg%3E");
+  z-index: 0;
+}
+
+.paz-nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem 1.5rem;
+  background: linear-gradient(to bottom, var(--paz-bg) 60%, transparent);
+}
+
+.paz-section {
+  position: relative;
+  z-index: 1;
+  max-width: 56rem;
+  margin: 0 auto;
+  padding: 4rem 1.5rem;
+}
+
+.paz-hero-title {
+  font-size: clamp(2.25rem, 6vw, 4rem);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  font-weight: 500;
+}
+
+.paz-mantra {
+  font-size: clamp(1.125rem, 2.5vw, 1.375rem);
+  color: var(--paz-ink-muted);
+  line-height: 1.6;
+}
+
+.paz-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.875rem 1.5rem;
+  border-radius: 9999px;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  text-decoration: none;
+}
+
+.paz-btn-primary {
+  background: var(--paz-accent);
+  color: #f4f1ea;
+  border: 1px solid var(--paz-accent);
+}
+
+.paz-btn-primary:hover {
+  background: #1f3520;
+  border-color: #1f3520;
+}
+
+.paz-btn-ghost {
+  background: transparent;
+  color: var(--paz-ink);
+  border: 1px solid var(--paz-border);
+}
+
+.paz-btn-ghost:hover {
+  background: var(--paz-bg-soft);
+  border-color: rgba(28, 43, 28, 0.2);
+}
+
+.paz-video-frame {
+  aspect-ratio: 16 / 9;
+  border-radius: 1rem;
+  overflow: hidden;
+  border: 1px solid var(--paz-border);
+  background: linear-gradient(145deg, #d8e0d4 0%, #c5d0c0 40%, #b8c9b2 100%);
+  position: relative;
+}
+
+.paz-video-placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  text-align: center;
+  padding: 2rem;
+}
+
+.paz-play-btn {
+  width: 4.5rem;
+  height: 4.5rem;
+  border-radius: 50%;
+  background: rgba(28, 43, 28, 0.85);
+  color: #f4f1ea;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.paz-play-btn:hover {
+  transform: scale(1.05);
+  background: var(--paz-accent);
+}
+
+.paz-avatar-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 1.25rem;
+}
+
+.paz-avatar-card {
+  text-align: center;
+  padding: 1.25rem 0.75rem;
+}
+
+.paz-avatar-circle {
+  width: 4rem;
+  height: 4rem;
+  border-radius: 50%;
+  margin: 0 auto 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--paz-ink);
+  border: 1px solid var(--paz-border);
+}
+
+.paz-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.5rem;
+  border-radius: 9999px;
+  background: var(--paz-bg-soft);
+  border: 1px solid var(--paz-border);
+  cursor: pointer;
+  user-select: none;
+}
+
+.paz-toggle-option {
+  padding: 0.625rem 1.25rem;
+  border-radius: 9999px;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  transition: all 0.25s ease;
+  color: var(--paz-ink-muted);
+}
+
+.paz-toggle-option.active {
+  background: var(--paz-accent);
+  color: #f4f1ea;
+}
+
+.paz-testimonial {
+  padding: 2rem 0;
+  border-top: 1px solid var(--paz-border);
+}
+
+.paz-testimonial:first-child {
+  border-top: none;
+}
+
+.paz-testimonial-quote {
+  font-size: clamp(1.25rem, 3vw, 1.75rem);
+  line-height: 1.45;
+  font-weight: 500;
+  font-style: italic;
+}
+
+.paz-faq-item {
+  border-top: 1px solid var(--paz-border);
+}
+
+.paz-faq-item:last-child {
+  border-bottom: 1px solid var(--paz-border);
+}
+
+.paz-faq-summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 1.25rem 0;
+  font-size: 1.0625rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.paz-faq-summary::-webkit-details-marker {
+  display: none;
+}
+
+.paz-faq-summary::after {
+  content: '+';
+  font-size: 1.5rem;
+  font-weight: 300;
+  color: var(--paz-sage);
+  transition: transform 0.2s ease;
+}
+
+.paz-faq-item[open] .paz-faq-summary::after {
+  transform: rotate(45deg);
+}
+
+.paz-faq-answer {
+  padding: 0 0 1.25rem;
+  color: var(--paz-ink-muted);
+  line-height: 1.65;
+  font-size: 0.975rem;
+}
+
+.paz-dual-cta {
+  font-size: clamp(2rem, 5vw, 3.25rem);
+  line-height: 1.15;
+  font-weight: 500;
+}
+
+.paz-dual-cta span {
+  color: var(--paz-sage);
+}
+
+.paz-footer {
+  border-top: 1px solid var(--paz-border);
+  padding: 2rem 1.5rem 3rem;
+  text-align: center;
+  color: var(--paz-ink-muted);
+  font-size: 0.875rem;
+}
+
+@keyframes paz-breathe {
+  0%, 100% { opacity: 0.4; transform: scale(1); }
+  50% { opacity: 0.7; transform: scale(1.02); }
+}
+
+.paz-breathe {
+  animation: paz-breathe 6s ease-in-out infinite;
+}

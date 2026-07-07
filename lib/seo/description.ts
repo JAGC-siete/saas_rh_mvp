@@ -61,6 +61,7 @@ export const pageDescriptions = {
   ventas: 'Cotización sin costo para nómina y asistencia biométrica en Honduras, El Salvador y Guatemala. Recibe propuesta en PDF al instante.',
   gracias: 'Confirmación de pago recibida. Tu sistema Humano SISU se activará en las próximas horas.',
   info: 'Solicita información sobre Humano SISU: nómina automatizada, asistencia biométrica y deducciones de ley en Honduras, El Salvador y Guatemala. Sin compromiso.',
+  paz: '¿Perdiste un domingo haciendo Excel? No sos una máquina de errores de deducción. Encontrá tu paz con Humano SISU.',
 }
 
 /**
