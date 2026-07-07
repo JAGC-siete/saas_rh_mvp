@@ -237,6 +237,36 @@ export function trackInfoLeadSubmit(params: {
   })
 }
 
+/** Checklist lead en /viernes */
+export function trackViernesLeadSubmit(params: {
+  eventId: string
+  email: string
+  firstName?: string
+}): void {
+  fireMetaPixelEvent(
+    'Lead',
+    {
+      content_name: 'viernes',
+      content_category: 'tofu',
+      value: 0,
+      currency: 'USD',
+      status: true,
+    },
+    params.eventId,
+    {
+      em: params.email,
+      fn: params.firstName,
+    }
+  )
+
+  fireGoogleAdsLeadConversion(params.eventId)
+
+  trackGA4Event('viernes_lead_submit', {
+    event_category: 'Lead',
+    event_label: 'viernes',
+  })
+}
+
 declare global {
   interface Window {
     fbq?: (

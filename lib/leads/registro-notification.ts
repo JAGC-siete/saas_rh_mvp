@@ -2,7 +2,7 @@ import type { CountryCode } from '../country/supported'
 import { getResendFromContact } from '../resend-from'
 import { buildLeadRegistroNotificationHtml } from './registro-notification-html'
 
-export type LeadRegistroSource = 'activar' | 'ventas' | 'suscripcion' | 'info'
+export type LeadRegistroSource = 'activar' | 'ventas' | 'suscripcion' | 'info' | 'viernes'
 
 export interface LeadRegistroNotificationData {
   source: LeadRegistroSource
@@ -35,6 +35,10 @@ const SOURCE_LABELS: Record<LeadRegistroSource, { title: string; subtitle: strin
   info: {
     title: 'Nueva Solicitud de Información en SISU',
     subtitle: 'Lead solicitó más información desde /secreto',
+  },
+  viernes: {
+    title: 'Nuevo Checklist en SISU',
+    subtitle: 'Lead solicitó checklist desde /viernes',
   },
 }
 
@@ -88,6 +92,16 @@ export function buildLeadFollowUpWhatsAppMessage(source: LeadRegistroSource): st
       `Buscá a ${CONTACT_SENDER_HINT}`,
       '',
       'La primera nota se lee en menos de 1 minuto.',
+    ].join('\n')
+  }
+
+  if (source === 'viernes') {
+    return [
+      '¡Checklist en camino! 📋',
+      '',
+      `Buscá en tu correo a ${CONTACT_SENDER_HINT} — te llega en menos de 1 minuto.`,
+      '',
+      'Mientras tanto: ¿cuántas horas te llevó la última quincena en Excel?',
     ].join('\n')
   }
 

@@ -156,6 +156,11 @@ const nextConfig = {
         destination: '/secreto/m/:id',
         permanent: true,
       },
+      {
+        source: '/domingo',
+        destination: '/viernes',
+        permanent: false,
+      },
       // Calculadoras deducciones: slug público calcusisu* (legacy calculadora-deducciones* → 301)
       {
         source: '/calculadora-deducciones',

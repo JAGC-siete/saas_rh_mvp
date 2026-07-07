@@ -62,6 +62,8 @@ export const pageDescriptions = {
   gracias: 'Confirmación de pago recibida. Tu sistema Humano SISU se activará en las próximas horas.',
   info: 'Solicita información sobre Humano SISU: nómina automatizada, asistencia biométrica y deducciones de ley en Honduras, El Salvador y Guatemala. Sin compromiso.',
   paz: '¿Perdiste un domingo haciendo Excel? No sos una máquina de errores de deducción. Encontrá tu paz con Humano SISU.',
+  viernes:
+    '¿Otra vez vas a perder el domingo en Excel? Biométrico + motor legal IHSS, RAP, ISR. Trial gratis en Honduras, El Salvador y Guatemala.',
 }
 
 /**

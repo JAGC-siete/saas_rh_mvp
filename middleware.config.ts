@@ -85,6 +85,8 @@ export const MIDDLEWARE_CONFIG = {
       '/afiliados',
       '/secreto',
       '/info',
+      '/paz',
+      '/viernes',
       '/suscripcion',
       '/recursos',
       '/sitemap.xml'

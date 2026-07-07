@@ -32,6 +32,11 @@ const SOURCE_LABELS: Record<
     subtitle: 'Lead solicitó más información desde /secreto',
     badge: 'Más información',
   },
+  viernes: {
+    title: 'Nuevo Checklist en SISU',
+    subtitle: 'Lead solicitó checklist desde /viernes',
+    badge: 'Checklist',
+  },
 }
 
 function sourcePath(source: LeadRegistroSource): string {

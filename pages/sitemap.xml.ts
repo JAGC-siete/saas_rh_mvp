@@ -87,6 +87,12 @@ const publicPages: SitemapUrl[] = [
     lastmod: new Date().toISOString().split('T')[0]
   },
   {
+    loc: '/viernes',
+    changefreq: 'weekly',
+    priority: 0.9,
+    lastmod: new Date().toISOString().split('T')[0]
+  },
+  {
     loc: deductionCalculatorPublicPath('SLV'),
     changefreq: 'monthly',
     priority: 0.75
