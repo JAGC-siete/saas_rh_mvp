@@ -10,7 +10,7 @@ import SchemaMarkup from '../components/SEO/SchemaMarkup'
 import DockNavbar from '../components/landing/DockNavbar'
 import MagneticHero from '../components/landing/MagneticHero'
 import HowItWorksBento from '../components/landing/HowItWorksBento'
-import BentoServicesGrid from '../components/landing/BentoServicesGrid'
+// import BentoServicesGrid from '../components/landing/BentoServicesGrid' // Sección oculta temporalmente
 import ScrollReveal from '../components/landing/ScrollReveal'
 import TrustBar from '../components/landing/TrustBar'
 import MeshBackground from '../components/landing/MeshBackground'
@@ -142,7 +142,8 @@ export default function LandingPage() {
 
       <HowItWorksBento />
       <FreeToolsSection />
-      <BentoServicesGrid />
+      {/* Sección "Módulos de Humano SISU" ocultada temporalmente: algunas cards gustan pero la sección completa no agrega valor por ahora. */}
+      {/* <BentoServicesGrid /> */}
       <AWSCertificationsSection />
       <MailListSection />
       <LandingClosingSection />
