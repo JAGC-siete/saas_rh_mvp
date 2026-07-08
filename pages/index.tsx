@@ -94,8 +94,8 @@ export default function LandingPage() {
       <section id="prueba-social" className="relative py-12 sm:py-16 md:py-20 px-4 sm:px-6 max-w-7xl mx-auto">
         <ScrollReveal>
           <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-center text-white leading-tight mb-6 sm:mb-8 px-2 max-w-5xl mx-auto">
-            <span className="text-white block sm:inline">Clientes de Humano SISU confirman: </span>
-            <span className="text-brand-300 block sm:inline mt-1 sm:mt-0">el control de asistencia conectado a la nómina es la ventaja real</span>
+            <span className="text-white block sm:inline">Clientes de SISU lo certifican: </span>
+            <span className="text-brand-300 block sm:inline mt-1 sm:mt-0">el control de asistencia integrado con la nómina es la ventaja verdadera</span>
           </h2>
         </ScrollReveal>
 
