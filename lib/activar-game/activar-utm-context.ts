@@ -7,7 +7,6 @@ const PATTERNS: Array<{ match: RegExp; context: ActivarUtmContext }> = [
   {
     match: /info|secreto|m5|mission/i,
     context: {
-      headline: 'Viste el reprocesamiento. El cielo es lo contrario.',
       subheadline:
         'Subí a un entorno de prueba con las leyes de tu país — sin Excel de por medio, con paz de verdad.',
     },
@@ -15,14 +14,12 @@ const PATTERNS: Array<{ match: RegExp; context: ActivarUtmContext }> = [
   {
     match: /calculadora|calc_/i,
     context: {
-      headline: 'Ya validaste los números. ¿Y si la planilla corriera sola?',
       subheadline: 'Tocá las nubes del motor legal en vivo — empleados ficticios, cero tarjeta.',
     },
   },
   {
     match: /ventas|cotiz/i,
     context: {
-      headline: 'Antes de decidir, tocá el cielo.',
       subheadline: '30 días para ver si alcanzás la paz que hoy se pierde en Excel.',
     },
   },
