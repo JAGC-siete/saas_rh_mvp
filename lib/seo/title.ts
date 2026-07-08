@@ -70,7 +70,7 @@ export const pageTitles = {
   deduccionesHonduras: 'IHSS, RAP, ISR automático | Sin cálculos manuales | Humano SISU',
   recursos: 'Recursos | Automatización RH y nómina local | Humano SISU',
   paz: 'La forma pacífica de cerrar planilla | Humano SISU',
-  viernes: 'Cierra planilla en 4 minutos, no en 4 horas | Humano SISU',
+  viernes: 'Toca el cielo cada viernes | Humano SISU',
 }
 
 /**

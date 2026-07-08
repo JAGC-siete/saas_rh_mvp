@@ -63,7 +63,7 @@ export const pageDescriptions = {
   info: 'Solicita información sobre Humano SISU: nómina automatizada, asistencia biométrica y deducciones de ley en Honduras, El Salvador y Guatemala. Sin compromiso.',
   paz: '¿Perdiste un domingo haciendo Excel? No sos una máquina de errores de deducción. Encontrá tu paz con Humano SISU.',
   viernes:
-    '¿Otra vez vas a perder el domingo en Excel? Biométrico + motor legal IHSS, RAP, ISR. Trial gratis en Honduras, El Salvador y Guatemala.',
+    '¿Otra vez vas a perder el domingo en Excel? Alcanzá la paz contable con biométrico + motor legal IHSS, RAP, ISR. Trial gratis en Honduras, El Salvador y Guatemala.',
 }
 
 /**

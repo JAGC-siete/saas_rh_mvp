@@ -1,40 +1,23 @@
-/* Humano SISU — /viernes (conversión directa, warm B2B) */
-
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Instrument+Serif:ital@0;1&display=swap');
+/* Humano SISU — /viernes (dark SaaS mesh, peace-led) */
 
 .viernes-page {
-  --v-bg: #faf8f4;
-  --v-bg-soft: #f0ebe3;
-  --v-bg-card: #ffffff;
-  --v-ink: #1a2419;
-  --v-ink-muted: #4d5c4b;
-  --v-accent: #2d5a3d;
-  --v-accent-hover: #234a31;
-  --v-amber: #c47d2a;
-  --v-border: rgba(26, 36, 25, 0.1);
-  --v-success: #2d6a4f;
+  --v-ink: #ffffff;
+  --v-ink-muted: #93c5fd;
+  --v-ink-soft: rgba(191, 219, 254, 0.85);
+  --v-accent: #3b82f6;
+  --v-accent-hover: #2563eb;
+  --v-border: rgba(255, 255, 255, 0.12);
+  --v-glass: rgba(255, 255, 255, 0.05);
+  --v-glass-hover: rgba(255, 255, 255, 0.1);
+  --v-success: #4ade80;
 
   min-height: 100vh;
-  background: var(--v-bg);
   color: var(--v-ink);
-  font-family: 'DM Sans', system-ui, sans-serif;
+  font-family: 'Montserrat', system-ui, sans-serif;
 }
 
 .viernes-serif {
   font-family: 'Instrument Serif', Georgia, 'Times New Roman', serif;
-}
-
-.viernes-nav {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 50;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 1rem 1.5rem;
-  background: linear-gradient(to bottom, var(--v-bg) 70%, transparent);
 }
 
 .viernes-section {
@@ -45,35 +28,46 @@
   padding: 3.5rem 1.5rem;
 }
 
-.viernes-eyebrow {
+.viernes-badge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  margin-bottom: 1.5rem;
   font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--v-amber);
-  margin-bottom: 1rem;
+  font-weight: 500;
+  border-radius: 9999px;
+  background: rgba(59, 130, 246, 0.2);
+  color: #bfdbfe;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.viernes-hero-eyebrow {
+  font-size: clamp(1.75rem, 4vw, 2.5rem);
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  color: #fff;
+  margin-bottom: 0.75rem;
 }
 
 .viernes-hero-title {
-  font-size: clamp(2rem, 5.5vw, 3.25rem);
-  line-height: 1.12;
+  font-size: clamp(3.5rem, 14vw, 7.5rem);
+  line-height: 0.95;
   letter-spacing: -0.02em;
-  font-weight: 400;
+  color: #fff;
 }
 
 .viernes-lead {
-  font-size: clamp(1.0625rem, 2.2vw, 1.25rem);
-  color: var(--v-ink-muted);
+  font-size: clamp(1rem, 2.2vw, 1.125rem);
+  color: var(--v-ink-soft);
   line-height: 1.65;
 }
 
 .viernes-mantra {
   font-size: 1.0625rem;
-  color: var(--v-ink);
+  color: var(--v-ink-muted);
   padding: 1rem 1.25rem;
-  border-left: 3px solid var(--v-amber);
-  background: var(--v-bg-soft);
-  border-radius: 0 0.5rem 0.5rem 0;
+  border-left: 3px solid var(--v-accent);
+  background: var(--v-glass);
+  border-radius: 0 0.75rem 0.75rem 0;
 }
 
 .viernes-btn {
@@ -82,7 +76,7 @@
   justify-content: center;
   gap: 0.5rem;
   padding: 0.875rem 1.5rem;
-  border-radius: 0.625rem;
+  border-radius: 0.75rem;
   font-size: 0.9375rem;
   font-weight: 600;
   transition: all 0.2s ease;
@@ -92,48 +86,57 @@
 }
 
 .viernes-btn-primary {
-  background: var(--v-accent);
-  color: #fff;
-  border: 1px solid var(--v-accent);
+  background: #ffffff;
+  color: #0f172a;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.22);
 }
 
 .viernes-btn-primary:hover {
-  background: var(--v-accent-hover);
-  border-color: var(--v-accent-hover);
+  background: #f8fafc;
+  color: #020617;
 }
 
 .viernes-btn-ghost {
   background: transparent;
-  color: var(--v-ink);
+  color: var(--v-ink-muted);
   border: 1px solid var(--v-border);
 }
 
 .viernes-btn-ghost:hover {
-  background: var(--v-bg-soft);
+  background: var(--v-glass-hover);
+  color: #fff;
 }
 
 .viernes-link {
-  color: var(--v-accent);
+  color: var(--v-ink-muted);
   text-decoration: underline;
   text-underline-offset: 3px;
 }
 
 .viernes-link:hover {
-  color: var(--v-accent-hover);
+  color: #fff;
 }
 
 .viernes-card {
-  background: var(--v-bg-card);
+  background: var(--v-glass);
+  backdrop-filter: blur(12px);
   border: 1px solid var(--v-border);
-  border-radius: 1rem;
+  border-radius: 1.25rem;
   padding: 1.75rem;
-  box-shadow: 0 1px 3px rgba(26, 36, 25, 0.04);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+}
+
+.viernes-section-title {
+  font-size: clamp(1.75rem, 4vw, 2.5rem);
+  line-height: 1.15;
+  color: #fff;
+  margin-bottom: 1.5rem;
 }
 
 .viernes-insight-lead {
   font-size: clamp(1.5rem, 3.5vw, 2rem);
   font-weight: 600;
-  color: var(--v-ink);
+  color: #fff;
   margin-bottom: 1rem;
 }
 
@@ -156,8 +159,8 @@
     grid-template-columns: 1fr;
     text-align: center;
     padding: 0.75rem;
-    background: var(--v-bg-soft);
-    border-radius: 0.5rem;
+    background: var(--v-glass);
+    border-radius: 0.75rem;
   }
 
   .viernes-comparison-arrow {
@@ -166,18 +169,18 @@
 }
 
 .viernes-comparison-before {
-  color: var(--v-ink-muted);
+  color: var(--v-ink-soft);
   text-decoration: line-through;
-  text-decoration-color: rgba(196, 125, 42, 0.5);
+  text-decoration-color: rgba(248, 113, 113, 0.5);
 }
 
 .viernes-comparison-arrow {
-  color: var(--v-amber);
+  color: #60a5fa;
   font-weight: 700;
 }
 
 .viernes-comparison-after {
-  color: var(--v-accent);
+  color: #86efac;
   font-weight: 600;
 }
 
@@ -185,25 +188,29 @@
   display: block;
   font-size: 0.8125rem;
   font-weight: 600;
-  color: var(--v-ink);
+  color: #fff;
   margin-bottom: 0.375rem;
 }
 
 .viernes-form-input {
   width: 100%;
-  padding: 0.75rem 1rem;
-  border-radius: 0.5rem;
+  padding: 0.875rem 1rem;
+  border-radius: 0.75rem;
   border: 1px solid var(--v-border);
-  background: #fff;
+  background: rgba(255, 255, 255, 0.05);
   font-size: 1rem;
-  color: var(--v-ink);
+  color: #fff;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.viernes-form-input::placeholder {
+  color: rgba(191, 219, 254, 0.5);
 }
 
 .viernes-form-input:focus {
   outline: none;
-  border-color: var(--v-accent);
-  box-shadow: 0 0 0 3px rgba(45, 90, 61, 0.12);
+  border-color: rgba(59, 130, 246, 0.5);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
 }
 
 .viernes-form-input:disabled {
@@ -212,13 +219,13 @@
 
 .viernes-form-error {
   font-size: 0.8125rem;
-  color: #b42318;
+  color: #fca5a5;
   margin-top: 0.25rem;
 }
 
 .viernes-form-disclaimer {
   font-size: 0.8125rem;
-  color: var(--v-ink-muted);
+  color: var(--v-ink-soft);
   line-height: 1.5;
 }
 
@@ -227,17 +234,12 @@
   border-top: 1px solid var(--v-border);
   font-size: 0.975rem;
   line-height: 1.6;
-  color: var(--v-ink-muted);
+  color: var(--v-ink-soft);
 }
 
 .viernes-proof-item:first-child {
   border-top: none;
   padding-top: 0;
-}
-
-.viernes-proof-item strong {
-  color: var(--v-ink);
-  font-weight: 500;
 }
 
 .viernes-faq-item {
@@ -254,6 +256,7 @@
   padding: 1.125rem 0;
   font-size: 1rem;
   font-weight: 600;
+  color: #fff;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -268,7 +271,7 @@
   content: '+';
   font-size: 1.375rem;
   font-weight: 400;
-  color: var(--v-accent);
+  color: #60a5fa;
   transition: transform 0.2s ease;
 }
 
@@ -278,7 +281,7 @@
 
 .viernes-faq-answer {
   padding: 0 0 1.125rem;
-  color: var(--v-ink-muted);
+  color: var(--v-ink-soft);
   line-height: 1.65;
   font-size: 0.9375rem;
 }
@@ -291,16 +294,16 @@
   border-radius: 9999px;
   font-size: 0.8125rem;
   font-weight: 600;
-  background: rgba(45, 106, 79, 0.1);
+  background: rgba(74, 222, 128, 0.15);
   color: var(--v-success);
-  border: 1px solid rgba(45, 106, 79, 0.2);
+  border: 1px solid rgba(74, 222, 128, 0.3);
 }
 
 .viernes-footer {
   border-top: 1px solid var(--v-border);
   padding: 2rem 1.5rem 3rem;
   text-align: center;
-  color: var(--v-ink-muted);
+  color: var(--v-ink-soft);
   font-size: 0.875rem;
 }
 
@@ -308,4 +311,24 @@
   border: none;
   border-top: 1px solid var(--v-border);
   margin: 0;
+  opacity: 0.5;
+}
+
+.viernes-final-title {
+  line-height: 0.95;
+  letter-spacing: -0.02em;
+  color: #fff;
+  margin-bottom: 1rem;
+}
+
+.viernes-final-title-lead {
+  display: block;
+  font-size: clamp(2rem, 5vw, 3rem);
+}
+
+.viernes-final-title-accent {
+  display: block;
+  font-size: clamp(2.5rem, 7vw, 4rem);
+  font-style: italic;
+  margin-top: 0.25rem;
 }
