@@ -6,9 +6,9 @@ export const SEALED_ENVELOPE_COPY = {
   /** Estado 0 — Intriga (empatía, hero serif) */
   intrigue: {
     headlineLead: '¿Conocés a alguien que perdió la paz con Recursos Humanos?',
-    headlineAccent: '¿Eres esa persona?',
-    subheadline:
+    headlineAccent:
       'Siempre amargados. Luchando por que todos lleguen a tiempo. A veces celebran cumpleaños. Se tardan meses para entregar una constancia de trabajo. El día de cierre, cuadrando horas extra en Excel, recalculando deducciones hasta la madrugada. Otra vez.',
+    subheadline: '¿Eres esa persona?',
     cta: 'Hacer las paces con RR.HH.',
     ctaSecondary: 'Validar deducciones gratis',
   },
