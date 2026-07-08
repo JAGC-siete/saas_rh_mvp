@@ -29,6 +29,7 @@ import PrestacionesResultHero from './PrestacionesResultHero'
 import PrestacionesTrojanShare from './PrestacionesTrojanShare'
 import { CalcPdfSentMessage, CalcTrustLine } from './CalculatorUiIcons'
 import CalculatorSubscriptionBridge from './CalculatorSubscriptionBridge'
+import { PUBLIC_CALCULATOR_CONFIGS } from '../../lib/public-calculator/config'
 
 const FORM_STORAGE_KEY = 'public_prestaciones_calculator_v1'
 const TOOL = 'prestaciones_hnd' as const
@@ -861,6 +862,7 @@ export default function PublicPrestacionesCalculator({ config }: { config: Publi
           <CalculatorSubscriptionBridge
             tool={TOOL}
             placement="footer"
+            shareConfig={PUBLIC_CALCULATOR_CONFIGS.HND}
           />
         </div>
 

@@ -919,6 +919,7 @@ export default function PublicDeductionCalculator({ config }: { config: PublicCa
           <CalculatorSubscriptionBridge
             tool={calcTool}
             placement="footer"
+            shareConfig={config}
           />
         </div>
       </div>

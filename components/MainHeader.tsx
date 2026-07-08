@@ -104,12 +104,13 @@ export default function MainHeader({ enableScrollEffect = false, fixed = true }:
                 >
                   Cómo funciona
                 </Link>
-                <Link
+                {/* Servicios oculto: sección #servicios comentada en landing */}
+                {/* <Link
                   href="/#servicios"
                   className="text-brand-200 hover:text-white px-3 py-2 rounded-full text-sm font-medium transition-all duration-300 hover:bg-white/10 hover:-translate-y-0.5 active:translate-y-0 whitespace-nowrap"
                 >
                   Servicios
-                </Link>
+                </Link> */}
                 <Link
                   href="/suscripcion"
                   className="text-brand-200 hover:text-white px-3 py-2 rounded-full text-sm font-medium transition-all duration-300 hover:bg-white/10 hover:-translate-y-0.5 active:translate-y-0 whitespace-nowrap"
@@ -267,13 +268,14 @@ export default function MainHeader({ enableScrollEffect = false, fixed = true }:
               >
                 Cómo funciona
               </Link>
-              <Link
+              {/* Servicios oculto: sección #servicios comentada en landing */}
+              {/* <Link
                 href="/#servicios"
                 className="block px-3 py-2 text-base font-medium text-brand-200/90 hover:text-white hover:bg-brand-800/20 rounded-md transition-colors"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 Servicios
-              </Link>
+              </Link> */}
               <Link
                 href="/suscripcion"
                 className="block px-3 py-2 text-base font-medium text-brand-200/90 hover:text-white hover:bg-brand-800/20 rounded-md transition-colors"

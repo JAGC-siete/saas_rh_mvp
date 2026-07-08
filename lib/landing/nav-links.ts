@@ -2,7 +2,7 @@ import { deductionCalculatorPublicPath } from '../marketing/calculator-public-pa
 
 export const LANDING_NAV_LINKS = [
   { href: '/#como-funciona', label: 'Cómo funciona' },
-  { href: '/#servicios', label: 'Servicios' },
+  // { href: '/#servicios', label: 'Servicios' }, // Oculto: sección BentoServicesGrid comentada en landing
   { href: '/suscripcion', label: 'Suscríbete' },
   { href: '/afiliados', label: 'Afiliados' },
 ] as const

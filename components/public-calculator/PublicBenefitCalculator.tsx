@@ -29,6 +29,7 @@ import BenefitTrojanShare from './BenefitTrojanShare'
 import LeadCaptureSoftGate, { useLeadSoftGateTriggers } from './LeadCaptureSoftGate'
 import { CalcPdfSentMessage, CalcTrustLine } from './CalculatorUiIcons'
 import CalculatorSubscriptionBridge from './CalculatorSubscriptionBridge'
+import { PUBLIC_CALCULATOR_CONFIGS } from '../../lib/public-calculator/config'
 
 function benefitToolKey(tipo: PublicBenefitCalculatorConfig['tipo']): 'aguinaldo_hnd' | 'catorceavo_hnd' {
   return tipo === '13AVO' ? 'aguinaldo_hnd' : 'catorceavo_hnd'
@@ -511,6 +512,7 @@ export default function PublicBenefitCalculator({ config }: { config: PublicBene
           <CalculatorSubscriptionBridge
             tool={tool}
             placement="footer"
+            shareConfig={PUBLIC_CALCULATOR_CONFIGS.HND}
           />
         </div>
 
