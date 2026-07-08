@@ -149,14 +149,14 @@ export const PUBLIC_CALCULATOR_CONFIGS: Record<CountryCode, PublicCalculatorConf
       headlineLead: 'Deja adivinar tus deducciones.',
       headlineAccent: 'Obten gratis el desgloce que RR.HH. te oculta.',
       subheadline:
-        'Ingresa tu salario mensual o quincenal y valida al instante cuánto te descuentan de ISR, RAP y Seguro Social según las leyes vigentes en Honduras.'
+        'Ingresa tu salario. Valida deducciones al instante. Impuesto, Aportaciones privadas y Seguro Social según las leyes vigentes de tu país.'
     },
     b2bFunnel: {
       hero: {
         headlineLead: 'Deja adivinar tus deducciones.',
         headlineAccent: 'Obten gratis el desgloce que RR.HH. te oculta.',
         subheadline:
-          'Ingresa tu salario mensual o quincenal y valida al instante cuánto te descuentan de ISR, RAP y Seguro Social según las leyes vigentes en Honduras.',
+          'Ingresa tu salario. Valida deducciones al instante. Impuesto, Aportaciones privadas y Seguro Social según las leyes vigentes de tu país.',
         authorityLine: 'Cumplimiento 100% legal 2026'
       },
       digitalHealth: {
@@ -334,14 +334,14 @@ export const PUBLIC_CALCULATOR_CONFIGS: Record<CountryCode, PublicCalculatorConf
       headlineLead: 'Deja adivinar tus deducciones.',
       headlineAccent: 'Obten gratis el desgloce que RR.HH. te oculta.',
       subheadline:
-        'Calculadora ISR El Salvador con el motor profesional de Humano SISU. Valida tu sueldo neto en dólares antes de firmar o reclamar.'
+        'Ingresa tu salario. Valida deducciones al instante. Impuesto, Aportaciones privadas y Seguro Social según las leyes vigentes de tu país.'
     },
     b2bFunnel: {
       hero: {
         headlineLead: 'Deja adivinar tus deducciones.',
         headlineAccent: 'Obten gratis el desgloce que RR.HH. te oculta.',
         subheadline:
-          'Valida tu sueldo en USD con el mismo motor legal que usa la planilla profesional de Humano SISU.',
+          'Ingresa tu salario. Valida deducciones al instante. Impuesto, Aportaciones privadas y Seguro Social según las leyes vigentes de tu país.',
         authorityLine: 'Parámetros legales vigentes · El Salvador'
       },
       digitalHealth: {
@@ -468,14 +468,14 @@ export const PUBLIC_CALCULATOR_CONFIGS: Record<CountryCode, PublicCalculatorConf
       headlineLead: 'Deja adivinar tus deducciones.',
       headlineAccent: 'Obten gratis el desgloce que RR.HH. te oculta.',
       subheadline:
-        'Calculadora de sueldo neto Guatemala con parámetros legales vigentes. Misma lógica que la planilla profesional de Humano SISU.'
+        'Ingresa tu salario. Valida deducciones al instante. Impuesto, Aportaciones privadas y Seguro Social según las leyes vigentes de tu país.'
     },
     b2bFunnel: {
       hero: {
         headlineLead: 'Deja adivinar tus deducciones.',
         headlineAccent: 'Obten gratis el desgloce que RR.HH. te oculta.',
         subheadline:
-          'Valida tu sueldo en GTQ con el mismo motor legal que usa la planilla profesional de Humano SISU.',
+          'Ingresa tu salario. Valida deducciones al instante. Impuesto, Aportaciones privadas y Seguro Social según las leyes vigentes de tu país.',
         authorityLine: 'Parámetros legales vigentes · Guatemala'
       },
       digitalHealth: {
