@@ -10,6 +10,7 @@ import type { PublicCalculatorConfig, PublicCalculatorDeductionKey } from '../..
 import { generateFAQPageSchema, generateWebPageSchema, generateBreadcrumbListSchema } from '../../lib/seo/schema'
 import DigitalHealthDiagnostic from './DigitalHealthDiagnostic'
 import TrojanHorseShare from './TrojanHorseShare'
+import LandingBridgeShare from './LandingBridgeShare'
 import type { CalculatorAudience } from './AudienceSelector'
 import RoleSelector, { type CalculatorRole } from './RoleSelector'
 import CalculatingState from './CalculatingState'
@@ -856,7 +857,12 @@ export default function PublicDeductionCalculator({ config }: { config: PublicCa
             <span className="block italic text-5xl sm:text-6xl lg:text-7xl mt-1">{config.landingBridge.titleAccent}</span>
           </h3>
           <p className="text-brand-200/90 mb-6 max-w-2xl mx-auto">{config.landingBridge.body}</p>
-          <ConversionButtons campaign="footer" size="sm" activarLabel={config.conversion.footerButton} />
+          <LandingBridgeShare
+            config={config}
+            activarUrl={activarUrl('footer')}
+            calcTool={calcTool}
+            size="sm"
+          />
           {config.relatedCalculators.length > 0 && (
             <div className="mt-6 flex flex-wrap justify-center gap-3 text-sm">
               {config.relatedCalculators.map((item) => (

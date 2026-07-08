@@ -5,6 +5,11 @@ import {
   buildTrojanShareMessage,
   buildTrojanShareUrl,
 } from '../lib/public-calculator/trojan-whatsapp'
+import {
+  buildCalculatorShareLink,
+  buildPeerShareMessage,
+  buildPeerShareUrl,
+} from '../lib/public-calculator/bridge-share'
 import { PUBLIC_CALCULATOR_CONFIGS } from '../lib/public-calculator/config'
 import { estimateTimeLeakHours } from '../lib/public-calculator/digital-health'
 
@@ -54,11 +59,40 @@ describe('trojan whatsapp URLs', () => {
   })
 })
 
+describe('bridge share URLs', () => {
+  it('builds peer share with calculator link and UTM', () => {
+    const script = PUBLIC_CALCULATOR_CONFIGS.HND.landingBridge.share.peerScript
+    const message = buildPeerShareMessage(script, PUBLIC_CALCULATOR_CONFIGS.HND.path, 'HND')
+    assert.ok(message.includes('SISU'))
+    assert.ok(message.includes('utm_medium=share'))
+    assert.ok(message.includes('utm_campaign=bridge-share-peer'))
+    assert.ok(message.includes(PUBLIC_CALCULATOR_CONFIGS.HND.path))
+
+    const url = buildPeerShareUrl(script, PUBLIC_CALCULATOR_CONFIGS.HND.path, 'HND')
+    assert.ok(url.startsWith('https://wa.me/?text='))
+  })
+
+  it('builds calculator share link for native share', () => {
+    const link = buildCalculatorShareLink(PUBLIC_CALCULATOR_CONFIGS.SLV.path, 'SLV', 'bridge-share-native')
+    assert.ok(link.includes('/calcusisusv'))
+    assert.ok(link.includes('utm_campaign=bridge-share-native'))
+  })
+})
+
 describe('b2b funnel config', () => {
-  it('is defined only for HND', () => {
+  it('is defined for all supported calculator countries', () => {
     assert.ok(PUBLIC_CALCULATOR_CONFIGS.HND.b2bFunnel)
-    assert.equal(PUBLIC_CALCULATOR_CONFIGS.SLV.b2bFunnel, undefined)
-    assert.equal(PUBLIC_CALCULATOR_CONFIGS.GTM.b2bFunnel, undefined)
+    assert.ok(PUBLIC_CALCULATOR_CONFIGS.SLV.b2bFunnel)
+    assert.ok(PUBLIC_CALCULATOR_CONFIGS.GTM.b2bFunnel)
+  })
+
+  it('defines landing bridge share actions', () => {
+    for (const country of ['HND', 'SLV', 'GTM'] as const) {
+      const bridge = PUBLIC_CALCULATOR_CONFIGS[country].landingBridge
+      assert.equal(bridge.shareButton, 'Compartir')
+      assert.equal(bridge.activarButton, 'Activar gratis')
+      assert.ok(bridge.share.peerScript.length > 0)
+    }
   })
 })
 

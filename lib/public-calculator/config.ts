@@ -77,6 +77,17 @@ export type PublicCalculatorConfig = {
     body: string
     href: string
     cta: string
+    shareButton: string
+    activarButton: string
+    share: {
+      sheetTitle: string
+      peerLabel: string
+      peerScript: string
+      bossLabel: string
+      copyLabel: string
+      copiedLabel: string
+      moreOptionsLabel: string
+    }
   }
   /** Bloque editorial SEO (opcional). Alineado a queries de Search Console. */
   seoGuide?: {
@@ -125,6 +136,21 @@ export type PublicCalculatorConfig = {
 }
 
 const BASE = 'https://humanosisu.net'
+
+const LANDING_BRIDGE_SHARE = {
+  shareButton: 'Compartir',
+  activarButton: 'Activar gratis',
+  share: {
+    sheetTitle: '¿A quién se lo envías?',
+    peerLabel: 'Un colega',
+    peerScript:
+      'Validé mis deducciones gratis con SISU. Si RR.H.H. te quitó la paz con la planilla, probá esta calculadora:',
+    bossLabel: 'Mi jefe / RR.HH.',
+    copyLabel: 'Copiar enlace',
+    copiedLabel: 'Enlace copiado',
+    moreOptionsLabel: 'Más opciones…',
+  },
+} as const
 
 export const PUBLIC_CALCULATOR_CONFIGS: Record<CountryCode, PublicCalculatorConfig> = {
   HND: {
@@ -282,7 +308,8 @@ export const PUBLIC_CALCULATOR_CONFIGS: Record<CountryCode, PublicCalculatorConf
       titleAccent: '¿Eres esa persona?',
       body: 'Ayudamos a dueños y equipos de RRHH a encontrar una forma más pacífica de operar. No sos una máquina de Excel.',
       href: '/activar?country=HND',
-      cta: 'Explora SISU'
+      cta: 'Explora SISU',
+      ...LANDING_BRIDGE_SHARE,
     },
     seoGuide: {
       title: 'Guía rápida: calculadora ISR Honduras y calculadora RAP',
@@ -443,8 +470,9 @@ export const PUBLIC_CALCULATOR_CONFIGS: Record<CountryCode, PublicCalculatorConf
       titleAccent: '¿Eres esa persona?',
       body: 'Ayudamos a dueños y equipos de RRHH a encontrar una forma más pacífica de operar. No sos una máquina de Excel.',
       href: '/activar?country=SLV',
-      cta: 'Explora SISU'
-    }
+      cta: 'Explora SISU',
+      ...LANDING_BRIDGE_SHARE,
+    },
   },
   GTM: {
     countryCode: 'GTM',
@@ -574,7 +602,8 @@ export const PUBLIC_CALCULATOR_CONFIGS: Record<CountryCode, PublicCalculatorConf
       titleAccent: '¿Eres esa persona?',
       body: 'Ayudamos a dueños y equipos de RRHH a encontrar una forma más pacífica de operar. No sos una máquina de Excel.',
       href: '/activar?country=GTM',
-      cta: 'Explora SISU'
-    }
+      cta: 'Explora SISU',
+      ...LANDING_BRIDGE_SHARE,
+    },
   }
 }
