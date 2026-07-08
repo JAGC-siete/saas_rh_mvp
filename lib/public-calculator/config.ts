@@ -72,7 +72,8 @@ export type PublicCalculatorConfig = {
   relatedCalculators: Array<{ href: string; label: string }>
   breadcrumbLabel: string
   landingBridge: {
-    title: string
+    titleLead: string
+    titleAccent: string
     body: string
     href: string
     cta: string
@@ -277,7 +278,8 @@ export const PUBLIC_CALCULATOR_CONFIGS: Record<CountryCode, PublicCalculatorConf
     ],
     breadcrumbLabel: 'Deducciones Honduras',
     landingBridge: {
-      title: 'Conoces a un colega que ha perdido la paz con RR.HH. ¿Eres esa persona?',
+      titleLead: '¿Conoces a un colega que ha perdido la paz con RR.HH.?',
+      titleAccent: '¿Eres esa persona?',
       body: 'Ayudamos a dueños y equipos de RRHH a encontrar una forma más pacífica de operar. No sos una máquina de Excel.',
       href: '/activar?country=HND',
       cta: 'Explora SISU'
@@ -437,7 +439,8 @@ export const PUBLIC_CALCULATOR_CONFIGS: Record<CountryCode, PublicCalculatorConf
     ],
     breadcrumbLabel: 'Deducciones El Salvador',
     landingBridge: {
-      title: 'Conoces a un colega que ha perdido la paz con RR.HH. ¿Eres esa persona?',
+      titleLead: '¿Conoces a un colega que ha perdido la paz con RR.HH.?',
+      titleAccent: '¿Eres esa persona?',
       body: 'Ayudamos a dueños y equipos de RRHH a encontrar una forma más pacífica de operar. No sos una máquina de Excel.',
       href: '/activar?country=SLV',
       cta: 'Explora SISU'
@@ -567,7 +570,8 @@ export const PUBLIC_CALCULATOR_CONFIGS: Record<CountryCode, PublicCalculatorConf
     ],
     breadcrumbLabel: 'Deducciones Guatemala',
     landingBridge: {
-      title: 'Conoces a un colega que ha perdido la paz con RR.HH. ¿Eres esa persona?',
+      titleLead: '¿Conoces a un colega que ha perdido la paz con RR.HH.?',
+      titleAccent: '¿Eres esa persona?',
       body: 'Ayudamos a dueños y equipos de RRHH a encontrar una forma más pacífica de operar. No sos una máquina de Excel.',
       href: '/activar?country=GTM',
       cta: 'Explora SISU'

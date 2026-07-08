@@ -850,16 +850,22 @@ export default function PublicDeductionCalculator({ config }: { config: PublicCa
           </p>
         )}
 
-        <div className="mt-8 glass-modern rounded-2xl shadow-2xl p-6 sm:p-8 text-center border border-white/10">
-          <h3 className="text-lg font-bold text-white mb-2">{config.landingBridge.title}</h3>
-          <p className="text-brand-200/90 mb-4 max-w-2xl mx-auto">{config.landingBridge.body}</p>
-          <Link
-            href={appendUtmParams(config.landingBridge.href, config.countryCode, 'bridge')}
-            onClick={() => trackCalcActivarClick(calcTool, 'bridge')}
-            className="inline-block py-2.5 px-6 bg-white/10 hover:bg-white/15 text-white font-semibold rounded-xl border border-white/20 transition-all"
-          >
-            {config.landingBridge.cta}
-          </Link>
+        <div className="mt-8 glass-modern rounded-2xl shadow-2xl p-6 sm:p-10 lg:p-12 text-center">
+          <h3 className="activar-serif text-white mb-6 leading-[0.95] tracking-tight">
+            <span className="block text-4xl sm:text-5xl lg:text-6xl">{config.landingBridge.titleLead}</span>
+            <span className="block italic text-5xl sm:text-6xl lg:text-7xl mt-1">{config.landingBridge.titleAccent}</span>
+          </h3>
+          <p className="text-brand-200/90 mb-6 max-w-2xl mx-auto">{config.landingBridge.body}</p>
+          <ConversionButtons campaign="footer" size="sm" activarLabel={config.conversion.footerButton} />
+          {config.relatedCalculators.length > 0 && (
+            <div className="mt-6 flex flex-wrap justify-center gap-3 text-sm">
+              {config.relatedCalculators.map((item) => (
+                <Link key={item.href} href={item.href} className="text-brand-300 hover:text-white underline">
+                  {item.label}
+                </Link>
+              ))}
+            </div>
+          )}
         </div>
 
         {config.seoGuide && (
@@ -882,21 +888,6 @@ export default function PublicDeductionCalculator({ config }: { config: PublicCa
             </div>
           </section>
         )}
-
-        <div className="mt-6 glass-modern rounded-2xl shadow-2xl p-6 sm:p-8 text-center">
-          <h3 className="text-xl font-bold text-white mb-4">{config.conversion.footerTitle}</h3>
-          <p className="text-brand-200/90 mb-6">{config.conversion.footerBody}</p>
-          <ConversionButtons campaign="footer" size="sm" activarLabel={config.conversion.footerButton} />
-          {config.relatedCalculators.length > 0 && (
-            <div className="mt-6 flex flex-wrap justify-center gap-3 text-sm">
-              {config.relatedCalculators.map((item) => (
-                <Link key={item.href} href={item.href} className="text-brand-300 hover:text-white underline">
-                  {item.label}
-                </Link>
-              ))}
-            </div>
-          )}
-        </div>
 
         <div className="mt-6">
           <CalculatorSubscriptionBridge
