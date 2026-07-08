@@ -116,7 +116,6 @@ export default function ViernesLanding() {
         {/* Hero */}
         <section className="viernes-section pt-8 sm:pt-12 text-center">
           <span className="viernes-badge">{copy.hero.badge}</span>
-          <p className="viernes-serif viernes-hero-eyebrow">{copy.hero.eyebrow}</p>
           <h1 className="viernes-serif viernes-hero-title mb-6">
             <span className="block text-4xl sm:text-5xl lg:text-6xl font-normal not-italic">
               {copy.hero.headlineLead}

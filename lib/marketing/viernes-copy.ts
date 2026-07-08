@@ -11,9 +11,8 @@ export const VIERNES_COPY = {
 
   hero: {
     badge: 'Prueba en vivo · 30 días',
-    eyebrow: 'Activa SISU',
     headlineLead: '¿Otra vez vas a perder el domingo?',
-    headlineAccent: 'Toca el cielo',
+    headlineAccent: 'Toca el cielo con SISU',
     subheadline:
       'La ayuda está a tan solo un paso. Cierra en viernes con biométrico, horas y deducciones de ley (IHSS, RAP, ISR) — y recupera el domingo.',
     mantra: 'No sos una máquina de Excel. El descanso es real, y también la plataforma.',
