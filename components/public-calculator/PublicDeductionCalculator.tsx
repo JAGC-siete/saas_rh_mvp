@@ -903,21 +903,15 @@ export default function PublicDeductionCalculator({ config }: { config: PublicCa
         </div>
 
         {config.seoGuide && (
-          <section className="mt-6 glass-modern rounded-2xl shadow-2xl p-6 sm:p-8 border border-white/10 text-left">
-            <h2 className="text-xl sm:text-2xl font-bold text-white mb-3">{config.seoGuide.title}</h2>
-            <p className="text-brand-200/90 mb-6">{config.seoGuide.intro}</p>
+          <section className="mt-10">
+            <h2 className="text-xl font-bold text-white mb-4">{config.seoGuide.title}</h2>
+            <p className="text-brand-200/90 mb-4">{config.seoGuide.intro}</p>
             <div className="space-y-4">
               {config.seoGuide.sections.map((section) => (
-                <details
-                  key={section.heading}
-                  className="glass rounded-xl border border-white/10 p-4 group open:bg-white/5"
-                >
-                  <summary className="cursor-pointer font-semibold text-white list-none flex items-center justify-between gap-3">
-                    <span>{section.heading}</span>
-                    <span className="text-brand-300 text-sm group-open:rotate-180 transition-transform">▼</span>
-                  </summary>
-                  <p className="mt-3 text-sm text-brand-200/90 leading-relaxed">{section.body}</p>
-                </details>
+                <div key={section.heading} className="glass-modern rounded-xl p-4">
+                  <h3 className="font-semibold text-white mb-2">{section.heading}</h3>
+                  <p className="text-sm text-brand-200/90">{section.body}</p>
+                </div>
               ))}
             </div>
           </section>
