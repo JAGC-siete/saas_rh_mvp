@@ -23,7 +23,7 @@ describe('marketing mission config', () => {
 
   it('buildMissionTextFooter includes all choice links', () => {
     const footer = buildMissionTextFooter(2, 'tok', 'info')
-    assert.ok(footer.includes('Nota #2 · Pregunta rápida'))
+    assert.ok(footer.includes('Clave #2 · Pregunta rápida'))
     assert.ok(footer.includes('Que sea muy difícil'))
     assert.ok(footer.includes('choice=difficult'))
     assert.ok(!footer.includes('Campo ·'))

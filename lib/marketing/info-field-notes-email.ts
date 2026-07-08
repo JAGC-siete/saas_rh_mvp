@@ -2,15 +2,15 @@ import { getMarketingSiteUrl } from './unsubscribe'
 import { buildMissionActivarUrl, buildMissionTextFooter } from './mission-config'
 
 export const INFO_PACK_SUBJECT_FIELD =
-  'Lo prometido: lo que viste en pantalla, por escrito'
+  'Lo prometido: el documento para dejar de pelear con Recursos Humanos'
 
 const INFO_FIELD_NOTE_SUBJECTS: Record<number, string> = {
-  0: 'Nota de campo #0: lo que te robó la paz sin que lo notaras',
-  1: 'Nota de campo #1: "siempre lo hemos hecho así"',
-  2: 'Nota de campo #2: el mito de los seis meses',
-  3: 'Nota de campo #3: la duda que no te deja dormir',
-  4: 'Nota de campo #4: pseudo-digitalización',
-  5: 'Nota de campo #5: cómo recuperar la paz sin tumbar lo que ya funciona',
+  0: 'Clave #0: la guerra silenciosa que drena tu negocio',
+  1: 'Clave #1: desarma "siempre lo hemos hecho así" (la mentira más cara)',
+  2: 'Clave #2: derriba el mito de los seis meses',
+  3: 'Clave #3: la duda que no te deja dormir el viernes',
+  4: 'Clave #4: sal de la pseudo-digitalización (o por qué tu app de asistencia no sirve)',
+  5: 'Clave #5: recupera la paz el lunes sin arriesgar la operación',
 }
 
 export function getInfoSequenceSubject(step: number): string {
@@ -31,29 +31,31 @@ export function buildInfoPackEmailBody(params: { nombre?: string | null; email: 
   return [
     `Hola ${name},`,
     '',
-    'Acabas de hacer algo que casi nadie hace: leer la historia completa antes de seguir adelante.',
+    'Acabas de hacer algo que el 99% de los líderes evita: mirar de frente el departamento que más canas verdes saca en la empresa.',
     '',
-    'Si viste la pantalla, ya tienes la idea central: mucha gente cree que "digitalizó" porque puso un reloj en la entrada… y a fin de quincena sigue bajando archivos, abriendo Excel y persiguiendo datos por WhatsApp. Eso no es automatizar. Es reprocesar con pantalla en vez de papel. Y ahí es donde se pierde la paz.',
+    'Si viste la pantalla, ya entiendes el problema real. La mayoría de los directores cree que su equipo de RR.HH. es ineficiente por naturaleza. Piensan: "Es que se la pasan persiguiendo papeles, calculando mal las nóminas y tardando días en responder un permiso".',
     '',
-    'Te dejo por escrito lo mismo — por si quieres volver a leerlo el día que la planilla te quite la calma.',
+    'Pero el secreto no es cambiar de personal. El secreto es destruir el puente de papel.',
     '',
-    'Lo que veo una y otra vez en negocios de la región:',
-    '• Capturan el dato en un lugar.',
-    '• Lo mueven a mano a otro.',
-    '• Lo vuelven a calcular en otro más.',
-    '• Y alguien — casi siempre el dueño o una persona de confianza — termina siendo el "puente" entre sistemas que no se hablan.',
+    'Casi todos los negocios de la región cometen este error fatal:',
+    '• RR.HH. captura una incidencia en un reloj checador.',
+    '• Alguien la copia a mano en un Excel.',
+    '• El gerente de operaciones aprueba las horas por WhatsApp.',
+    '• Y tú (o tu contador) terminas jugando al detective para cuadrar la quincena.',
     '',
-    'Eso cansa. Y casi nadie lo mide porque "así siempre lo hemos hecho".',
+    'Eso no es culpa de Recursos Humanos. Eso es someter a humanos a hacer el trabajo de un software. El costo real es el resentimiento interno, los errores de cálculo y las horas perdidas.',
     '',
-    'Si más adelante te da curiosidad ver cómo se ve cuando el dato viaja solo (sin USB, sin doble digitación), aquí están dos enlaces — úsalos solo si te apetece:',
-    `→ Ver el motor en 30 segundos: ${site}/activar`,
-    `→ Tablas de precios (sin llamadas): ${site}/ventas`,
+    'Te dejo esto por escrito para el próximo fin de mes, cuando la nómina te vuelva a quitar la calma.',
     '',
-    'Un saludo,',
+    'Si tienes curiosidad de ver cómo RR.HH. se vuelve tu aliado estratégico cuando el dato viaja solo, te dejo estos dos enlaces:',
+    `→ Mira cómo automatizar el dolor en 30 segundos: ${site}/activar`,
+    `→ Los precios de nuestra solución (sin llamadas molestas): ${site}/ventas`,
+    '',
+    'Abrazo,',
     '',
     'Jorge',
     '',
-    'PD: En los próximos días te mando unas notas cortas — una por email — sobre las trampas invisibles que te roban la paz en casi todos los negocios. La primera llega mañana. Solo leer si te interesa.',
+    'PD: Mañana te enviaré la Clave #1 sobre la mentira corporativa más peligrosa del mundo. Si quieres dejar de perder dinero en fricción interna, te sugiero leerla.',
   ].join('\n')
 }
 
@@ -61,17 +63,17 @@ export function buildInfoWelcomeText(): string {
   return [
     'Hola,',
     '',
-    'Te quedaste — y eso ya te separa de quien sigue perdiendo la paz cada fin de mes.',
+    'Te quedaste. Eso significa que estás harto de la fricción diaria entre tu operación y Recursos Humanos.',
     '',
-    'Mañana te mando la primera nota sobre algo que escucho en casi todas las visitas:',
+    'Mañana te escribo sobre la frase que destruye el crecimiento de cualquier empresa. La escucho en el 90% de las consultorías que doy:',
     '',
-    '"Es que siempre lo hemos hecho así."',
+    '"Es que en Recursos Humanos siempre lo hemos hecho así."',
     '',
-    'No suena a problema. Suena a prudencia. Pero muchas veces es la razón por la que un negocio sigue regalando horas —y paz— a lo repetitivo, aunque la solución sea más obvia de lo que parece.',
+    'No lo dicen por maldad. Lo dicen por inercia. Pero esa inercia es la que hace que tu equipo pase el 80% de su tiempo operando archivos huérfanos en lugar de retener al talento que te genera dinero.',
     '',
-    'Hoy no necesitas hacer nada. Solo ten presente que el enemigo rara vez es "la tecnología". Es la inercia.',
+    'Hoy no tienes que comprar nada. Solo entiende esto: tu enemigo no es tu gente de RR.HH. Tu enemigo es el sistema medieval que los obligas a usar.',
     '',
-    'Mañana, la primera trampa concreta.',
+    'Mañana, la primera clave.',
     '',
     '— Jorge',
   ].join('\n')
@@ -89,15 +91,15 @@ export function buildInfoPainPoint1Text(params: InfoPainPointParams): string {
   let body = [
     `Hola ${name},`,
     '',
-    'En el correo anterior te dejé la historia por escrito. Hoy, la primera trampa que le roba la paz a casi todos:',
+    'Ayer te prometí la primera clave para hacer las paces con RR.HH. Empieza por desarmar esta mentira: "Siempre lo hemos hecho así y funciona".',
     '',
-    '"Es que siempre lo hemos hecho así."',
+    'Mentira. No funciona. Solo sobrevive.',
     '',
-    'No es mala fe. Es miedo a tocar algo que "funciona más o menos".',
+    'El "más o menos" corporativo te está costando miles de dólares en horas hombre. Cada vez que RR.HH. tiene que re-confirmar un permiso, cruzar un Excel de asistencia o corregir manualmente un día festivo, estás pagando por un error de diseño.',
     '',
-    'El problema: "más o menos" suele costar horas que nadie suma. Firmas, cruces, correcciones, "déjame revisar el Excel otra vez". Cosas pequeñas que a fin de mes pesan —y te quitan la paz—.',
+    'Hacer las paces con RR.HH. empieza por aceptar que el riesgo no es probar una tecnología nueva. El riesgo real es seguir perdiendo paz, tiempo y dinero por defender el pasado.',
     '',
-    'Lo anoto en el margen: el riesgo no siempre es probar algo nuevo. A veces el riesgo es no cambiar y seguir pagando en tiempo (y en paz) lo que ya podría resolverse solo.',
+    'Mañana te cuento por qué "el software pesado" te mintió.',
   ].join('\n')
 
   if (params.leadToken) {
@@ -115,15 +117,15 @@ export function buildInfoPainPoint2Text(params: InfoPainPointParams): string {
   let body = [
     `Hola ${name},`,
     '',
-    'Otra frase que escucho mucho:',
+    'Hablemos de otra excusa muy común: "Es que implementar un sistema de Recursos Humanos toma meses, es un dolor de cabeza y nadie lo va a usar".',
     '',
-    '"Eso de sistemas nuevos es complicado. Primero hay que instalarlo meses, enseñarle a todos…"',
+    'Tienen razón... si compras software obsoleto de la década pasada.',
     '',
-    'A veces es verdad — con software pesado.',
+    'Ese miedo paraliza a los dueños de negocio y los condena a seguir usando WhatsApp, libretas y correos como su "sistema operativo de personal".',
     '',
-    'Pero otras veces es una excusa cómoda para no mover nada y seguir con el Excel, la USB y el WhatsApp como sistema operativo real del negocio.',
+    'Una herramienta moderna no requiere un máster en ingeniería. Si la solución no le devuelve la paz a tu equipo en la primera semana, no es una solución, es una carga. Hacer las paces con RR.HH. es darles herramientas que amen usar, no castigos digitales.',
     '',
-    'Si una herramienta sirve, debería devolverte tiempo y paz, no quitártelos.',
+    'Mañana te muestro el costo psicológico de la duda.',
   ].join('\n')
 
   if (params.leadToken) {
@@ -141,13 +143,15 @@ export function buildInfoPainPoint3Text(params: InfoPainPointParams): string {
   let body = [
     `Hola ${name},`,
     '',
-    'Cuando los horarios, permisos y pagos viven repartidos — libreta, Excel, chats, memoria de alguien — casi siempre se escapa algo.',
+    'Cuando los horarios, las vacaciones, las faltas y los bonos viven dispersos en la mente de tres personas distintas y dos archivos de Excel, pasa lo inevitable: se escapan errores.',
     '',
-    'Cinco minutos mal contados. Un permiso que no quedó anotado. Un cálculo hecho apurado un viernes.',
+    'Cinco minutos mal cobrados aquí. Un día de vacaciones que no se registró allá. Una prima dominical mal calculada por las prisas del cierre.',
     '',
-    'Parecen detalles. A fin de mes se sienten.',
+    'Al final del mes, el problema no es solo el dinero que se fuga. Es la desconfianza. El empleado cree que le roban, tú crees que RR.HH. no sabe trabajar, y RR.HH. se siente frustrado.',
     '',
-    'El costo oculto no es solo el error. Es vivir con la duda: "¿Lo hicimos bien?". Y esa duda es justo lo que te roba la paz.',
+    'Esa duda constante destruye la cultura de tu empresa. Y la paz no regresa hasta que los datos son irrefutables para todos.',
+    '',
+    'Mañana te revelo el engaño de la "pantalla bonita".',
   ].join('\n')
 
   if (params.leadToken) {
@@ -165,15 +169,15 @@ export function buildInfoPainPoint4Text(params: InfoPainPointParams): string {
   let body = [
     `Hola ${name},`,
     '',
-    'Algo que sigo viendo:',
+    'Esto da risa, si no fuera porque cuesta dinero. Veo empresas con tablets de reconocimiento facial de última generación en la entrada... pero la secretaria sigue bajando los datos a un USB para meterlos a un Excel a fin de mes.',
     '',
-    'Biométrico en la puerta. Excel en la oficina. WhatsApp en el bolsillo.',
+    'Eso no es transformación digital. Eso es ponerle una pantalla a la burocracia de siempre.',
     '',
-    'Digitalizaron la captura. No la ejecución.',
+    'Si tu equipo gasta más tiempo moviendo el dato de un sistema a otro que analizando el rendimiento de la empresa, estás atrapado en la pseudo-digitalización. Es doble trabajo, pero con luces LED.',
     '',
-    'El dato nace en un lugar y muere en otro. Alguien lo baja, lo sube, lo cruza, lo vuelve a digitar. Trabajo doble con mejor presentación.',
+    'Hacer las paces con RR.HH. es conectar los puntos para que ellos dejen de digitar y empiecen a gestionar.',
     '',
-    'Si pasas más tiempo buscando y moviendo datos que usándolos, no es eficiencia. Es reprocesamiento disfrazado — y es la fuga silenciosa de tu paz.',
+    'Mañana cerramos la serie con la forma inteligente de probar esto sin romper nada.',
   ].join('\n')
 
   if (params.leadToken) {
@@ -192,26 +196,24 @@ export function buildInfoPainPoint5Text(params: InfoPainPointParams): string {
   let body = [
     `Hola ${name},`,
     '',
-    'Última nota de esta serie.',
+    'Llegamos al final. Y la pregunta lógica que tienes ahora mismo es: "Suena espectacular, Jorge... pero no puedo darme el lujo de parar la operación para experimentar".',
     '',
-    'Casi siempre llega la misma pregunta:',
+    'Tiene todo el sentido del mundo. Cuidar el flujo de caja es tu prioridad.',
     '',
-    '"Suena bien… pero ¿cómo pruebo algo sin poner de cabeza lo que ya tengo?"',
+    'Por eso, el secreto definitivo para hacer las paces con Recursos Humanos no es una revolución de un día para otro. Es una transición en paralelo.',
     '',
-    'Tiene sentido. Nadie quiere apagar la operación un lunes.',
+    'Pon a prueba nuestro motor durante una quincena mientras tú sigues haciendo la nómina con tu método viejo y lento. Compara los resultados con tus propios ojos. Descubre los errores que se te estaban escapando y mira cuánto tiempo libre le queda a tu equipo.',
     '',
-    'Lo que propongo no es "cambiar todo el lunes". Es mirar una pieza en paralelo — dejar que el sistema calcule unos días mientras tú sigues con tu método actual — y comparar con tus propios ojos.',
-    '',
-    'Sin presión. Sin llamadas agresivas. Solo la curiosidad de ver cómo se siente recuperar la paz.',
+    'Sin llamadas de ventas agresivas. Sin contratos forzosos. Solo tú, viendo cómo la fricción desaparece.',
   ].join('\n')
 
   if (params.leadToken) {
     body += buildMissionTextFooter(5, params.leadToken, 'info')
     body += `\n\nSi prefieres ir directo al motor (30 seg):\n${buildMissionActivarUrl(params.leadToken)}`
     body +=
-      '\n\nPD: Esta fue la serie completa. Si en algún momento quieres hablar de tu caso concreto, responde a este correo. Si no, no pasa nada — ya hiciste lo más difícil: mirar de frente el reprocesamiento.'
+      '\n\nPD: Esta fue la serie completa. Si estás listo para automatizar el caos y transformar a RR.HH. en el motor más eficiente de tu empresa, responde a este correo. Si no, no pasa nada; al menos ya sabes exactamente por dónde se está fugando tu paz.'
   } else {
-    body += `\n\nSolo responde a este correo o entra aquí: ${site}/activar\n\n— Jorge`
+    body += `\n\nSi quieres ver el motor funcionando en 30 segundos, entra aquí: ${site}/activar\n\n— Jorge`
   }
 
   return body

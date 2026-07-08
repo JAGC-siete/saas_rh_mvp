@@ -16,29 +16,43 @@ export const SEALED_ENVELOPE_COPY = {
     ctaSecondary: 'Validar deducciones gratis',
   },
 
-  /** Estado 1 — Dejanos dónde enviarte la historia */
+  /** Estado 1 — Wizard paso a paso (uno a uno con barra de progreso) */
   unlock: {
-    title: '¿A dónde te enviamos la historia?',
+    title: '¿A dónde te enviamos la clave?',
     sub: 'Te la mostramos aquí al instante y te la dejamos en el correo con el paso a paso.',
+    progressLabel: 'Recuperando tu paz…',
+    stepLabels: ['Nombre', 'Correo', 'WhatsApp', 'Empresa'],
     fields: {
-      nombre: { label: 'Nombre', placeholder: '¿Cómo te llamás?' },
-      email: { label: 'Correo', placeholder: '¿A dónde te enviamos la historia?' },
+      nombre: {
+        label: 'Nombre',
+        question: '¿Cómo te llamás?',
+        placeholder: 'Tu nombre',
+      },
+      email: {
+        label: 'Correo',
+        question: '¿A dónde te enviamos la clave?',
+        placeholder: 'tu@correo.com',
+      },
       phone: {
-        label: 'WhatsApp (Opcional)',
-        placeholder: 'Por si preferís que te escribamos por ahí',
+        label: 'WhatsApp (opcional)',
+        question: '¿Querés que te avisemos por WhatsApp?',
+        placeholder: 'Tu número de WhatsApp',
       },
       empresa: {
-        label: 'Empresa (Opcional)',
-        placeholder: '¿Dónde cerrás la planilla?',
+        label: 'Empresa (opcional)',
+        question: '¿Dónde cerrás la planilla?',
+        placeholder: 'Nombre de tu empresa',
       },
     },
+    next: 'Siguiente',
+    back: 'Atrás',
     submit: 'Recuperar mi paz',
     submitting: 'Un momento…',
     disclaimer:
-      'Sin trial automático ni cobros. Solo la historia y cómo aplicarla. Te salís cuando querás.',
+      'Sin trial automático ni cobros. Solo la clave y cómo aplicarla. Te salís cuando querás.',
     errors: {
-      nombre: 'Indica tu nombre para enviarte la historia.',
-      email: 'Indica tu correo; ahí te enviamos la historia.',
+      nombre: 'Indica tu nombre para enviarte la clave.',
+      email: 'Indica tu correo; ahí te enviamos la clave.',
       submit: 'No se pudo enviar. Intenta de nuevo.',
       connection: 'Error de conexión. Por favor intenta de nuevo.',
     },
@@ -51,7 +65,7 @@ export const SEALED_ENVELOPE_COPY = {
     lead: 'El secreto es simple: digitalizar de verdad. Lo difícil es que casi nadie llega.',
     paragraphs: [
       'Durante años, el cierre de planilla fue mi peor semana del mes: bajar marcajes a un USB, pelear con Excel, cuadrar horas extra y rezar para que IHSS, RAP e ISR cerraran bien. Un solo error y volvía a empezar de cero.',
-      'La salida existe: cuando el marcaje se conecta al motor legal, las horas y las deducciones se calculan solas y recuperás la paz. Pero entre vos y ese punto hay unas trampas invisibles que frenan a casi todos — son justo las que te voy a mostrar, una por una, en los próximos correos.',
+      'La salida existe: cuando el marcaje se conecta al motor legal, las horas y las deducciones se calculan solas y recuperás la paz. Pero para llegar ahí hay unas claves que casi nadie aplica — son justo las que te voy a mostrar, una por una, en los próximos correos.',
     ],
     comparison: [
       { before: '4 horas un domingo', after: '4 minutos un viernes' },
@@ -64,7 +78,7 @@ export const SEALED_ENVELOPE_COPY = {
   nextStep: {
     title: '¿Qué sigue?',
     body:
-      'Ya tenés la historia en tu bandeja de entrada. No tenés que hacer nada más por hoy. En las próximas horas te mando la primera de las trampas invisibles que nos arrastran de vuelta al trabajo manual —y que te separan de la paz—, aunque la solución sea tan simple como la que acabás de leer.',
+      'Ya tenés la historia en tu bandeja de entrada. No tenés que hacer nada más por hoy. En las próximas horas te mando la primera clave para salir del trabajo manual que te separa de la paz, aunque la solución sea tan simple como la que acabás de leer.',
     emailHint: 'Buscá un correo de jorgearturo@humanosisu.net — revisá spam si no lo ves.',
     ctaActivar: 'Ver cómo se ve en 30 segundos',
     ctaCalculadora: 'Probar calculadora gratis',

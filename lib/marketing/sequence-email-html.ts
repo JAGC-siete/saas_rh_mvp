@@ -124,7 +124,10 @@ export function buildSequenceEmailHtml(input: BuildSequenceEmailHtmlInput): stri
 
   return wrapLiquidEmail({
     title: subject,
-    subtitle: 'Tablero de notas de campo · Humano SISU',
+    subtitle:
+      normalizeLeadSource(source) === 'info'
+        ? 'Claves para hacer las paces con RR.HH. · Humano SISU'
+        : 'Tablero de notas de campo · Humano SISU',
     badge: badge ?? (missionId ? getMissionDef(missionId, source).badge : 'Serie educativa'),
     bodyHtml,
     footerNote: `Humano SISU · ${SITE_URL.replace(/^https?:\/\//, '')}`,
@@ -148,13 +151,16 @@ export function buildWelcomeEmailHtml(input: {
     unsubscribeHtml(input.unsubscribeToken),
   ].join('')
 
+  const welcomeKind = normalizeLeadSource(input.source)
   return wrapLiquidEmail({
     title: input.subject,
     subtitle:
-      normalizeLeadSource(input.source) === 'suscripcion'
+      welcomeKind === 'suscripcion'
         ? 'Alertas sobre tu sueldo · Humano SISU'
-        : 'Notas de campo · Humano SISU',
-    badge: 'Nota #0',
+        : welcomeKind === 'info'
+          ? 'Claves para hacer las paces con RR.HH. · Humano SISU'
+          : 'Notas de campo · Humano SISU',
+    badge: welcomeKind === 'info' ? 'Clave #0' : 'Nota #0',
     bodyHtml,
   })
 }

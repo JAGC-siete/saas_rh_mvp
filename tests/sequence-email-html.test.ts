@@ -17,7 +17,7 @@ describe('sequence email HTML mission block', () => {
     assert.ok(!stripped.includes('choice=difficult'))
     assert.ok(!stripped.includes('Campo ·'))
     assert.ok(!stripped.includes('— Jorge'))
-    assert.ok(stripped.includes('Si una herramienta sirve'))
+    assert.ok(stripped.includes('Una herramienta moderna'))
   })
 
   it('buildSequenceEmailHtml renders mission once in HTML, not as duplicated paragraphs', () => {

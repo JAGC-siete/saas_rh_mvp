@@ -91,8 +91,8 @@ describe('sendSequenceEmail welcome source (unit)', () => {
     assert.ok(welcomeVentas.includes('propuesta en PDF'))
     assert.ok(welcomeVentas.includes('— Jorge'))
     assert.ok(painPoint1.startsWith('Hola María,'))
-    assert.ok(painPoint1.includes('la historia por escrito'))
-    assert.ok(painPoint1.includes('siempre lo hemos hecho así'))
+    assert.ok(painPoint1.includes('error de diseño'))
+    assert.ok(painPoint1.includes('Siempre lo hemos hecho así y funciona'))
     assert.ok(!painPoint1.includes('6 meses de implementación'))
 
     const subsPp1 = buildPainPoint1Text({
@@ -116,9 +116,9 @@ describe('sendSequenceEmail welcome source (unit)', () => {
     const activar = buildPainPoint2Text({ nombre: 'Ana', email: 'a@x.com', source: 'activar' })
 
     assert.ok(info.startsWith('Hola Ana,'))
-    assert.ok(info.includes('sistemas nuevos es complicado'))
-    assert.ok(info.includes('WhatsApp como sistema operativo'))
-    assert.ok(infoWithMission.includes('Nota #2 · Pregunta rápida'))
+    assert.ok(info.includes('implementar un sistema de Recursos Humanos'))
+    assert.ok(info.includes('sistema operativo de personal'))
+    assert.ok(infoWithMission.includes('Clave #2 · Pregunta rápida'))
     assert.ok(ventas.includes('72 horas'))
     assert.ok(ventas.includes('20%'))
     assert.ok(activar.includes('encendiste el entorno'))
@@ -132,8 +132,8 @@ describe('sendSequenceEmail welcome source (unit)', () => {
     const activar = buildPainPoint3Text({ nombre: 'Luis', email: 'l@x.com', source: 'activar' })
 
     assert.ok(info.startsWith('Hola Luis,'))
-    assert.ok(info.includes('se escapa algo'))
-    assert.ok(info.includes('¿Lo hicimos bien?'))
+    assert.ok(info.includes('se escapan errores'))
+    assert.ok(info.includes('desconfianza'))
     assert.ok(ventas.includes('objeción'))
     assert.ok(ventas.includes('biométrico'))
     assert.ok(!ventas.includes('evaluando una cotización'))
@@ -148,8 +148,8 @@ describe('sendSequenceEmail welcome source (unit)', () => {
     const activar = buildPainPoint4Text({ nombre: 'Carla', email: 'c@x.com', source: 'activar' })
 
     assert.ok(info.startsWith('Hola Carla,'))
-    assert.ok(info.includes('Biométrico en la puerta'))
-    assert.ok(info.includes('reprocesamiento disfrazado'))
+    assert.ok(info.includes('reconocimiento facial'))
+    assert.ok(info.includes('luces LED'))
     assert.ok(ventas.includes('/app/login'))
     assert.ok(ventas.includes('trial incluido'))
     assert.ok(!ventas.includes('final_v2'))
@@ -169,7 +169,7 @@ describe('sendSequenceEmail welcome source (unit)', () => {
     const activar = buildPainPoint5Text({ nombre: 'Pedro', email: 'p@x.com', source: 'activar' })
 
     assert.ok(info.startsWith('Hola Pedro,'))
-    assert.ok(info.includes('Última nota de esta serie'))
+    assert.ok(info.includes('Llegamos al final'))
     assert.ok(info.includes('prueba en la sombra'))
     assert.ok(info.includes('Sí, muéstrame'))
     assert.ok(info.includes('/activar'))

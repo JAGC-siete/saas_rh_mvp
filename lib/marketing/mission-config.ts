@@ -42,7 +42,7 @@ export type MissionDef = {
 export const MISSIONS: Record<MissionId, MissionDef> = {
   1: {
     id: 1,
-    badge: 'Nota #1',
+    badge: 'Clave #1',
     stepLabel: 'Inercia',
     question: '¿Cuántas horas al mes crees que se te van en lo repetitivo — firmas, cruces, correcciones?',
     choices: [
@@ -53,7 +53,7 @@ export const MISSIONS: Record<MissionId, MissionDef> = {
   },
   2: {
     id: 2,
-    badge: 'Nota #2',
+    badge: 'Clave #2',
     stepLabel: 'Complejidad',
     question: '¿Qué es lo que más te frena cuando piensas en automatizar algo?',
     choices: [
@@ -64,7 +64,7 @@ export const MISSIONS: Record<MissionId, MissionDef> = {
   },
   3: {
     id: 3,
-    badge: 'Nota #3',
+    badge: 'Clave #3',
     stepLabel: 'Costo oculto',
     question: '¿Dónde sientes que hoy se te escapa más el tiempo?',
     choices: [
@@ -75,7 +75,7 @@ export const MISSIONS: Record<MissionId, MissionDef> = {
   },
   4: {
     id: 4,
-    badge: 'Nota #4',
+    badge: 'Clave #4',
     stepLabel: 'Pseudo digitalización',
     question: 'Se honesto: ¿Tu Excel actual tiene errores que rezas porque nadie descubra?',
     choices: [
@@ -85,7 +85,7 @@ export const MISSIONS: Record<MissionId, MissionDef> = {
   },
   5: {
     id: 5,
-    badge: 'Nota #5',
+    badge: 'Clave #5',
     stepLabel: 'Prueba en la sombra',
     question: '¿Te interesa ver cómo sería esa prueba en la sombra?',
     choices: [{ id: 'shadow', label: 'Sí, muéstrame' }],
@@ -336,7 +336,7 @@ export function buildMissionFooterHeader(mission: MissionDef, source?: string | 
 export function stripMissionTextFooter(text: string): string {
   return text
     .replace(
-      /\n\n?(?:(?:Nota #\d · )?(?:Campo · )?(?:Pregunta rápida|Respuesta rápida)[^\n]*\n[\s\S]*?\n\n— Jorge)/,
+      /\n\n?(?:(?:(?:Nota|Clave) #\d · )?(?:Campo · )?(?:Pregunta rápida|Respuesta rápida)[^\n]*\n[\s\S]*?\n\n— Jorge)/,
       ''
     )
     .trim()

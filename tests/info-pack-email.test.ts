@@ -11,7 +11,7 @@ import { buildInfoPackEmailHtml } from '../lib/marketing/info-pack-email-html'
 describe('info pack email (/info TOFU)', () => {
   it('uses field-notes subject', () => {
     assert.equal(buildInfoPackSubject(), INFO_PACK_SUBJECT)
-    assert.ok(INFO_PACK_SUBJECT.includes('pantalla'))
+    assert.ok(INFO_PACK_SUBJECT.includes('Recursos Humanos'))
   })
 
   it('reinforces action without anti-sell disclaimers', () => {
@@ -22,13 +22,12 @@ describe('info pack email (/info TOFU)', () => {
     })
 
     assert.ok(text.startsWith('Hola Victor,'))
-    assert.ok(text.includes('Acabas de hacer algo que casi nadie hace'))
-    assert.ok(text.includes('reprocesar'))
-    assert.ok(text.includes('puente'))
-    assert.ok(text.includes('Ver el motor en 30 segundos'))
+    assert.ok(text.includes('el 99% de los líderes evita'))
+    assert.ok(text.includes('puente de papel'))
+    assert.ok(text.includes('automatizar el dolor en 30 segundos'))
     assert.ok(text.includes('/activar'))
     assert.ok(text.includes('/ventas'))
-    assert.ok(text.includes('notas cortas'))
+    assert.ok(text.includes('Clave #1'))
     assert.ok(text.includes('Jorge'))
     assert.ok(!text.includes('Gracias por abrir'))
     assert.ok(!text.includes('cero venta'))
@@ -53,12 +52,12 @@ describe('info pack email (/info TOFU)', () => {
     })
 
     assert.ok(html.includes('Humano SISU'))
-    assert.ok(html.includes('Acabas de hacer algo que casi nadie hace'))
+    assert.ok(html.includes('el 99% de los líderes evita'))
     assert.ok(html.includes('Hola Victor'))
-    assert.ok(html.includes('Ver el motor en 30 segundos'))
+    assert.ok(html.includes('Automatizar el dolor en 30 segundos'))
     assert.ok(html.includes('/activar'))
     assert.ok(html.includes('/ventas'))
-    assert.ok(html.includes('notas cortas'))
+    assert.ok(html.includes('Clave #1'))
     assert.ok(html.includes('unsubscribe?token=test-token'))
   })
 })

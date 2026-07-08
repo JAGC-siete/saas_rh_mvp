@@ -32,35 +32,40 @@ export function buildInfoPackEmailHtml(params: {
     liquidParagraph(`Hola ${greeting},`),
     liquidParagraph(
       escapeMultiline(
-        'Acabas de hacer algo que casi nadie hace: leer la historia completa antes de seguir adelante.'
+        'Acabas de hacer algo que el 99% de los líderes evita: mirar de frente el departamento que más canas verdes saca en la empresa.'
       )
     ),
     liquidParagraph(
-      'Si viste la pantalla, ya tienes la idea central: mucha gente cree que "digitalizó" porque puso un reloj en la entrada… y a fin de quincena sigue bajando archivos, abriendo Excel y persiguiendo datos por WhatsApp. Eso no es automatizar. Es <strong>reprocesar</strong> con pantalla en vez de papel. Y ahí es donde se pierde la paz.'
+      'Si viste la pantalla, ya entiendes el problema real. La mayoría de los directores cree que su equipo de RR.HH. es ineficiente por naturaleza. Piensan: "Es que se la pasan persiguiendo papeles, calculando mal las nóminas y tardando días en responder un permiso".'
     ),
-    liquidParagraph('Te dejo por escrito lo mismo — por si quieres volver a leerlo el día que la planilla te quite la calma.'),
+    liquidParagraph(
+      'Pero el secreto no es cambiar de personal. El secreto es <strong>destruir el puente de papel</strong>.'
+    ),
     liquidPanel(
       liquidBulletList([
-        'Capturan el dato en un lugar.',
-        'Lo mueven a mano a otro.',
-        'Lo vuelven a calcular en otro más.',
-        'Y alguien — casi siempre el dueño o una persona de confianza — termina siendo el "puente" entre sistemas que no se hablan.',
+        'RR.HH. captura una incidencia en un reloj checador.',
+        'Alguien la copia a mano en un Excel.',
+        'El gerente de operaciones aprueba las horas por WhatsApp.',
+        'Y tú (o tu contador) terminas jugando al detective para cuadrar la quincena.',
       ]),
-      'Lo que veo una y otra vez en negocios de la región'
+      'El error fatal que cometen casi todos'
     ),
     liquidParagraph(
-      'Eso cansa. Y casi nadie lo mide porque "así siempre lo hemos hecho".'
+      'Eso no es culpa de Recursos Humanos. Eso es someter a humanos a hacer el trabajo de un software. El costo real es el resentimiento interno, los errores de cálculo y las horas perdidas.'
     ),
     liquidParagraph(
-      'Si más adelante te da curiosidad ver cómo se ve cuando el dato viaja solo (sin USB, sin doble digitación), aquí están dos enlaces — úsalos solo si te apetece:'
+      'Te dejo esto por escrito para el próximo fin de mes, cuando la nómina te vuelva a quitar la calma.'
+    ),
+    liquidParagraph(
+      'Si tienes curiosidad de ver cómo RR.HH. se vuelve tu aliado estratégico cuando el dato viaja solo, te dejo estos dos enlaces:'
     ),
     `<div style="text-align: center; margin: 18px 0;">
-      <a href="${activarUrl}" style="display: inline-block; background: linear-gradient(135deg, ${B.emailAccent}, #2563eb); color: white; padding: 12px 22px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 14px; margin: 0 6px 10px 6px;">Ver el motor en 30 segundos</a>
-      <a href="${ventasUrl}" style="display: inline-block; background: transparent; color: ${B.emailAccent}; padding: 11px 22px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 14px; border: 2px solid ${B.emailAccent}; margin: 0 6px 10px 6px;">Tablas de precios (sin llamadas)</a>
+      <a href="${activarUrl}" style="display: inline-block; background: linear-gradient(135deg, ${B.emailAccent}, #2563eb); color: white; padding: 12px 22px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 14px; margin: 0 6px 10px 6px;">Automatizar el dolor en 30 segundos</a>
+      <a href="${ventasUrl}" style="display: inline-block; background: transparent; color: ${B.emailAccent}; padding: 11px 22px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 14px; border: 2px solid ${B.emailAccent}; margin: 0 6px 10px 6px;">Los precios (sin llamadas molestas)</a>
     </div>`,
-    liquidParagraph('Un saludo,<br /><strong>Jorge</strong>'),
+    liquidParagraph('Abrazo,<br /><strong>Jorge</strong>'),
     liquidInfoBox(
-      'En los próximos días te mando unas notas cortas — una por email — sobre las trampas invisibles que te roban la paz en casi todos los negocios. La primera llega mañana. Solo leer si te interesa.',
+      'Mañana te enviaré la Clave #1 sobre la mentira corporativa más peligrosa del mundo. Si quieres dejar de perder dinero en fricción interna, te sugiero leerla.',
       'neutral'
     ),
     `<p style="margin: 0; text-align: center; font-size: 12px; color: ${B.emailTextMuted}; line-height: 1.55;">
@@ -71,8 +76,8 @@ export function buildInfoPackEmailHtml(params: {
 
   return wrapLiquidEmail({
     title: 'Humano SISU',
-    subtitle: 'Lo que viste en pantalla, por escrito',
-    badge: 'Nota de campo',
+    subtitle: 'El documento para hacer las paces con RR.HH.',
+    badge: 'El secreto',
     bodyHtml,
     footerNote: `Humano SISU · ${site}`,
   })

@@ -12,6 +12,8 @@ import { hasValidationErrors } from '../../lib/forms/validation-errors'
 
 type PageStatus = 'intrigue' | 'unlocking' | 'revealed'
 
+type WizardKey = 'nombre' | 'email' | 'phone' | 'empresa'
+
 interface ValidationErrors {
   nombre?: string
   email?: string
@@ -19,6 +21,15 @@ interface ValidationErrors {
 }
 
 const copy = SEALED_ENVELOPE_COPY
+
+const WIZARD_ORDER: WizardKey[] = ['nombre', 'email', 'phone', 'empresa']
+
+const FIELD_META: Record<WizardKey, { type: string; autoComplete: string; inputMode?: 'tel' }> = {
+  nombre: { type: 'text', autoComplete: 'name' },
+  email: { type: 'email', autoComplete: 'email' },
+  phone: { type: 'tel', autoComplete: 'tel', inputMode: 'tel' },
+  empresa: { type: 'text', autoComplete: 'organization' },
+}
 
 function computeErrors(fd: { nombre: string; email: string }): ValidationErrors {
   const errors: ValidationErrors = {}
@@ -37,23 +48,83 @@ function computeErrors(fd: { nombre: string; email: string }): ValidationErrors 
   return errors
 }
 
+function validateStep(key: WizardKey, fd: { nombre: string; email: string }): string | undefined {
+  if (key === 'nombre') {
+    const nombre = fd.nombre.trim()
+    if (!nombre) return copy.unlock.errors.nombre
+    if (nombre.length > 120) return 'El nombre es demasiado largo.'
+  }
+  if (key === 'email') {
+    const email = fd.email.trim()
+    if (!email) return copy.unlock.errors.email
+    return leadEmailValidationMessage(email) ?? undefined
+  }
+  return undefined
+}
+
 export default function SealedEnvelopeLead() {
   const [status, setStatus] = useState<PageStatus>('intrigue')
+  const [stepIndex, setStepIndex] = useState(0)
   const [formData, setFormData] = useState({ nombre: '', email: '', phone: '', empresa: '' })
   const [errors, setErrors] = useState<ValidationErrors>({})
   const [isLoading, setIsLoading] = useState(false)
 
-  const handleInputChange = (field: keyof typeof formData, value: string) => {
-    const next = { ...formData, [field]: value }
-    setFormData(next)
-    setErrors(computeErrors({ nombre: next.nombre, email: next.email }))
+  const totalSteps = WIZARD_ORDER.length
+  const currentKey = WIZARD_ORDER[stepIndex]
+  const isLastStep = stepIndex === totalSteps - 1
+  const pct = Math.round(((stepIndex + 1) / totalSteps) * 100)
+
+  const startUnlock = () => {
+    setStepIndex(0)
+    setErrors({})
+    setStatus('unlocking')
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleInputChange = (field: keyof typeof formData, value: string) => {
+    setFormData((prev) => ({ ...prev, [field]: value }))
+    setErrors((prev) => {
+      if (!prev[field as keyof ValidationErrors] && !prev.submit) return prev
+      const next = { ...prev }
+      delete next[field as keyof ValidationErrors]
+      delete next.submit
+      return next
+    })
+  }
+
+  const goBack = () => {
+    setErrors({})
+    if (stepIndex === 0) {
+      setStatus('intrigue')
+      return
+    }
+    setStepIndex((i) => i - 1)
+  }
+
+  const goNext = () => {
+    const stepError = validateStep(currentKey, formData)
+    if (stepError) {
+      setErrors({ [currentKey]: stepError } as ValidationErrors)
+      return
+    }
+    setErrors({})
+    if (!isLastStep) {
+      setStepIndex((i) => i + 1)
+      return
+    }
+    void submitLead()
+  }
+
+  const handleStepSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    goNext()
+  }
+
+  const submitLead = async () => {
     const allErrors = computeErrors(formData)
     if (hasValidationErrors(allErrors)) {
       setErrors(allErrors)
+      const firstBadStep = WIZARD_ORDER.findIndex((key) => allErrors[key as keyof ValidationErrors])
+      if (firstBadStep >= 0) setStepIndex(firstBadStep)
       return
     }
 
@@ -122,7 +193,7 @@ export default function SealedEnvelopeLead() {
           <div className="flex flex-col sm:flex-row flex-wrap justify-center gap-3">
             <button
               type="button"
-              onClick={() => setStatus('unlocking')}
+              onClick={startUnlock}
               className="viernes-btn viernes-btn-primary"
             >
               {copy.intrigue.cta}
@@ -146,92 +217,117 @@ export default function SealedEnvelopeLead() {
           exit={{ opacity: 0, y: -8 }}
           transition={{ duration: 0.35 }}
         >
-          <h2 className="viernes-serif viernes-section-title text-center">{copy.unlock.title}</h2>
-          <p className="viernes-lead mb-8 text-center max-w-xl mx-auto">{copy.unlock.sub}</p>
+          <div className="max-w-lg mx-auto mb-6">
+            <div className="glass-modern rounded-xl border border-white/15 px-4 py-3 shadow-lg backdrop-blur-md">
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                <span className="text-xs font-medium text-brand-200/90 tracking-wide">
+                  {copy.unlock.progressLabel}
+                </span>
+                <span className="text-sm font-bold text-white tabular-nums">
+                  {pct}% · Paso {stepIndex + 1} de {totalSteps}
+                </span>
+              </div>
 
-          <form onSubmit={handleSubmit} className="viernes-card space-y-4 max-w-lg mx-auto">
-            <div>
-              <label htmlFor="info-nombre" className="viernes-form-label">
-                {copy.unlock.fields.nombre.label}
-              </label>
-              <input
-                id="info-nombre"
-                name="nombre"
-                type="text"
-                value={formData.nombre}
-                onChange={(e) => handleInputChange('nombre', e.target.value)}
-                placeholder={copy.unlock.fields.nombre.placeholder}
-                disabled={isLoading}
-                autoComplete="name"
-                className="viernes-form-input"
-                required
-              />
-              {errors.nombre && <p className="viernes-form-error">{errors.nombre}</p>}
+              <div className="h-2 rounded-full bg-white/10 overflow-hidden mb-3">
+                <div
+                  className="h-full rounded-full transition-all duration-500 ease-out"
+                  style={{ width: `${pct}%`, background: 'linear-gradient(90deg,#38bdf8,#3b82f6)' }}
+                  role="progressbar"
+                  aria-valuenow={pct}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-label={`${copy.unlock.progressLabel}: ${pct}%`}
+                />
+              </div>
+
+              <div className="grid grid-cols-4 gap-1">
+                {copy.unlock.stepLabels.map((label, i) => {
+                  const done = i < stepIndex
+                  const active = i === stepIndex
+                  return (
+                    <div key={label} className="text-center min-w-0">
+                      <div
+                        className={`mx-auto mb-1 h-2 w-2 rounded-full transition-colors ${
+                          done || active ? 'bg-sky-400 shadow-[0_0_8px_rgba(56,189,248,0.5)]' : 'bg-white/20'
+                        } ${active ? 'ring-2 ring-sky-400/40 scale-125' : ''}`}
+                      />
+                      <p
+                        className={`text-[10px] sm:text-xs truncate px-0.5 ${
+                          active
+                            ? 'text-white font-medium'
+                            : done
+                              ? 'text-brand-200/80'
+                              : 'text-brand-400/60'
+                        }`}
+                      >
+                        {label}
+                      </p>
+                    </div>
+                  )
+                })}
+              </div>
             </div>
+          </div>
 
-            <div>
-              <label htmlFor="info-email" className="viernes-form-label">
-                {copy.unlock.fields.email.label}
-              </label>
-              <input
-                id="info-email"
-                name="email"
-                type="email"
-                value={formData.email}
-                onChange={(e) => handleInputChange('email', e.target.value)}
-                placeholder={copy.unlock.fields.email.placeholder}
+          <form onSubmit={handleStepSubmit} className="viernes-card max-w-lg mx-auto">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={currentKey}
+                initial={{ opacity: 0, x: 16 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -16 }}
+                transition={{ duration: 0.25 }}
+              >
+                <h2 className="viernes-serif viernes-section-title text-center mb-6">
+                  {copy.unlock.fields[currentKey].question}
+                </h2>
+
+                <label htmlFor={`info-${currentKey}`} className="viernes-form-label">
+                  {copy.unlock.fields[currentKey].label}
+                </label>
+                <input
+                  id={`info-${currentKey}`}
+                  name={currentKey}
+                  type={FIELD_META[currentKey].type}
+                  inputMode={FIELD_META[currentKey].inputMode}
+                  value={formData[currentKey]}
+                  onChange={(e) => handleInputChange(currentKey, e.target.value)}
+                  placeholder={copy.unlock.fields[currentKey].placeholder}
+                  disabled={isLoading}
+                  autoComplete={FIELD_META[currentKey].autoComplete}
+                  className="viernes-form-input"
+                  autoFocus
+                />
+                {errors[currentKey as keyof ValidationErrors] && (
+                  <p className="viernes-form-error">{errors[currentKey as keyof ValidationErrors]}</p>
+                )}
+              </motion.div>
+            </AnimatePresence>
+
+            {errors.submit && <p className="viernes-form-error text-center mt-4">{errors.submit}</p>}
+
+            <div className="flex items-center gap-3 mt-6">
+              <button
+                type="button"
+                onClick={goBack}
                 disabled={isLoading}
-                autoComplete="email"
-                className="viernes-form-input"
-                required
-              />
-              {errors.email && <p className="viernes-form-error">{errors.email}</p>}
-            </div>
-
-            <div>
-              <label htmlFor="info-phone" className="viernes-form-label">
-                {copy.unlock.fields.phone.label}
-              </label>
-              <input
-                id="info-phone"
-                name="phone"
-                type="tel"
-                value={formData.phone}
-                onChange={(e) => handleInputChange('phone', e.target.value)}
-                placeholder={copy.unlock.fields.phone.placeholder}
+                className="viernes-btn viernes-btn-ghost"
+              >
+                {copy.unlock.back}
+              </button>
+              <button
+                type="submit"
                 disabled={isLoading}
-                autoComplete="tel"
-                className="viernes-form-input"
-              />
+                className="viernes-btn viernes-btn-primary flex-1"
+              >
+                {isLoading
+                  ? copy.unlock.submitting
+                  : isLastStep
+                    ? copy.unlock.submit
+                    : copy.unlock.next}
+              </button>
             </div>
-
-            <div>
-              <label htmlFor="info-empresa" className="viernes-form-label">
-                {copy.unlock.fields.empresa.label}
-              </label>
-              <input
-                id="info-empresa"
-                name="empresa"
-                type="text"
-                value={formData.empresa}
-                onChange={(e) => handleInputChange('empresa', e.target.value)}
-                placeholder={copy.unlock.fields.empresa.placeholder}
-                disabled={isLoading}
-                autoComplete="organization"
-                className="viernes-form-input"
-              />
-            </div>
-
-            {errors.submit && <p className="viernes-form-error text-center">{errors.submit}</p>}
-
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="viernes-btn viernes-btn-primary w-full"
-            >
-              {isLoading ? copy.unlock.submitting : copy.unlock.submit}
-            </button>
-            <p className="viernes-form-disclaimer text-center">{copy.unlock.disclaimer}</p>
+            <p className="viernes-form-disclaimer text-center mt-4">{copy.unlock.disclaimer}</p>
           </form>
         </motion.section>
       )}

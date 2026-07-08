@@ -99,7 +99,7 @@ function buildInfoSequenceEmails(): OutboundEmail[] {
       html: infoPackHtml,
     },
     {
-      label: 'Nota #0 Welcome (+24h)',
+      label: 'Clave #0 Welcome (+24h)',
       subject: welcomeSubject,
       text: welcomeText,
       html: buildWelcomeEmailHtml({
