@@ -1,6 +1,11 @@
 import BorderBeam from '../landing/BorderBeam'
 import { trackGA4Event } from '../../lib/analytics/ga4'
 import { CalcCompanyIcon, CalcEmployeeIcon } from './CalculatorUiIcons'
+import {
+  SPOTLIGHT_ACCENTS,
+  SpotlightGlowOverlay,
+  useSpotlightGlow,
+} from '../ui/spotlightGlow'
 
 export type CalculatorRole = 'empleado' | 'empresa'
 
@@ -23,15 +28,36 @@ export default function RoleSelector({
   companyBody,
   tool,
 }: Props) {
+  const empleadoGlow = useSpotlightGlow<HTMLButtonElement>()
+  const empresaGlow = useSpotlightGlow<HTMLButtonElement>()
+
   const options: Array<{
     id: CalculatorRole
     title: string
     body: string
     icon: React.ReactNode
     emphasis: 'primary' | 'secondary'
+    accent: (typeof SPOTLIGHT_ACCENTS)[keyof typeof SPOTLIGHT_ACCENTS]
+    glow: ReturnType<typeof useSpotlightGlow<HTMLButtonElement>>
   }> = [
-    { id: 'empleado', title: employeeTitle, body: employeeBody, icon: <CalcEmployeeIcon />, emphasis: 'primary' },
-    { id: 'empresa', title: companyTitle, body: companyBody, icon: <CalcCompanyIcon />, emphasis: 'secondary' },
+    {
+      id: 'empleado',
+      title: employeeTitle,
+      body: employeeBody,
+      icon: <CalcEmployeeIcon />,
+      emphasis: 'primary',
+      accent: SPOTLIGHT_ACCENTS.gold,
+      glow: empleadoGlow,
+    },
+    {
+      id: 'empresa',
+      title: companyTitle,
+      body: companyBody,
+      icon: <CalcCompanyIcon />,
+      emphasis: 'secondary',
+      accent: SPOTLIGHT_ACCENTS.green,
+      glow: empresaGlow,
+    },
   ]
 
   return (
@@ -48,7 +74,10 @@ export default function RoleSelector({
           const primary = opt.emphasis === 'primary'
           const card = (
             <button
+              ref={opt.glow.ref}
               type="button"
+              onMouseMove={opt.glow.onMouseMove}
+              onMouseLeave={opt.glow.onMouseLeave}
               onClick={() => {
                 onSelect(opt.id)
                 trackGA4Event('calc_audience_select', {
@@ -57,37 +86,52 @@ export default function RoleSelector({
                   tool,
                 })
               }}
-              className={`h-full w-full text-left rounded-2xl border-2 transition-all ${
+              className={`group relative overflow-hidden h-full w-full text-left rounded-2xl border-2 transition-all [--glow-x:50%] [--glow-y:30%] ${
                 primary ? 'px-6 py-7 sm:py-9' : 'px-5 py-5 sm:py-6'
               } ${
                 active
-                  ? 'border-brand-500/80 bg-brand-600/30 text-white shadow-lg shadow-brand-900/30'
-                  : primary
-                    ? 'border-brand-400/50 bg-brand-500/10 text-white hover:border-brand-400/80 hover:bg-brand-500/20 shadow-lg shadow-brand-900/20'
-                    : 'border-white/15 bg-white/5 text-brand-200/90 hover:border-cyan-400/40 hover:bg-white/10'
+                  ? `${opt.accent.activeBorder} text-white shadow-lg shadow-brand-900/30`
+                  : `border-white/15 bg-white/5 hover:bg-white/10 ${opt.accent.borderHover} ${opt.accent.shadowHover} ${
+                      primary ? 'text-white' : 'text-brand-200/90'
+                    }`
               }`}
               aria-pressed={active}
             >
+              <SpotlightGlowOverlay glow={opt.accent.glow} baseOpacity="opacity-0" />
               <span
-                className={`mb-3 block ${primary ? 'text-brand-100 scale-110 origin-left' : 'text-brand-300/80'}`}
+                className={`relative z-10 mb-3 block ${
+                  primary ? 'text-white scale-110 origin-left' : 'text-brand-300/80'
+                }`}
                 aria-hidden="true"
               >
                 {opt.icon}
               </span>
-              <div className={`font-semibold ${primary ? 'text-xl sm:text-2xl' : 'text-base sm:text-lg opacity-90'}`}>
+              <div
+                className={`relative z-10 font-semibold ${
+                  primary ? 'text-xl sm:text-2xl' : 'text-base sm:text-lg opacity-90'
+                }`}
+              >
                 {opt.title}
               </div>
               {opt.body ? (
-                <p className={`mt-2 leading-relaxed ${primary ? 'text-sm sm:text-base opacity-90' : 'text-xs sm:text-sm opacity-75'}`}>
+                <p
+                  className={`relative z-10 mt-2 leading-relaxed ${
+                    primary ? 'text-sm sm:text-base opacity-90' : 'text-xs sm:text-sm opacity-75'
+                  }`}
+                >
                   {opt.body}
                 </p>
               ) : null}
             </button>
           )
           return active ? (
-            <BorderBeam key={opt.id} className="h-full">{card}</BorderBeam>
+            <BorderBeam key={opt.id} className="h-full">
+              {card}
+            </BorderBeam>
           ) : (
-            <div key={opt.id} className="h-full">{card}</div>
+            <div key={opt.id} className="h-full">
+              {card}
+            </div>
           )
         })}
       </div>
