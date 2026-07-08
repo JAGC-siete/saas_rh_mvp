@@ -181,12 +181,13 @@ export default function SealedEnvelopeLead() {
           transition={{ duration: 0.35 }}
         >
           <span className="viernes-badge">{copy.badge}</span>
-          <p className="viernes-serif viernes-hero-eyebrow max-w-3xl mx-auto">{copy.intrigue.eyebrow}</p>
-          <h1 className="viernes-serif viernes-hero-title mb-6">
-            <span className="block text-4xl sm:text-5xl lg:text-6xl font-normal not-italic">
+          <h1 className="viernes-serif mb-6 max-w-4xl mx-auto">
+            <span className="block text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-normal not-italic leading-tight text-white">
               {copy.intrigue.headlineLead}
             </span>
-            <span className="block italic mt-1">{copy.intrigue.headlineAccent}</span>
+            <span className="block text-xl sm:text-2xl lg:text-3xl text-brand-300 mt-4 font-normal not-italic">
+              {copy.intrigue.headlineAccent}
+            </span>
           </h1>
           <p className="viernes-lead mb-6 max-w-2xl mx-auto">{copy.intrigue.subheadline}</p>
           <p className="viernes-mantra mb-8 max-w-xl mx-auto text-left">{copy.intrigue.mantra}</p>
@@ -367,7 +368,6 @@ export default function SealedEnvelopeLead() {
 
           <div className="viernes-card mt-6">
             <h3 className="viernes-serif text-2xl font-bold text-white mb-3">{copy.nextStep.title}</h3>
-            <p className="viernes-lead mb-3">{copy.nextStep.body}</p>
             <p className="viernes-form-disclaimer mb-6">{copy.nextStep.emailHint}</p>
             <div className="flex flex-col sm:flex-row flex-wrap gap-3">
               <Link

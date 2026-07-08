@@ -5,9 +5,8 @@ export const SEALED_ENVELOPE_COPY = {
 
   /** Estado 0 — Intriga (empatía, hero serif) */
   intrigue: {
-    eyebrow: '¿Conocés a alguien que perdió la paz cerrando planilla?',
-    headlineLead: '¿Esa persona',
-    headlineAccent: 'sos vos?',
+    headlineLead: '¿Conocés a alguien que perdió la paz con Recursos Humanos?',
+    headlineAccent: '¿Eres esa persona?',
     subheadline:
       'El último día del mes, cuadrando horas en Excel, persiguiendo marcajes y recalculando IHSS, RAP e ISR hasta la madrugada. Otra vez.',
     mantra:
@@ -65,7 +64,7 @@ export const SEALED_ENVELOPE_COPY = {
     lead: 'El secreto es simple: digitalizar de verdad. Lo difícil es que casi nadie llega.',
     paragraphs: [
       'Durante años, el cierre de planilla fue mi peor semana del mes: bajar marcajes a un USB, pelear con Excel, cuadrar horas extra y rezar para que IHSS, RAP e ISR cerraran bien. Un solo error y volvía a empezar de cero.',
-      'La salida existe: cuando el marcaje se conecta al motor legal, las horas y las deducciones se calculan solas y recuperás la paz. Pero para llegar ahí hay unas claves que casi nadie aplica — son justo las que te voy a mostrar, una por una, en los próximos correos.',
+      'La salida existe: cuando enlazas el marcaje a la compu, las horas y las deducciones se calculan solas y vos recuperás la paz. Pero para llegar ahí hay algunas claves — nos leemos en los próximos correos.',
     ],
     comparison: [
       { before: '4 horas un domingo', after: '4 minutos un viernes' },
@@ -77,8 +76,6 @@ export const SEALED_ENVELOPE_COPY = {
   /** Estado 3 — Cierre (conversación humana, sin gamificación) */
   nextStep: {
     title: '¿Qué sigue?',
-    body:
-      'Ya tenés la historia en tu bandeja de entrada. No tenés que hacer nada más por hoy. En las próximas horas te mando la primera clave para salir del trabajo manual que te separa de la paz, aunque la solución sea tan simple como la que acabás de leer.',
     emailHint: 'Buscá un correo de jorgearturo@humanosisu.net — revisá spam si no lo ves.',
     ctaActivar: 'Ver cómo se ve en 30 segundos',
     ctaCalculadora: 'Probar calculadora gratis',
