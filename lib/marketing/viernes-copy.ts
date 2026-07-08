@@ -35,29 +35,8 @@ export const VIERNES_COPY = {
   },
 
   checklist: {
-    title: 'Checklist: cerrar planilla sin perder el domingo',
-    sub: '4 pasos. 1 página. El mismo camino que equipos que ya tocaron el cielo.',
-    fields: {
-      nombre: { label: 'Nombre', placeholder: '¿Cómo te llamamos?' },
-      email: { label: 'Correo', placeholder: '¿A dónde enviamos el checklist?' },
-    },
-    submit: 'Enviame el checklist',
-    submitting: 'Enviando…',
-    disclaimer:
-      'También recibirás acceso al trial gratis. Sin cotización automática. Sin cobro sorpresa.',
-    success: {
-      title: 'Checklist en camino',
-      body: 'Revisá tu correo en los próximos minutos. Mientras tanto, podés tocar las nubes y ver el sistema en acción.',
-      ctaActivar: 'Tocar las nubes',
-      ctaCalculadora: 'Validar deducciones gratis',
-      emailHint: 'Buscá un correo de jorgearturo@humanosisu.net — revisá spam si no lo ves.',
-    },
-    errors: {
-      nombre: 'Indica tu nombre para enviarte el checklist.',
-      email: 'Indica tu correo; ahí te enviamos el checklist.',
-      submit: 'No se pudo enviar. Intenta de nuevo.',
-      connection: 'Error de conexión. Por favor intenta de nuevo.',
-    },
+    title: 'Hacer las paces con RR.HH.',
+    sub: '4 pasos. Te mostramos la historia al instante y te la dejamos en el correo.',
   },
 
   proof: {

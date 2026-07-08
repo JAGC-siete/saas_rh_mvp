@@ -16,7 +16,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const { nombre, email, phone, empresa } = req.body
+    const { nombre, email, phone, empresa, from } = req.body
 
     const trimmedName = typeof nombre === 'string' ? nombre.trim() : ''
     if (!trimmedName) {
@@ -49,7 +49,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     }
 
-    const leadSource = 'info'
+    const leadSource = from === 'viernes' ? 'info:viernes' : 'info'
 
     const { leadId, welcomeSent, infoPackSent, skippedReason } = await enrollMarketingLead({
       email: trimmedEmail,
@@ -60,7 +60,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (skippedReason !== 'excluded') {
       void sendLeadRegistroNotification({
-        source: 'info',
+        source: from === 'viernes' ? 'viernes' : 'info',
         nombre: trimmedName,
         email: trimmedEmail,
         whatsapp: phoneNorm,
