@@ -4,8 +4,8 @@ import dynamic from 'next/dynamic'
 import DemoFooter from '../components/DemoFooter'
 import FreeToolsSection from '../components/FreeToolsSection'
 import AWSCertificationsSection from '../components/AWSCertificationsSection'
-import MailListSection from '../components/MailListSection'
-import LandingClosingSection from '../components/LandingClosingSection'
+// import MailListSection from '../components/MailListSection' // Sección oculta temporalmente
+// import LandingClosingSection from '../components/LandingClosingSection' // Sección oculta temporalmente
 import SchemaMarkup from '../components/SEO/SchemaMarkup'
 import DockNavbar from '../components/landing/DockNavbar'
 import MagneticHero from '../components/landing/MagneticHero'
@@ -145,8 +145,9 @@ export default function LandingPage() {
       {/* Sección "Módulos de Humano SISU" ocultada temporalmente: algunas cards gustan pero la sección completa no agrega valor por ahora. */}
       {/* <BentoServicesGrid /> */}
       <AWSCertificationsSection />
-      <MailListSection />
-      <LandingClosingSection />
+      {/* Newsletter + cierre CTA ocultados temporalmente. Reactivar: descomentar imports y <MailListSection /> / <LandingClosingSection /> */}
+      {/* <MailListSection /> */}
+      {/* <LandingClosingSection /> */}
       <TrustBar />
 
       <div className="landing-footer-bridge pt-8">
