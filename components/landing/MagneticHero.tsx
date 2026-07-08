@@ -46,7 +46,7 @@ export default function MagneticHero() {
                 SISU — Control de Asistencia y Software de Recursos Humanos
               </span>
               <span className="block text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-4xl mt-2 bg-gradient-to-r from-brand-200 to-brand-500 bg-clip-text text-transparent font-semibold">
-                Recursos Humanos simplificado para Honduras, El Salvador y Guatemala.
+                Recursos Humanos exclusivo para Honduras, El Salvador y Guatemala.
               </span>
             </motion.h1>
 
