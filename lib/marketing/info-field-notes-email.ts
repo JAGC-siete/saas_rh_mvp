@@ -2,15 +2,15 @@ import { getMarketingSiteUrl } from './unsubscribe'
 import { buildMissionActivarUrl, buildMissionTextFooter } from './mission-config'
 
 export const INFO_PACK_SUBJECT_FIELD =
-  'Lo prometido: lo que viste en pantalla, por escrito 🪄'
+  'Lo prometido: lo que viste en pantalla, por escrito'
 
 const INFO_FIELD_NOTE_SUBJECTS: Record<number, string> = {
-  0: 'Nota de campo #0: la frase que congela todo',
+  0: 'Nota de campo #0: lo que te robó la paz sin que lo notaras',
   1: 'Nota de campo #1: "siempre lo hemos hecho así"',
   2: 'Nota de campo #2: el mito de los seis meses',
-  3: 'Nota de campo #3: el costo de "creo que está bien"',
+  3: 'Nota de campo #3: la duda que no te deja dormir',
   4: 'Nota de campo #4: pseudo-digitalización',
-  5: 'Nota de campo #5: cómo probar sin tumbar lo que ya funciona',
+  5: 'Nota de campo #5: cómo recuperar la paz sin tumbar lo que ya funciona',
 }
 
 export function getInfoSequenceSubject(step: number): string {
@@ -31,11 +31,11 @@ export function buildInfoPackEmailBody(params: { nombre?: string | null; email: 
   return [
     `Hola ${name},`,
     '',
-    'Acabas de hacer algo que casi nadie hace: leer el extracto completo antes de seguir adelante.',
+    'Acabas de hacer algo que casi nadie hace: leer la historia completa antes de seguir adelante.',
     '',
-    'Si viste la pantalla, ya tienes la idea central: mucha gente cree que "digitalizó" porque puso un reloj en la entrada… y a fin de quincena sigue bajando archivos, abriendo Excel y persiguiendo datos por WhatsApp. Eso no es automatizar. Es reprocesar con pantalla en vez de papel.',
+    'Si viste la pantalla, ya tienes la idea central: mucha gente cree que "digitalizó" porque puso un reloj en la entrada… y a fin de quincena sigue bajando archivos, abriendo Excel y persiguiendo datos por WhatsApp. Eso no es automatizar. Es reprocesar con pantalla en vez de papel. Y ahí es donde se pierde la paz.',
     '',
-    'Te dejo por escrito lo mismo — por si quieres guardarlo.',
+    'Te dejo por escrito lo mismo — por si quieres volver a leerlo el día que la planilla te quite la calma.',
     '',
     'Lo que veo una y otra vez en negocios de la región:',
     '• Capturan el dato en un lugar.',
@@ -53,7 +53,7 @@ export function buildInfoPackEmailBody(params: { nombre?: string | null; email: 
     '',
     'Jorge',
     '',
-    'PD: En los próximos días te mando unas notas cortas — una por email — sobre las trampas invisibles que veo en casi todos los negocios. La primera llega mañana. Solo leer si te interesa.',
+    'PD: En los próximos días te mando unas notas cortas — una por email — sobre las trampas invisibles que te roban la paz en casi todos los negocios. La primera llega mañana. Solo leer si te interesa.',
   ].join('\n')
 }
 
@@ -61,13 +61,13 @@ export function buildInfoWelcomeText(): string {
   return [
     'Hola,',
     '',
-    'Te quedaste — y eso ya te separa de quien cierra el sobre a la mitad.',
+    'Te quedaste — y eso ya te separa de quien sigue perdiendo la paz cada fin de mes.',
     '',
     'Mañana te mando la primera nota sobre algo que escucho en casi todas las visitas:',
     '',
     '"Es que siempre lo hemos hecho así."',
     '',
-    'No suena a problema. Suena a prudencia. Pero muchas veces es la razón por la que un negocio sigue regalando horas a lo repetitivo — aunque la solución sea más obvia de lo que parece.',
+    'No suena a problema. Suena a prudencia. Pero muchas veces es la razón por la que un negocio sigue regalando horas —y paz— a lo repetitivo, aunque la solución sea más obvia de lo que parece.',
     '',
     'Hoy no necesitas hacer nada. Solo ten presente que el enemigo rara vez es "la tecnología". Es la inercia.',
     '',
@@ -89,15 +89,15 @@ export function buildInfoPainPoint1Text(params: InfoPainPointParams): string {
   let body = [
     `Hola ${name},`,
     '',
-    'En el correo anterior te mandé el extracto del sobre. Hoy la primera trampa que veo en casi todos lados:',
+    'En el correo anterior te dejé la historia por escrito. Hoy, la primera trampa que le roba la paz a casi todos:',
     '',
     '"Es que siempre lo hemos hecho así."',
     '',
     'No es mala fe. Es miedo a tocar algo que "funciona más o menos".',
     '',
-    'El problema: "más o menos" suele costar horas que nadie suma. Firmas, cruces, correcciones, "déjame revisar el Excel otra vez". Cosas pequeñas que a fin de mes pesan.',
+    'El problema: "más o menos" suele costar horas que nadie suma. Firmas, cruces, correcciones, "déjame revisar el Excel otra vez". Cosas pequeñas que a fin de mes pesan —y te quitan la paz—.',
     '',
-    'Lo anoto en el margen: el riesgo no siempre es probar algo nuevo. A veces el riesgo es no cambiar y seguir pagando en tiempo lo que ya podría resolverse solo.',
+    'Lo anoto en el margen: el riesgo no siempre es probar algo nuevo. A veces el riesgo es no cambiar y seguir pagando en tiempo (y en paz) lo que ya podría resolverse solo.',
   ].join('\n')
 
   if (params.leadToken) {
@@ -123,7 +123,7 @@ export function buildInfoPainPoint2Text(params: InfoPainPointParams): string {
     '',
     'Pero otras veces es una excusa cómoda para no mover nada y seguir con el Excel, la USB y el WhatsApp como sistema operativo real del negocio.',
     '',
-    'Si una herramienta sirve, debería devolverte tiempo, no quitártelo.',
+    'Si una herramienta sirve, debería devolverte tiempo y paz, no quitártelos.',
   ].join('\n')
 
   if (params.leadToken) {
@@ -147,7 +147,7 @@ export function buildInfoPainPoint3Text(params: InfoPainPointParams): string {
     '',
     'Parecen detalles. A fin de mes se sienten.',
     '',
-    'El costo oculto no es solo el error. Es vivir con la duda: "¿Lo hicimos bien?"',
+    'El costo oculto no es solo el error. Es vivir con la duda: "¿Lo hicimos bien?". Y esa duda es justo lo que te roba la paz.',
   ].join('\n')
 
   if (params.leadToken) {
@@ -173,7 +173,7 @@ export function buildInfoPainPoint4Text(params: InfoPainPointParams): string {
     '',
     'El dato nace en un lugar y muere en otro. Alguien lo baja, lo sube, lo cruza, lo vuelve a digitar. Trabajo doble con mejor presentación.',
     '',
-    'Si pasas más tiempo buscando y moviendo datos que usándolos, no es eficiencia. Es reprocesamiento disfrazado.',
+    'Si pasas más tiempo buscando y moviendo datos que usándolos, no es eficiencia. Es reprocesamiento disfrazado — y es la fuga silenciosa de tu paz.',
   ].join('\n')
 
   if (params.leadToken) {
@@ -202,7 +202,7 @@ export function buildInfoPainPoint5Text(params: InfoPainPointParams): string {
     '',
     'Lo que propongo no es "cambiar todo el lunes". Es mirar una pieza en paralelo — dejar que el sistema calcule unos días mientras tú sigues con tu método actual — y comparar con tus propios ojos.',
     '',
-    'Sin presión. Sin llamadas agresivas. Solo curiosidad.',
+    'Sin presión. Sin llamadas agresivas. Solo la curiosidad de ver cómo se siente recuperar la paz.',
   ].join('\n')
 
   if (params.leadToken) {

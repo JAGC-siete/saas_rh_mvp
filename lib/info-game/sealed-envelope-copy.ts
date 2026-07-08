@@ -1,78 +1,72 @@
-/** Copy for /secreto — Acceso Temporal Concedido (Sobre Sellado). */
+/** Copy for /secreto — La paz de cerrar planilla (hero estilo viernes). */
 
 export const SEALED_ENVELOPE_COPY = {
-  badge: 'Acceso Temporal Concedido',
+  badge: 'Historia real · 2 min de lectura',
 
-  /** Estado 0 — Intriga */
+  /** Estado 0 — Intriga (empatía, hero serif) */
   intrigue: {
-    headline: 'Nuestro truco secreto para que lo repetitivo se haga solo.',
+    eyebrow: '¿Conocés a alguien que perdió la paz cerrando planilla?',
+    headlineLead: '¿Esa persona',
+    headlineAccent: 'sos vos?',
     subheadline:
-      'Está dentro de este sobre por tiempo limitado. No necesitas ser experto en leyes ni tener 10 años de experiencia, planillas o recursos humanos — solo tener curiosidad.',
-    envelopeLabel: 'METODO SECRETO',
-    envelopeHint: 'El método absoluto para delegar la carga operativa para siempre.',
-    cta: 'Revelar el secreto',
+      'El último día del mes, cuadrando horas en Excel, persiguiendo marcajes y recalculando IHSS, RAP e ISR hasta la madrugada. Otra vez.',
+    mantra:
+      'No naciste para vivir dentro de una hoja de Excel. La paz de cerrar planilla en minutos es real, y también la plataforma.',
+    cta: 'Quiero recuperar la paz',
+    ctaSecondary: 'Validar deducciones gratis',
   },
 
-  /** Estado 1 — Desbloqueo */
+  /** Estado 1 — Dejanos dónde enviarte la historia */
   unlock: {
-    progressLabel: 'Autorizando acceso al método…',
+    title: '¿A dónde te enviamos la historia?',
+    sub: 'Te la mostramos aquí al instante y te la dejamos en el correo con el paso a paso.',
     fields: {
-      nombre: {
-        label: 'Nombre',
-        placeholder: '¿A quién le revelamos el secreto?',
-      },
-      email: {
-        label: 'Correo',
-        placeholder: '¿A dónde te enviamos el secreto?',
-      },
+      nombre: { label: 'Nombre', placeholder: '¿Cómo te llamás?' },
+      email: { label: 'Correo', placeholder: '¿A dónde te enviamos la historia?' },
       phone: {
-        label: 'Línea directa (Opcional)',
-        placeholder: '¿A qué número te avisamos cuando llegue el secreto? (Opcional)',
+        label: 'WhatsApp (Opcional)',
+        placeholder: 'Por si preferís que te escribamos por ahí',
       },
       empresa: {
-        label: 'Organización',
-        placeholder: '¿En qué empresa vas a aplicar este truco? (Opcional)',
+        label: 'Empresa (Opcional)',
+        placeholder: '¿Dónde cerrás la planilla?',
       },
     },
-    submit: 'Desbloquear el Secreto',
-    submitting: 'Abriendo sobre…',
-    disclaimer: 'Estás a un solo clic de saber lo que las mayorías ignoran.',
+    submit: 'Recuperar mi paz',
+    submitting: 'Un momento…',
+    disclaimer:
+      'Sin trial automático ni cobros. Solo la historia y cómo aplicarla. Te salís cuando querás.',
+    errors: {
+      nombre: 'Indica tu nombre para enviarte la historia.',
+      email: 'Indica tu correo; ahí te enviamos la historia.',
+      submit: 'No se pudo enviar. Intenta de nuevo.',
+      connection: 'Error de conexión. Por favor intenta de nuevo.',
+    },
   },
 
-  /** Estado 2 — Revelación (on-screen) */
+  /** Estado 2 — La historia (on-screen) */
   revealed: {
-    badge: 'Secreto revelado',
-    docStamp: 'Documento filtrado',
-    docClassification: 'Uso exclusivo · Curiosos autorizados',
-    docRef: 'REF · HS-INT-001',
-    title: '¿Digitalizar o Automatizar?',
-    body: [
-      'Muchos empresarios confunden ambos conceptos. Usar un reloj biométrico pero seguir bajando registros a un USB para calcular la nómina en Excel no es modernizarse; es solo cambiar el papel por una pantalla.',
-      'La verdadera automatización elimina al intermediario humano. Al conectar el registro al motor legal, los datos viajan solos y calculan todo en tiempo real. Digitalizar es el puente; automatizar te permite delegar.',
+    badge: '✓ Historia desbloqueada',
+    title: 'Cerrar planilla dejó de quitarme el sueño',
+    lead: 'El secreto es simple: digitalizar de verdad. Lo difícil es que casi nadie llega.',
+    paragraphs: [
+      'Durante años, el cierre de planilla fue mi peor semana del mes: bajar marcajes a un USB, pelear con Excel, cuadrar horas extra y rezar para que IHSS, RAP e ISR cerraran bien. Un solo error y volvía a empezar de cero.',
+      'La salida existe: cuando el marcaje se conecta al motor legal, las horas y las deducciones se calculan solas y recuperás la paz. Pero entre vos y ese punto hay unas trampas invisibles que frenan a casi todos — son justo las que te voy a mostrar, una por una, en los próximos correos.',
     ],
-    bullets: [
-      'Cero Reprocesamiento: Adiós a los USBs, archivos corruptos y la doble digitación.',
-      'Cálculo en la Sombra: El sistema procesa horas y leyes en tiempo real mientras duermes.',
-      'Delegación Absoluta: La tecnología hace el papeleo; tú solo revisas y apruebas.',
+    comparison: [
+      { before: '4 horas un domingo', after: '4 minutos un viernes' },
+      { before: 'Miedo a un error en IHSS/RAP', after: 'Cálculo de ley en tiempo real' },
+      { before: 'Vos hacés el trabajo repetitivo', after: 'Vos revisás y aprobás' },
     ],
   },
 
   /** Estado 3 — Cierre (conversación humana, sin gamificación) */
   nextStep: {
-    title: '¿Qué pasa ahora?',
+    title: '¿Qué sigue?',
     body:
-      'Ya tienes el secreto en tu bandeja de entrada. No tienes que hacer más nada por hoy. En las próximas horas te voy a mandar la primera trampa invisible que nos arrastra de vuelta al trabajo manual y repetitivo (aunque la solución sea tan obvia como la que acabas de ver).',
-    emailHint: 'Busca un correo de jorgearturo@humanosisu.net — revisa spam si no lo ves.',
+      'Ya tenés la historia en tu bandeja de entrada. No tenés que hacer nada más por hoy. En las próximas horas te mando la primera de las trampas invisibles que nos arrastran de vuelta al trabajo manual —y que te separan de la paz—, aunque la solución sea tan simple como la que acabás de leer.',
+    emailHint: 'Buscá un correo de jorgearturo@humanosisu.net — revisá spam si no lo ves.',
     ctaActivar: 'Ver cómo se ve en 30 segundos',
     ctaCalculadora: 'Probar calculadora gratis',
   },
 } as const
-
-export const UNLOCK_PROGRESS = {
-  nombre: 40,
-  email: 40,
-  phone: 10,
-  empresa: 10,
-} as const
-
-export const UNLOCK_PROGRESS_MAX = 100

@@ -32,13 +32,13 @@ export function buildInfoPackEmailHtml(params: {
     liquidParagraph(`Hola ${greeting},`),
     liquidParagraph(
       escapeMultiline(
-        'Acabas de hacer algo que casi nadie hace: leer el extracto completo antes de seguir adelante.'
+        'Acabas de hacer algo que casi nadie hace: leer la historia completa antes de seguir adelante.'
       )
     ),
     liquidParagraph(
-      'Si viste la pantalla, ya tienes la idea central: mucha gente cree que "digitalizó" porque puso un reloj en la entrada… y a fin de quincena sigue bajando archivos, abriendo Excel y persiguiendo datos por WhatsApp. Eso no es automatizar. Es <strong>reprocesar</strong> con pantalla en vez de papel.'
+      'Si viste la pantalla, ya tienes la idea central: mucha gente cree que "digitalizó" porque puso un reloj en la entrada… y a fin de quincena sigue bajando archivos, abriendo Excel y persiguiendo datos por WhatsApp. Eso no es automatizar. Es <strong>reprocesar</strong> con pantalla en vez de papel. Y ahí es donde se pierde la paz.'
     ),
-    liquidParagraph('Te dejo por escrito lo mismo — por si quieres guardarlo.'),
+    liquidParagraph('Te dejo por escrito lo mismo — por si quieres volver a leerlo el día que la planilla te quite la calma.'),
     liquidPanel(
       liquidBulletList([
         'Capturan el dato en un lugar.',
@@ -60,7 +60,7 @@ export function buildInfoPackEmailHtml(params: {
     </div>`,
     liquidParagraph('Un saludo,<br /><strong>Jorge</strong>'),
     liquidInfoBox(
-      'En los próximos días te mando unas notas cortas — una por email — sobre las trampas invisibles que veo en casi todos los negocios. La primera llega mañana. Solo leer si te interesa.',
+      'En los próximos días te mando unas notas cortas — una por email — sobre las trampas invisibles que te roban la paz en casi todos los negocios. La primera llega mañana. Solo leer si te interesa.',
       'neutral'
     ),
     `<p style="margin: 0; text-align: center; font-size: 12px; color: ${B.emailTextMuted}; line-height: 1.55;">

@@ -1,21 +1,12 @@
 import Link from 'next/link'
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Button } from '../ui/button'
-import BorderBeam from '../landing/BorderBeam'
-import { CalcCheckIcon } from '../public-calculator/CalculatorUiIcons'
-import InfoProgressRail from './InfoProgressRail'
-import FloatingChest from './FloatingChest'
 import {
   buildMetaApiTrackingFields,
   createMetaEventId,
   trackInfoLeadSubmit,
 } from '../../lib/analytics/metaPixel'
-import {
-  SEALED_ENVELOPE_COPY,
-  UNLOCK_PROGRESS,
-  UNLOCK_PROGRESS_MAX,
-} from '../../lib/info-game/sealed-envelope-copy'
+import { SEALED_ENVELOPE_COPY } from '../../lib/info-game/sealed-envelope-copy'
 import { leadEmailValidationMessage } from '../../lib/marketing/validate-lead-email'
 import { hasValidationErrors } from '../../lib/forms/validation-errors'
 
@@ -24,19 +15,20 @@ type PageStatus = 'intrigue' | 'unlocking' | 'revealed'
 interface ValidationErrors {
   nombre?: string
   email?: string
-  phone?: string
   submit?: string
 }
+
+const copy = SEALED_ENVELOPE_COPY
 
 function computeErrors(fd: { nombre: string; email: string }): ValidationErrors {
   const errors: ValidationErrors = {}
   const nombre = fd.nombre.trim()
   const email = fd.email.trim()
 
-  if (!nombre) errors.nombre = 'Indica tu nombre para desbloquear el secreto.'
+  if (!nombre) errors.nombre = copy.unlock.errors.nombre
   else if (nombre.length > 120) errors.nombre = 'El nombre es demasiado largo.'
 
-  if (!email) errors.email = 'Indica tu correo; ahí te enviamos el Secreto y la Misión 2.'
+  if (!email) errors.email = copy.unlock.errors.email
   else {
     const emailError = leadEmailValidationMessage(email)
     if (emailError) errors.email = emailError
@@ -45,28 +37,16 @@ function computeErrors(fd: { nombre: string; email: string }): ValidationErrors 
   return errors
 }
 
-function computeUnlockProgress(form: { nombre: string; email: string; phone: string; empresa: string }): number {
-  let pct = 0
-  if (form.nombre.trim()) pct += UNLOCK_PROGRESS.nombre
-  if (form.email.trim() && !leadEmailValidationMessage(form.email)) pct += UNLOCK_PROGRESS.email
-  if (form.phone.trim()) pct += UNLOCK_PROGRESS.phone
-  if (form.empresa.trim()) pct += UNLOCK_PROGRESS.empresa
-  return Math.min(UNLOCK_PROGRESS_MAX, pct)
-}
-
 export default function SealedEnvelopeLead() {
   const [status, setStatus] = useState<PageStatus>('intrigue')
   const [formData, setFormData] = useState({ nombre: '', email: '', phone: '', empresa: '' })
   const [errors, setErrors] = useState<ValidationErrors>({})
   const [isLoading, setIsLoading] = useState(false)
 
-  const copy = SEALED_ENVELOPE_COPY
-  const progress = useMemo(() => computeUnlockProgress(formData), [formData])
-
   const handleInputChange = (field: keyof typeof formData, value: string) => {
     const next = { ...formData, [field]: value }
     setFormData(next)
-    setErrors(computeErrors(next))
+    setErrors(computeErrors({ nombre: next.nombre, email: next.email }))
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -99,7 +79,7 @@ export default function SealedEnvelopeLead() {
       const data = await response.json()
 
       if (!response.ok || !data.success) {
-        setErrors({ submit: data.error || 'No se pudo desbloquear. Intenta de nuevo.' })
+        setErrors({ submit: data.error || copy.unlock.errors.submit })
         return
       }
 
@@ -112,294 +92,204 @@ export default function SealedEnvelopeLead() {
 
       setStatus('revealed')
     } catch {
-      setErrors({ submit: 'Error de conexión. Por favor intenta de nuevo.' })
+      setErrors({ submit: copy.unlock.errors.connection })
     } finally {
       setIsLoading(false)
     }
   }
 
-  const inputClass =
-    'w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-brand-200/70 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-transparent disabled:opacity-50'
-
   return (
-    <div className="max-w-lg mx-auto">
-      {status !== 'intrigue' && (
-        <div className="text-center mb-8">
-          <span className="inline-block px-3 py-1 mb-4 text-xs rounded-full bg-green-500/15 text-green-300 border border-green-500/25">
-            {copy.badge}
-          </span>
-          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-4 leading-tight">
-            {copy.intrigue.headline}
+    <AnimatePresence mode="wait">
+      {status === 'intrigue' && (
+        <motion.section
+          key="intrigue"
+          className="viernes-section pt-8 sm:pt-12 text-center"
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -8 }}
+          transition={{ duration: 0.35 }}
+        >
+          <span className="viernes-badge">{copy.badge}</span>
+          <p className="viernes-serif viernes-hero-eyebrow max-w-3xl mx-auto">{copy.intrigue.eyebrow}</p>
+          <h1 className="viernes-serif viernes-hero-title mb-6">
+            <span className="block text-4xl sm:text-5xl lg:text-6xl font-normal not-italic">
+              {copy.intrigue.headlineLead}
+            </span>
+            <span className="block italic mt-1">{copy.intrigue.headlineAccent}</span>
           </h1>
-          <p className="text-base sm:text-lg text-brand-200/90 leading-relaxed">{copy.intrigue.subheadline}</p>
-        </div>
+          <p className="viernes-lead mb-6 max-w-2xl mx-auto">{copy.intrigue.subheadline}</p>
+          <p className="viernes-mantra mb-8 max-w-xl mx-auto text-left">{copy.intrigue.mantra}</p>
+          <div className="flex flex-col sm:flex-row flex-wrap justify-center gap-3">
+            <button
+              type="button"
+              onClick={() => setStatus('unlocking')}
+              className="viernes-btn viernes-btn-primary"
+            >
+              {copy.intrigue.cta}
+            </button>
+            <Link
+              href="/calculadora?utm_source=info&utm_medium=hero&utm_campaign=validar-calculo"
+              className="viernes-btn viernes-btn-ghost text-sm"
+            >
+              {copy.intrigue.ctaSecondary}
+            </Link>
+          </div>
+        </motion.section>
       )}
 
       {status === 'unlocking' && (
-        <InfoProgressRail
-          points={progress}
-          maxPoints={UNLOCK_PROGRESS_MAX}
-          label={copy.unlock.progressLabel}
-          compact
-        />
+        <motion.section
+          key="unlocking"
+          className="viernes-section pt-8 sm:pt-12"
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -8 }}
+          transition={{ duration: 0.35 }}
+        >
+          <h2 className="viernes-serif viernes-section-title text-center">{copy.unlock.title}</h2>
+          <p className="viernes-lead mb-8 text-center max-w-xl mx-auto">{copy.unlock.sub}</p>
+
+          <form onSubmit={handleSubmit} className="viernes-card space-y-4 max-w-lg mx-auto">
+            <div>
+              <label htmlFor="info-nombre" className="viernes-form-label">
+                {copy.unlock.fields.nombre.label}
+              </label>
+              <input
+                id="info-nombre"
+                name="nombre"
+                type="text"
+                value={formData.nombre}
+                onChange={(e) => handleInputChange('nombre', e.target.value)}
+                placeholder={copy.unlock.fields.nombre.placeholder}
+                disabled={isLoading}
+                autoComplete="name"
+                className="viernes-form-input"
+                required
+              />
+              {errors.nombre && <p className="viernes-form-error">{errors.nombre}</p>}
+            </div>
+
+            <div>
+              <label htmlFor="info-email" className="viernes-form-label">
+                {copy.unlock.fields.email.label}
+              </label>
+              <input
+                id="info-email"
+                name="email"
+                type="email"
+                value={formData.email}
+                onChange={(e) => handleInputChange('email', e.target.value)}
+                placeholder={copy.unlock.fields.email.placeholder}
+                disabled={isLoading}
+                autoComplete="email"
+                className="viernes-form-input"
+                required
+              />
+              {errors.email && <p className="viernes-form-error">{errors.email}</p>}
+            </div>
+
+            <div>
+              <label htmlFor="info-phone" className="viernes-form-label">
+                {copy.unlock.fields.phone.label}
+              </label>
+              <input
+                id="info-phone"
+                name="phone"
+                type="tel"
+                value={formData.phone}
+                onChange={(e) => handleInputChange('phone', e.target.value)}
+                placeholder={copy.unlock.fields.phone.placeholder}
+                disabled={isLoading}
+                autoComplete="tel"
+                className="viernes-form-input"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="info-empresa" className="viernes-form-label">
+                {copy.unlock.fields.empresa.label}
+              </label>
+              <input
+                id="info-empresa"
+                name="empresa"
+                type="text"
+                value={formData.empresa}
+                onChange={(e) => handleInputChange('empresa', e.target.value)}
+                placeholder={copy.unlock.fields.empresa.placeholder}
+                disabled={isLoading}
+                autoComplete="organization"
+                className="viernes-form-input"
+              />
+            </div>
+
+            {errors.submit && <p className="viernes-form-error text-center">{errors.submit}</p>}
+
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="viernes-btn viernes-btn-primary w-full"
+            >
+              {isLoading ? copy.unlock.submitting : copy.unlock.submit}
+            </button>
+            <p className="viernes-form-disclaimer text-center">{copy.unlock.disclaimer}</p>
+          </form>
+        </motion.section>
       )}
 
-      <AnimatePresence mode="wait">
-        {status === 'intrigue' && (
-          <motion.div
-            key="intrigue"
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.96 }}
-            transition={{ duration: 0.35 }}
-          >
-            <div className="text-center mb-4">
-              <span className="inline-block px-3 py-1 mb-4 text-xs rounded-full bg-green-500/15 text-green-300 border border-green-500/25">
-                {copy.badge}
-              </span>
-              <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white leading-tight">
-                {copy.intrigue.headline}
-              </h1>
-            </div>
-            <BorderBeam className="mb-6">
-              <div className="glass-modern rounded-2xl border border-amber-500/25 p-8 sm:p-10 text-center bg-gradient-to-b from-amber-500/5 to-transparent">
-                <FloatingChest className="mb-4" size="lg" />
-                <p className="text-xs font-semibold tracking-widest text-amber-300/90 mb-2">
-                  {copy.intrigue.envelopeLabel}
-                </p>
-                <p className="text-sm text-brand-200/90 max-w-xs mx-auto">{copy.intrigue.envelopeHint}</p>
-              </div>
-            </BorderBeam>
-            <p className="text-base sm:text-lg text-brand-200/90 leading-relaxed text-center mb-8">
-              {copy.intrigue.subheadline}
-            </p>
-            <Button type="button" variant="modern" className="w-full" onClick={() => setStatus('unlocking')}>
-              {copy.intrigue.cta}
-            </Button>
-          </motion.div>
-        )}
+      {status === 'revealed' && (
+        <motion.section
+          key="revealed"
+          className="viernes-section pt-8 sm:pt-12"
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+        >
+          <div className="text-center mb-6">
+            <span className="viernes-success-badge">{copy.revealed.badge}</span>
+          </div>
 
-        {status === 'unlocking' && (
-          <motion.div
-            key="unlocking"
-            initial={{ opacity: 0, scale: 0.92 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 1.05, rotateX: 8 }}
-            transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-          >
-            <BorderBeam>
-              <form
-                onSubmit={handleSubmit}
-                className="glass-modern rounded-2xl border border-cyan-500/30 p-5 sm:p-6 space-y-4"
-              >
-                <div className="text-center pb-2">
-                  <motion.div
-                    initial={{ scale: 1.1 }}
-                    animate={{ scale: 1 }}
-                    className="text-4xl mb-2"
-                    aria-hidden
-                  >
-                    🔓
-                  </motion.div>
-                  <p className="text-xs text-cyan-300/90 uppercase tracking-wide">{copy.intrigue.envelopeLabel}</p>
-                </div>
-
-                <div>
-                  <label htmlFor="info-nombre" className="block text-xs font-medium text-brand-300 mb-1">
-                    {copy.unlock.fields.nombre.label}
-                  </label>
-                  <input
-                    id="info-nombre"
-                    name="nombre"
-                    type="text"
-                    value={formData.nombre}
-                    onChange={(e) => handleInputChange('nombre', e.target.value)}
-                    placeholder={copy.unlock.fields.nombre.placeholder}
-                    disabled={isLoading}
-                    autoComplete="name"
-                    className={inputClass}
-                    required
-                  />
-                  {errors.nombre && <p className="mt-1 text-sm text-red-400">{errors.nombre}</p>}
-                </div>
-
-                <div>
-                  <label htmlFor="info-email" className="block text-xs font-medium text-brand-300 mb-1">
-                    {copy.unlock.fields.email.label}
-                  </label>
-                  <input
-                    id="info-email"
-                    name="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => handleInputChange('email', e.target.value)}
-                    placeholder={copy.unlock.fields.email.placeholder}
-                    disabled={isLoading}
-                    autoComplete="email"
-                    className={inputClass}
-                    required
-                  />
-                  {errors.email && <p className="mt-1 text-sm text-red-400">{errors.email}</p>}
-                </div>
-
-                <div>
-                  <label htmlFor="info-phone" className="block text-xs font-medium text-brand-300 mb-1">
-                    {copy.unlock.fields.phone.label}
-                  </label>
-                  <input
-                    id="info-phone"
-                    name="phone"
-                    type="tel"
-                    value={formData.phone}
-                    onChange={(e) => handleInputChange('phone', e.target.value)}
-                    placeholder={copy.unlock.fields.phone.placeholder}
-                    disabled={isLoading}
-                    autoComplete="tel"
-                    className={inputClass}
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="info-empresa" className="block text-xs font-medium text-brand-300 mb-1">
-                    {copy.unlock.fields.empresa.label}
-                  </label>
-                  <input
-                    id="info-empresa"
-                    name="empresa"
-                    type="text"
-                    value={formData.empresa}
-                    onChange={(e) => handleInputChange('empresa', e.target.value)}
-                    placeholder={copy.unlock.fields.empresa.placeholder}
-                    disabled={isLoading}
-                    autoComplete="organization"
-                    className={inputClass}
-                  />
-                </div>
-
-                {errors.submit && (
-                  <p className="text-sm text-red-400 text-center font-medium">{errors.submit}</p>
-                )}
-
-                <Button type="submit" disabled={isLoading || progress < 80} className="w-full" variant="modern">
-                  {isLoading ? copy.unlock.submitting : copy.unlock.submit}
-                </Button>
-
-                <p className="text-xs sm:text-sm text-brand-200/60 text-center">{copy.unlock.disclaimer}</p>
-              </form>
-            </BorderBeam>
-          </motion.div>
-        )}
-
-        {status === 'revealed' && (
-          <motion.div
-            key="revealed"
-            initial={{ opacity: 0, scale: 0.88, rotateX: -12 }}
-            animate={{ opacity: 1, scale: 1, rotateX: 0 }}
-            transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
-            className="space-y-5"
-          >
-            {/* Estado 2 — Revelación (documento filtrado) */}
-            <div className="relative overflow-hidden rounded-sm border border-amber-900/50 shadow-2xl shadow-black/50">
-              {/* Marca de agua */}
-              <div
-                className="pointer-events-none absolute inset-0 flex items-center justify-center overflow-hidden"
-                aria-hidden
-              >
-                <span className="select-none font-mono text-4xl sm:text-5xl font-bold uppercase tracking-[0.35em] text-amber-950 opacity-[0.07] -rotate-12 whitespace-nowrap">
-                  Confidencial
-                </span>
-              </div>
-
-              {/* Cabecera tipo dossier */}
-              <div className="relative border-b border-amber-900/25 bg-gradient-to-r from-amber-950/90 via-stone-900/95 to-amber-950/90 px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <span className="inline-block h-2 w-2 rounded-full bg-red-500 animate-pulse" aria-hidden />
-                  <span className="font-mono text-[10px] sm:text-xs uppercase tracking-[0.2em] text-amber-200/90">
-                    {copy.revealed.docStamp}
+          <div className="viernes-card">
+            <h2 className="viernes-serif viernes-section-title text-center mb-4">{copy.revealed.title}</h2>
+            <p className="viernes-insight-lead viernes-serif italic text-center">{copy.revealed.lead}</p>
+            {copy.revealed.paragraphs.map((paragraph) => (
+              <p key={paragraph.slice(0, 24)} className="viernes-lead mb-4 last:mb-0">
+                {paragraph}
+              </p>
+            ))}
+            <div className="viernes-comparison">
+              {copy.revealed.comparison.map((row) => (
+                <div key={row.before} className="viernes-comparison-row">
+                  <span className="viernes-comparison-before">{row.before}</span>
+                  <span className="viernes-comparison-arrow" aria-hidden="true">
+                    →
                   </span>
+                  <span className="viernes-comparison-after">{row.after}</span>
                 </div>
-                <span className="font-mono text-[10px] text-amber-300/60 tracking-wider">{copy.revealed.docRef}</span>
-              </div>
-
-              {/* Cuerpo — papel filtrado */}
-              <div className="relative bg-gradient-to-br from-stone-100 via-amber-50/95 to-stone-200/90 px-5 sm:px-8 py-6 sm:py-8 text-stone-900">
-                <p className="font-mono text-[10px] uppercase tracking-widest text-amber-900/70 mb-4 border-b border-amber-900/15 pb-3">
-                  {copy.revealed.docClassification}
-                </p>
-
-                <div className="flex items-center justify-center gap-2 mb-5">
-                  <CalcCheckIcon className="text-amber-800 w-5 h-5 shrink-0" solid />
-                  <span className="font-mono text-xs font-semibold uppercase tracking-wider text-amber-900">
-                    {copy.revealed.badge}
-                  </span>
-                </div>
-
-                <h2 className="font-serif text-2xl sm:text-3xl font-bold text-stone-900 text-center mb-5 tracking-tight border-b-2 border-double border-amber-900/25 pb-4">
-                  {copy.revealed.title}
-                </h2>
-
-                {copy.revealed.body.map((paragraph) => (
-                  <p
-                    key={paragraph.slice(0, 24)}
-                    className="font-serif text-sm sm:text-base text-stone-800 leading-relaxed mb-3 first-letter:text-2xl first-letter:font-bold first-letter:text-amber-900 first-letter:mr-0.5 first-letter:float-left"
-                  >
-                    {paragraph}
-                  </p>
-                ))}
-
-                <ul className="mt-5 space-y-2.5 border-t border-dashed border-amber-900/20 pt-4">
-                  {copy.revealed.bullets.map((item) => {
-                    const colonIdx = item.indexOf(': ')
-                    const label = colonIdx >= 0 ? item.slice(0, colonIdx) : item
-                    const detail = colonIdx >= 0 ? item.slice(colonIdx + 2) : ''
-                    return (
-                      <li key={item} className="flex gap-2.5 text-sm font-mono text-stone-700 leading-snug">
-                        <span className="text-amber-800 shrink-0 font-bold" aria-hidden>
-                          ✦
-                        </span>
-                        <span>
-                          <strong className="text-stone-900">{label}:</strong>
-                          {detail ? ` ${detail}` : ''}
-                        </span>
-                      </li>
-                    )
-                  })}
-                </ul>
-
-                <p className="mt-6 font-mono text-[9px] uppercase tracking-[0.25em] text-amber-900/45 text-center">
-                  — Fin del extracto · No distribuir —
-                </p>
-              </div>
+              ))}
             </div>
+          </div>
 
-            {/* Estado 3 — El siguiente paso */}
-            <motion.div
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.25, duration: 0.4 }}
-              className="glass-modern rounded-2xl border border-purple-500/30 p-5 sm:p-6"
-            >
-              <h3 className="text-lg font-bold text-white mb-2">{copy.nextStep.title}</h3>
-              <p className="text-sm text-brand-200/90 leading-relaxed mb-3">{copy.nextStep.body}</p>
-              <p className="text-xs text-brand-300/70 mb-4">{copy.nextStep.emailHint}</p>
-              <div className="flex flex-col sm:flex-row gap-3">
-                <Link
-                  href="/activar?utm_source=info&utm_medium=unlock&utm_campaign=sealed_envelope"
-                  className="inline-flex justify-center py-2.5 px-5 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl text-sm transition-colors"
-                >
-                  {copy.nextStep.ctaActivar}
-                </Link>
-                <Link
-                  href="/calculadora?utm_source=info&utm_medium=unlock&utm_campaign=sealed_envelope"
-                  className="inline-flex justify-center py-2.5 px-5 border border-white/20 hover:bg-white/10 text-white font-semibold rounded-xl text-sm transition-colors"
-                >
-                  {copy.nextStep.ctaCalculadora}
-                </Link>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
+          <div className="viernes-card mt-6">
+            <h3 className="viernes-serif text-2xl font-bold text-white mb-3">{copy.nextStep.title}</h3>
+            <p className="viernes-lead mb-3">{copy.nextStep.body}</p>
+            <p className="viernes-form-disclaimer mb-6">{copy.nextStep.emailHint}</p>
+            <div className="flex flex-col sm:flex-row flex-wrap gap-3">
+              <Link
+                href="/activar?utm_source=info&utm_medium=unlock&utm_campaign=sealed_envelope"
+                className="viernes-btn viernes-btn-primary"
+              >
+                {copy.nextStep.ctaActivar}
+              </Link>
+              <Link
+                href="/calculadora?utm_source=info&utm_medium=unlock&utm_campaign=sealed_envelope"
+                className="viernes-btn viernes-btn-ghost"
+              >
+                {copy.nextStep.ctaCalculadora}
+              </Link>
+            </div>
+          </div>
+        </motion.section>
+      )}
+    </AnimatePresence>
   )
 }

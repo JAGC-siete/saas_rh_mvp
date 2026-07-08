@@ -91,7 +91,7 @@ describe('sendSequenceEmail welcome source (unit)', () => {
     assert.ok(welcomeVentas.includes('propuesta en PDF'))
     assert.ok(welcomeVentas.includes('— Jorge'))
     assert.ok(painPoint1.startsWith('Hola María,'))
-    assert.ok(painPoint1.includes('extracto del sobre'))
+    assert.ok(painPoint1.includes('la historia por escrito'))
     assert.ok(painPoint1.includes('siempre lo hemos hecho así'))
     assert.ok(!painPoint1.includes('6 meses de implementación'))
 

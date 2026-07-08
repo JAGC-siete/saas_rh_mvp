@@ -65,7 +65,7 @@ export const pageTitles = {
   biometricoNomina: 'Sistema biométrico + nómina | HN, SV y GT | Humano SISU',
   ventas: 'Cotización nómina y asistencia | PDF al instante | Humano SISU',
   gracias: 'Confirmación de activación | Humano SISU',
-  info: 'Solicitar información | Software nómina y asistencia HN SV GT | Humano SISU',
+  info: 'Recuperá la paz al cerrar planilla | Software nómina y asistencia HN SV GT | Humano SISU',
   implementacion48h: 'Automatiza asistencia y payroll | Ahorra horas | Humano SISU',
   deduccionesHonduras: 'IHSS, RAP, ISR automático | Sin cálculos manuales | Humano SISU',
   recursos: 'Recursos | Automatización RH y nómina local | Humano SISU',

@@ -60,7 +60,7 @@ export const pageDescriptions = {
   recursos: 'Artículos sobre automatización de RH y nómina local. Guías, mejores prácticas y tendencias para MIPYMES.',
   ventas: 'Cotización sin costo para nómina y asistencia biométrica en Honduras, El Salvador y Guatemala. Recibe propuesta en PDF al instante.',
   gracias: 'Confirmación de pago recibida. Tu sistema Humano SISU se activará en las próximas horas.',
-  info: 'Solicita información sobre Humano SISU: nómina automatizada, asistencia biométrica y deducciones de ley en Honduras, El Salvador y Guatemala. Sin compromiso.',
+  info: '¿Perdés la paz cada vez que cerrás planilla? Descubrí cómo recuperarla automatizando asistencia biométrica, nómina y deducciones de ley (IHSS, RAP, ISR) en Honduras, El Salvador y Guatemala. Sin compromiso.',
   paz: '¿Perdiste un domingo haciendo Excel? No sos una máquina de errores de deducción. Encontrá tu paz con Humano SISU.',
   viernes:
     '¿Otra vez vas a perder el domingo en Excel? Alcanzá la paz contable con biométrico + motor legal IHSS, RAP, ISR. Trial gratis en Honduras, El Salvador y Guatemala.',

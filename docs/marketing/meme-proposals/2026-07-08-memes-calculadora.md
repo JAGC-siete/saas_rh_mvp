@@ -1,148 +1,148 @@
+# Propuestas de Memes - Calculadora de Deducciones Honduras (2026-07-08)
+
 | # | Template | Ángulo | Título anuncio |
 |---|----------|--------|----------------|
-| 1 | Drake Hotline Bling | Recibo no cuadra | ¿Te cuadran los centavos? |
-| 2 | Woman Yelling At Cat | RRHH no explica | La verdad sobre el ISR |
-| 3 | Change My Mind | Recibo no cuadra | El voucher no es ley |
-| 4 | Two Buttons | RRHH no explica | El dilema del empleado |
-| 5 | Expanding Brain | Burocracia | Evolución del cálculo |
+| 1 | They're The Same Picture | Recibo no cuadra | ¿Firmaste una cosa y el voucher otra? |
+| 2 | Always Has Been | Recibo no cuadra | El plot twist de cada quincena 🚀 |
+| 3 | Batman Slapping Robin | RRHH no explica | Dejá de preguntarle a RRHH 🦇 |
+| 4 | One Does Not Simply | RRHH no explica | Entender IHSS no es tan fácil |
+| 5 | Left Exit 12 Off Ramp | Burocracia | El atajo que todos deberían tomar |
 
 ---
 
-## Propuesta 1 — Drake Hotline Bling
+## Propuesta 1 — They're The Same Picture
 
-Template imgflip: Drake Hotline Bling  
-Link: https://imgflip.com/memetemplate/Drake-Hotline-Bling
+**Template imgflip:** They're The Same Picture  
+**Link:** https://imgflip.com/memetemplate/Theyre-The-Same-Picture
 
-Texto en el meme (paneles):
+**Texto en el meme (paneles):**
+
 | Panel / zona | Texto |
 |--------------|-------|
-| Panel superior (No) | Creerle al voucher sin revisar |
-| Panel inferior (Sí) | Pasarlo por la calculadora de SISU |
+| Imagen izquierda | Lo que firmaste en contrato |
+| Imagen derecha | Tu voucher quincenal neto |
+| Pam (oficina) | RRHH dice que son iguales |
+| Texto inferior | Son la misma decepción |
 
-Título del anuncio (feed):  
-¿Te cuadran los centavos? 🤨
+**Título del anuncio (feed):**  
+¿Firmaste una cosa y el voucher otra?
 
-Copy del post:  
-Esa sensación de que te falta un monto en el depósito... 💸 
-Calcula tu IHSS, RAP e ISR en 30 segundos y sal de dudas.
-¿Alguna vez te han pagado mal el ISR? Contanos abajo. 👇
-humanosisu.net/calculadora-deducciones
+**Copy del post:**  
+El bruto suena increíble hasta que ves el neto y nada cuadra. 💸 IHSS, RAP e ISR desglosados en 30 segundos, gratis y con el mismo motor legal de nómina profesional.  
+¿Te ha pasado que el recibo no cuadra con lo que te prometieron? Contanos. 👇
 
-CTA:  
+**CTA:**  
 humanosisu.net/calculadora-deducciones?utm_source=facebook&utm_medium=organic&utm_campaign=calc-meme-2026-07-08-1
 
-Por qué funciona:  
-Usa la validación social y el miedo a perder dinero (FOMO/Loss aversion) para generar clics inmediatos.
+**Por qué funciona:**  
+Contrasta expectativa vs realidad del sueldo. La frase final invita a comentar experiencias similares y compartir la indignación.
 
 ---
 
-## Propuesta 2 — Woman Yelling At Cat
+## Propuesta 2 — Always Has Been
 
-Template imgflip: Woman Yelling At Cat  
-Link: https://imgflip.com/memetemplate/Woman-Yelling-At-Cat
+**Template imgflip:** Always Has Been  
+**Link:** https://imgflip.com/memetemplate/Always-Has-Been
 
-Texto en el meme (paneles):
+**Texto en el meme (paneles):**
+
 | Panel / zona | Texto |
 |--------------|-------|
-| Mujer gritando | "¡Explicame por qué me quitaron tanto!" |
-| Gato confundido | "Es el ISR progresivo, compa" |
+| Astronauta 1 | Revisando por qué el neto no cuadra |
+| Astronauta 2 | Siempre ha sido el voucher |
+| Pistola | (sin texto) |
 
-Título del anuncio (feed):  
-La verdad sobre el ISR 🤯
+**Título del anuncio (feed):**  
+El plot twist de cada quincena 🚀
 
-Copy del post:  
-RRHH te dice "está en la ley", pero nadie te explica cómo se calcula. 🙄
-Saca tu cuenta real gratis y sin registrarte en el link.
-Etiquetá a ese amigo que siempre se queja de los descuentos. 👥
-humanosisu.net/calculadora-deducciones
+**Copy del post:**  
+Cada quincena la misma sorpresa: depositan menos y nadie te explica por qué. Dejá de adivinar y sacá la cuenta exacta al instante. PDF opcional, sin guardar tu salario.  
+¿Cuántas veces te ha pasado? Etiquetá al compa que siempre dice "algo anda mal". 👇
 
-CTA:  
+**CTA:**  
 humanosisu.net/calculadora-deducciones?utm_source=facebook&utm_medium=organic&utm_campaign=calc-meme-2026-07-08-2
 
-Por qué funciona:  
-Representa el conflicto común entre el empleado y el departamento administrativo, generando empatía y debate.
+**Por qué funciona:**  
+El giro del meme refuerza la sospecha colectiva de que el voucher nunca cuadra. Es shareable porque valida una frustración que casi todos sienten.
 
 ---
 
-## Propuesta 3 — Change My Mind
+## Propuesta 3 — Batman Slapping Robin
 
-Template imgflip: Change My Mind  
-Link: https://imgflip.com/memetemplate/Change-My-Mind
+**Template imgflip:** Batman Slapping Robin  
+**Link:** https://imgflip.com/memetemplate/Batman-Slapping-Robin
 
-Texto en el meme (paneles):
+**Texto en el meme (paneles):**
+
 | Panel / zona | Texto |
 |--------------|-------|
-| Letrero | El voucher de pago puede mentir. Change my mind. |
+| Robin | Voy a preguntarle a RRHH otra vez |
+| Batman (cachetada) | USÁ LA CALCULADORA DE SISU |
 
-Título del anuncio (feed):  
-El voucher no es ley 📄
+**Título del anuncio (feed):**  
+Dejá de preguntarle a RRHH 🦇
 
-Copy del post:  
-Si el recibo no cuadra, el error es de ellos, no tuyo. 🧐
-Verificá tus deducciones de IHSS y RAP con el mismo motor de una nómina profesional.
-¿Te ha pasado que el neto no coincide con lo pactado? 💬
-humanosisu.net/calculadora-deducciones
+**Copy del post:**  
+Tercer correo, misma respuesta: "está según la ley". 🙄 RRHH nunca te explica el tope del IHSS, el RAP ni el ISR progresivo. Calculalo vos en 30 segundos y comparalo con tu recibo.  
+¿Cuál es la excusa más común que te han dado? 👇
 
-CTA:  
+**CTA:**  
 humanosisu.net/calculadora-deducciones?utm_source=facebook&utm_medium=organic&utm_campaign=calc-meme-2026-07-08-3
 
-Por qué funciona:  
-Posiciona la herramienta como una "auditoría" personal, apelando al sentido de justicia y control del trabajador.
+**Por qué funciona:**  
+El cachetazo es humor directo contra la dependencia de RRHH. Dispara debate en comentarios sobre respuestas evasivas de planillas.
 
 ---
 
-## Propuesta 4 — Two Buttons
+## Propuesta 4 — One Does Not Simply
 
-Template imgflip: Two Buttons  
-Link: https://imgflip.com/memetemplate/Two-Buttons
+**Template imgflip:** One Does Not Simply  
+**Link:** https://imgflip.com/memetemplate/One-Does-Not-Simply
 
-Texto en el meme (paneles):
+**Texto en el meme (paneles):**
+
 | Panel / zona | Texto |
 |--------------|-------|
-| Botón 1 | Pedir explicación a RRHH (esperar 5 días) |
-| Botón 2 | Usar calculadora de SISU (30 segundos) |
+| Texto superior | One does not simply |
+| Texto inferior | entender IHSS, RAP e ISR sin ayuda |
 
-Título del anuncio (feed):  
-El dilema del empleado 😵‍💫
+**Título del anuncio (feed):**  
+Entender IHSS no es tan fácil
 
-Copy del post:  
-¿Para qué esperar a que te respondan el correo si podés saberlo ya? ⏱️
-Cálculo exacto de deducciones hondureñas en un clic. 
-Sin formularios largos, solo la verdad de tu salario. 🚀
-humanosisu.net/calculadora-deducciones
+**Copy del post:**  
+No sos contador y no deberías serlo para saber cuánto te llega. La calculadora de Humano SISU te da el desglose legal que RRHH nunca te explica, gratis y en segundos.  
+Change my mind: ¿alguien te ha explicado bien tus deducciones alguna vez? 👇
 
-CTA:  
+**CTA:**  
 humanosisu.net/calculadora-deducciones?utm_source=facebook&utm_medium=organic&utm_campaign=calc-meme-2026-07-08-4
 
-Por qué funciona:  
-Resalta el contraste entre la burocracia lenta y la eficiencia tecnológica, atacando el "punto de dolor" de la espera.
+**Por qué funciona:**  
+Reconoce la complejidad real del sistema sin sonar corporativo. El "change my mind" al final empuja respuestas y etiquetas a colegas de RRHH.
 
 ---
 
-## Propuesta 5 — Expanding Brain
+## Propuesta 5 — Left Exit 12 Off Ramp
 
-Template imgflip: Expanding Brain  
-Link: https://imgflip.com/memetemplate/Expanding-Brain
+**Template imgflip:** Left Exit 12 Off Ramp  
+**Link:** https://imgflip.com/memetemplate/Left-Exit-12-Off-Ramp
 
-Texto en el meme (paneles):
+**Texto en el meme (paneles):**
+
 | Panel / zona | Texto |
 |--------------|-------|
-| Cerebro 1 | Calcular a mano con calculadora |
-| Cerebro 2 | Preguntarle al compañero de al lado |
-| Cerebro 3 | Mandar mail a RRHH y esperar |
-| Cerebro 4 | Usar la calculadora de Humano SISU |
+| Carretera principal | Calculadora SISU en 30 segundos |
+| Salida (rampa) | Esperar constancia de RRHH 5 días |
+| Conductor | (toma la salida equivocada) |
 
-Título del anuncio (feed):  
-Evolución del cálculo 🧠
+**Título del anuncio (feed):**  
+El atajo que todos deberían tomar
 
-Copy del post:  
-Dejá de adivinar cuánto te va a quedar después de impuestos. 📉
- la forma más inteligente de conocer tu salario neto en Honduras.
-Compartí esto con tu equipo para que todos sepan cuánto ganar. 📲
-humanosisu.net/calculadora-deducciones
+**Copy del post:**  
+Constancia en 3 a 5 días vs cálculo instantáneo con el motor legal de nómina. Mismo resultado, cero correos, cero espera. Probalo y comparalo con tu voucher.  
+¿Cuántos días llevás esperando que RRHH te responda? Sé honesto. 👇
 
-CTA:  
+**CTA:**  
 humanosisu.net/calculadora-deducciones?utm_source=facebook&utm_medium=organic&utm_campaign=calc-meme-2026-07-08-5
 
-Por qué funciona:  
-Usa el humor progresivo para ridiculizar los métodos obsoletos y presentar el producto como la solución "iluminada".
+**Por qué funciona:**  
+Visualiza el absurdo de elegir la burocracia cuando hay alternativa inmediata. El formato de "error de ruta" es muy shareable en feeds de humor laboral.
