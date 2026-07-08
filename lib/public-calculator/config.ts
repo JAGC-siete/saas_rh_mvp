@@ -223,8 +223,8 @@ export const PUBLIC_CALCULATOR_CONFIGS: Record<CountryCode, PublicCalculatorConf
         }
       },
       audience: {
-        employeeTitle: 'Soy empleado',
-        bossTitle: 'Soy dueño /jefe de RR.HH.',
+        employeeTitle: 'Empleado',
+        bossTitle: 'Dueño /jefe de RR.HH.',
         employeeBody: '',
         bossBody: ''
       },
@@ -410,8 +410,8 @@ export const PUBLIC_CALCULATOR_CONFIGS: Record<CountryCode, PublicCalculatorConf
         }
       },
       audience: {
-        employeeTitle: 'Soy empleado',
-        bossTitle: 'Soy dueño /jefe de RR.HH.',
+        employeeTitle: 'Empleado',
+        bossTitle: 'Dueño /jefe de RR.HH.',
         employeeBody: '',
         bossBody: ''
       },
@@ -546,8 +546,8 @@ export const PUBLIC_CALCULATOR_CONFIGS: Record<CountryCode, PublicCalculatorConf
         }
       },
       audience: {
-        employeeTitle: 'Soy empleado',
-        bossTitle: 'Soy dueño /jefe de RR.HH.',
+        employeeTitle: 'Empleado',
+        bossTitle: 'Dueño /jefe de RR.HH.',
         employeeBody: '',
         bossBody: ''
       },
