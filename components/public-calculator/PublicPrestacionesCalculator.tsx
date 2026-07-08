@@ -867,6 +867,17 @@ export default function PublicPrestacionesCalculator({ config }: { config: Publi
         </div>
 
         <section className="mt-10">
+          <h2 className="text-lg font-semibold text-white mb-3">Calculadoras relacionadas</h2>
+          <div className="flex flex-wrap gap-3">
+            {config.relatedCalculators.map((link) => (
+              <Link key={link.href} href={link.href} className="text-brand-300 hover:text-white underline text-sm">
+                {link.label}
+              </Link>
+            ))}
+          </div>
+        </section>
+
+        <section className="mt-10">
           <h2 className="text-xl font-bold text-white mb-4">Preguntas frecuentes</h2>
           <div className="space-y-4">
             {config.faqs.map((faq) => (
@@ -874,17 +885,6 @@ export default function PublicPrestacionesCalculator({ config }: { config: Publi
                 <h3 className="font-semibold text-white mb-2">{faq.question}</h3>
                 <p className="text-sm text-brand-200/90">{faq.answer}</p>
               </div>
-            ))}
-          </div>
-        </section>
-
-        <section className="mt-10">
-          <h2 className="text-lg font-semibold text-white mb-3">Calculadoras relacionadas</h2>
-          <div className="flex flex-wrap gap-3">
-            {config.relatedCalculators.map((link) => (
-              <Link key={link.href} href={link.href} className="text-brand-300 hover:text-white underline text-sm">
-                {link.label}
-              </Link>
             ))}
           </div>
         </section>

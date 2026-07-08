@@ -894,6 +894,14 @@ export default function PublicDeductionCalculator({ config }: { config: PublicCa
           )}
         </div>
 
+        <div className="mt-6">
+          <CalculatorSubscriptionBridge
+            tool={calcTool}
+            placement="footer"
+            shareConfig={config}
+          />
+        </div>
+
         {config.seoGuide && (
           <section className="mt-6 glass-modern rounded-2xl shadow-2xl p-6 sm:p-8 border border-white/10 text-left">
             <h2 className="text-xl sm:text-2xl font-bold text-white mb-3">{config.seoGuide.title}</h2>
@@ -914,14 +922,6 @@ export default function PublicDeductionCalculator({ config }: { config: PublicCa
             </div>
           </section>
         )}
-
-        <div className="mt-6">
-          <CalculatorSubscriptionBridge
-            tool={calcTool}
-            placement="footer"
-            shareConfig={config}
-          />
-        </div>
       </div>
 
       {result && b2b && croEnabled && (
