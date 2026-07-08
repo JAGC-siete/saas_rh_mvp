@@ -16,19 +16,13 @@ export default function AWSCertificationsSection() {
         <ScrollReveal>
           <div className="text-center mb-10">
             <h2 className="text-2xl sm:text-3xl font-bold text-white mb-6">
-              Humano SISU: infraestructura cloud certificada AWS
+              SISU: Gestión de RR.HH. potenciada con la misma tecnología de la nube que utilizan gigantes mundiales como Netflix o Airbnb, adaptada a la MIPYME del triángulo norte (🇭🇳 🇸🇻 🇬🇹)
             </h2>
             <p className="text-slate-400 max-w-4xl mx-auto mb-4 text-base sm:text-lg font-medium landing-dark-text">
-              Software de recursos humanos y control de asistencia construido con la misma tecnología que usan Netflix y Airbnb, adaptado a MIPYMES en Centroamérica.
-              <br />
-              <span className="text-brand-400 font-medium">
-                Optimizado para que tu empresa tenga la seguridad y escalabilidad de un gigante, sin pagar como uno.
-              </span>
-              <br />
-              <span className="text-white font-semibold">Tecnología global. Precio local.</span>
+              <span className="text-white font-semibold">Poder global, precio local:</span> Escalabilidad y seguridad de un gigante sin su costo.
             </p>
             <p className="text-sm text-slate-400 max-w-2xl mx-auto font-medium">
-              Tus datos están encriptados bajo estándares bancarios en servidores regionales de AWS.
+              <span className="text-white font-semibold">Datos seguros:</span> Infraestructura AWS regional encriptada
             </p>
           </div>
         </ScrollReveal>
