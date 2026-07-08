@@ -10,6 +10,7 @@ import {
   buildPeerShareMessage,
   buildPeerShareUrl,
 } from '../lib/public-calculator/bridge-share'
+import { buildSocialShareUrl } from '../lib/public-calculator/social-share'
 import { PUBLIC_CALCULATOR_CONFIGS } from '../lib/public-calculator/config'
 import { estimateTimeLeakHours } from '../lib/public-calculator/digital-health'
 
@@ -79,6 +80,28 @@ describe('bridge share URLs', () => {
   })
 })
 
+describe('social share URLs', () => {
+  it('builds X intent with text and tracked URL', () => {
+    const url = buildCalculatorShareLink(PUBLIC_CALCULATOR_CONFIGS.HND.path, 'HND', 'share-x')
+    const intent = buildSocialShareUrl('x', url, PUBLIC_CALCULATOR_CONFIGS.HND.socialShare.postCalcScript)
+    assert.ok(intent.startsWith('https://twitter.com/intent/tweet?'))
+    assert.ok(intent.includes(encodeURIComponent('share-x')))
+  })
+
+  it('builds Facebook sharer with URL only', () => {
+    const url = buildCalculatorShareLink(PUBLIC_CALCULATOR_CONFIGS.GTM.path, 'GTM', 'share-facebook')
+    const intent = buildSocialShareUrl('facebook', url, 'ignored')
+    assert.ok(intent.startsWith('https://www.facebook.com/sharer/sharer.php?'))
+    assert.ok(intent.includes(encodeURIComponent('share-facebook')))
+  })
+
+  it('builds LinkedIn share URL', () => {
+    const url = buildCalculatorShareLink(PUBLIC_CALCULATOR_CONFIGS.HND.path, 'HND', 'share-linkedin')
+    const intent = buildSocialShareUrl('linkedin', url, 'ignored')
+    assert.ok(intent.startsWith('https://www.linkedin.com/sharing/share-offsite/?'))
+  })
+})
+
 describe('b2b funnel config', () => {
   it('is defined for all supported calculator countries', () => {
     assert.ok(PUBLIC_CALCULATOR_CONFIGS.HND.b2bFunnel)
@@ -89,9 +112,11 @@ describe('b2b funnel config', () => {
   it('defines landing bridge share actions', () => {
     for (const country of ['HND', 'SLV', 'GTM'] as const) {
       const bridge = PUBLIC_CALCULATOR_CONFIGS[country].landingBridge
+      const social = PUBLIC_CALCULATOR_CONFIGS[country].socialShare
       assert.equal(bridge.shareButton, 'Compartir')
       assert.equal(bridge.activarButton, 'Activar gratis')
       assert.ok(bridge.share.peerScript.length > 0)
+      assert.ok(social.postCalcScript.includes('SISU'))
     }
   })
 })

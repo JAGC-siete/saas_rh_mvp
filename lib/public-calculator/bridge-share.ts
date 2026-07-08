@@ -4,10 +4,21 @@ import { calculatorUtmSource } from './utm'
 
 const SITE_BASE = 'https://humanosisu.net'
 
+export type CalculatorShareCampaign =
+  | 'bridge-share-peer'
+  | 'bridge-share-copy'
+  | 'bridge-share-native'
+  | 'post-calc-share-peer'
+  | 'post-calc-share-copy'
+  | 'post-calc-share-native'
+  | 'share-x'
+  | 'share-facebook'
+  | 'share-linkedin'
+
 export function buildCalculatorShareLink(
   path: string,
   countryCode: CountryCode,
-  campaign: 'bridge-share-peer' | 'bridge-share-copy' | 'bridge-share-native'
+  campaign: CalculatorShareCampaign
 ): string {
   const params = new URLSearchParams({
     utm_source: calculatorUtmSource(countryCode),
@@ -21,7 +32,7 @@ export function buildPeerShareMessage(
   script: string,
   path: string,
   countryCode: CountryCode,
-  campaign: 'bridge-share-peer' | 'bridge-share-copy' = 'bridge-share-peer'
+  campaign: CalculatorShareCampaign = 'bridge-share-peer'
 ): string {
   const link = buildCalculatorShareLink(path, countryCode, campaign)
   return `${script.trim()} ${link}`
@@ -30,9 +41,10 @@ export function buildPeerShareMessage(
 export function buildPeerShareUrl(
   script: string,
   path: string,
-  countryCode: CountryCode
+  countryCode: CountryCode,
+  campaign: CalculatorShareCampaign = 'bridge-share-peer'
 ): string {
-  const message = buildPeerShareMessage(script, path, countryCode, 'bridge-share-peer')
+  const message = buildPeerShareMessage(script, path, countryCode, campaign)
   return `https://wa.me/?text=${encodeURIComponent(message)}`
 }
 

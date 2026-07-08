@@ -71,6 +71,11 @@ export type PublicCalculatorConfig = {
   faqs: FAQItem[]
   relatedCalculators: Array<{ href: string; label: string }>
   breadcrumbLabel: string
+  socialShare: {
+    postCalcScript: string
+    postCalcButton: string
+    networksLabel: string
+  }
   landingBridge: {
     titleLead: string
     titleAccent: string
@@ -136,6 +141,15 @@ export type PublicCalculatorConfig = {
 }
 
 const BASE = 'https://humanosisu.net'
+
+export const CALCULATOR_OG_IMAGE_PATH = '/og-image.png'
+export const CALCULATOR_OG_IMAGE_URL = `${BASE}${CALCULATOR_OG_IMAGE_PATH}`
+
+const CALCULATOR_SOCIAL_SHARE = {
+  postCalcScript: 'Acabo de calcular mis deducciones gratis con SISU. Probalo aquí:',
+  postCalcButton: 'Compartir',
+  networksLabel: 'Compartir en redes',
+} as const
 
 const LANDING_BRIDGE_SHARE = {
   shareButton: 'Compartir',
@@ -303,6 +317,7 @@ export const PUBLIC_CALCULATOR_CONFIGS: Record<CountryCode, PublicCalculatorConf
       { href: '/suscripcion', label: 'Newsletter nómina y RRHH' },
     ],
     breadcrumbLabel: 'Deducciones Honduras',
+    socialShare: CALCULATOR_SOCIAL_SHARE,
     landingBridge: {
       titleLead: '¿Conoces a un colega que ha perdido la paz con RR.HH.?',
       titleAccent: '¿Eres esa persona?',
@@ -465,6 +480,7 @@ export const PUBLIC_CALCULATOR_CONFIGS: Record<CountryCode, PublicCalculatorConf
       { href: '/suscripcion', label: 'Newsletter nómina y RRHH' },
     ],
     breadcrumbLabel: 'Deducciones El Salvador',
+    socialShare: CALCULATOR_SOCIAL_SHARE,
     landingBridge: {
       titleLead: '¿Conoces a un colega que ha perdido la paz con RR.HH.?',
       titleAccent: '¿Eres esa persona?',
@@ -597,6 +613,7 @@ export const PUBLIC_CALCULATOR_CONFIGS: Record<CountryCode, PublicCalculatorConf
       { href: '/suscripcion', label: 'Newsletter nómina y RRHH' },
     ],
     breadcrumbLabel: 'Deducciones Guatemala',
+    socialShare: CALCULATOR_SOCIAL_SHARE,
     landingBridge: {
       titleLead: '¿Conoces a un colega que ha perdido la paz con RR.HH.?',
       titleAccent: '¿Eres esa persona?',

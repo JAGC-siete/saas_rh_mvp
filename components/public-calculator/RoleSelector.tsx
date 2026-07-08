@@ -28,9 +28,10 @@ export default function RoleSelector({
     title: string
     body: string
     icon: React.ReactNode
+    emphasis: 'primary' | 'secondary'
   }> = [
-    { id: 'empleado', title: employeeTitle, body: employeeBody, icon: <CalcEmployeeIcon /> },
-    { id: 'empresa', title: companyTitle, body: companyBody, icon: <CalcCompanyIcon /> },
+    { id: 'empleado', title: employeeTitle, body: employeeBody, icon: <CalcEmployeeIcon />, emphasis: 'primary' },
+    { id: 'empresa', title: companyTitle, body: companyBody, icon: <CalcCompanyIcon />, emphasis: 'secondary' },
   ]
 
   return (
@@ -41,9 +42,10 @@ export default function RoleSelector({
       <p className="text-sm text-brand-300/80 text-center mb-5 max-w-lg mx-auto">
         Un clic — personalizamos tu resultado y el PDF que recibirás.
       </p>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-[1.6fr_1fr] gap-4 items-stretch">
         {options.map((opt) => {
           const active = audience === opt.id
+          const primary = opt.emphasis === 'primary'
           const card = (
             <button
               type="button"
@@ -55,24 +57,37 @@ export default function RoleSelector({
                   tool,
                 })
               }}
-              className={`w-full text-left rounded-2xl border-2 px-5 py-5 transition-all ${
+              className={`h-full w-full text-left rounded-2xl border-2 transition-all ${
+                primary ? 'px-6 py-7 sm:py-9' : 'px-5 py-5 sm:py-6'
+              } ${
                 active
                   ? 'border-brand-500/80 bg-brand-600/30 text-white shadow-lg shadow-brand-900/30'
-                  : 'border-white/20 bg-white/5 text-brand-200 hover:border-cyan-400/50 hover:bg-white/10'
+                  : primary
+                    ? 'border-brand-400/50 bg-brand-500/10 text-white hover:border-brand-400/80 hover:bg-brand-500/20 shadow-lg shadow-brand-900/20'
+                    : 'border-white/15 bg-white/5 text-brand-200/90 hover:border-cyan-400/40 hover:bg-white/10'
               }`}
               aria-pressed={active}
             >
-              <span className="mb-3 block text-brand-200" aria-hidden="true">
+              <span
+                className={`mb-3 block ${primary ? 'text-brand-100 scale-110 origin-left' : 'text-brand-300/80'}`}
+                aria-hidden="true"
+              >
                 {opt.icon}
               </span>
-              <div className="font-semibold text-lg">{opt.title}</div>
-              {opt.body ? <p className="text-sm mt-2 opacity-90 leading-relaxed">{opt.body}</p> : null}
+              <div className={`font-semibold ${primary ? 'text-xl sm:text-2xl' : 'text-base sm:text-lg opacity-90'}`}>
+                {opt.title}
+              </div>
+              {opt.body ? (
+                <p className={`mt-2 leading-relaxed ${primary ? 'text-sm sm:text-base opacity-90' : 'text-xs sm:text-sm opacity-75'}`}>
+                  {opt.body}
+                </p>
+              ) : null}
             </button>
           )
           return active ? (
-            <BorderBeam key={opt.id}>{card}</BorderBeam>
+            <BorderBeam key={opt.id} className="h-full">{card}</BorderBeam>
           ) : (
-            <div key={opt.id}>{card}</div>
+            <div key={opt.id} className="h-full">{card}</div>
           )
         })}
       </div>

@@ -11,6 +11,8 @@ import { generateFAQPageSchema, generateWebPageSchema, generateBreadcrumbListSch
 import DigitalHealthDiagnostic from './DigitalHealthDiagnostic'
 import TrojanHorseShare from './TrojanHorseShare'
 import LandingBridgeShare from './LandingBridgeShare'
+import CalculatorShareTrigger from './CalculatorShareTrigger'
+import { CALCULATOR_OG_IMAGE_URL } from '../../lib/public-calculator/config'
 import type { CalculatorAudience } from './AudienceSelector'
 import RoleSelector, { type CalculatorRole } from './RoleSelector'
 import CalculatingState from './CalculatingState'
@@ -437,6 +439,14 @@ export default function PublicDeductionCalculator({ config }: { config: PublicCa
         <meta property="og:title" content={config.seo.title} />
         <meta property="og:description" content={config.seo.description} />
         <meta property="og:url" content={config.canonicalUrl} />
+        <meta property="og:type" content="website" />
+        <meta property="og:image" content={CALCULATOR_OG_IMAGE_URL} />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={config.seo.title} />
+        <meta name="twitter:description" content={config.seo.description} />
+        <meta name="twitter:image" content={CALCULATOR_OG_IMAGE_URL} />
         <link rel="canonical" href={config.canonicalUrl} />
       </Head>
       <SchemaMarkup schema={[webPageSchema, faqSchema, breadcrumbSchema]} />
@@ -768,6 +778,16 @@ export default function PublicDeductionCalculator({ config }: { config: PublicCa
                       {config.trust.minimumWageLabel}: {formatCurrency(result.constants.minimumWage)} |{' '}
                       {config.trust.ceilingLabel}: {formatCurrency(result.constants.ihssCeiling)}
                     </p>
+                  </div>
+
+                  <div className="mb-6 text-center">
+                    <p className="text-sm text-brand-200/90 mb-3">{config.socialShare.postCalcScript}</p>
+                    <CalculatorShareTrigger
+                      config={config}
+                      calcTool={calcTool}
+                      placement="post-calc"
+                      fullWidth
+                    />
                   </div>
 
                   {croEnabled && b2b ? (
