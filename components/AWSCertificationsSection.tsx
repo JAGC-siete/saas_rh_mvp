@@ -16,10 +16,10 @@ export default function AWSCertificationsSection() {
         <ScrollReveal>
           <div className="text-center mb-10">
             <h2 className="text-2xl sm:text-3xl font-bold text-white mb-6">
-              SISU: Gestión de RR.HH. potenciada con la misma tecnología de la nube que utilizan gigantes mundiales como Netflix o Airbnb, adaptada a la MIPYME del triángulo norte (🇭🇳 🇸🇻 🇬🇹)
+              Potenciada con la tecnología de la nube utilizada por gigantes mundiales como Netflix o Airbnb.
             </h2>
             <p className="text-slate-400 max-w-4xl mx-auto mb-4 text-base sm:text-lg font-medium landing-dark-text">
-              <span className="text-white font-semibold">Poder global, precio local:</span> Escalabilidad y seguridad de un gigante sin su costo.
+              Diseñada por ingenieros certificados
             </p>
             <p className="text-sm text-slate-400 max-w-2xl mx-auto font-medium">
               <span className="text-white font-semibold">Datos seguros:</span> Infraestructura AWS regional encriptada
