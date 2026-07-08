@@ -185,12 +185,9 @@ export default function SealedEnvelopeLead() {
             <span className="block text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-normal not-italic leading-tight text-white">
               {copy.intrigue.headlineLead}
             </span>
-            <span className="block text-xl sm:text-2xl lg:text-3xl text-brand-300 mt-4 font-normal not-italic">
-              {copy.intrigue.headlineAccent}
-            </span>
           </h1>
           <p className="viernes-lead mb-6 max-w-2xl mx-auto">{copy.intrigue.subheadline}</p>
-          <p className="viernes-mantra mb-8 max-w-xl mx-auto text-left">{copy.intrigue.mantra}</p>
+          <p className="viernes-mantra mb-8 max-w-xl mx-auto text-left">{copy.intrigue.headlineAccent}</p>
           <div className="flex flex-col sm:flex-row flex-wrap justify-center gap-3">
             <button
               type="button"

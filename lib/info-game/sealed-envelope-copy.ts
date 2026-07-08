@@ -8,10 +8,8 @@ export const SEALED_ENVELOPE_COPY = {
     headlineLead: '¿Conocés a alguien que perdió la paz con Recursos Humanos?',
     headlineAccent: '¿Eres esa persona?',
     subheadline:
-      'El último día del mes, cuadrando horas en Excel, persiguiendo marcajes y recalculando IHSS, RAP e ISR hasta la madrugada. Otra vez.',
-    mantra:
-      'No naciste para vivir dentro de una hoja de Excel. La paz de cerrar planilla en minutos es real, y también la plataforma.',
-    cta: 'Quiero recuperar la paz',
+      'Siempre amargados. Luchando por que todos lleguen a tiempo. A veces celebran cumpleaños. Se tardan meses para entregar una constancia de trabajo. El día de cierre, cuadrando horas extra en Excel, recalculando deducciones hasta la madrugada. Otra vez.',
+    cta: 'Hacer las paces con RR.HH.',
     ctaSecondary: 'Validar deducciones gratis',
   },
 
