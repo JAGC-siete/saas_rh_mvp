@@ -71,8 +71,11 @@ export function appendUtmParams(
     utm_medium: 'cta',
     utm_campaign: campaign,
   })
-  const separator = href.includes('?') ? '&' : '?'
-  return `${href}${separator}${params.toString()}`
+  const hashIndex = href.indexOf('#')
+  const base = hashIndex === -1 ? href : href.slice(0, hashIndex)
+  const hash = hashIndex === -1 ? '' : href.slice(hashIndex)
+  const separator = base.includes('?') ? '&' : '?'
+  return `${base}${separator}${params.toString()}${hash}`
 }
 
 export function buildDemoWhatsAppUrl(

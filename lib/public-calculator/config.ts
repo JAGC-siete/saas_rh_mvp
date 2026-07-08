@@ -279,7 +279,7 @@ export const PUBLIC_CALCULATOR_CONFIGS: Record<CountryCode, PublicCalculatorConf
     landingBridge: {
       title: 'Conoces a un colega que ha perdido la paz con RR.HH. ¿Eres esa persona?',
       body: 'Ayudamos a dueños y equipos de RRHH a encontrar una forma más pacífica de operar. No sos una máquina de Excel.',
-      href: '/#como-funciona',
+      href: '/activar?country=HND',
       cta: 'Explora SISU'
     },
     seoGuide: {
@@ -439,7 +439,7 @@ export const PUBLIC_CALCULATOR_CONFIGS: Record<CountryCode, PublicCalculatorConf
     landingBridge: {
       title: 'Conoces a un colega que ha perdido la paz con RR.HH. ¿Eres esa persona?',
       body: 'Ayudamos a dueños y equipos de RRHH a encontrar una forma más pacífica de operar. No sos una máquina de Excel.',
-      href: '/#como-funciona',
+      href: '/activar?country=SLV',
       cta: 'Explora SISU'
     }
   },
@@ -569,7 +569,7 @@ export const PUBLIC_CALCULATOR_CONFIGS: Record<CountryCode, PublicCalculatorConf
     landingBridge: {
       title: 'Conoces a un colega que ha perdido la paz con RR.HH. ¿Eres esa persona?',
       body: 'Ayudamos a dueños y equipos de RRHH a encontrar una forma más pacífica de operar. No sos una máquina de Excel.',
-      href: '/#como-funciona',
+      href: '/activar?country=GTM',
       cta: 'Explora SISU'
     }
   }
