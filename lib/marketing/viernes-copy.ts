@@ -21,7 +21,7 @@ export const VIERNES_COPY = {
   },
 
   insight: {
-    title: 'El cielo vs. el reprocesamiento',
+    title: 'El cielo automatizado vs. infierno del reprocesamiento',
     lead: 'Digitalizar no es alcanzar la paz.',
     paragraphs: [
       'Muchas empresas ya tienen reloj biométrico… y siguen bajando Excel, pasando USBs y recalculando IHSS a mano. Eso no es modernizar. Es el mismo dolor con pantalla nueva.',
