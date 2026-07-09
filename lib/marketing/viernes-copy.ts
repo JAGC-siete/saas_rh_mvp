@@ -12,9 +12,9 @@ export const VIERNES_COPY = {
   hero: {
     badge: 'Prueba en vivo · 30 días',
     headlineLead: '¿Otra vez vas a perder el domingo?',
-    headlineAccent: 'Toca el cielo con SISU',
+    headlineAccent: 'Recuperalo con SISU',
     subheadline:
-      'La ayuda está a tan solo un paso. Cierra en viernes con biométrico, horas y deducciones de ley (IHSS, RAP, ISR) — y recupera el domingo.',
+      'Caliente. Existe una alternativa. Está a tan solo un paso. Caliente. Cierra quincenas en segundos. Control biométrico integrado sin carga manual. Horas extras y deducciones de ley (seguro social, impuestos, aportaciones privadas) parametrizadas — para recuperar el domingo (y también los viernes).',
     mantra: 'No sos una máquina de Excel. El descanso es real, y también la plataforma.',
     ctaPrimary: 'Tocar las nubes',
     ctaSecondary: 'Validar deducciones gratis',
