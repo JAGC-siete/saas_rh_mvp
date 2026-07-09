@@ -13,6 +13,12 @@ export const SEALED_ENVELOPE_COPY = {
     ctaSecondary: 'Validar deducciones gratis',
   },
 
+  /** Encabezado de la sección del wizard (debajo del hero). */
+  wizardIntro: {
+    title: 'Hacer las paces con RR.HH.',
+    sub: '4 pasos. Te mostramos la historia al instante y te la dejamos en el correo.',
+  },
+
   /** Estado 1 — Wizard paso a paso (uno a uno con barra de progreso) */
   unlock: {
     title: '¿A dónde te enviamos la clave?',

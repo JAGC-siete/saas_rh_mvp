@@ -34,11 +34,6 @@ export const VIERNES_COPY = {
     ],
   },
 
-  checklist: {
-    title: 'Hacer las paces con RR.HH.',
-    sub: '4 pasos. Te mostramos la historia al instante y te la dejamos en el correo.',
-  },
-
   proof: {
     title: 'Lo que cambia cuando dejás el Excel atrás',
     items: [
@@ -79,10 +74,5 @@ export const VIERNES_COPY = {
     sub: 'Trial gratis. Sin tarjeta sorpresa. Si preferís hablar con alguien antes: cotización en 24h.',
     primary: 'Tocar las nubes',
     secondary: '¿Más de 30 empleados o varias sucursales? Pedir cotización',
-  },
-
-  footer: {
-    tag: 'Humano SISU — Paz contable cada viernes.',
-    link: 'Ir a humanosisu.net',
   },
 } as const

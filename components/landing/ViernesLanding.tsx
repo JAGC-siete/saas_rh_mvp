@@ -98,8 +98,6 @@ export default function ViernesLanding() {
         <hr className="viernes-divider" />
 
         <section id="peace-wizard" className="viernes-section">
-          <h2 className="viernes-serif viernes-section-title">{copy.checklist.title}</h2>
-          <p className="viernes-lead mb-8">{copy.checklist.sub}</p>
           <PeaceLeadWizard ref={wizardRef} channel="viernes" embedded idPrefix="viernes" />
         </section>
 
@@ -152,15 +150,6 @@ export default function ViernesLanding() {
             </Link>
           </p>
         </section>
-
-        <footer className="viernes-footer">
-          <p className="viernes-serif italic mb-2">{copy.footer.tag}</p>
-          <p>
-            <Link href="/" className="viernes-link">
-              {copy.footer.link}
-            </Link>
-          </p>
-        </footer>
       </div>
     </PublicPageShell>
   )

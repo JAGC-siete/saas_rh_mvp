@@ -67,7 +67,11 @@ export default function SealedEnvelopeLead() {
         )}
       </AnimatePresence>
 
-      <PeaceLeadWizard ref={wizardRef} channel="info" idPrefix="info" />
+      <section id="info-wizard" className="viernes-section">
+        <h2 className="viernes-serif viernes-section-title">{copy.wizardIntro.title}</h2>
+        <p className="viernes-lead mb-8">{copy.wizardIntro.sub}</p>
+        <PeaceLeadWizard ref={wizardRef} channel="info" idPrefix="info" />
+      </section>
     </>
   )
 }
