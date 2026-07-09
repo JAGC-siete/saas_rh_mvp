@@ -8,8 +8,6 @@ import SchemaMarkup from '../SEO/SchemaMarkup'
 import { validateFormInputs } from '../../lib/deduction-validator/client-validation'
 import type { PublicCalculatorConfig, PublicCalculatorDeductionKey } from '../../lib/public-calculator/config'
 import { generateFAQPageSchema, generateWebPageSchema, generateBreadcrumbListSchema } from '../../lib/seo/schema'
-import DigitalHealthDiagnostic from './DigitalHealthDiagnostic'
-import TrojanHorseShare from './TrojanHorseShare'
 import LandingBridgeShare from './LandingBridgeShare'
 import { buildPeaceWizardUrl } from '../../lib/public-calculator/utm'
 import CalculatorShareTrigger from './CalculatorShareTrigger'
@@ -22,7 +20,6 @@ import BenefitLeadCapture from './BenefitLeadCapture'
 import LeadCaptureSoftGate, { useLeadSoftGateTriggers } from './LeadCaptureSoftGate'
 import { CalcPdfSentMessage, CalcTrustLine, CalcCheckIcon, CalcIconTextRow } from './CalculatorUiIcons'
 import CalculatorSubscriptionBridge from './CalculatorSubscriptionBridge'
-import { trackGA4Event } from '../../lib/analytics/ga4'
 import {
   trackCalcActivarClick,
   trackCalcComplete,
@@ -154,20 +151,6 @@ export default function PublicDeductionCalculator({ config }: { config: PublicCa
     },
     [calcTool, audience]
   )
-
-  const scrollToTrojan = useCallback(() => {
-    trackGA4Event('calc_sticky_constancia_click', {
-      event_category: 'Calculator',
-      event_label: 'sticky',
-    })
-    const el = document.getElementById('trojan-horse')
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'start' })
-      return
-    }
-    const selector = document.getElementById('audience-selector')
-    selector?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  }, [])
 
   useEffect(() => {
     if (!b2b) return
@@ -708,16 +691,6 @@ export default function PublicDeductionCalculator({ config }: { config: PublicCa
                     </>
                   )}
 
-                  {b2b && (
-                    <div className="mb-6">
-                      <DigitalHealthDiagnostic
-                        config={b2b}
-                        monthlyGrossSalary={result.monthlyGrossSalary}
-                        netSalaryFormatted={formatCurrency(result.netSalary)}
-                      />
-                    </div>
-                  )}
-
                   <div className="space-y-3 mb-6">
                     <h3 className="text-lg font-semibold text-white mb-3">Desglose de Deducciones</h3>
                     {renderResultRow(
@@ -820,9 +793,7 @@ export default function PublicDeductionCalculator({ config }: { config: PublicCa
                           </CalcIconTextRow>
                         </div>
                       )}
-                      {audience === 'empleado' ? (
-                        <TrojanHorseShare config={b2b} countryCode={config.countryCode} />
-                      ) : (
+                      {audience === 'jefe' ? (
                         <div className="glass-modern rounded-xl p-6 border border-cyan-500/30 text-center">
                           <h3 className="text-xl font-bold text-white mb-2">{config.conversion.inlineTitle}</h3>
                           {b2b.audience.bossBody ? (
@@ -830,7 +801,7 @@ export default function PublicDeductionCalculator({ config }: { config: PublicCa
                           ) : null}
                           <ConversionButtons campaign="post-calc" />
                         </div>
-                      )}
+                      ) : null}
                     </div>
                   ) : (
                     <>
@@ -937,34 +908,9 @@ export default function PublicDeductionCalculator({ config }: { config: PublicCa
                 >
                   Recibir PDF gratis
                 </button>
-                {audience === 'empleado' && (
-                  <>
-                    {' · '}
-                    <button type="button" onClick={scrollToTrojan} className="text-cyan-300 hover:text-white underline">
-                      {b2b.stickyConstancia.ctaLabel}
-                    </button>
-                  </>
-                )}
               </p>
             )}
             {audience === 'jefe' && <ConversionButtons campaign="sticky" size="sm" />}
-          </div>
-        </div>
-      )}
-
-      {result && b2b && !croEnabled && (
-        <div className="fixed bottom-0 inset-x-0 z-40 p-3 sm:p-4 bg-slate-900/95 border-t border-white/10 backdrop-blur-md shadow-2xl">
-          <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-center gap-3">
-            <p className="text-sm text-brand-100 text-center">
-              <span className="font-semibold text-white">{b2b.stickyConstancia.text}</span>{' '}
-              <button
-                type="button"
-                onClick={scrollToTrojan}
-                className="text-cyan-300 hover:text-white underline font-medium"
-              >
-                {b2b.stickyConstancia.ctaLabel}
-              </button>
-            </p>
           </div>
         </div>
       )}
