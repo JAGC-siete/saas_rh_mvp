@@ -47,7 +47,8 @@ export const MARKETING_LANDINGS: MarketingLandingEntry[] = [
       'Landing de conversión: dolor domingo + insight digitalizar vs automatizar + checklist + trial.',
     primaryCta: '/activar',
     launched: '2026-07-07',
-    notes: 'Reemplazo conceptual de /secreto y /paz. Medir leads y activaciones 14 días.',
+    notes:
+      'Warm: recuperar el viernes. Pack/secuencia info (Paper Bridge) con opener viernes. Source DB: viernes.',
   },
   {
     path: '/secreto',
@@ -56,10 +57,11 @@ export const MARKETING_LANDINGS: MarketingLandingEntry[] = [
     name: 'Secreto (sobre sellado TOFU)',
     kind: 'lead-magnet',
     status: 'underperforming',
-    purpose: 'Lead magnet gamificado; email sequence info.',
-    primaryCta: 'Formulario → secuencia email',
+    purpose: 'Lead magnet gamificado; misma secuencia info (paces / Paper Bridge).',
+    primaryCta: 'Formulario → secuencia email info',
     launched: '2026-07',
-    notes: '0 conversiones en 5 días al aire. Candidato a redirect → /viernes.',
+    notes:
+      '0 conversiones en 5 días. Comparte secuencia info con /viernes (opener distinto). Candidato a redirect.',
   },
   {
     path: '/paz',

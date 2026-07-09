@@ -4,6 +4,12 @@ import { buildMissionActivarUrl, buildMissionTextFooter } from './mission-config
 export const INFO_PACK_SUBJECT_FIELD =
   'Lo prometido: el documento para dejar de pelear con Recursos Humanos'
 
+/** /viernes entry: same Paper Bridge pack, opener “recuperar el viernes”. */
+export const INFO_PACK_SUBJECT_VIERNES =
+  'Lo prometido: cómo recuperar el viernes (y dejar de pelear con el cierre)'
+
+export type InfoPackVariant = 'default' | 'viernes'
+
 const INFO_FIELD_NOTE_SUBJECTS: Record<number, string> = {
   0: 'Clave #0: la guerra silenciosa que drena tu negocio',
   1: 'Clave #1: desarma "siempre lo hemos hecho así" (la mentira más cara)',
@@ -24,18 +30,38 @@ function firstName(raw?: string | null, email?: string): string {
   return local || 'Equipo'
 }
 
-export function buildInfoPackEmailBody(params: { nombre?: string | null; email: string }): string {
+export function buildInfoPackEmailBody(params: {
+  nombre?: string | null
+  email: string
+  variant?: InfoPackVariant
+}): string {
   const name = firstName(params.nombre, params.email)
   const site = getMarketingSiteUrl().replace(/\/$/, '')
+  const variant = params.variant ?? 'default'
+
+  const opener =
+    variant === 'viernes'
+      ? [
+          `Hola ${name},`,
+          '',
+          'Pediste recuperar el viernes. Eso empieza por mirar de frente el cierre que te lo está robando.',
+          '',
+          'La mayoría cree que RR.HH. es ineficiente por naturaleza: persiguiendo papeles, calculando mal la nómina, tardando días en un permiso. El domingo se va en Excel. Otra vez.',
+          '',
+          'Pero recuperar el viernes no es cambiar de personal. Es destruir el puente de papel — digitalizar de verdad y automatizar el dato.',
+        ]
+      : [
+          `Hola ${name},`,
+          '',
+          'Acabas de hacer algo que el 99% de los líderes evita: mirar de frente el departamento que más canas verdes saca en la empresa.',
+          '',
+          'Si viste la pantalla, ya entiendes el problema real. La mayoría de los directores cree que su equipo de RR.HH. es ineficiente por naturaleza. Piensan: "Es que se la pasan persiguiendo papeles, calculando mal las nóminas y tardando días en responder un permiso".',
+          '',
+          'Pero el secreto no es cambiar de personal. El secreto es destruir el puente de papel.',
+        ]
 
   return [
-    `Hola ${name},`,
-    '',
-    'Acabas de hacer algo que el 99% de los líderes evita: mirar de frente el departamento que más canas verdes saca en la empresa.',
-    '',
-    'Si viste la pantalla, ya entiendes el problema real. La mayoría de los directores cree que su equipo de RR.HH. es ineficiente por naturaleza. Piensan: "Es que se la pasan persiguiendo papeles, calculando mal las nóminas y tardando días en responder un permiso".',
-    '',
-    'Pero el secreto no es cambiar de personal. El secreto es destruir el puente de papel.',
+    ...opener,
     '',
     'Casi todos los negocios de la región cometen este error fatal:',
     '• RR.HH. captura una incidencia en un reloj checador.',
@@ -45,7 +71,9 @@ export function buildInfoPackEmailBody(params: { nombre?: string | null; email: 
     '',
     'Eso no es culpa de Recursos Humanos. Eso es someter a humanos a hacer el trabajo de un software. El costo real es el resentimiento interno, los errores de cálculo y las horas perdidas.',
     '',
-    'Te dejo esto por escrito para el próximo fin de mes, cuando la nómina te vuelva a quitar la calma.',
+    variant === 'viernes'
+      ? 'Te dejo esto por escrito para el próximo cierre — cuando el viernes (o el domingo) te vuelva a quitar la calma.'
+      : 'Te dejo esto por escrito para el próximo fin de mes, cuando la nómina te vuelva a quitar la calma.',
     '',
     'Si tienes curiosidad de ver cómo RR.HH. se vuelve tu aliado estratégico cuando el dato viaja solo, te dejo estos dos enlaces:',
     `→ Mira cómo automatizar el dolor en 30 segundos: ${site}/activar`,
@@ -55,7 +83,9 @@ export function buildInfoPackEmailBody(params: { nombre?: string | null; email: 
     '',
     'Jorge',
     '',
-    'PD: Mañana te enviaré la Clave #1 sobre la mentira corporativa más peligrosa del mundo. Si quieres dejar de perder dinero en fricción interna, te sugiero leerla.',
+    variant === 'viernes'
+      ? 'PD: Mañana empieza la serie de claves para digitalizar y automatizar — la forma real de recuperar el viernes. La Clave #1 desarma la mentira más cara: "siempre lo hemos hecho así".'
+      : 'PD: Mañana te enviaré la Clave #1 sobre la mentira corporativa más peligrosa del mundo. Si quieres dejar de perder dinero en fricción interna, te sugiero leerla.',
   ].join('\n')
 }
 

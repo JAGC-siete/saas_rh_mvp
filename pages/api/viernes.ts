@@ -9,7 +9,7 @@ import {
 } from '../../lib/analytics/metaCapiServer'
 import { validateLeadEmail } from '../../lib/marketing/validate-lead-email'
 
-const LEAD_SOURCE = 'info:viernes'
+const LEAD_SOURCE = 'viernes'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -55,7 +55,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(200).json(
         createSuccessResponse({
           message:
-            'El checklist ya fue enviado a este correo. Revisa tu bandeja buscando a jorgearturo@humanosisu.net',
+            'Las claves ya fueron enviadas a este correo. Revisa tu bandeja buscando a jorgearturo@humanosisu.net',
           leadId,
         })
       )
@@ -92,7 +92,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       createSuccessResponse({
         message:
           infoPackSent || welcomeSent
-            ? 'Gracias. Revisa tu correo: te enviamos el checklist.'
+            ? 'Gracias. Revisa tu correo: te enviamos las claves para recuperar el viernes.'
             : 'Gracias. Pronto nos pondremos en contacto.',
         leadId,
       })

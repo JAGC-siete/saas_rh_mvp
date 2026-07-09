@@ -10,8 +10,8 @@ Inventario para auditoría, medición y limpieza. Fuente de verdad en código: `
 
 | Ruta | Estado | Propósito | CTA principal | Notas |
 |------|--------|-----------|---------------|-------|
-| `/viernes` | **experimental** | Conversión domingo/Excel + checklist | `/activar` | Nueva landing (2026-07-07). Medir 14 días. |
-| `/secreto` (`/info`) | underperforming | Lead magnet sobre sellado | Form → email | 0 conversiones en 5 días. Redirect → `/viernes` cuando haya datos. |
+| `/viernes` | **experimental** | Recuperar el viernes → pack/secuencia `info` | `/activar` | Opener “recuperar el viernes”; misma serie claves. Source `viernes`. |
+| `/secreto` (`/info`) | underperforming | Lead magnet + secuencia `info` | Form → email | Misma secuencia que `/viernes`. Redirect si pierde. |
 | `/paz` | awareness-only | Parodia Railway Peace | `/activar` (final) | Sin lead capture; video placeholder. Solo paid social o retiro. |
 
 **Alias:** `/domingo` → redirect 302 a `/viernes`
@@ -60,4 +60,4 @@ Inventario para auditoría, medición y limpieza. Fuente de verdad en código: `
 | `/secreto` | `pages/info.tsx` | `components/info-game/SealedEnvelopeLead.tsx` | `lib/info-game/sealed-envelope-copy.ts` | shell principal |
 | `/paz` | `pages/paz.tsx` | `components/landing/PazLanding.tsx` | inline en componente | `styles/paz-landing.css` |
 
-API leads: `/api/viernes` (source `info:viernes`), `/api/info` (source `info`)
+API leads: `/api/viernes` (source `viernes`), `/api/info` (source `info`; `from=viernes` → `viernes`). Ambos normalizan a kind `info` (secuencia Paper Bridge). Pack T+0: variant `viernes` vs `default`.

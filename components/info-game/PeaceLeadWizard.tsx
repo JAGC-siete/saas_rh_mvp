@@ -8,6 +8,7 @@ import {
   trackViernesLeadSubmit,
 } from '../../lib/analytics/metaPixel'
 import { SEALED_ENVELOPE_COPY } from '../../lib/info-game/sealed-envelope-copy'
+import { VIERNES_COPY } from '../../lib/marketing/viernes-copy'
 import { leadEmailValidationMessage } from '../../lib/marketing/validate-lead-email'
 import { hasValidationErrors } from '../../lib/forms/validation-errors'
 
@@ -31,9 +32,59 @@ interface ValidationErrors {
   submit?: string
 }
 
-const copy = SEALED_ENVELOPE_COPY
+type WizardFieldCopy = {
+  label: string
+  question: string
+  placeholder: string
+}
 
-const WIZARD_ORDER: WizardKey[] = ['nombre', 'email', 'phone', 'empresa']
+type WizardCopy = {
+  unlock: {
+    title: string
+    sub: string
+    progressLabel: string
+    stepLabels: readonly string[]
+    fields: Record<WizardKey, WizardFieldCopy>
+    next: string
+    back: string
+    submit: string
+    submitting: string
+    disclaimer: string
+    errors: {
+      nombre: string
+      email: string
+      submit: string
+      connection: string
+    }
+  }
+  revealed: {
+    badge: string
+    title: string
+    lead: string
+    paragraphs: readonly string[]
+    comparison: readonly { before: string; after: string }[]
+  }
+  nextStep: {
+    title: string
+    emailHint: string
+    ctaActivar: string
+    ctaCalculadora: string
+  }
+}
+
+function wizardCopyForChannel(channel: Props['channel']): WizardCopy {
+  if (channel === 'viernes') {
+    return VIERNES_COPY.wizard as WizardCopy
+  }
+  return {
+    unlock: SEALED_ENVELOPE_COPY.unlock,
+    revealed: SEALED_ENVELOPE_COPY.revealed,
+    nextStep: SEALED_ENVELOPE_COPY.nextStep,
+  } as WizardCopy
+}
+
+const WIZARD_ORDER_INFO: WizardKey[] = ['nombre', 'email', 'phone', 'empresa']
+const WIZARD_ORDER_VIERNES: WizardKey[] = ['nombre', 'email']
 
 const FIELD_META: Record<WizardKey, { type: string; autoComplete: string; inputMode?: 'tel' }> = {
   nombre: { type: 'text', autoComplete: 'name' },
@@ -42,7 +93,10 @@ const FIELD_META: Record<WizardKey, { type: string; autoComplete: string; inputM
   empresa: { type: 'text', autoComplete: 'organization' },
 }
 
-function computeErrors(fd: { nombre: string; email: string }): ValidationErrors {
+function computeErrors(
+  fd: { nombre: string; email: string },
+  copy: WizardCopy
+): ValidationErrors {
   const errors: ValidationErrors = {}
   const nombre = fd.nombre.trim()
   const email = fd.email.trim()
@@ -59,7 +113,11 @@ function computeErrors(fd: { nombre: string; email: string }): ValidationErrors 
   return errors
 }
 
-function validateStep(key: WizardKey, fd: { nombre: string; email: string }): string | undefined {
+function validateStep(
+  key: WizardKey,
+  fd: { nombre: string; email: string },
+  copy: WizardCopy
+): string | undefined {
   if (key === 'nombre') {
     const nombre = fd.nombre.trim()
     if (!nombre) return copy.unlock.errors.nombre
@@ -73,7 +131,7 @@ function validateStep(key: WizardKey, fd: { nombre: string; email: string }): st
   return undefined
 }
 
-function wizardFieldQuestion(key: WizardKey, nombre: string): string {
+function wizardFieldQuestion(key: WizardKey, nombre: string, copy: WizardCopy): string {
   const question = copy.unlock.fields[key].question
   if (!question.includes('{nombre}')) return question
   const firstName = nombre.trim().split(/\s+/)[0] || 'colega'
@@ -81,26 +139,35 @@ function wizardFieldQuestion(key: WizardKey, nombre: string): string {
 }
 
 function utmMediumForChannel(channel: Props['channel'], embedded: boolean): string {
-  if (channel === 'viernes') return embedded ? 'checklist' : 'unlock'
+  if (channel === 'viernes') return embedded ? 'claves' : 'unlock'
   return 'unlock'
+}
+
+function utmCampaignForChannel(channel: Props['channel']): string {
+  return channel === 'viernes' ? 'recuperar-viernes' : 'sealed_envelope'
 }
 
 const PeaceLeadWizard = forwardRef<PeaceLeadWizardHandle, Props>(function PeaceLeadWizard(
   { channel, embedded = false, idPrefix = 'peace' },
   ref
 ) {
+  const copy = wizardCopyForChannel(channel)
+  const wizardOrder = channel === 'viernes' ? WIZARD_ORDER_VIERNES : WIZARD_ORDER_INFO
   const [status, setStatus] = useState<WizardStatus>('idle')
   const [stepIndex, setStepIndex] = useState(0)
   const [formData, setFormData] = useState({ nombre: '', email: '', phone: '', empresa: '' })
   const [errors, setErrors] = useState<ValidationErrors>({})
   const [isLoading, setIsLoading] = useState(false)
 
-  const totalSteps = WIZARD_ORDER.length
-  const currentKey = WIZARD_ORDER[stepIndex]
+  const totalSteps = wizardOrder.length
+  const currentKey = wizardOrder[stepIndex]
   const isLastStep = stepIndex === totalSteps - 1
   const pct = Math.round(((stepIndex + 1) / totalSteps) * 100)
+  const stepLabels =
+    channel === 'viernes' ? (['Nombre', 'Correo'] as const) : copy.unlock.stepLabels
   const utmSource = channel
   const utmMedium = utmMediumForChannel(channel, embedded)
+  const utmCampaign = utmCampaignForChannel(channel)
 
   const startUnlock = () => {
     setStepIndex(0)
@@ -131,7 +198,7 @@ const PeaceLeadWizard = forwardRef<PeaceLeadWizardHandle, Props>(function PeaceL
   }
 
   const goNext = () => {
-    const stepError = validateStep(currentKey, formData)
+    const stepError = validateStep(currentKey, formData, copy)
     if (stepError) {
       setErrors({ [currentKey]: stepError } as ValidationErrors)
       return
@@ -150,10 +217,10 @@ const PeaceLeadWizard = forwardRef<PeaceLeadWizardHandle, Props>(function PeaceL
   }
 
   const submitLead = async () => {
-    const allErrors = computeErrors(formData)
+    const allErrors = computeErrors(formData, copy)
     if (hasValidationErrors(allErrors)) {
       setErrors(allErrors)
-      const firstBadStep = WIZARD_ORDER.findIndex((key) => allErrors[key as keyof ValidationErrors])
+      const firstBadStep = wizardOrder.findIndex((key) => allErrors[key as keyof ValidationErrors])
       if (firstBadStep >= 0) setStepIndex(firstBadStep)
       return
     }
@@ -163,16 +230,23 @@ const PeaceLeadWizard = forwardRef<PeaceLeadWizardHandle, Props>(function PeaceL
 
     try {
       const metaEventId = createMetaEventId(channel)
-      const payload = {
-        nombre: formData.nombre.trim(),
-        email: formData.email.trim(),
-        phone: formData.phone.trim() || undefined,
-        empresa: formData.empresa.trim() || undefined,
-        from: channel === 'viernes' ? 'viernes' : undefined,
-        ...buildMetaApiTrackingFields(metaEventId),
-      }
+      const endpoint = channel === 'viernes' ? '/api/viernes' : '/api/info'
+      const payload =
+        channel === 'viernes'
+          ? {
+              nombre: formData.nombre.trim(),
+              email: formData.email.trim(),
+              ...buildMetaApiTrackingFields(metaEventId),
+            }
+          : {
+              nombre: formData.nombre.trim(),
+              email: formData.email.trim(),
+              phone: formData.phone.trim() || undefined,
+              empresa: formData.empresa.trim() || undefined,
+              ...buildMetaApiTrackingFields(metaEventId),
+            }
 
-      const response = await fetch('/api/info', {
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -195,7 +269,7 @@ const PeaceLeadWizard = forwardRef<PeaceLeadWizardHandle, Props>(function PeaceL
         trackInfoLeadSubmit({
           eventId: metaEventId,
           email: payload.email,
-          phone: payload.phone,
+          phone: formData.phone.trim() || undefined,
           firstName: payload.nombre,
         })
       }
@@ -247,8 +321,8 @@ const PeaceLeadWizard = forwardRef<PeaceLeadWizardHandle, Props>(function PeaceL
                 />
               </div>
 
-              <div className="grid grid-cols-4 gap-1">
-                {copy.unlock.stepLabels.map((label, i) => {
+              <div className={`grid gap-1 ${totalSteps === 2 ? 'grid-cols-2' : 'grid-cols-4'}`}>
+                {stepLabels.map((label, i) => {
                   const done = i < stepIndex
                   const active = i === stepIndex
                   return (
@@ -286,7 +360,7 @@ const PeaceLeadWizard = forwardRef<PeaceLeadWizardHandle, Props>(function PeaceL
                 transition={{ duration: 0.25 }}
               >
                 <h2 className="viernes-serif viernes-section-title text-center mb-6">
-                  {wizardFieldQuestion(currentKey, formData.nombre)}
+                  {wizardFieldQuestion(currentKey, formData.nombre, copy)}
                 </h2>
 
                 <label htmlFor={`${idPrefix}-${currentKey}`} className="viernes-form-label">
@@ -377,13 +451,13 @@ const PeaceLeadWizard = forwardRef<PeaceLeadWizardHandle, Props>(function PeaceL
             <p className="viernes-form-disclaimer mb-6">{copy.nextStep.emailHint}</p>
             <div className="flex flex-col sm:flex-row flex-wrap gap-3">
               <Link
-                href={`/activar?utm_source=${utmSource}&utm_medium=${utmMedium}&utm_campaign=sealed_envelope`}
+                href={`/activar?utm_source=${utmSource}&utm_medium=${utmMedium}&utm_campaign=${utmCampaign}`}
                 className="viernes-btn viernes-btn-primary"
               >
                 {copy.nextStep.ctaActivar}
               </Link>
               <Link
-                href={`/calculadora?utm_source=${utmSource}&utm_medium=${utmMedium}&utm_campaign=sealed_envelope`}
+                href={`/calculadora?utm_source=${utmSource}&utm_medium=${utmMedium}&utm_campaign=${utmCampaign}`}
                 className="viernes-btn viernes-btn-ghost"
               >
                 {copy.nextStep.ctaCalculadora}

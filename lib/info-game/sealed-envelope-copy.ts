@@ -9,13 +9,13 @@ export const SEALED_ENVELOPE_COPY = {
     headlineAccent:
       'Siempre amargados. Luchando por que todos lleguen a tiempo. A veces celebran cumpleaños. Se tardan meses para entregar una constancia de trabajo. El día de cierre, cuadrando horas extra en Excel, recalculando deducciones hasta la madrugada. Otra vez.',
     subheadline: '¿Eres esa persona?',
-    cta: 'Hacer las paces con RR.HH.',
+    cta: 'Revelar los 4 fallos ocultos',
     ctaSecondary: 'Validar deducciones gratis',
   },
 
   /** Encabezado de la sección del wizard (debajo del hero). */
   wizardIntro: {
-    title: 'Como hacer las paces con RR.HH.',
+    title: 'Los 4 fallos que rompen la cultura con RR.HH.',
     sub: '4 sencillos pasos. La historia completa al instante y 4 claves por correo.',
   },
 

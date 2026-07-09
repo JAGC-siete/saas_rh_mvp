@@ -33,9 +33,9 @@ const SOURCE_LABELS: Record<
     badge: 'Más información',
   },
   viernes: {
-    title: 'Nuevo Checklist en SISU',
-    subtitle: 'Lead solicitó checklist desde /viernes',
-    badge: 'Checklist',
+    title: 'Nuevo lead /viernes en SISU',
+    subtitle: 'Lead pidió claves para recuperar el viernes',
+    badge: 'Viernes',
   },
 }
 

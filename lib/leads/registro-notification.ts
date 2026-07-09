@@ -37,8 +37,8 @@ const SOURCE_LABELS: Record<LeadRegistroSource, { title: string; subtitle: strin
     subtitle: 'Lead solicitó más información desde /secreto',
   },
   viernes: {
-    title: 'Nuevo Checklist en SISU',
-    subtitle: 'Lead solicitó checklist desde /viernes',
+    title: 'Nuevo lead /viernes en SISU',
+    subtitle: 'Lead pidió claves para recuperar el viernes',
   },
 }
 
@@ -97,7 +97,7 @@ export function buildLeadFollowUpWhatsAppMessage(source: LeadRegistroSource): st
 
   if (source === 'viernes') {
     return [
-      '¡Checklist en camino! 📋',
+      '¡Claves en camino! — recuperar el viernes.',
       '',
       `Buscá en tu correo a ${CONTACT_SENDER_HINT} — te llega en menos de 1 minuto.`,
       '',

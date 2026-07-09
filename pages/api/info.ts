@@ -49,7 +49,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     }
 
-    const leadSource = from === 'viernes' ? 'info:viernes' : 'info'
+    const fromViernes = from === 'viernes'
+    const leadSource = fromViernes ? 'viernes' : 'info'
 
     const { leadId, welcomeSent, infoPackSent, skippedReason } = await enrollMarketingLead({
       email: trimmedEmail,
@@ -60,7 +61,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (skippedReason !== 'excluded') {
       void sendLeadRegistroNotification({
-        source: from === 'viernes' ? 'viernes' : 'info',
+        source: fromViernes ? 'viernes' : 'info',
         nombre: trimmedName,
         email: trimmedEmail,
         whatsapp: phoneNorm,
@@ -105,11 +106,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       },
     })
 
+    const successMessage = fromViernes
+      ? infoPackSent || welcomeSent
+        ? 'Gracias. Revisa tu correo: te enviamos las claves para recuperar el viernes.'
+        : 'Gracias. Pronto nos pondremos en contacto.'
+      : infoPackSent || welcomeSent
+        ? 'Gracias. Revisa tu correo: te enviamos la información general sobre SISU.'
+        : 'Gracias. Pronto nos pondremos en contacto.'
+
     return res.status(200).json(
       createSuccessResponse({
-        message: infoPackSent || welcomeSent
-          ? 'Gracias. Revisa tu correo: te enviamos la información general sobre SISU.'
-          : 'Gracias. Pronto nos pondremos en contacto.',
+        message: successMessage,
         leadId,
       })
     )

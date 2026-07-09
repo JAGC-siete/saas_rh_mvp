@@ -3,6 +3,7 @@ import { logger } from '../logger'
 import {
   getWatchWindowKey,
   isMoreSpecificSource,
+  isViernesLeadEntry,
   normalizeLeadSource,
   SEQUENCE_COMPLETE_STEP,
   SEQUENCE_CONTENT,
@@ -44,7 +45,7 @@ export type EnrollMarketingLeadInput = {
 export type EnrollMarketingLeadResult = {
   leadId: string | null
   welcomeSent: boolean
-  /** /info: informational pack sent (sequence welcome follows after delay). */
+  /** Immediate pack sent (info / suscripcion); sequence welcome follows after delay. */
   infoPackSent?: boolean
   skippedReason?: 'excluded' | 'completed'
 }
@@ -256,6 +257,7 @@ export async function enrollMarketingLead(
               to: trimmedEmail,
               nombre: displayName,
               unsubscribeToken: lead.unsubscribe_token,
+              variant: isViernesLeadEntry(source) ? 'viernes' : 'default',
             })
           } else {
             await sendSuscripcionPackEmail({
@@ -265,9 +267,11 @@ export async function enrollMarketingLead(
             })
           }
 
-          const packLabel = isInfoLeadSource(source) ? INFO_PACK_LEDGER_LABEL : SUSCRIPCION_PACK_LEDGER_LABEL
+          const packLabel = isInfoLeadSource(source)
+            ? INFO_PACK_LEDGER_LABEL
+            : SUSCRIPCION_PACK_LEDGER_LABEL
           const packSubject = isInfoLeadSource(source)
-            ? buildInfoPackSubject()
+            ? buildInfoPackSubject(isViernesLeadEntry(source) ? 'viernes' : 'default')
             : buildSuscripcionPackSubject()
 
           await client
@@ -287,7 +291,7 @@ export async function enrollMarketingLead(
             watch_window_key: getWatchWindowKey(now),
           })
 
-          if (isInfoLeadSource(source)) {
+          if (isInfoLeadSource(source) || isSuscripcionLeadSource(source)) {
             infoPackSent = true
           }
           welcomeSent = true

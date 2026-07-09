@@ -38,7 +38,6 @@ import {
   buildSuscripcionPainPoint5Text,
   buildSuscripcionWelcomeText,
 } from './suscripcion-field-notes-email'
-
 export const SEQUENCE_STEP = {
   WELCOME: 0,
   PAIN_POINT_1: 1,
@@ -75,6 +74,12 @@ const SOURCE_SPECIFICITY: Record<LeadSourceKind, number> = {
   activar: 3,
 }
 
+/** True when lead entered via /viernes (same info sequence; distinct pack opener + analytics). */
+export function isViernesLeadEntry(raw?: string | null): boolean {
+  const s = (raw ?? '').trim().toLowerCase()
+  return s === 'viernes' || s.startsWith('viernes:') || s === 'info:viernes'
+}
+
 /** Maps raw source strings (API, backfill, landing) to a greeting kind. */
 export function normalizeLeadSource(raw?: string | null): LeadSourceKind {
   const s = (raw ?? '').trim().toLowerCase()
@@ -85,7 +90,15 @@ export function normalizeLeadSource(raw?: string | null): LeadSourceKind {
   if (s === 'ventas' || s.startsWith('ventas:')) {
     return 'ventas'
   }
-  if (s === 'info' || s.startsWith('info:') || s === 'info-page') {
+  // /viernes + /secreto share the info (Paper Bridge) sequence; source string stays for analytics.
+  if (
+    s === 'viernes' ||
+    s.startsWith('viernes:') ||
+    s === 'info:viernes' ||
+    s === 'info' ||
+    s.startsWith('info:') ||
+    s === 'info-page'
+  ) {
     return 'info'
   }
   return 'suscripcion'

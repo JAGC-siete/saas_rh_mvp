@@ -9,6 +9,7 @@ const PAIN_POINT_1_STEP = 1
 export function isSuscripcionAcceleratedLead(source?: string | null): boolean {
   const s = (source ?? '').trim().toLowerCase()
   if (s === 'info' || s.startsWith('info:') || s === 'info-page') return false
+  if (s === 'viernes' || s.startsWith('viernes:')) return false
   if (s === 'activar' || s.startsWith('activaciones:') || s.startsWith('activar:')) return false
   if (s === 'ventas' || s.startsWith('ventas:')) return false
   return true

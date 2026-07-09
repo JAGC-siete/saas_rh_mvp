@@ -27,6 +27,9 @@ describe('marketing welcome greetings by source', () => {
     assert.equal(normalizeLeadSource('activaciones:trial_pending_data'), 'activar')
     assert.equal(normalizeLeadSource('info'), 'info')
     assert.equal(normalizeLeadSource('info-page'), 'info')
+    assert.equal(normalizeLeadSource('viernes'), 'info')
+    assert.equal(normalizeLeadSource('info:viernes'), 'info')
+    assert.equal(normalizeLeadSource('viernes:landing'), 'info')
     assert.equal(normalizeLeadSource(undefined), 'suscripcion')
   })
 
@@ -52,6 +55,14 @@ describe('marketing welcome greetings by source', () => {
     assert.ok(info.includes('Te quedaste'))
     assert.ok(info.includes('siempre lo hemos hecho así'))
     assert.ok(!info.includes(WELCOME_BODY_AFTER_GREETING))
+
+    const viernes = buildWelcomeText('viernes')
+    assert.ok(viernes.includes('siempre lo hemos hecho así'))
+    assert.ok(!viernes.includes('Digitalizar no es dejar de reprocesar'))
+    assert.ok(!viernes.includes(WELCOME_BODY_AFTER_GREETING))
+
+    const legacyViernes = buildWelcomeText('info:viernes')
+    assert.ok(legacyViernes.includes('siempre lo hemos hecho así'))
   })
 
   it('welcome body after greeting is generic only for legacy sources without field notes', () => {
