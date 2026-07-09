@@ -103,7 +103,7 @@ export default function BenefitLeadCapture({
             onChange={(e) => onConsentChange(e.target.checked)}
             className="mt-1"
           />
-          Acepto recibir el PDF oficial, recordatorios legales y el newsletter de Humano SISU.
+          Quiero recibir el PDF con recordatorios legales y el newsletter de Humano SISU.
         </label>
       </div>
 

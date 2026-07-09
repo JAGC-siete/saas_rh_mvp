@@ -27,10 +27,12 @@ export default function LeadCaptureSoftGate({ open, onClose, title, body, childr
         >
           ✕
         </button>
-        <h2 id="soft-gate-title" className="text-xl font-bold text-white pr-8 mb-2">
-          {title}
-        </h2>
-        <p className="text-sm text-brand-200/90 mb-4">{body}</p>
+        {title.trim() ? (
+          <h2 id="soft-gate-title" className="text-xl font-bold text-white pr-8 mb-2">
+            {title}
+          </h2>
+        ) : null}
+        {body.trim() ? <p className="text-sm text-brand-200/90 mb-4">{body}</p> : null}
         {children}
       </div>
     </div>

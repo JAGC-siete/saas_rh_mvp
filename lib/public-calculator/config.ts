@@ -239,12 +239,11 @@ export const PUBLIC_CALCULATOR_CONFIGS: Record<CountryCode, PublicCalculatorConf
         'Validando ISR según ley vigente…',
       ],
       leadCapture: {
-        headline: 'Recibe tu desglose en PDF oficial',
+        headline: 'Te lo enviamos en PDF a tu correo',
         subheadline:
           'Reporte detallado Seguro Social, RAP e ISR + guía de cumplimiento. Gratis, sin guardar tu salario en servidores.',
-        softGateTitle: 'No pierdas este cálculo de deducciones',
-        softGateBody:
-          '¿Te enviamos el PDF con tu salario neto y el desglose legal? Es gratis y llega en segundos.',
+        softGateTitle: '',
+        softGateBody: '',
       },
     },
     defaultDeductions: { ihss: true, rap: true, afp: false, infop: false, isr: true },
@@ -426,12 +425,11 @@ export const PUBLIC_CALCULATOR_CONFIGS: Record<CountryCode, PublicCalculatorConf
         'Validando retención ISR según MH…',
       ],
       leadCapture: {
-        headline: 'Recibe tu desglose en PDF oficial',
+        headline: 'Te lo enviamos en PDF a tu correo',
         subheadline:
           'ISSS, AFP e ISR en USD + resumen de cumplimiento. Gratis — no guardamos tu salario en servidores.',
-        softGateTitle: 'No pierdas este cálculo de deducciones',
-        softGateBody:
-          '¿Te enviamos el PDF con tu sueldo neto en dólares? Es gratis y llega en segundos.',
+        softGateTitle: '',
+        softGateBody: '',
       },
     },
     defaultDeductions: { ihss: true, rap: true, afp: true, infop: false, isr: true },
@@ -562,12 +560,11 @@ export const PUBLIC_CALCULATOR_CONFIGS: Record<CountryCode, PublicCalculatorConf
         'Validando retención ISR según SAT…',
       ],
       leadCapture: {
-        headline: 'Recibe tu desglose en PDF oficial',
+        headline: 'Te lo enviamos en PDF a tu correo',
         subheadline:
           'IGSS e ISR en quetzales + resumen de cumplimiento. Gratis — no guardamos tu salario en servidores.',
-        softGateTitle: 'No pierdas este cálculo de deducciones',
-        softGateBody:
-          '¿Te enviamos el PDF con tu sueldo neto en quetzales? Es gratis y llega en segundos.',
+        softGateTitle: '',
+        softGateBody: '',
       },
     },
     defaultDeductions: { ihss: true, rap: false, afp: false, infop: false, isr: true },
