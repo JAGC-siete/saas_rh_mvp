@@ -28,22 +28,22 @@ export const SEALED_ENVELOPE_COPY = {
     fields: {
       nombre: {
         label: 'Nombre',
-        question: '¿Cómo te llamás?',
+        question: '¿Cómo te llamás, colega?',
         placeholder: 'Tu nombre',
       },
       email: {
         label: 'Correo',
-        question: '¿A dónde te enviamos la clave?',
+        question: '¿A dónde te enviamos la clave, {nombre}?',
         placeholder: 'tu@correo.com',
       },
       phone: {
         label: 'WhatsApp (opcional)',
-        question: '¿Querés que te avisemos por WhatsApp?',
+        question: '{nombre}, ¿Querés que te avisemos por WhatsApp?',
         placeholder: 'Tu número de WhatsApp',
       },
       empresa: {
         label: 'Empresa (opcional)',
-        question: '¿Dónde cerrás la planilla?',
+        question: '{nombre}, ¿Qué empresa desea hacer las paces con RR.HH.?',
         placeholder: 'Nombre de tu empresa',
       },
     },

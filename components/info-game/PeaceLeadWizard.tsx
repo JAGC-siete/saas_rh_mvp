@@ -73,6 +73,13 @@ function validateStep(key: WizardKey, fd: { nombre: string; email: string }): st
   return undefined
 }
 
+function wizardFieldQuestion(key: WizardKey, nombre: string): string {
+  const question = copy.unlock.fields[key].question
+  if (!question.includes('{nombre}')) return question
+  const firstName = nombre.trim().split(/\s+/)[0] || 'colega'
+  return question.replace('{nombre}', firstName)
+}
+
 function utmMediumForChannel(channel: Props['channel'], embedded: boolean): string {
   if (channel === 'viernes') return embedded ? 'checklist' : 'unlock'
   return 'unlock'
@@ -279,7 +286,7 @@ const PeaceLeadWizard = forwardRef<PeaceLeadWizardHandle, Props>(function PeaceL
                 transition={{ duration: 0.25 }}
               >
                 <h2 className="viernes-serif viernes-section-title text-center mb-6">
-                  {copy.unlock.fields[currentKey].question}
+                  {wizardFieldQuestion(currentKey, formData.nombre)}
                 </h2>
 
                 <label htmlFor={`${idPrefix}-${currentKey}`} className="viernes-form-label">
