@@ -25,7 +25,7 @@ export default function LandingBridgeShare({ config, activarUrl, calcTool, size 
       <Link
         href={activarUrl}
         onClick={() => trackCalcActivarClick(calcTool, 'footer')}
-        className={`inline-block ${pad} bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl transition-all text-center`}
+        className={`inline-block ${pad} bg-white hover:bg-slate-50 text-slate-900 font-semibold rounded-xl transition-all text-center shadow-sm`}
       >
         {config.landingBridge.activarButton}
       </Link>

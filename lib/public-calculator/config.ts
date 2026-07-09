@@ -153,7 +153,7 @@ const CALCULATOR_SOCIAL_SHARE = {
 
 const LANDING_BRIDGE_SHARE = {
   shareButton: 'Compartir',
-  activarButton: 'Activar gratis',
+  activarButton: 'Hacer las paces con RR.HH.',
   share: {
     sheetTitle: '¿A quién se lo envías?',
     peerLabel: 'Un colega',

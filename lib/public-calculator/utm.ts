@@ -1,4 +1,5 @@
 import type { CountryCode } from '../country/supported'
+import { INFO_FUNNEL_PUBLIC_PATH } from '../marketing/info-funnel-path'
 import type { BenefitTipo } from './benefit-config'
 
 const DEMO_WHATSAPP = '50432226773'
@@ -51,6 +52,13 @@ export function buildBenefitDemoWhatsAppUrl(tipo: BenefitTipo, trackingLabel: st
   const label = tipo === '13AVO' ? 'aguinaldo' : 'catorceavo'
   const message = `Hola, calculé mi ${label} en Humano SISU (Honduras) y me gustaría una demo. Ref: ${trackingLabel}`
   return `https://wa.me/${DEMO_WHATSAPP}?text=${encodeURIComponent(message)}`
+}
+
+export function buildPeaceWizardUrl(
+  countryCode: CountryCode,
+  campaign: 'footer' | 'bridge' = 'footer'
+): string {
+  return appendUtmParams(`${INFO_FUNNEL_PUBLIC_PATH}?unlock=1`, countryCode, campaign)
 }
 
 export function appendUtmParams(

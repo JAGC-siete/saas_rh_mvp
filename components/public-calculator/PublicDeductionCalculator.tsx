@@ -11,6 +11,7 @@ import { generateFAQPageSchema, generateWebPageSchema, generateBreadcrumbListSch
 import DigitalHealthDiagnostic from './DigitalHealthDiagnostic'
 import TrojanHorseShare from './TrojanHorseShare'
 import LandingBridgeShare from './LandingBridgeShare'
+import { buildPeaceWizardUrl } from '../../lib/public-calculator/utm'
 import CalculatorShareTrigger from './CalculatorShareTrigger'
 import { CALCULATOR_OG_IMAGE_URL } from '../../lib/public-calculator/config'
 import type { CalculatorAudience } from './AudienceSelector'
@@ -879,7 +880,7 @@ export default function PublicDeductionCalculator({ config }: { config: PublicCa
           <p className="text-brand-200/90 mb-6 max-w-2xl mx-auto">{config.landingBridge.body}</p>
           <LandingBridgeShare
             config={config}
-            activarUrl={activarUrl('footer')}
+            activarUrl={buildPeaceWizardUrl(config.countryCode, 'footer')}
             calcTool={calcTool}
             size="sm"
           />

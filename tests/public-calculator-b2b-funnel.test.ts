@@ -114,7 +114,7 @@ describe('b2b funnel config', () => {
       const bridge = PUBLIC_CALCULATOR_CONFIGS[country].landingBridge
       const social = PUBLIC_CALCULATOR_CONFIGS[country].socialShare
       assert.equal(bridge.shareButton, 'Compartir')
-      assert.equal(bridge.activarButton, 'Activar gratis')
+      assert.equal(bridge.activarButton, 'Hacer las paces con RR.HH.')
       assert.ok(bridge.share.peerScript.length > 0)
       assert.ok(social.postCalcScript.includes('SISU'))
     }
