@@ -137,9 +137,9 @@ export default function ViernesLanding() {
           </h2>
           <p className="viernes-lead max-w-lg mx-auto mb-8">{copy.finalCta.sub}</p>
           <div className="flex flex-col sm:flex-row flex-wrap justify-center gap-3 mb-4">
-            <button type="button" onClick={openPeaceWizard} className="viernes-btn viernes-btn-primary">
+            <Link href={copy.finalCta.activarHref} className="viernes-btn viernes-btn-primary">
               {copy.finalCta.primary}
-            </button>
+            </Link>
           </div>
           <p className="text-sm text-[var(--v-ink-soft)]">
             <Link

@@ -72,7 +72,8 @@ export const VIERNES_COPY = {
     headlineLead: 'Cierra la próxima quincena.',
     headlineAccent: 'Recupera el domingo.',
     sub: 'Trial gratis. Sin tarjeta sorpresa. Si preferís hablar con alguien antes: cotización en 24h.',
-    primary: 'Recuperar',
+    primary: 'Tocar las nubes',
+    activarHref: '/activar?utm_source=viernes&utm_medium=cta-final&utm_campaign=tocar-las-nubes',
     secondary: '¿Más de 30 empleados o varias sucursales? Pedir cotización',
   },
 } as const
