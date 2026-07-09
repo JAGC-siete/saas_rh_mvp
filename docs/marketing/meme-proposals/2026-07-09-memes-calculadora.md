@@ -2,155 +2,142 @@
 
 | # | Template | Ángulo | Título anuncio |
 |---|----------|--------|----------------|
-| 1 | Anakin Padme 4 Panel | Recibo no cuadra | ¿El voucher es exacto? 🤨 |
-| 2 | Mocking Spongebob | Recibo no cuadra | "No te descuentan de más" |
-| 3 | Trade Offer | RRHH no explica | Una oferta que no podés rechazar |
-| 4 | Bernie I Am Once Again | RRHH no explica | La pregunta de cada quincena |
-| 5 | This Is Fine | Burocracia/Instantáneo | Mi salud mental esperando el voucher |
+| 1 | Drake Hotline Bling | Burocracia/Instantáneo | Deja de esperar la constancia de RRHH |
+| 2 | Two Buttons | Recibo no cuadra | El dilema del voucher quincenal |
+| 3 | Change My Mind | RRHH no explica | RRHH no quiere que sepas cuánto es el RAP |
+| 4 | Distracted Boyfriend | Recibo no cuadra | Tu salario bruto vs. tu salario neto |
+| 5 | Expanding Brain | RRHH no explica | Evolución de calcular tu sueldo en Honduras |
 
 ---
 
-## Propuesta 1 — Anakin Padme 4 Panel
+## Propuesta 1 — Drake Hotline Bling
 
-**Template imgflip:** Anakin Padme 4 Panel  
-**Link:** https://imgflip.com/memetemplate/Anakin-Padme-4-Panel
+**Template imgflip:** Drake Hotline Bling  
+**Link:** https://imgflip.com/memetemplate/Drake-Hotline-Bling
 
 **Texto en el meme (paneles):**
 
 | Panel / zona | Texto |
 |--------------|-------|
-| Padme | Voy a revisar mi voucher de pago |
-| Anakin | Para ver si el neto está correcto |
-| Padme | ...¿cierto que el neto está correcto? |
-| Anakin | (Silencio / Mirada fija) |
+| Panel arriba (No) | Pedir constancia de sueldo y esperar 5 días |
+| Panel abajo (Sí) | Calcular todo en 30 segundos gratis |
 
 **Título del anuncio (feed):**  
-¿El voucher es exacto? 🤨
+¿Harto de esperar por tu constancia? ⏳
 
 **Copy del post:**  
-Ese silencio incómodo cuando ves el depósito y no sabés por qué es menos de lo que esperabas. 💸 
-No te quedés con la duda. Calculá tu IHSS, RAP e ISR en 30 segundos con el motor legal de SISU.
-¿Alguna vez sentiste que el voucher "te oculta" algo? Contanos tu experiencia. 👇
-https://humanosisu.net/calculadora-deducciones
+No necesitas permiso de nadie para saber cuánto te están quitando. 🙅‍♂️ Calcula tu IHSS, RAP e ISR al instante con el motor legal exacto. ⚡️ ¿Crees que RRHH tarda demasiado en responder? Comenta un "SÍ" 👇
 
 **CTA:**  
 https://humanosisu.net/calculadora-deducciones?utm_source=facebook&utm_medium=organic&utm_campaign=calc-meme-2026-07-09-1
 
 **Por qué funciona:**  
-Usa la tensión del meme para representar la desconfianza instintiva del empleado hacia su recibo de pago.
+Ataca la frustración de la burocracia administrativa comparándola con la gratificación instantánea de la herramienta.
 
 ---
 
-## Propuesta 2 — Mocking Spongebob
+## Propuesta 2 — Two Buttons
 
-**Template imgflip:** Mocking Spongebob  
-**Link:** https://imgflip.com/memetemplate/Mocking-Spongebob
+**Template imgflip:** Two Buttons  
+**Link:** https://imgflip.com/memetemplate/Two-Buttons
 
 **Texto en el meme (paneles):**
 
 | Panel / zona | Texto |
 |--------------|-------|
-| Texto superior | RRHH: "Los descuentos están calculados según la ley" |
-| Spongebob | "lOs dEsCuEnToS eStÁn cAlCuLaDos sEgÚn lA lEy" |
+| Botón 1 | Confiar ciegamente en el voucher |
+| Botón 2 | Usar la calculadora de Humano SISU |
+| Persona | Empleado viendo su recibo de pago |
 
 **Título del anuncio (feed):**  
-"No te descuentan de más" 🙄
+¿Tu recibo miente o tú no entiendes el RAP? 🤔
 
 **Copy del post:**  
-Cuando te dan la respuesta estándar pero vos sabés que algo no cuadra. 🧐
-Dejá de pelear con palabras rebuscadas y sacá tu cuenta real gratis y sin registrarte.
-Etiquetá a ese compa que siempre revisa el voucher con lupa. 👥
-https://humanosisu.net/calculadora-deducciones
+Esa sensación cuando el neto no cuadra con lo que esperabas... 🙃 Deja de adivinar y obtén el desglose legal exacto de tus deducciones. 📉 ¿Te ha pasado que el monto cambia sin explicación? Cuéntanos aquí 👇
 
 **CTA:**  
 https://humanosisu.net/calculadora-deducciones?utm_source=facebook&utm_medium=organic&utm_campaign=calc-meme-2026-07-09-2
 
 **Por qué funciona:**  
-Burla la retórica corporativa, posicionando la calculadora como la herramienta de verificación independiente.
+Representa la tensión psicológica de la duda sobre el salario, generando empatía inmediata.
 
 ---
 
-## Propuesta 3 — Trade Offer
+## Propuesta 3 — Change My Mind
 
-**Template imgflip:** Trade Offer  
-**Link:** https://imgflip.com/memetemplate/Trade-Offer
+**Template imgflip:** Change My Mind  
+**Link:** https://imgflip.com/memetemplate/Change-My-Mind
 
 **Texto en el meme (paneles):**
 
-| Panel / zona | Texto |
-|--------------|-------|
-| Texto principal | TRADE OFFER: I give you the exact legal breakdown of your salary |
-| Texto inferior | You stop guessing why your net is so low |
+| Elemento | Texto |
+|-----------|-------|
+| Cartel en la mesa | RRHH nunca te explica la diferencia real entre IHSS y RAP |
+| (abajo) | Change my mind |
 
 **Título del anuncio (feed):**  
-Una oferta que no podés rechazar 🤝
+La verdad que RRHH no te cuenta 🤫
 
-**Copyي del post:**  
-Cambiamos tu incertidumbre por datos exactos. 🚀
-Obtené el desglose de IHSS, RAP e ISR en segundos. El mismo motor que usan las empresas profesionales, ahora gratis para vos.
-¿Preferís saber la verdad en 30 segundos o esperar una semana por una respuesta? ⏱️
-https://humanosisu.net/calculadora-deducciones
+**Copy del post:**  
+¿Sabes exactamente cuánto te quitan por el techo del seguro social y cuánto va al RAP? 🧐 No te quedes con la duda. Usa la calculadora gratuita y toma el control de tu dinero. 💸 ¿Cuál es la deducción que más te confunde?
 
 **CTA:**  
 https://humanosisu.net/calculadora-deducciones?utm_source=facebook&utm_medium=organic&utm_campaign=calc-meme-2026-07-09-3
 
 **Por qué funciona:**  
-Utiliza un formato de "intercambio de valor" directo, resaltando el beneficio inmediato y la utilidad de la herramienta.
+Posiciona la herramienta como una "revelación" de conocimiento prohibido o ignorado por la empresa.
 
 ---
 
-## Propuesta 4 — Bernie I Am Once Again Asking For Your Support
+## Propuesta 4 — Distracted Boyfriend
 
-**Template imgflip:** Bernie I Am Once Again Asking For Your Support  
-**Link:** https://imgflip.com/memetemplate/Bernie-I-Am-Once-Again-Asking-For-Your-Support
+**Template imgflip:** Distracted Boyfriend  
+**Link:** https://imgflip.com/memetemplate/Distracted-Boyfriend
 
 **Texto en el meme (paneles):**
 
 | Panel / zona | Texto |
 |--------------|-------|
-| Texto superior | Yo cada quincena preguntándole a RRHH |
-| Texto inferior | ¿Me puede explicar por qué me quitaron tanto de ISR este mes? |
+| Novia (Enojada) | Mi salario bruto esperado |
+| Hombre | Yo |
+| Chica (Pasando) | Mi salario neto después de ISR y RAP |
 
 **Título del anuncio (feed):**  
-La pregunta de cada quincena 😫
+El romance más triste de Honduras: Tú y tu salario neto 💔
 
 **Copy del post:**  
-¿Harto de ser el "pesado" de la oficina preguntando por tus descuentos? 🙄
-Saca tu cuenta mensual o quincenal al instante. Sin formularios, sin correos, solo la verdad de tu salario.
-Comenta tu salario redondeado y te decimos si te están quitando lo correcto. 👇
-https://humanosisu.net/calculadora-deducciones
+Cuando ves el bruto y te emocionas, pero luego llega el ISR a llevarse su parte... 💸 Calcula tu monto real sin sorpresas desagradables al final de la quincena. 📉 ¿Cuánto te "robó" el ISR este mes? Comenta tu salario redondeado 👇
 
 **CTA:**  
 https://humanosisu.net/calculadora-deducciones?utm_source=facebook&utm_medium=organic&utm_campaign=calc-meme-2026-07-09-4
 
 **Por qué funciona:**  
-Crea empatía sobre la fatiga de tener que pedir explicaciones repetitivamente a RRHH.
+Humor relatable sobre la brecha entre el salario bruto y neto, un punto de dolor universal.
 
 ---
 
-## Propuesta 5 — This Is Fine
+## Propuesta 5 — Expanding Brain
 
-**Template imgflip:** This Is Fine  
-**Link:** https://imgflip.com/memetemplate/This-Is-Fine
+**Template imgflip:** Expanding Brain  
+**Link:** https://imgflip.com/memetemplate/Expanding-Brain
 
 **Texto en el meme (paneles):**
 
 | Panel / zona | Texto |
 |--------------|-------|
-| Perro en fuego | Yo viendo que el neto no cuadra pero RRHH dice que "todo está bien" |
-| Burbuja de texto | "Seguro que el error es mío" |
+| Cerebro 1 | Adivinar el neto según el mes pasado |
+| Cerebro 2 | Hacer un Excel con fórmulas que no entiendes |
+| Cerebro 3 | Pedirle al Lic. de Planilla que te explique |
+| Cerebro 4 | Usar la calculadora de Humano SISU en 30 seg |
 
 **Título del anuncio (feed):**  
-Mi salud mental esperando el voucher 🐶🔥
+Sube de nivel tu inteligencia financiera 🧠✨
 
 **Copy del post:**  
-No te resignes a no entender tu propio sueldo. 📉
-Dejá la adivinanza y usá la calculadora de Humano SISU para saber exactamente cuánto te corresponde. 
-¿Cuántas veces has aceptado que el voucher "está bien" aunque no cuadre? Sé honesto. 👇
-https://humanosisu.net/calculadora-deducciones
+Deja de pelear con el Excel o de esperar a que RRHH tenga tiempo de atenderte. 🕒 Acceso instantáneo al motor legal de nómina profesional, totalmente gratis. 🚀 ¿Sigues usando la vieja escuela o ya eres Pro?
 
 **CTA:**  
 https://humanosisu.net/calculadora-deducciones?utm_source=facebook&utm_medium=organic&utm_campaign=calc-meme-2026-07-09-5
 
 **Por qué funciona:**  
-Usa la ironía y la resignación para atacar el punto de dolor de la falta de transparencia administrativa.
+Usa la estructura de "evolución" para ridiculizar los métodos lentos y posicionar el software como la opción superior.
