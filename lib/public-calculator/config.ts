@@ -321,33 +321,6 @@ export const PUBLIC_CALCULATOR_CONFIGS: Record<CountryCode, PublicCalculatorConf
       cta: 'Explora SISU',
       ...LANDING_BRIDGE_SHARE,
     },
-    seoGuide: {
-      title: 'Guía rápida: calculadora ISR Honduras y calculadora RAP',
-      intro:
-        'Esta página concentra las búsquedas más frecuentes sobre deducciones de salario en Honduras. Usa el formulario arriba para obtener cifras exactas; aquí el contexto legal en lenguaje claro.',
-      sections: [
-        {
-          heading: 'Calculadora ISR Honduras: ¿qué calcula?',
-          body:
-            'El Impuesto sobre la Renta (ISR) en Honduras se calcula con una tabla progresiva según tu ingreso gravable. Nuestra calculadora ISR Honduras aplica los tramos vigentes del año en curso y te muestra la retención mensual o quincenal, según el salario que ingreses.'
-        },
-        {
-          heading: 'Calculadora RAP: deducción de pensiones',
-          body:
-            'El RAP descuenta el 1.5% sobre la parte del salario que excede el techo del Seguro Social (IVM). La calculadora RAP te permite ver ese rubro por separado o junto con Seguro Social e ISR para conocer tu sueldo neto real.'
-        },
-        {
-          heading: 'Seguro Social y salario neto en lempiras',
-          body:
-            'Además de ISR y RAP, el aporte obrero al Seguro Social (5% con tope) suele ser la otra deducción principal. Al sumar los rubros que correspondan a tu caso, obtienes el total descontado y el neto a recibir — útil para validar tu voucher o negociar con RR.HH.'
-        },
-        {
-          heading: '¿Empresa o empleado?',
-          body:
-            'Si solo quieres validar tu recibo, basta con la calculadora gratuita. Si gestionas planilla para varios colaboradores, Humano SISU automatiza Seguro Social, RAP e ISR desde la asistencia biométrica hasta el comprobante de pago.'
-        }
-      ]
-    }
   },
   SLV: {
     countryCode: 'SLV',

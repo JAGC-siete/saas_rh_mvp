@@ -98,28 +98,7 @@ export const PUBLIC_PRESTACIONES_CONFIG: PublicPrestacionesConfig = {
     footerButton: 'Activar gratis',
     footerHref: '/activar?country=HND',
   },
-  faqs: [
-    {
-      question: '¿Qué incluye la liquidación por finiquito en Honduras?',
-      answer:
-        'Según el motivo de salida puede incluir preaviso, auxilio de cesantía (con compensación RAP si aplica), vacaciones proporcionales y proporcionales de 13vo y 14vo.',
-    },
-    {
-      question: '¿Cómo se calcula la cesantía?',
-      answer:
-        'Depende de la antigüedad (año comercial 360) y el motivo de salida. La calculadora aplica las reglas estándar de la ley hondureña y muestra cesantía bruta, RAP aplicado y cesantía neta.',
-    },
-    {
-      question: '¿Puedo incluir mi saldo RAP?',
-      answer:
-        'Sí, opcionalmente. El RAP acumulado puede compensar la cesantía hasta el monto de la cesantía bruta calculada.',
-    },
-    {
-      question: '¿El resultado es vinculante?',
-      answer:
-        'Es una estimación orientativa. El monto final puede variar por salario promedio real, extras, políticas internas y condiciones del caso.',
-    },
-  ],
+  faqs: [],
   relatedCalculators: [
     { href: '/calculadora-aguinaldo-honduras', label: 'Calculadora de aguinaldo' },
     { href: '/calculadora-catorceavo-honduras', label: 'Calculadora de catorceavo' },

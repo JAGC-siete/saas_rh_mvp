@@ -96,6 +96,17 @@
   color: #020617;
 }
 
+.viernes-btn-activar {
+  background: #16a34a;
+  color: #ffffff;
+  box-shadow: 0 0 20px rgba(34, 197, 94, 0.25);
+}
+
+.viernes-btn-activar:hover {
+  background: #15803d;
+  color: #ffffff;
+}
+
 .viernes-btn-ghost {
   background: transparent;
   color: var(--v-ink-muted);

@@ -457,7 +457,7 @@ export default function PublicPrestacionesCalculator({ config }: { config: Publi
     description: config.seo.description,
     inLanguage: config.seo.inLanguage,
   })
-  const faqSchema = generateFAQPageSchema(config.faqs)
+  const faqSchema = config.faqs.length > 0 ? generateFAQPageSchema(config.faqs) : null
   const breadcrumbSchema = generateBreadcrumbListSchema([
     { name: 'Inicio', url: '/' },
     { name: 'Calculadoras', url: '/calculadora' },
@@ -510,7 +510,7 @@ export default function PublicPrestacionesCalculator({ config }: { config: Publi
         <meta property="og:url" content={config.canonicalUrl} />
         <link rel="canonical" href={config.canonicalUrl} />
       </Head>
-      <SchemaMarkup schema={[webPageSchema, faqSchema, breadcrumbSchema]} />
+      <SchemaMarkup schema={[webPageSchema, breadcrumbSchema, ...(faqSchema ? [faqSchema] : [])]} />
 
       {result && (
         <div className="sticky top-0 z-30 bg-slate-900/95 border-b border-green-500/30 backdrop-blur-md py-2 px-4 sm:hidden">
@@ -877,17 +877,19 @@ export default function PublicPrestacionesCalculator({ config }: { config: Publi
           </div>
         </section>
 
-        <section className="mt-10">
-          <h2 className="text-xl font-bold text-white mb-4">Preguntas frecuentes</h2>
-          <div className="space-y-4">
-            {config.faqs.map((faq) => (
-              <div key={faq.question} className="glass-modern rounded-xl p-4">
-                <h3 className="font-semibold text-white mb-2">{faq.question}</h3>
-                <p className="text-sm text-brand-200/90">{faq.answer}</p>
-              </div>
-            ))}
-          </div>
-        </section>
+        {config.faqs.length > 0 && (
+          <section className="mt-10">
+            <h2 className="text-xl font-bold text-white mb-4">Preguntas frecuentes</h2>
+            <div className="space-y-4">
+              {config.faqs.map((faq) => (
+                <div key={faq.question} className="glass-modern rounded-xl p-4">
+                  <h3 className="font-semibold text-white mb-2">{faq.question}</h3>
+                  <p className="text-sm text-brand-200/90">{faq.answer}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
       </div>
 
       {result && (
