@@ -11,12 +11,12 @@ export const VIERNES_COPY = {
 
   hero: {
     badge: 'Prueba en vivo · 30 días',
-    headlineLead: '¿Otra vez vas a perder el domingo?',
+    headlineLead: '¿Otro fin de semana perdido?',
     headlineAccent: 'Recuperalo con SISU',
     subheadline:
-      'Caliente. Existe una alternativa. Está a tan solo un paso. Caliente. Cierra quincenas en segundos. Control biométrico integrado sin carga manual. Horas extras y deducciones de ley (seguro social, impuestos, aportaciones privadas) parametrizadas — para recuperar el domingo (y también los viernes).',
+      'Caliente. Existe una alternativa. Está a tan solo un paso. Cierra quincenas en segundos. Caliente, sigue leyendo. Control biométrico integrado sin carga manual. Horas extras y deducciones de ley (seguro social, impuestos, aportaciones privadas) parametrizadas — para recuperar los domingos (y también los viernes).',
     mantra: 'No sos una máquina de Excel. El descanso es real, y también la plataforma.',
-    ctaPrimary: 'Tocar las nubes',
+    ctaPrimary: 'Recuperar',
     ctaSecondary: 'Validar deducciones gratis',
   },
 
@@ -72,7 +72,7 @@ export const VIERNES_COPY = {
     headlineLead: 'Cierra la próxima quincena.',
     headlineAccent: 'Recupera el domingo.',
     sub: 'Trial gratis. Sin tarjeta sorpresa. Si preferís hablar con alguien antes: cotización en 24h.',
-    primary: 'Tocar las nubes',
+    primary: 'Recuperar',
     secondary: '¿Más de 30 empleados o varias sucursales? Pedir cotización',
   },
 } as const
