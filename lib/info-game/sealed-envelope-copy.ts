@@ -15,8 +15,8 @@ export const SEALED_ENVELOPE_COPY = {
 
   /** Encabezado de la sección del wizard (debajo del hero). */
   wizardIntro: {
-    title: 'Hacer las paces con RR.HH.',
-    sub: '4 pasos. Te mostramos la historia al instante y te la dejamos en el correo.',
+    title: 'Como hacer las paces con RR.HH.',
+    sub: '4 sencillos pasos. La historia completa al instante y 4 claves por correo.',
   },
 
   /** Estado 1 — Wizard paso a paso (uno a uno con barra de progreso) */
@@ -52,7 +52,7 @@ export const SEALED_ENVELOPE_COPY = {
     submit: 'Recuperar mi paz',
     submitting: 'Un momento…',
     disclaimer:
-      'Sin trial automático ni cobros. Solo la clave y cómo aplicarla. Te salís cuando querás.',
+      'Sin trial ni cobros. Solo las claves y cómo aplicarlas.',
     errors: {
       nombre: 'Indica tu nombre para enviarte la clave.',
       email: 'Indica tu correo; ahí te enviamos la clave.',
