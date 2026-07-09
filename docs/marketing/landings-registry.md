@@ -25,7 +25,7 @@ Inventario para auditoría, medición y limpieza. Fuente de verdad en código: `
 | `/` | active | Home SEO + conversión |
 | `/activar` | active | Trial |
 | `/ventas` | active | Cotización |
-| `/suscripcion` | active | Precios / suscripción |
+| `/suscripcion` | active | Alertas de sueldo (cold / post-calcu) |
 | `/calculadora` + `calcusisu*` | active | TOFU herramienta |
 
 ---

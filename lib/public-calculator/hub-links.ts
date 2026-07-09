@@ -6,8 +6,8 @@ export const CALCULATOR_HUB_LINKS = {
   hub: { href: '/calculadora', label: 'Todas las calculadoras laborales' },
   suscripcion: {
     href: '/suscripcion',
-    label: 'Newsletter nómina y RRHH',
-    subtitle: 'Guías y alertas legales tras usar las calculadoras',
+    label: 'Alertas de sueldo',
+    subtitle: 'Fechas legales y cambios en deducciones — gratis',
   },
   info: {
     href: INFO_FUNNEL_PUBLIC_PATH,

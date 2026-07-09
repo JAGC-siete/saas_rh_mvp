@@ -16,24 +16,19 @@ import {
 
 const FAQS = [
   {
-    question: '¿Qué recibo al suscribirme?',
+    question: '¿Qué recibo al activar alertas?',
     answer:
       'Recordatorios de fechas legales (aguinaldo, catorceavo), explicaciones cuando cambian deducciones y guías para entender tu recibo — el mismo motor que alimenta las calculadoras gratuitas.',
   },
   {
-    question: '¿La suscripción es gratis?',
+    question: '¿Es gratis?',
     answer:
-      'Sí. Es gratuito. Las calculadoras también siguen siendo gratis, las uses con suscripción o no.',
+      'Sí. Las alertas son gratuitas. Las calculadoras también siguen siendo gratis, las uses con alertas o no.',
   },
   {
-    question: '¿Puedo seguir usando las calculadoras sin suscribirme?',
+    question: '¿Puedo usar las calculadoras sin activar alertas?',
     answer:
       'Sí. Todas las calculadoras laborales de Humano SISU son gratuitas: deducciones por país, aguinaldo, catorceavo y prestaciones.',
-  },
-  {
-    question: '¿Humano SISU sirve para mi país?',
-    answer:
-      'Las calculadoras cubren Honduras, El Salvador y Guatemala, con deducciones de ley locales (IHSS/RAP/ISR, ISSS/AFP, IGSS, etc.).',
   },
 ]
 
@@ -68,9 +63,9 @@ export default function SuscripcionPage() {
   })
   const pageDescription = generateDescription({
     valueProposition:
-      'Activá alertas sobre aguinaldo, catorceavo y deducciones después de usar las calculadoras gratuitas de Humano SISU',
+      'Alertas gratis de aguinaldo, catorceavo y cambios en deducciones — para quien revisa su recibo en Honduras, El Salvador y Guatemala',
     cta: 'Activar alertas gratis',
-    additionalBenefit: 'Para quienes revisan su recibo en Honduras, El Salvador y Guatemala',
+    additionalBenefit: 'Mismo motor legal que las calculadoras de Humano SISU',
   })
 
   const webPageSchema = generateWebPageSchema({
@@ -82,7 +77,7 @@ export default function SuscripcionPage() {
   const breadcrumbSchema = generateBreadcrumbListSchema([
     { name: 'Inicio', url: '/' },
     { name: 'Calculadoras', url: '/calculadora' },
-    { name: 'Alertas', url: '/suscripcion' },
+    { name: 'Alertas de sueldo', url: '/suscripcion' },
   ])
   const faqSchema = generateFAQPageSchema(FAQS)
 
@@ -107,12 +102,34 @@ export default function SuscripcionPage() {
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-4xl">
           <ReciboAlertasLead utmContext={utmContext} source="suscripcion-page" />
 
-          <div className="mb-10 mt-12">
-            <h2 className="text-lg font-semibold text-white mb-4">Calculadoras gratuitas</h2>
-            <p className="text-sm text-brand-300/80 mb-4">
-              Validá sueldo neto, aguinaldo o finiquito — siempre gratis.
-            </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="mt-14 mb-10">
+            <h2 className="text-lg font-semibold text-white mb-4">Preguntas frecuentes</h2>
+            <div className="space-y-3">
+              {FAQS.map((faq) => (
+                <div key={faq.question} className="glass rounded-xl p-4 border border-white/10">
+                  <h3 className="font-medium text-white text-sm mb-2">{faq.question}</h3>
+                  <p className="text-sm text-brand-200/90 leading-relaxed">{faq.answer}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <details className="group mb-4">
+            <summary className="cursor-pointer list-none flex items-center justify-between gap-3 glass rounded-xl p-4 border border-white/10 hover:border-cyan-400/30 transition-colors">
+              <div>
+                <h2 className="text-lg font-semibold text-white">Calculadoras gratuitas</h2>
+                <p className="text-sm text-brand-300/80 mt-1">
+                  Validá sueldo neto, aguinaldo o finiquito — siempre gratis.
+                </p>
+              </div>
+              <span
+                className="text-brand-300 text-sm shrink-0 group-open:rotate-180 transition-transform"
+                aria-hidden
+              >
+                ▼
+              </span>
+            </summary>
+            <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
               {ALL_CALCULATOR_LINKS.map((item) => (
                 <Link
                   key={item.href}
@@ -129,19 +146,7 @@ export default function SuscripcionPage() {
                 Ver todas las calculadoras laborales
               </Link>
             </p>
-          </div>
-
-          <div>
-            <h2 className="text-lg font-semibold text-white mb-4">Preguntas frecuentes</h2>
-            <div className="space-y-3">
-              {FAQS.map((faq) => (
-                <div key={faq.question} className="glass rounded-xl p-4 border border-white/10">
-                  <h3 className="font-medium text-white text-sm mb-2">{faq.question}</h3>
-                  <p className="text-sm text-brand-200/90 leading-relaxed">{faq.answer}</p>
-                </div>
-              ))}
-            </div>
-          </div>
+          </details>
         </div>
       </section>
     </PublicPageShell>

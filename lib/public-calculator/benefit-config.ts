@@ -143,7 +143,7 @@ export const PUBLIC_BENEFIT_CONFIGS: Record<BenefitTipo, PublicBenefitCalculator
       { href: '/calculadora-catorceavo-honduras', label: 'Calculadora Catorceavo' },
       { href: '/calculadora-prestaciones', label: 'Calculadora de finiquito' },
       { href: deductionCalculatorPublicPath('HND'), label: 'Calculadora de deducciones' },
-      { href: '/suscripcion', label: 'Newsletter nómina y RRHH' },
+      { href: '/suscripcion', label: 'Alertas de sueldo' },
       {
         href: '/recursos/cumplimiento-legal-errores-13vo-14vo-salario',
         label: 'Errores comunes 13vo y 14vo',
@@ -219,7 +219,7 @@ export const PUBLIC_BENEFIT_CONFIGS: Record<BenefitTipo, PublicBenefitCalculator
       { href: '/calculadora-aguinaldo-honduras', label: 'Calculadora Aguinaldo' },
       { href: '/calculadora-prestaciones', label: 'Calculadora de finiquito' },
       { href: deductionCalculatorPublicPath('HND'), label: 'Calculadora de deducciones' },
-      { href: '/suscripcion', label: 'Newsletter nómina y RRHH' },
+      { href: '/suscripcion', label: 'Alertas de sueldo' },
       {
         href: '/recursos/cumplimiento-legal-errores-13vo-14vo-salario',
         label: 'Errores comunes 13vo y 14vo',

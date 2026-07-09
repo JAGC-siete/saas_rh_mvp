@@ -112,11 +112,11 @@ export const MARKETING_LANDINGS: MarketingLandingEntry[] = [
   },
   {
     path: '/suscripcion',
-    name: 'Suscripción / precios',
+    name: 'Alertas de sueldo',
     kind: 'commercial',
     status: 'active',
-    purpose: 'Pricing y suscripción.',
-    primaryCta: 'Formulario suscripción',
+    purpose: 'Cold TOFU: alertas legales de recibo (post-calcu o direct).',
+    primaryCta: 'Activar alertas gratis',
   },
   {
     path: '/alternativa-odoo-honduras',

@@ -1,24 +1,22 @@
 import Link from 'next/link'
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Button } from '../ui/button'
 import BorderBeam from '../landing/BorderBeam'
 import { CalcCheckIcon } from '../public-calculator/CalculatorUiIcons'
-import InfoProgressRail from '../info-game/InfoProgressRail'
 import {
   buildMetaApiTrackingFields,
   createMetaEventId,
   trackNewsletterCompleteRegistration,
 } from '../../lib/analytics/metaPixel'
-import type { CalculatorUtmContext } from '../../lib/suscripcion-game/calculator-utm-context'
 import {
-  RECIBO_ALERTAS_COPY,
-  UNLOCK_PROGRESS,
-  UNLOCK_PROGRESS_MAX,
-} from '../../lib/suscripcion-game/recibo-alertas-copy'
+  getCalculatorUtmContext,
+  type CalculatorUtmContext,
+} from '../../lib/suscripcion-game/calculator-utm-context'
+import { RECIBO_ALERTAS_COPY } from '../../lib/suscripcion-game/recibo-alertas-copy'
 import { hasValidationErrors } from '../../lib/forms/validation-errors'
 
-type PageStatus = 'intrigue' | 'unlocking' | 'revealed'
+type PageStatus = 'form' | 'revealed'
 
 interface ValidationErrors {
   nombre?: string
@@ -45,30 +43,25 @@ function computeErrors(fd: { nombre: string; email: string }): ValidationErrors 
   return errors
 }
 
-function computeUnlockProgress(form: { nombre: string; email: string }): number {
-  let pct = 0
-  if (form.nombre.trim()) pct += UNLOCK_PROGRESS.nombre
-  if (form.email.trim() && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
-    pct += UNLOCK_PROGRESS.email
-  }
-  return Math.min(UNLOCK_PROGRESS_MAX, pct)
-}
-
-export default function ReciboAlertasLead({ utmContext = {}, source = 'suscripcion-page' }: Props) {
-  const [status, setStatus] = useState<PageStatus>('intrigue')
+export default function ReciboAlertasLead({
+  utmContext = getCalculatorUtmContext(null),
+  source = 'suscripcion-page',
+}: Props) {
+  const [status, setStatus] = useState<PageStatus>('form')
   const [formData, setFormData] = useState({ nombre: '', email: '' })
   const [errors, setErrors] = useState<ValidationErrors>({})
   const [isLoading, setIsLoading] = useState(false)
 
   const copy = RECIBO_ALERTAS_COPY
-  const progress = useMemo(() => computeUnlockProgress(formData), [formData])
-  const headline = utmContext.headline ?? copy.intrigue.headline
-  const subheadline = utmContext.subheadline ?? copy.intrigue.subheadline
+  const { headline, subheadline, badge, fromCalculator } = utmContext
 
   const handleInputChange = (field: keyof typeof formData, value: string) => {
     const next = { ...formData, [field]: value }
     setFormData(next)
-    setErrors(computeErrors(next))
+    setErrors((prev) => {
+      if (!prev.nombre && !prev.email && !prev.submit) return prev
+      return computeErrors(next)
+    })
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -122,69 +115,36 @@ export default function ReciboAlertasLead({ utmContext = {}, source = 'suscripci
 
   return (
     <div className="max-w-lg mx-auto">
-      {status === 'unlocking' && (
-        <InfoProgressRail
-          points={progress}
-          maxPoints={UNLOCK_PROGRESS_MAX}
-          label={copy.unlock.progressLabel}
-          compact
-        />
-      )}
-
       <AnimatePresence mode="wait">
-        {status === 'intrigue' && (
+        {status === 'form' && (
           <motion.div
-            key="intrigue"
+            key="form"
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.96 }}
+            exit={{ opacity: 0, scale: 0.98 }}
             transition={{ duration: 0.35 }}
           >
-            <div className="text-center mb-4">
+            <div className="text-center mb-6">
               <span className="inline-block px-3 py-1 mb-4 text-xs rounded-full bg-cyan-500/15 text-cyan-300 border border-cyan-500/25">
-                {copy.badge}
-                {utmContext.country ? ` · ${utmContext.country}` : ''}
+                {badge}
               </span>
-              <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white leading-tight mb-4">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white leading-tight mb-3">
                 {headline}
               </h1>
+              <p className="text-base sm:text-lg text-brand-200/90 leading-relaxed">{subheadline}</p>
             </div>
 
-            <BorderBeam className="mb-6">
-              <div className="glass-modern rounded-2xl border border-cyan-500/25 p-8 sm:p-10 text-center bg-gradient-to-b from-cyan-500/5 to-transparent">
-                <motion.div
-                  className="text-5xl sm:text-6xl mb-4"
-                  aria-hidden
-                  animate={{ y: [0, -4, 0] }}
-                  transition={{ repeat: Infinity, duration: 3, ease: 'easeInOut' }}
-                >
-                  🧾
-                </motion.div>
-                <p className="text-xs font-semibold tracking-widest text-cyan-300/90 mb-2">
-                  {copy.intrigue.receiptLabel}
-                </p>
-                <p className="text-sm text-brand-200/90 max-w-xs mx-auto">{copy.intrigue.receiptHint}</p>
-              </div>
-            </BorderBeam>
+            <ul className="mb-6 space-y-2.5 max-w-md mx-auto">
+              {copy.valueBullets.map((item) => (
+                <li key={item} className="flex gap-2.5 text-sm text-brand-200/90 leading-snug">
+                  <span className="text-cyan-400 shrink-0 mt-0.5" aria-hidden>
+                    ✓
+                  </span>
+                  {item}
+                </li>
+              ))}
+            </ul>
 
-            <p className="text-base sm:text-lg text-brand-200/90 leading-relaxed text-center mb-8">{subheadline}</p>
-            <Button type="button" variant="modern" className="w-full" onClick={() => setStatus('unlocking')}>
-              {copy.intrigue.cta}
-            </Button>
-          </motion.div>
-        )}
-
-        {status === 'unlocking' && (
-          <motion.div
-            key="unlocking"
-            initial={{ opacity: 0, scale: 0.92 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 1.05 }}
-            transition={{ duration: 0.45 }}
-          >
-            <div className="text-center mb-6">
-              <h1 className="text-xl sm:text-2xl font-bold text-white">{headline}</h1>
-            </div>
             <BorderBeam>
               <form
                 onSubmit={handleSubmit}
@@ -192,7 +152,7 @@ export default function ReciboAlertasLead({ utmContext = {}, source = 'suscripci
               >
                 <div>
                   <label htmlFor="subs-nombre" className="block text-xs font-medium text-brand-300 mb-1">
-                    {copy.unlock.fields.nombre.label}
+                    {copy.form.fields.nombre.label}
                   </label>
                   <input
                     id="subs-nombre"
@@ -200,7 +160,7 @@ export default function ReciboAlertasLead({ utmContext = {}, source = 'suscripci
                     type="text"
                     value={formData.nombre}
                     onChange={(e) => handleInputChange('nombre', e.target.value)}
-                    placeholder={copy.unlock.fields.nombre.placeholder}
+                    placeholder={copy.form.fields.nombre.placeholder}
                     disabled={isLoading}
                     autoComplete="name"
                     className={inputClass}
@@ -211,7 +171,7 @@ export default function ReciboAlertasLead({ utmContext = {}, source = 'suscripci
 
                 <div>
                   <label htmlFor="subs-email" className="block text-xs font-medium text-brand-300 mb-1">
-                    {copy.unlock.fields.email.label}
+                    {copy.form.fields.email.label}
                   </label>
                   <input
                     id="subs-email"
@@ -219,7 +179,7 @@ export default function ReciboAlertasLead({ utmContext = {}, source = 'suscripci
                     type="email"
                     value={formData.email}
                     onChange={(e) => handleInputChange('email', e.target.value)}
-                    placeholder={copy.unlock.fields.email.placeholder}
+                    placeholder={copy.form.fields.email.placeholder}
                     disabled={isLoading}
                     autoComplete="email"
                     className={inputClass}
@@ -232,13 +192,24 @@ export default function ReciboAlertasLead({ utmContext = {}, source = 'suscripci
                   <p className="text-sm text-red-400 text-center font-medium">{errors.submit}</p>
                 )}
 
-                <Button type="submit" disabled={isLoading || progress < 100} className="w-full" variant="modern">
-                  {isLoading ? copy.unlock.submitting : copy.unlock.submit}
+                <Button type="submit" disabled={isLoading} className="w-full" variant="modern">
+                  {isLoading ? copy.form.submitting : copy.form.submit}
                 </Button>
 
-                <p className="text-xs sm:text-sm text-brand-200/60 text-center">{copy.unlock.disclaimer}</p>
+                <p className="text-xs sm:text-sm text-brand-200/60 text-center">{copy.form.disclaimer}</p>
               </form>
             </BorderBeam>
+
+            {!fromCalculator && (
+              <p className="mt-5 text-center">
+                <Link
+                  href={copy.secondaryCalcCta.href}
+                  className="text-sm text-brand-300 hover:text-white underline decoration-white/20"
+                >
+                  {copy.secondaryCalcCta.label} →
+                </Link>
+              </p>
+            )}
           </motion.div>
         )}
 
