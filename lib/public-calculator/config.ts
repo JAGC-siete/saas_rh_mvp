@@ -310,11 +310,7 @@ export const PUBLIC_CALCULATOR_CONFIGS: Record<CountryCode, PublicCalculatorConf
           'Sí. Elige modalidad quincenal o mensual; la herramienta prorratea las deducciones de ley para mostrarte el monto del período que estás revisando.'
       }
     ],
-    relatedCalculators: [
-      { href: deductionCalculatorPublicPath('SLV'), label: 'Calculadora El Salvador' },
-      { href: deductionCalculatorPublicPath('GTM'), label: 'Calculadora Guatemala' },
-      { href: '/suscripcion', label: 'Newsletter nómina y RRHH' },
-    ],
+    relatedCalculators: [],
     breadcrumbLabel: 'Deducciones Honduras',
     socialShare: CALCULATOR_SOCIAL_SHARE,
     landingBridge: {
@@ -472,11 +468,7 @@ export const PUBLIC_CALCULATOR_CONFIGS: Record<CountryCode, PublicCalculatorConf
       { question: '¿Cómo usar la calculadora ISR El Salvador?', answer: 'Ingresa tu salario mensual o quincenal en USD, elige las deducciones y obtén Seguro Social, AFP e ISR con el mismo motor de nómina de Humano SISU.' },
       { question: '¿El sueldo neto incluye Seguro Social y AFP?', answer: 'Sí. Puedes activar o desactivar cada rubro. El neto es salario bruto menos Seguro Social, AFP e ISR seleccionados.' }
     ],
-    relatedCalculators: [
-      { href: deductionCalculatorPublicPath('HND'), label: 'Calculadora Honduras' },
-      { href: deductionCalculatorPublicPath('GTM'), label: 'Calculadora Guatemala' },
-      { href: '/suscripcion', label: 'Newsletter nómina y RRHH' },
-    ],
+    relatedCalculators: [],
     breadcrumbLabel: 'Deducciones El Salvador',
     socialShare: CALCULATOR_SOCIAL_SHARE,
     landingBridge: {
@@ -604,11 +596,7 @@ export const PUBLIC_CALCULATOR_CONFIGS: Record<CountryCode, PublicCalculatorConf
       { question: '¿Cómo calcular sueldo neto en Guatemala?', answer: 'Ingresa tu salario en quetzales, selecciona Seguro Social e ISR y obtén el neto del período con el motor de nómina de Humano SISU.' },
       { question: '¿La calculadora incluye Seguro Social?', answer: 'Sí. El rubro de Seguro Social (IGSS) usa la tasa obrero configurada en los parámetros legales del SaaS para Guatemala.' }
     ],
-    relatedCalculators: [
-      { href: deductionCalculatorPublicPath('HND'), label: 'Calculadora Honduras' },
-      { href: deductionCalculatorPublicPath('SLV'), label: 'Calculadora El Salvador' },
-      { href: '/suscripcion', label: 'Newsletter nómina y RRHH' },
-    ],
+    relatedCalculators: [],
     breadcrumbLabel: 'Deducciones Guatemala',
     socialShare: CALCULATOR_SOCIAL_SHARE,
     landingBridge: {

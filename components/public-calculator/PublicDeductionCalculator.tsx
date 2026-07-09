@@ -8,8 +8,6 @@ import SchemaMarkup from '../SEO/SchemaMarkup'
 import { validateFormInputs } from '../../lib/deduction-validator/client-validation'
 import type { PublicCalculatorConfig, PublicCalculatorDeductionKey } from '../../lib/public-calculator/config'
 import { generateFAQPageSchema, generateWebPageSchema, generateBreadcrumbListSchema } from '../../lib/seo/schema'
-import LandingBridgeShare from './LandingBridgeShare'
-import { buildPeaceWizardUrl } from '../../lib/public-calculator/utm'
 import CalculatorShareTrigger from './CalculatorShareTrigger'
 import { CALCULATOR_OG_IMAGE_URL } from '../../lib/public-calculator/config'
 import type { CalculatorAudience } from './AudienceSelector'
@@ -843,30 +841,7 @@ export default function PublicDeductionCalculator({ config }: { config: PublicCa
           </p>
         )}
 
-        <div className="mt-8 glass-modern rounded-2xl shadow-2xl p-6 sm:p-10 lg:p-12 text-center">
-          <h3 className="activar-serif text-white mb-6 leading-[0.95] tracking-tight">
-            <span className="block text-4xl sm:text-5xl lg:text-6xl">{config.landingBridge.titleLead}</span>
-            <span className="block italic text-5xl sm:text-6xl lg:text-7xl mt-1">{config.landingBridge.titleAccent}</span>
-          </h3>
-          <p className="text-brand-200/90 mb-6 max-w-2xl mx-auto">{config.landingBridge.body}</p>
-          <LandingBridgeShare
-            config={config}
-            activarUrl={buildPeaceWizardUrl(config.countryCode, 'footer')}
-            calcTool={calcTool}
-            size="sm"
-          />
-          {config.relatedCalculators.length > 0 && (
-            <div className="mt-6 flex flex-wrap justify-center gap-3 text-sm">
-              {config.relatedCalculators.map((item) => (
-                <Link key={item.href} href={item.href} className="text-brand-300 hover:text-white underline">
-                  {item.label}
-                </Link>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div className="mt-6">
+        <div className="mt-8">
           <CalculatorSubscriptionBridge
             tool={calcTool}
             placement="footer"
