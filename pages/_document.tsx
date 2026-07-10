@@ -1,13 +1,11 @@
 import { Html, Head, Main, NextScript } from 'next/document'
+import { resolveMetaPixelId } from '../lib/analytics/meta-pixel-id'
 
 /**
  * Mismo patrón que gtag (AW-…): ID público en el HTML.
  * Env opcional en build/runtime; fallback al píxel de Events Manager.
  */
-const META_PIXEL_ID =
-  process.env['META_PIXEL_ID']?.trim() ||
-  process.env['NEXT_PUBLIC_META_PIXEL_ID']?.trim() ||
-  '833142547420951'
+const META_PIXEL_ID = resolveMetaPixelId()
 
 const GADS_CONVERSION_ID = 'AW-17840996991'
 const GA4_MEASUREMENT_ID =

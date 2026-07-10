@@ -13,8 +13,11 @@
 
 import { trackGA4Event } from './ga4'
 import { fireGoogleAdsLeadConversion } from './googleAds'
+import { DEFAULT_META_PIXEL_ID } from './meta-pixel-id'
 
-export const META_PIXEL_ID = '833142547420951'
+/** Client-side: NEXT_PUBLIC_* se inyecta en build; fallback = píxel Ads actual. */
+export const META_PIXEL_ID =
+  process.env.NEXT_PUBLIC_META_PIXEL_ID?.trim() || DEFAULT_META_PIXEL_ID
 
 type MetaStandardEvent = 'SubmitApplication' | 'CompleteRegistration' | 'StartTrial' | 'Lead'
 
