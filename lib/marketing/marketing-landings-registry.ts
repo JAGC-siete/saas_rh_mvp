@@ -103,11 +103,18 @@ export const MARKETING_LANDINGS: MarketingLandingEntry[] = [
   },
   {
     path: '/calculadora',
-    aliases: ['/calcusisuhn', '/calcusisusv', '/calcusisuguate'],
+    aliases: [
+      '/calculadora-deducciones',
+      '/calculadora-deducciones-el-salvador',
+      '/calculadora-deducciones-guatemala',
+      '/calcusisuhn',
+      '/calcusisusv',
+      '/calcusisuguate',
+    ],
     name: 'Calculadoras (hub + país)',
     kind: 'calculator',
     status: 'active',
-    purpose: 'TOFU herramienta gratis; validación motor legal.',
+    purpose: 'TOFU herramienta gratis; canónico calculadora-deducciones*; calcusisu* → 301.',
     primaryCta: 'Uso herramienta → lead opcional',
   },
   {

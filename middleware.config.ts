@@ -1,6 +1,7 @@
 // Middleware Configuration
 import {
   ALL_DEDUCTION_CALCULATOR_INTERNAL_PATHS,
+  ALL_DEDUCTION_CALCULATOR_LEGACY_PATHS,
   ALL_DEDUCTION_CALCULATOR_PUBLIC_PATHS,
 } from './lib/marketing/calculator-public-paths'
 
@@ -78,6 +79,7 @@ export const MIDDLEWARE_CONFIG = {
       '/terminos-de-servicio',
       ...ALL_DEDUCTION_CALCULATOR_PUBLIC_PATHS,
       ...ALL_DEDUCTION_CALCULATOR_INTERNAL_PATHS,
+      ...ALL_DEDUCTION_CALCULATOR_LEGACY_PATHS,
       '/alternativa-odoo-honduras',
       '/sistema-biometrico-nomina',
       '/implementacion-48-horas',

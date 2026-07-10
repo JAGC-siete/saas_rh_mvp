@@ -8,7 +8,7 @@ category: "Cumplimiento Legal"
 
 # Guía rápida: calculadora ISR Honduras y calculadora RAP
 
-Esta guía concentra las búsquedas más frecuentes sobre deducciones de salario en Honduras. Usa la [calculadora de deducciones en lempiras](/calcusisuhn) para obtener cifras exactas; aquí el contexto legal en lenguaje claro.
+Esta guía concentra las búsquedas más frecuentes sobre deducciones de salario en Honduras. Usa la [calculadora de deducciones en lempiras](/calculadora-deducciones) para obtener cifras exactas; aquí el contexto legal en lenguaje claro.
 
 ## Calculadora ISR Honduras: ¿qué calcula?
 
@@ -30,4 +30,4 @@ Si solo quieres validar tu recibo, basta con la calculadora gratuita. Si gestion
 
 ¿Necesitas el desglose técnico con tablas y parámetros 2026? Lee también la [guía completa de ISR y RAP en Honduras](/recursos/guia-calcular-isr-rap-honduras-2026).
 
-**[Validar deducciones ahora → /calcusisuhn]**
+**[Validar deducciones ahora → /calculadora-deducciones]**

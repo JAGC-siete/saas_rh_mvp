@@ -72,19 +72,6 @@ const nextConfig = {
         source: '/secreto/m/:id',
         destination: '/info/m/:id',
       },
-      // Public slugs → internal calculator pages (files stay at pages/calculadora-deducciones*)
-      {
-        source: '/calcusisuhn',
-        destination: '/calculadora-deducciones',
-      },
-      {
-        source: '/calcusisusv',
-        destination: '/calculadora-deducciones-el-salvador',
-      },
-      {
-        source: '/calcusisuguate',
-        destination: '/calculadora-deducciones-guatemala',
-      },
     ]
   },
   
@@ -161,20 +148,20 @@ const nextConfig = {
         destination: '/viernes',
         permanent: false,
       },
-      // Calculadoras deducciones: slug público calcusisu* (legacy calculadora-deducciones* → 301)
+      // Calculadoras deducciones: canónico calculadora-deducciones* (calcusisu* → 301)
       {
-        source: '/calculadora-deducciones',
-        destination: '/calcusisuhn',
+        source: '/calcusisuhn',
+        destination: '/calculadora-deducciones',
         permanent: true,
       },
       {
-        source: '/calculadora-deducciones-el-salvador',
-        destination: '/calcusisusv',
+        source: '/calcusisusv',
+        destination: '/calculadora-deducciones-el-salvador',
         permanent: true,
       },
       {
-        source: '/calculadora-deducciones-guatemala',
-        destination: '/calcusisuguate',
+        source: '/calcusisuguate',
+        destination: '/calculadora-deducciones-guatemala',
         permanent: true,
       },
       // Redirigir attendance legacy - COMENTADO: ahora /attendance/register existe directamente

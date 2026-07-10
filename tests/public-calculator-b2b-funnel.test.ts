@@ -75,7 +75,7 @@ describe('bridge share URLs', () => {
 
   it('builds calculator share link for native share', () => {
     const link = buildCalculatorShareLink(PUBLIC_CALCULATOR_CONFIGS.SLV.path, 'SLV', 'bridge-share-native')
-    assert.ok(link.includes('/calcusisusv'))
+    assert.ok(link.includes('/calculadora-deducciones-el-salvador'))
     assert.ok(link.includes('utm_campaign=bridge-share-native'))
   })
 })
