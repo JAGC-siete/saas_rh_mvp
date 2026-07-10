@@ -16,6 +16,10 @@ import {
   type CalculatorAudience,
 } from '../../lib/analytics/calculator-events'
 import {
+  buildMetaApiTrackingFields,
+  createMetaEventId,
+} from '../../lib/analytics/metaPixel'
+import {
   generateBreadcrumbListSchema,
   generateFAQPageSchema,
   generateWebPageSchema,
@@ -219,6 +223,7 @@ export default function PublicBenefitCalculator({ config }: { config: PublicBene
     setSendingEmail(true)
     setError(null)
     try {
+      const metaEventId = createMetaEventId('calc')
       const res = await fetch('/api/public/send-benefit-report', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -232,6 +237,7 @@ export default function PublicBenefitCalculator({ config }: { config: PublicBene
           fechaIngreso,
           label: config.label,
           audience: audience ?? undefined,
+          ...buildMetaApiTrackingFields(metaEventId),
         }),
       })
       const data = await res.json()
@@ -243,9 +249,13 @@ export default function PublicBenefitCalculator({ config }: { config: PublicBene
       dismissSoftGate()
       trackCalcLeadSubmit({
         tool,
+        eventId: metaEventId,
+        email: email.trim(),
         audience,
         hasPhone: Boolean(phone.trim()),
         hasCompany: Boolean(company.trim()),
+        phone: phone.trim() || undefined,
+        firstName: fullName.trim() || undefined,
       })
     } catch {
       setError('Error al enviar el correo.')

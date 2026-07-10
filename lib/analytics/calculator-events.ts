@@ -1,5 +1,6 @@
 import { trackGA4Event } from './ga4'
 import { fireGoogleAdsLeadConversion, trackCTAClick } from './googleAds'
+import { trackCalculatorCompleteRegistration } from './metaPixel'
 
 export type CalculatorTool =
   | 'deducciones_hnd'
@@ -32,14 +33,26 @@ export function trackCalcComplete(params: {
   })
 }
 
-/** Lead capturado vía PDF/email — conversión principal para Google Ads. */
+/** Lead capturado vía PDF/email — conversión principal (Google Ads + Meta CompleteRegistration). */
 export function trackCalcLeadSubmit(params: {
   tool: CalculatorTool
+  eventId: string
+  email: string
   audience?: CalculatorAudience | null
   hasPhone?: boolean
   hasCompany?: boolean
+  phone?: string
+  firstName?: string
 }): void {
   fireLeadConversion()
+
+  trackCalculatorCompleteRegistration({
+    eventId: params.eventId,
+    email: params.email,
+    tool: params.tool,
+    phone: params.phone,
+    firstName: params.firstName,
+  })
 
   trackGA4Event('calc_lead_submit', {
     event_category: 'Lead',

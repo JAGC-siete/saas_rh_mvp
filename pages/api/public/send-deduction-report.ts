@@ -15,6 +15,10 @@ import {
 } from '../../../lib/marketing/enroll-public-tool-lead'
 import { parseCountryCodeInput } from '../../../lib/country/supported'
 import { PUBLIC_CALCULATOR_CONFIGS } from '../../../lib/public-calculator/config'
+import {
+  parseMetaTrackingPayload,
+  sendMetaWebsiteConversionFireAndForget,
+} from '../../../lib/analytics/metaCapiServer'
 
 interface SendDeductionReportRequest {
   email: string
@@ -286,6 +290,25 @@ async function sendReportHandler(
       sanitizedEmail,
       marketingSourceForDeductionCalculator(resolvedCountry)
     )
+
+    const metaTracking = parseMetaTrackingPayload(req.body)
+    sendMetaWebsiteConversionFireAndForget({
+      req,
+      eventName: 'CompleteRegistration',
+      tracking: metaTracking,
+      userData: {
+        email: sanitizedEmail,
+        phone: typeof phone === 'string' ? phone : undefined,
+        firstName: name || undefined,
+      },
+      customData: {
+        content_name: marketingSourceForDeductionCalculator(resolvedCountry),
+        content_category: 'calculator',
+        value: 1,
+        currency: 'USD',
+        status: true,
+      },
+    })
 
     return res.status(200).json({ 
       success: true,

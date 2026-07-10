@@ -19,6 +19,10 @@ import {
 } from '../../../lib/benefit-public/email-template'
 import type { BenefitCalculationResult } from '../../../lib/payroll/thirteenth-fourteenth/calculate'
 import type { BenefitTipo } from '../../../lib/public-calculator/benefit-config'
+import {
+  parseMetaTrackingPayload,
+  sendMetaWebsiteConversionFireAndForget,
+} from '../../../lib/analytics/metaCapiServer'
 
 interface SendBenefitReportRequest extends BenefitCalculationResult {
   email: string
@@ -138,6 +142,25 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     await sendEmailWithResend(sanitizedEmail, subject, html, pdfBuffer, filename, apiKey, fromEmail)
 
     enrollPublicToolLeadNonBlocking(sanitizedEmail, marketingSourceForBenefitCalculator(tipo))
+
+    const metaTracking = parseMetaTrackingPayload(req.body)
+    sendMetaWebsiteConversionFireAndForget({
+      req,
+      eventName: 'CompleteRegistration',
+      tracking: metaTracking,
+      userData: {
+        email: sanitizedEmail,
+        phone: typeof body.phone === 'string' ? body.phone : undefined,
+        firstName: name || undefined,
+      },
+      customData: {
+        content_name: marketingSourceForBenefitCalculator(tipo),
+        content_category: 'calculator',
+        value: 1,
+        currency: 'USD',
+        status: true,
+      },
+    })
 
     logger.info('Reporte de beneficio enviado', {
       email: maskEmail(sanitizedEmail),

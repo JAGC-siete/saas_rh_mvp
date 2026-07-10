@@ -24,6 +24,10 @@ import {
   trackCalcLeadSubmit,
   type CalculatorTool,
 } from '../../lib/analytics/calculator-events'
+import {
+  buildMetaApiTrackingFields,
+  createMetaEventId,
+} from '../../lib/analytics/metaPixel'
 
 interface DeductionResult {
   grossSalary: number
@@ -337,6 +341,7 @@ export default function PublicDeductionCalculator({ config }: { config: PublicCa
     setSendingEmail(true)
     setError(null)
     try {
+      const metaEventId = createMetaEventId('calc')
       const response = await fetch('/api/public/send-deduction-report', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -349,7 +354,8 @@ export default function PublicDeductionCalculator({ config }: { config: PublicCa
           country_code: config.countryCode,
           audience: leadAudience(audience),
           ...result,
-          salary: parseFloat(salary.replace(/[^\d.]/g, ''))
+          salary: parseFloat(salary.replace(/[^\d.]/g, '')),
+          ...buildMetaApiTrackingFields(metaEventId),
         })
       })
       const data = await response.json()
@@ -358,9 +364,13 @@ export default function PublicDeductionCalculator({ config }: { config: PublicCa
       dismissSoftGate()
       trackCalcLeadSubmit({
         tool: calcTool,
+        eventId: metaEventId,
+        email: email.trim(),
         audience: leadAudience(audience),
         hasPhone: Boolean(phone.trim()),
         hasCompany: Boolean(company.trim()),
+        phone: phone.trim() || undefined,
+        firstName: fullName.trim() || undefined,
       })
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Error al enviar el reporte por email. Por favor intenta de nuevo.'

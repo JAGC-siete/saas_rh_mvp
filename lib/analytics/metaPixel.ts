@@ -5,7 +5,8 @@
  * - /activar  → StartTrial
  * - /ventas   → SubmitApplication
  * - /suscripcion → CompleteRegistration
- * - /info       → Lead
+ * - calculadoras (PDF lead) → CompleteRegistration
+ * - /info, /viernes → Lead
  *
  * Píxel base en pages/_document.tsx.
  */
@@ -201,6 +202,32 @@ export function trackNewsletterCompleteRegistration(params: {
     },
     params.eventId,
     { em: params.email }
+  )
+}
+
+/** Lead PDF en calculadoras públicas (registro = email + consentimiento). */
+export function trackCalculatorCompleteRegistration(params: {
+  eventId: string
+  email: string
+  tool: string
+  phone?: string
+  firstName?: string
+}): void {
+  fireMetaPixelEvent(
+    'CompleteRegistration',
+    {
+      content_name: params.tool,
+      content_category: 'calculator',
+      value: 1,
+      currency: 'USD',
+      status: true,
+    },
+    params.eventId,
+    {
+      em: params.email,
+      ph: params.phone,
+      fn: params.firstName,
+    }
   )
 }
 

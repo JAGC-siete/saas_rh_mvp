@@ -17,6 +17,10 @@ import {
   generatePrestacionesEmailSubject,
 } from '../../../lib/prestaciones-public/email-template'
 import { PUBLIC_PRESTACIONES_CONFIG } from '../../../lib/public-calculator/prestaciones-config'
+import {
+  parseMetaTrackingPayload,
+  sendMetaWebsiteConversionFireAndForget,
+} from '../../../lib/analytics/metaCapiServer'
 
 interface SendPrestacionesReportRequest {
   email: string
@@ -242,6 +246,25 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       sanitizedEmail,
       marketingSourceForPrestacionesCalculator()
     )
+
+    const metaTracking = parseMetaTrackingPayload(req.body)
+    sendMetaWebsiteConversionFireAndForget({
+      req,
+      eventName: 'CompleteRegistration',
+      tracking: metaTracking,
+      userData: {
+        email: sanitizedEmail,
+        phone: typeof body.phone === 'string' ? body.phone : undefined,
+        firstName: name || undefined,
+      },
+      customData: {
+        content_name: marketingSourceForPrestacionesCalculator(),
+        content_category: 'calculator',
+        value: 1,
+        currency: 'USD',
+        status: true,
+      },
+    })
 
     return res.status(200).json({
       success: true,

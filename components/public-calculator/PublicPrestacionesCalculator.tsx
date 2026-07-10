@@ -17,6 +17,10 @@ import {
   type CalculatorAudience,
 } from '../../lib/analytics/calculator-events'
 import {
+  buildMetaApiTrackingFields,
+  createMetaEventId,
+} from '../../lib/analytics/metaPixel'
+import {
   generateBreadcrumbListSchema,
   generateFAQPageSchema,
   generateWebPageSchema,
@@ -382,6 +386,7 @@ export default function PublicPrestacionesCalculator({ config }: { config: Publi
     setSendingEmail(true)
     setError(null)
     try {
+      const metaEventId = createMetaEventId('calc')
       const response = await fetch('/api/public/send-prestaciones-report', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -405,6 +410,7 @@ export default function PublicPrestacionesCalculator({ config }: { config: Publi
           },
           rubros: result.rubros,
           reservaLaboralDisclaimer: result.metadata.reservaLaboralDisclaimer,
+          ...buildMetaApiTrackingFields(metaEventId),
         }),
       })
       const data = await response.json()
@@ -416,9 +422,13 @@ export default function PublicPrestacionesCalculator({ config }: { config: Publi
       dismissSoftGate()
       trackCalcLeadSubmit({
         tool: TOOL,
+        eventId: metaEventId,
+        email: email.trim(),
         audience,
         hasPhone: Boolean(phone.trim()),
         hasCompany: Boolean(company.trim()),
+        phone: phone.trim() || undefined,
+        firstName: fullName.trim() || undefined,
       })
     } catch {
       setError('Error al enviar el correo.')
