@@ -177,11 +177,11 @@ export const PUBLIC_CALCULATOR_CONFIGS: Record<CountryCode, PublicCalculatorConf
     currencyPrefix: 'Lps.',
     phonePlaceholder: 'Ej: +504 9999-9999',
     seo: {
-      title: 'Calculadora ISR Honduras y Calculadora RAP | IHSS · Sueldo neto | Humano SISU',
+      title: 'Calculadora de Deducciones Honduras | ISR, RAP, IHSS | GRATIS',
       description:
-        'Calculadora ISR Honduras y calculadora RAP gratis. Calcula IHSS, deducciones de ley y salario neto en lempiras con el mismo motor de nómina Humano SISU.',
+        'Calculadora de deducciones en Honduras gratis. Calcula tu salario neto en lempiras, ISR, IHSS y RAP con SISU.',
       keywords:
-        'calculadora isr honduras, calculadora rap, calculadora ihss honduras, sueldo neto honduras, deducciones planilla Honduras, IHSS RAP ISR',
+        'calculadora de deducciones, calculadora impuesto honduras, calculadora isr honduras, calculadora rap, deducciones de ley, deducciones legales, calculadora ihss honduras, salario neto honduras, gratis, deducciones planilla Honduras',
       inLanguage: 'es-HN'
     },
     hero: {
@@ -332,11 +332,11 @@ export const PUBLIC_CALCULATOR_CONFIGS: Record<CountryCode, PublicCalculatorConf
     currencyPrefix: '$',
     phonePlaceholder: 'Ej: +503 7777-7777',
     seo: {
-      title: 'Calculadora ISR El Salvador | ISSS, AFP y sueldo neto | Humano SISU',
+      title: 'Calculadora de Deducciones El Salvador | ISR, ISSS, AFP | GRATIS',
       description:
-        'Calculadora ISR El Salvador gratis: ISSS, AFP y sueldo neto en USD. Mismo motor de nómina Humano SISU. Automatiza planilla en El Salvador.',
+        'Calculadora de deducciones en El Salvador gratis. Calcula tu sueldo neto en USD, retención de renta, ISSS y AFP con SISU.',
       keywords:
-        'Calculadora ISR El Salvador, sueldo neto El Salvador, ISSS, AFP El Salvador, deducciones planilla SV, retención renta El Salvador, nómina El Salvador',
+        'calculadora de deducciones, deducciones de ley, deducciones legales, Calculadora impuesto El Salvador, Calculadora ISR El Salvador, sueldo neto El Salvador, ISSS, AFP El Salvador, deducciones planilla SV, gratis',
       inLanguage: 'es-SV'
     },
     hero: {
@@ -463,11 +463,11 @@ export const PUBLIC_CALCULATOR_CONFIGS: Record<CountryCode, PublicCalculatorConf
     currencyPrefix: 'Q',
     phonePlaceholder: 'Ej: +502 5555-5555',
     seo: {
-      title: 'Calculadora sueldo neto Guatemala | IGSS e ISR | Humano SISU',
+      title: 'Calculadora de Deducciones Guatemala | IGSS e ISR | GRATIS',
       description:
-        'Calculadora sueldo neto Guatemala: IGSS e ISR en quetzales. Motor de nómina Humano SISU. Automatiza planilla en Guatemala gratis.',
+        'Calculadora de deducciones en Guatemala gratis. Calcula tu sueldo neto en quetzales, retenciones de IGSS e ISR con SISU.',
       keywords:
-        'Sueldo Neto Guatemala, calculadora IGSS Guatemala, ISR Guatemala, deducciones planilla GT, sueldo neto quetzales, nómina Guatemala',
+        'calculadora de deducciones, GRATIS, deducciones de ley, deducciones legales, impuestos, Sueldo Neto Guatemala, calculadora IGSS Guatemala, ISR Guatemala, deducciones planilla GT',
       inLanguage: 'es-GT'
     },
     hero: {
