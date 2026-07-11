@@ -46,7 +46,7 @@ export function generateTitle(options: TitleOptions = {}): string {
  * Predefined titles for common pages
  */
 export const pageTitles = {
-  home: 'Humano SISU | Software de Recursos Humanos y Control de Asistencia | HN, SV, GT',
+  home: 'Calculadora de deducciones | ISR, Seguro Social, Salario, Sueldo | Honduras, El Salvador y Guatemala | Gratis.',
   activate: 'Activa SISU | Toca el cielo | Humano SISU',
   affiliates: 'Programa de Afiliados | Humano SISU',
   calculator: 'Calculadora ISR Honduras y Calculadora RAP | IHSS · Humano SISU',
