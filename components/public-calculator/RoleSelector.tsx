@@ -63,10 +63,10 @@ export default function RoleSelector({
   return (
     <div className="mb-8">
       <h2 className="text-lg sm:text-xl font-bold text-white text-center mb-2">
-        Haz click en la tarjeta
-      </h2>
-      <p className="text-sm text-brand-300/80 text-center mb-5 max-w-lg mx-auto">
         ¿Para quién es este cálculo?
+      </h2>
+      <p className="text-xs sm:text-sm text-brand-400 text-center mb-5 max-w-lg mx-auto">
+        Selecciona en una tarjeta
       </p>
       <div className="grid grid-cols-1 sm:grid-cols-[1.6fr_1fr] gap-4 items-stretch">
         {options.map((opt) => {
