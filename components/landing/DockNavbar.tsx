@@ -7,9 +7,14 @@ import { useScrollThreshold, useScrollY } from '../../lib/hooks/useScrollThresho
 
 interface DockNavbarProps {
   loginAlwaysVisible?: boolean
+  /** Extra top offset in px when a fixed banner sits above the dock (e.g. home announcement). */
+  topOffsetPx?: number
 }
 
-export default function DockNavbar({ loginAlwaysVisible = false }: DockNavbarProps) {
+export default function DockNavbar({
+  loginAlwaysVisible = false,
+  topOffsetPx = 0,
+}: DockNavbarProps) {
   const isScrolled = useScrollY(50)
   const showLoginOnScroll = useScrollThreshold(0.2)
   const showLogin = loginAlwaysVisible || showLoginOnScroll
@@ -46,8 +51,13 @@ export default function DockNavbar({ loginAlwaysVisible = false }: DockNavbarPro
     }
   }, [isCalculatorMenuOpen])
 
+  const topStyle = { top: `${16 + topOffsetPx}px` }
+
   return (
-    <header className="fixed top-4 left-0 right-0 z-50 px-4 pointer-events-none">
+    <header
+      className="fixed left-0 right-0 z-50 px-4 pointer-events-none"
+      style={topStyle}
+    >
       <motion.nav
         layout
         className={`pointer-events-auto mx-auto glass-modern rounded-full border border-white/10 transition-all duration-300 ${

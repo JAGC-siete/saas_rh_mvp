@@ -1,5 +1,5 @@
 import Head from 'next/head'
-import { useEffect } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import dynamic from 'next/dynamic'
 import DemoFooter from '../components/DemoFooter'
 import FreeToolsSection from '../components/FreeToolsSection'
@@ -8,6 +8,7 @@ import AWSCertificationsSection from '../components/AWSCertificationsSection'
 // import LandingClosingSection from '../components/LandingClosingSection' // Sección oculta temporalmente
 import SchemaMarkup from '../components/SEO/SchemaMarkup'
 import DockNavbar from '../components/landing/DockNavbar'
+import HomeAnnouncementBanner from '../components/landing/HomeAnnouncementBanner'
 import MagneticHero from '../components/landing/MagneticHero'
 import HowItWorksBento from '../components/landing/HowItWorksBento'
 // import BentoServicesGrid from '../components/landing/BentoServicesGrid' // Sección oculta temporalmente
@@ -21,6 +22,9 @@ import { initGoogleAdsTracking } from '../lib/analytics/googleAds'
 
 const CursorSpotlight = dynamic(() => import('../components/landing/CursorSpotlight'), { ssr: false })
 
+/** Approx banner height — keeps dock + page padding clear of the stripe. */
+const HOME_BANNER_OFFSET_PX = 36
+
 const TESTIMONIALS = [
   { name: 'Felix Garcia', company: 'Restaurante Tonys Mar', employees: '40 empleados', quote: 'Ya no pierdo domingos haciendo planilla. 4 horas ahora son 4 minutos.', rating: 5 },
   { name: 'Nancy Urrutia', company: 'Prohalca', employees: '37 empleados', quote: 'Habiamos contratado un sistema de asistencia que no hacia planilla, ahora tenemos dashboard interactivo.', rating: 5 },
@@ -28,6 +32,11 @@ const TESTIMONIALS = [
 ]
 
 export default function LandingPage() {
+  const [bannerVisible, setBannerVisible] = useState(false)
+  const onBannerVisibilityChange = useCallback((visible: boolean) => {
+    setBannerVisible(visible)
+  }, [])
+
   useEffect(() => {
     initGoogleAdsTracking()
 
@@ -59,7 +68,11 @@ export default function LandingPage() {
   })
 
   return (
-    <div className="min-h-screen bg-mesh pt-20 sm:pt-24 relative text-white">
+    <div
+      className={`min-h-screen bg-mesh relative text-white ${
+        bannerVisible ? 'pt-28 sm:pt-32' : 'pt-20 sm:pt-24'
+      }`}
+    >
       <Head>
         <title>{pageTitle}</title>
         <link rel="icon" href="/logo-humano-sisu.png" />
@@ -87,7 +100,8 @@ export default function LandingPage() {
 
       <MeshBackground />
       <CursorSpotlight />
-      <DockNavbar />
+      <HomeAnnouncementBanner onVisibilityChange={onBannerVisibilityChange} />
+      <DockNavbar topOffsetPx={bannerVisible ? HOME_BANNER_OFFSET_PX : 0} />
 
       <MagneticHero />
 
