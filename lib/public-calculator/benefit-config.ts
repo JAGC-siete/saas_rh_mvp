@@ -74,9 +74,9 @@ const SHARED_CONVERSION = {
 
 const SHARED_FUNNEL_BASE = {
   audience: {
-    employeeTitle: 'Soy empleado',
+    employeeTitle: 'Personal',
     employeeBody: 'Quiero validar cuánto me corresponde de este beneficio.',
-    companyTitle: 'Soy empresa / RRHH',
+    companyTitle: 'Empresarial',
     companyBody: 'Calculo para mi equipo o quiero automatizar la planilla.',
   },
   verificationSteps: [

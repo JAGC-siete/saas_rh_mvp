@@ -63,10 +63,10 @@ export default function RoleSelector({
   return (
     <div className="mb-8">
       <h2 className="text-lg sm:text-xl font-bold text-white text-center mb-2">
-        ¿Conoces a un colega que ha perdido la paz con RR.HH.?
+        Haz click en la tarjeta
       </h2>
       <p className="text-sm text-brand-300/80 text-center mb-5 max-w-lg mx-auto">
-        ¿Eres esa persona?
+        ¿Para quién es este cálculo?
       </p>
       <div className="grid grid-cols-1 sm:grid-cols-[1.6fr_1fr] gap-4 items-stretch">
         {options.map((opt) => {

@@ -16,7 +16,7 @@ export function appendSuscripcionUtmParams(
 
 export const CALCULATOR_SUBSCRIPTION_BRIDGE = {
   title: '¿Te sirvió la calculadora?',
-  body: 'Recibí por correo recordatorios de aguinaldo, catorceavo y cambios en deducciones — para no depender solo de lo que diga tu recibo.',
+  body: 'Para no depender de lo que te diga RR.HH. — Recibí recordatorios sobre el aguinaldo, catorceavo y cambios en deducciones.',
   ctaLabel: 'Activar alertas gratis',
   shareLabel: 'Compartir',
   pricingLabel: 'Ver todas las calculadoras',

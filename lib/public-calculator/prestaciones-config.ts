@@ -109,9 +109,9 @@ export const PUBLIC_PRESTACIONES_CONFIG: PublicPrestacionesConfig = {
   breadcrumbLabel: 'Prestaciones Honduras',
   funnel: {
     audience: {
-      employeeTitle: 'Soy empleado',
+      employeeTitle: 'Personal',
       employeeBody: 'Quiero saber cuánto me corresponde de finiquito antes de firmar.',
-      companyTitle: 'Soy empresa / RRHH',
+      companyTitle: 'Empresarial',
       companyBody: 'Liquido a un colaborador o quiero automatizar finiquitos y planilla.',
     },
     verificationSteps: [

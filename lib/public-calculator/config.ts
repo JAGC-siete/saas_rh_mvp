@@ -223,8 +223,8 @@ export const PUBLIC_CALCULATOR_CONFIGS: Record<CountryCode, PublicCalculatorConf
         }
       },
       audience: {
-        employeeTitle: 'Empleado',
-        bossTitle: 'Dueño /jefe de RR.HH.',
+        employeeTitle: 'Personal',
+        bossTitle: 'Empresarial',
         employeeBody: '',
         bossBody: ''
       },
@@ -314,8 +314,8 @@ export const PUBLIC_CALCULATOR_CONFIGS: Record<CountryCode, PublicCalculatorConf
     breadcrumbLabel: 'Deducciones Honduras',
     socialShare: CALCULATOR_SOCIAL_SHARE,
     landingBridge: {
-      titleLead: '¿Conoces a un colega que ha perdido la paz con RR.HH.?',
-      titleAccent: '¿Eres esa persona?',
+      titleLead: 'Haz click en la tarjeta',
+      titleAccent: '¿Para quién es este cálculo?',
       body: 'Ayudamos a dueños y equipos de RRHH a encontrar una forma más pacífica de operar. No sos una máquina de Excel.',
       href: '/activar?country=HND',
       cta: 'Explora SISU',
@@ -378,8 +378,8 @@ export const PUBLIC_CALCULATOR_CONFIGS: Record<CountryCode, PublicCalculatorConf
         }
       },
       audience: {
-        employeeTitle: 'Empleado',
-        bossTitle: 'Dueño /jefe de RR.HH.',
+        employeeTitle: 'Personal',
+        bossTitle: 'Empresarial',
         employeeBody: '',
         bossBody: ''
       },
@@ -445,8 +445,8 @@ export const PUBLIC_CALCULATOR_CONFIGS: Record<CountryCode, PublicCalculatorConf
     breadcrumbLabel: 'Deducciones El Salvador',
     socialShare: CALCULATOR_SOCIAL_SHARE,
     landingBridge: {
-      titleLead: '¿Conoces a un colega que ha perdido la paz con RR.HH.?',
-      titleAccent: '¿Eres esa persona?',
+      titleLead: 'Haz click en la tarjeta',
+      titleAccent: '¿Para quién es este cálculo?',
       body: 'Ayudamos a dueños y equipos de RRHH a encontrar una forma más pacífica de operar. No sos una máquina de Excel.',
       href: '/activar?country=SLV',
       cta: 'Explora SISU',
@@ -509,8 +509,8 @@ export const PUBLIC_CALCULATOR_CONFIGS: Record<CountryCode, PublicCalculatorConf
         }
       },
       audience: {
-        employeeTitle: 'Empleado',
-        bossTitle: 'Dueño /jefe de RR.HH.',
+        employeeTitle: 'Personal',
+        bossTitle: 'Empresarial',
         employeeBody: '',
         bossBody: ''
       },
@@ -573,8 +573,8 @@ export const PUBLIC_CALCULATOR_CONFIGS: Record<CountryCode, PublicCalculatorConf
     breadcrumbLabel: 'Deducciones Guatemala',
     socialShare: CALCULATOR_SOCIAL_SHARE,
     landingBridge: {
-      titleLead: '¿Conoces a un colega que ha perdido la paz con RR.HH.?',
-      titleAccent: '¿Eres esa persona?',
+      titleLead: 'Haz click en la tarjeta',
+      titleAccent: '¿Para quién es este cálculo?',
       body: 'Ayudamos a dueños y equipos de RRHH a encontrar una forma más pacífica de operar. No sos una máquina de Excel.',
       href: '/activar?country=GTM',
       cta: 'Explora SISU',
