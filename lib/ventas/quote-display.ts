@@ -2,19 +2,40 @@ import type { QuotationQuote } from './types'
 import { formatMoney } from './pricing'
 import { hardwareFeeMonthly } from './modality-includes'
 import {
+  quoteIncludesBiometricTerminals,
+  shouldChargeHardwareContinuity,
+} from './business-rules'
+import {
   computeQuotationUrgencyOffer,
   formatUrgencyOfferExpiryFriendly,
   type QuotationUrgencyBreakdown,
 } from './urgency-offer'
 
-function resolveMonthlyHardwareFee(quote: QuotationQuote): number {
+export function employeesCountFromQuote(quote: QuotationQuote): number {
+  if (Number.isFinite(quote.employees_count) && quote.employees_count > 0) {
+    return quote.employees_count
+  }
+  return quote.tier?.min_employees || 0
+}
+
+function resolveListedHardwareFee(quote: QuotationQuote): number {
   if (quote.monthly_hardware_fee > 0) return quote.monthly_hardware_fee
   const hw = hardwareFeeMonthly(quote.terminals_count || 1)
   return hw.special ? 0 : hw.fee
 }
 
+/** Hardware fee to show for a given modality, applying business rules. */
+export function resolveHardwareFeeForModality(
+  quote: QuotationQuote,
+  modality: 'annual' | 'monthly'
+): number {
+  const employees = employeesCountFromQuote(quote)
+  if (!shouldChargeHardwareContinuity(modality, employees)) return 0
+  return resolveListedHardwareFee(quote)
+}
+
 function resolveMonthlyTotal(quote: QuotationQuote): number {
-  return quote.monthly_software_total + resolveMonthlyHardwareFee(quote)
+  return quote.monthly_software_total + resolveHardwareFeeForModality(quote, 'monthly')
 }
 
 export type PlanSummaryLine = {
@@ -55,12 +76,20 @@ export function buildUrgencyPriceDisplay(params: {
   const { periodLabel, isMonthly } = summary
   const count = quote.terminals_count
   const terminalWord = count === 1 ? 'terminal' : 'terminales'
+  const includesTerminals = quoteIncludesBiometricTerminals(
+    isMonthly ? 'monthly' : 'annual',
+    employeesCountFromQuote(quote)
+  )
 
   const listPriceLabel = isMonthly
     ? `Precio mensual con ${count} ${terminalWord}`
-    : count === 1
-      ? 'Precio anual con 1 terminal incluida'
-      : `Precio anual con ${count} terminales incluidas`
+    : includesTerminals
+      ? count === 1
+        ? 'Precio anual con 1 terminal incluida'
+        : `Precio anual con ${count} terminales incluidas`
+      : count === 1
+        ? 'Precio anual (terminal por continuidad de hardware)'
+        : `Precio anual (${count} terminales por continuidad de hardware)`
 
   return {
     listPriceLabel,
@@ -71,8 +100,14 @@ export function buildUrgencyPriceDisplay(params: {
   }
 }
 
-export function getContractIncludesLabels(isAnnual: boolean, terminalsCount: number): string[] {
-  if (isAnnual) {
+export function getContractIncludesLabels(params: {
+  isAnnual: boolean
+  terminalsCount: number
+  includesTerminals: boolean
+}): string[] {
+  const { isAnnual, terminalsCount, includesTerminals } = params
+
+  if (isAnnual && includesTerminals) {
     const terminalPhrase =
       terminalsCount === 1
         ? '1 terminal (sin costo adicional)'
@@ -84,6 +119,16 @@ export function getContractIncludesLabels(isAnnual: boolean, terminalsCount: num
       'Migración y capacitación del personal',
       'Actualizaciones',
       'Impuestos',
+    ]
+  }
+
+  if (isAnnual) {
+    return [
+      'Subscripción anual de software',
+      'Migración y capacitación del personal',
+      'Actualizaciones',
+      'Impuestos',
+      'Terminal biométrica: Servicio de Continuidad de Hardware (mensual, por separado)',
     ]
   }
 
@@ -116,7 +161,7 @@ export function buildQuotationPlanSummary(params: {
   const tierLabel = `${quote.tier.min_employees} a ${quote.tier.max_employees} empleados`
   const terminalsLabel = terminalsLabelFromCount(quote.terminals_count)
 
-  const monthlyHardwareFee = resolveMonthlyHardwareFee(quote)
+  const monthlyHardwareFee = resolveHardwareFeeForModality(quote, resolvedModality)
 
   const urgency = computeQuotationUrgencyOffer({
     billingModality: resolvedModality,
@@ -140,10 +185,10 @@ export function buildQuotationPlanSummary(params: {
       },
     ]
 
-    if (isMonthly && urgency.hardwareTotal > 0) {
+    if (monthlyHardwareFee > 0) {
       lines.push({
         label: `Servicio de Continuidad de Hardware (${terminalsLabel})`,
-        value: `${fmt(urgency.hardwareTotal)} / ${periodLabel}`,
+        value: `${fmt(monthlyHardwareFee)} / mes`,
       })
     }
 
@@ -199,10 +244,10 @@ export function buildQuotationPlanSummary(params: {
     })
   }
 
-  if (isMonthly && monthlyHardwareFee > 0) {
+  if (monthlyHardwareFee > 0) {
     lines.push({
       label: `Servicio de Continuidad de Hardware (${terminalsLabel})`,
-      value: `${fmt(monthlyHardwareFee)} / ${periodLabel}`,
+      value: `${fmt(monthlyHardwareFee)} / mes`,
     })
   }
 

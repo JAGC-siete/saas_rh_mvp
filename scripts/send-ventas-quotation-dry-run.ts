@@ -5,6 +5,7 @@
 
 import { getResendFromContact } from '../lib/resend-from'
 import { hardwareFeeMonthly } from '../lib/ventas/modality-includes'
+import { shouldChargeHardwareContinuity } from '../lib/ventas/business-rules'
 import {
   normalizeCouponCode,
   resolveTierByEmployees,
@@ -53,7 +54,9 @@ function buildQuote(): QuotationQuote {
   const annualTotal = roundMoney(annualSubtotal - annualDiscountAmount)
   const monthlySoftwareTotal = roundMoney(annualTotal / 12)
   const hw = hardwareFeeMonthly(TERMINALS_COUNT)
-  const monthlyHardwareFee = BILLING_MODALITY === 'monthly' ? hw.fee : 0
+  const monthlyHardwareFee = shouldChargeHardwareContinuity(BILLING_MODALITY, EMPLOYEES_COUNT)
+    ? hw.fee
+    : 0
   const monthlyTotal = roundMoney(monthlySoftwareTotal + monthlyHardwareFee)
 
   return {
@@ -69,6 +72,7 @@ function buildQuote(): QuotationQuote {
     tier: { min_employees: tier.min_employees, max_employees: tier.max_employees },
     billing_modality: BILLING_MODALITY,
     terminals_count: TERMINALS_COUNT,
+    employees_count: EMPLOYEES_COUNT,
   }
 }
 

@@ -8,9 +8,9 @@ export default function Document() {
   return (
     <Html lang="es">
       <Head>
-        <link rel="icon" href="/logo-humano-sisu.png" />
-        <link rel="shortcut icon" href="/logo-humano-sisu.png" />
-        <link rel="apple-touch-icon" href="/logo-humano-sisu.png" />
+        <link rel="icon" href="/brand/favicon-humano-sisu.png" />
+        <link rel="shortcut icon" href="/brand/favicon-humano-sisu.png" />
+        <link rel="apple-touch-icon" href="/brand/logo-humano-sisu-sm.png" />
 
         {/* Inject environment variables for client-side access */}
         <script

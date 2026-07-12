@@ -1,7 +1,17 @@
 import type { QuotationQuote } from './types'
 import { formatMoney } from './pricing'
-import { buildQuotationPlanSummary, type PlanSummaryLine } from './quote-display'
-import { getVentasModalityDefinition, hardwareFeeMonthly } from './modality-includes'
+import {
+  buildQuotationPlanSummary,
+  employeesCountFromQuote,
+  resolveHardwareFeeForModality,
+  type PlanSummaryLine,
+} from './quote-display'
+import { getVentasModalityDefinition } from './modality-includes'
+import {
+  isMonthlyModalityAvailable,
+  quoteIncludesBiometricTerminals,
+  ventasMonthlyUnavailableMessage,
+} from './business-rules'
 
 export type ModalityComparison = {
   primaryModality: 'annual' | 'monthly'
@@ -12,17 +22,24 @@ export type ModalityComparison = {
   totalValue: string
   footnote: string
   equivalentNote: string | null
+  /** False when monthly is not available for this employee count. */
+  available: boolean
 }
 
 export function buildModalityComparison(params: {
   quote: QuotationQuote
   sentAt?: Date
   now?: Date
-}): ModalityComparison {
+}): ModalityComparison | null {
   const { quote, sentAt = new Date(), now } = params
+  const employees = employeesCountFromQuote(quote)
   const primaryModality = quote.billing_modality
   const alternateModality: 'annual' | 'monthly' =
     primaryModality === 'monthly' ? 'annual' : 'monthly'
+
+  if (alternateModality === 'monthly' && !isMonthlyModalityAvailable(employees)) {
+    return null
+  }
 
   const summary = buildQuotationPlanSummary({
     quote,
@@ -32,8 +49,7 @@ export function buildModalityComparison(params: {
     applyUrgencyOffer: false,
   })
 
-  const def = getVentasModalityDefinition(alternateModality)
-  const fmt = (n: number) => formatMoney(quote.currency, n)
+  const def = getVentasModalityDefinition(alternateModality, { employeesCount: employees })
 
   const listPriceNote =
     primaryModality === 'annual'
@@ -43,8 +59,10 @@ export function buildModalityComparison(params: {
   let footnote: string
   if (alternateModality === 'monthly') {
     footnote = `La terminal biométrica no está incluida en el plan mensual; se cotiza por separado. ${listPriceNote}`
-  } else {
+  } else if (quoteIncludesBiometricTerminals('annual', employees)) {
     footnote = `Incluye terminal biométrica en la propuesta. ${listPriceNote}`
+  } else {
+    footnote = `La terminal biométrica no está incluida en el plan anual de este rango; se cotiza como continuidad de hardware. ${listPriceNote}`
   }
 
   return {
@@ -56,17 +74,17 @@ export function buildModalityComparison(params: {
     totalValue: summary.totalValue,
     footnote,
     equivalentNote: null,
+    available: true,
   }
 }
 
-function resolvedMonthlyHardwareFee(quote: QuotationQuote): number {
-  if (quote.monthly_hardware_fee > 0) return quote.monthly_hardware_fee
-  const hw = hardwareFeeMonthly(quote.terminals_count || 1)
-  return hw.special ? 0 : hw.fee
+export function modalityComparisonUnavailableNote(employeesCount: number): string | null {
+  if (isMonthlyModalityAvailable(employeesCount)) return null
+  return ventasMonthlyUnavailableMessage()
 }
 
 export function buildModalityComparisonSnapshot(quote: QuotationQuote) {
-  const monthlyHardwareFee = resolvedMonthlyHardwareFee(quote)
+  const monthlyHardwareFee = resolveHardwareFeeForModality(quote, 'monthly')
   return {
     primary: quote.billing_modality,
     annual_total: quote.annual_total,
@@ -118,10 +136,7 @@ export function buildModalityComparisonHtml(comparison: ModalityComparison): str
 }
 
 export function buildModalityComparisonPlainText(comparison: ModalityComparison): string[] {
-  const lines: string[] = [
-    '',
-    comparison.title,
-  ]
+  const lines: string[] = ['', comparison.title]
 
   for (const line of comparison.lines) {
     lines.push(`• ${line.label}: ${line.value}`)
@@ -137,3 +152,4 @@ export function buildModalityComparisonPlainText(comparison: ModalityComparison)
 
   return lines
 }
+

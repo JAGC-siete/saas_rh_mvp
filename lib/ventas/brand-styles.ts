@@ -30,10 +30,11 @@ export function buildVentasRefLabel(companyName?: string, contactName?: string):
 
 export function buildTerminalsDisplayLabel(params: {
   terminalsCount: number
-  isAnnual: boolean
+  /** When true, terminals are included in the plan (no continuity fee). */
+  includesTerminals: boolean
 }): string {
-  const { terminalsCount, isAnnual } = params
-  if (isAnnual) {
+  const { terminalsCount, includesTerminals } = params
+  if (includesTerminals) {
     return terminalsCount === 1 ? '1 (incluida)' : `${terminalsCount} (incluidas)`
   }
   return `${terminalsCount} · continuidad hardware`

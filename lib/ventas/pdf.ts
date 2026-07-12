@@ -2,12 +2,14 @@ import { Buffer } from 'buffer'
 import type { QuotationQuote } from './types'
 import {
   buildQuotationPlanSummary,
+  employeesCountFromQuote,
   getContractIncludesLabels,
 } from './quote-display'
 import type { VentasBankDetails } from './bank-details'
 import { buildModalityComparison } from './modality-comparison'
 import { getVentasModalityDefinition } from './modality-includes'
 import { buildTerminalsDisplayLabel, buildVentasRefLabel } from './brand-styles'
+import { quoteIncludesBiometricTerminals } from './business-rules'
 import { PDF_TYPE as TYPE, VENTAS_PDF_THEME as T } from './pdf-theme'
 
 const MARGIN = 40
@@ -31,13 +33,18 @@ export async function generateVentasQuotationPDF(params: {
     contactName,
     companyName,
     countryLabel,
+    employeesCount,
     sentAt = new Date(),
     bankDetails,
   } = params
 
+  const employees = quote.employees_count || employeesCount || employeesCountFromQuote(quote)
+  const includesTerminals = quoteIncludesBiometricTerminals(quote.billing_modality, employees)
   const planSummary = buildQuotationPlanSummary({ quote, sentAt })
   const modalityComparison = buildModalityComparison({ quote, sentAt })
-  const modalityDef = getVentasModalityDefinition(quote.billing_modality)
+  const modalityDef = getVentasModalityDefinition(quote.billing_modality, {
+    employeesCount: employees,
+  })
   const isAnnual = quote.billing_modality === 'annual'
   const refLabel = buildVentasRefLabel(companyName, contactName)
 
@@ -79,7 +86,7 @@ export async function generateVentasQuotationPDF(params: {
         countryLabel,
         tierLabel: planSummary.tierLabel,
         terminalsCount: quote.terminals_count,
-        isAnnual,
+        includesTerminals,
       })
 
       const featuresY = 178
@@ -88,6 +95,7 @@ export async function generateVentasQuotationPDF(params: {
         contentW,
         isAnnual,
         terminalsCount: quote.terminals_count,
+        includesTerminals,
       })
 
       const priceY = featuresY + featuresH + 10
@@ -100,19 +108,22 @@ export async function generateVentasQuotationPDF(params: {
       })
 
       const comparisonY = priceY + 156
-      drawComparisonStrip(doc, {
-        y: comparisonY,
-        contentW,
-        title: modalityComparison.title,
-        total: `${modalityComparison.totalLabel}: ${modalityComparison.totalValue}`,
-        note: truncateText(modalityComparison.equivalentNote || modalityComparison.footnote, 120),
-      })
+      if (modalityComparison) {
+        drawComparisonStrip(doc, {
+          y: comparisonY,
+          contentW,
+          title: modalityComparison.title,
+          total: `${modalityComparison.totalLabel}: ${modalityComparison.totalValue}`,
+          note: truncateText(modalityComparison.equivalentNote || modalityComparison.footnote, 120),
+        })
+      }
 
       drawFooter(doc, {
-        y: comparisonY + 58,
+        y: modalityComparison ? comparisonY + 58 : comparisonY,
         contentW,
         bankDetails,
         isAnnual,
+        includesTerminals,
       })
 
       doc.end()
@@ -167,11 +178,19 @@ function drawClientFicha(
     countryLabel: string
     tierLabel: string
     terminalsCount: number
-    isAnnual: boolean
+    includesTerminals: boolean
   }
 ) {
-  const { y, contentW, companyName, contactName, countryLabel, tierLabel, terminalsCount, isAnnual } =
-    params
+  const {
+    y,
+    contentW,
+    companyName,
+    contactName,
+    countryLabel,
+    tierLabel,
+    terminalsCount,
+    includesTerminals,
+  } = params
   const boxH = 76
   const colW = (contentW - 36) / 2
 
@@ -199,7 +218,7 @@ function drawClientFicha(
   drawMetaValue(doc, countryLabel, colAX, rowY, colW)
   drawMetaValue(
     doc,
-    buildTerminalsDisplayLabel({ terminalsCount, isAnnual }),
+    buildTerminalsDisplayLabel({ terminalsCount, includesTerminals }),
     colBX,
     rowY,
     colW
@@ -208,10 +227,16 @@ function drawClientFicha(
 
 function drawFeaturesRow(
   doc: PDFKit.PDFDocument,
-  params: { y: number; contentW: number; isAnnual: boolean; terminalsCount: number }
+  params: {
+    y: number
+    contentW: number
+    isAnnual: boolean
+    terminalsCount: number
+    includesTerminals: boolean
+  }
 ): number {
-  const { y, contentW, isAnnual, terminalsCount } = params
-  const labels = getContractIncludesLabels(isAnnual, terminalsCount)
+  const { y, contentW, isAnnual, terminalsCount, includesTerminals } = params
+  const labels = getContractIncludesLabels({ isAnnual, terminalsCount, includesTerminals })
   const colGap = 16
   const colW = (contentW - colGap) / 2
   const rowH = 14
@@ -307,9 +332,10 @@ function drawFooter(
     contentW: number
     bankDetails?: VentasBankDetails | null
     isAnnual: boolean
+    includesTerminals: boolean
   }
 ) {
-  const { y, contentW, bankDetails, isAnnual } = params
+  const { y, contentW, bankDetails, isAnnual, includesTerminals } = params
   const boxW = (contentW - 14) / 2
   const boxH = 128
 
@@ -319,7 +345,9 @@ function drawFooter(
     : 'Entrega en 3 a 5 días hábiles tras confirmar el depósito.'
 
   const paymentIntro = isAnnual
-    ? '50% anticipo para programar la instalación y enlace de las terminales y 50% únicamente contra la instalación y enlace efectivos de las terminales con el sistema.'
+    ? includesTerminals
+      ? '50% anticipo para programar la instalación y enlace de las terminales y 50% únicamente contra la instalación y enlace efectivos de las terminales con el sistema.'
+      : '50% anticipo sobre la licencia anual para programar la instalación. Las terminales se cotizan por separado como Servicio de Continuidad de Hardware (mensual).'
     : 'El siguiente paso es enviar el comprobante de depósito de la primera mensualidad.'
 
   drawSectionTitle(doc, implementationTitle, MARGIN, y)
@@ -377,7 +405,7 @@ function drawFooter(
     doc.fillColor(T.textMuted).font('Helvetica').fontSize(TYPE.body).text(
       'Solicite datos bancarios a su asesor al confirmar.',
       paymentX + 12,
-      y + 72,
+      y + 70,
       { width: boxW - 24 }
     )
   }
@@ -386,8 +414,7 @@ function drawFooter(
     'Humano SISU · humanosisu.net · Propuesta comercial · Precios en lempiras',
     MARGIN,
     y + boxH + 28,
-    { width: contentW,
-      align: 'center' }
+    { width: contentW, align: 'center' }
   )
 }
 

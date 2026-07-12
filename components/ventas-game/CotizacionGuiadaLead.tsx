@@ -20,6 +20,11 @@ import {
 } from '../../lib/ventas/bank-details'
 import { getVentasModalityDefinition } from '../../lib/ventas/modality-includes'
 import { buildModalityComparison } from '../../lib/ventas/modality-comparison'
+import {
+  isMonthlyModalityAvailable,
+  VENTAS_MONTHLY_MIN_EMPLOYEES,
+} from '../../lib/ventas/business-rules'
+import { employeesCountFromQuote } from '../../lib/ventas/quote-display'
 import { isCountryCode, type CountryCode } from '../../lib/country/supported'
 import {
   buildMetaApiTrackingFields,
@@ -92,6 +97,8 @@ export default function CotizacionGuiadaLead({
 
   const planSummary = useMemo(() => (quote ? buildQuotationPlanSummary({ quote }) : null), [quote])
   const modalityComparison = useMemo(() => (quote ? buildModalityComparison({ quote }) : null), [quote])
+  const employeesCount = Number(formData.employees_count) || 1
+  const monthlyAvailable = isMonthlyModalityAvailable(employeesCount)
 
   const whatsappUrl = useMemo(() => {
     if (step !== 'success') return ''
@@ -104,7 +111,18 @@ export default function CotizacionGuiadaLead({
   }, [step, formData.contact_name, formData.company_name])
 
   const patchForm = (patch: Partial<QuotationRequest>) => {
-    setFormData((prev) => ({ ...prev, ...patch }))
+    setFormData((prev) => {
+      const next = { ...prev, ...patch }
+      const emp = Number(next.employees_count)
+      if (
+        next.billing_modality === 'monthly' &&
+        Number.isFinite(emp) &&
+        !isMonthlyModalityAvailable(emp)
+      ) {
+        next.billing_modality = 'annual'
+      }
+      return next
+    })
     setErrors((prev) => (prev.submit ? omitValidationField(prev, 'submit') : prev))
   }
 
@@ -224,7 +242,12 @@ export default function CotizacionGuiadaLead({
                 <h2 className="text-xl font-bold text-white mb-4">Resumen de inversión</h2>
                 <div className="space-y-2 text-brand-200 text-sm">
                   <p>
-                    <strong>Modalidad:</strong> {getVentasModalityDefinition(quote.billing_modality).label}
+                    <strong>Modalidad:</strong>{' '}
+                    {
+                      getVentasModalityDefinition(quote.billing_modality, {
+                        employeesCount: employeesCountFromQuote(quote),
+                      }).label
+                    }
                   </p>
                   <p>
                     <strong>Rango tarifario:</strong> {quote.tier.min_employees}–{quote.tier.max_employees}{' '}
@@ -354,12 +377,33 @@ export default function CotizacionGuiadaLead({
                         <label className="block text-white font-medium mb-2 text-sm">Modalidad</label>
                         <select
                           value={formData.billing_modality || 'annual'}
-                          onChange={(e) => patchForm({ billing_modality: e.target.value as 'annual' | 'monthly' })}
-                          className={inputClass}
+                          onChange={(e) =>
+                            patchForm({ billing_modality: e.target.value as 'annual' | 'monthly' })
+                          }
+                          className={`${inputClass} ${errors.billing_modality ? 'border-red-500/50' : ''}`}
                         >
-                          <option value="annual" className="bg-slate-800">Anual (recomendado)</option>
-                          <option value="monthly" className="bg-slate-800">Mensual</option>
+                          <option value="annual" className="bg-slate-800">
+                            Anual (recomendado)
+                          </option>
+                          <option
+                            value="monthly"
+                            className="bg-slate-800"
+                            disabled={!monthlyAvailable}
+                          >
+                            {monthlyAvailable
+                              ? 'Mensual'
+                              : `Mensual (desde ${VENTAS_MONTHLY_MIN_EMPLOYEES} empleados)`}
+                          </option>
                         </select>
+                        {!monthlyAvailable && (
+                          <p className="text-xs text-brand-400 mt-2">
+                            Modalidad mensual disponible a partir de {VENTAS_MONTHLY_MIN_EMPLOYEES}{' '}
+                            empleados.
+                          </p>
+                        )}
+                        {errors.billing_modality && (
+                          <p className="text-red-400 text-xs mt-2">{errors.billing_modality}</p>
+                        )}
                       </div>
                       <div>
                         <label className="block text-white font-medium mb-2 text-sm">Terminales</label>
@@ -400,7 +444,8 @@ export default function CotizacionGuiadaLead({
                     <p className="text-xs text-brand-300 bg-black/20 p-3 rounded-lg border border-white/10">
                       {
                         getVentasModalityDefinition(
-                          (formData.billing_modality || 'annual') === 'monthly' ? 'monthly' : 'annual'
+                          (formData.billing_modality || 'annual') === 'monthly' ? 'monthly' : 'annual',
+                          { employeesCount }
                         ).formHint
                       }
                     </p>

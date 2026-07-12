@@ -5,6 +5,7 @@
 
 import { getResendFromContact } from '../lib/resend-from'
 import { hardwareFeeMonthly } from '../lib/ventas/modality-includes'
+import { shouldChargeHardwareContinuity } from '../lib/ventas/business-rules'
 import { roundMoney } from '../lib/ventas/pricing'
 import { generateVentasQuotationPDF } from '../lib/ventas/pdf'
 import {
@@ -18,12 +19,13 @@ import type { QuotationQuote } from '../lib/ventas/types'
 
 const TEST_EMAIL = 'jorge7gomez@gmail.com'
 const SENT_AT = new Date()
+const EMPLOYEES_COUNT = 30
 
 function buildSampleQuote(modality: 'monthly' | 'annual'): QuotationQuote {
   const annualTotal = 65000
   const monthlySoftware = roundMoney(annualTotal / 12)
   const hw = hardwareFeeMonthly(2)
-  const monthlyHardware = modality === 'monthly' ? hw.fee : 0
+  const monthlyHardware = shouldChargeHardwareContinuity(modality, EMPLOYEES_COUNT) ? hw.fee : 0
 
   return {
     currency: 'HNL',
@@ -35,9 +37,10 @@ function buildSampleQuote(modality: 'monthly' | 'annual'): QuotationQuote {
     monthly_total: roundMoney(monthlySoftware + monthlyHardware),
     coupon_applied: true,
     discount_pct_applied: 0.45,
-    tier: { min_employees: 1, max_employees: 30 },
+    tier: { min_employees: 21, max_employees: 50 },
     billing_modality: modality,
     terminals_count: 2,
+    employees_count: EMPLOYEES_COUNT,
   }
 }
 
@@ -60,7 +63,7 @@ async function sendQuotationDryRun(params: {
     contactName,
     companyName,
     phone: '98765432',
-    employeesCount: 25,
+    employeesCount: EMPLOYEES_COUNT,
     terminalsCount: quote.terminals_count,
     couponCodeSubmitted: 'gastro2026',
     countryLabel,

@@ -10,6 +10,11 @@ import { getResendFromContact } from '../../lib/resend-from'
 import type { QuotationRequest, QuotationResponse, VentasPricingTier, CurrencyCode } from '../../lib/ventas/types'
 import { clampInt, resolveTierByEmployees, roundMoney } from '../../lib/ventas/pricing'
 import { hardwareFeeMonthly, ventasTooManyTerminalsErrorMessage } from '../../lib/ventas/modality-includes'
+import {
+  isMonthlyModalityAvailable,
+  shouldChargeHardwareContinuity,
+  ventasMonthlyUnavailableMessage,
+} from '../../lib/ventas/business-rules'
 import { loadActiveVentasConfig, resolveSubmittedPromo } from '../../lib/ventas/load-ventas-config'
 import { generateVentasQuotationPDF } from '../../lib/ventas/pdf'
 import { generateVentasQuotationEmailHTML, generateVentasQuotationEmailSubject, generateVentasQuotationEmailText } from '../../lib/ventas/email-template'
@@ -223,6 +228,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
   }
 
   const billingModality = normalizeBillingModality((body as any).billing_modality)
+  if (billingModality === 'monthly' && !isMonthlyModalityAvailable(employeesCount)) {
+    return res.status(400).json({ error: ventasMonthlyUnavailableMessage() })
+  }
   const terminalsCountRaw = (body as any).terminals_count
   const terminalsCount = clampInt(Number(terminalsCountRaw ?? 0), 0, 10000)
 
@@ -289,7 +297,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
     if (hwQuote.special) {
       return res.status(400).json({ error: ventasTooManyTerminalsErrorMessage() })
     }
-    const monthlyHardwareFee = billingModality === 'monthly' ? hwQuote.fee : 0
+    const monthlyHardwareFee = shouldChargeHardwareContinuity(billingModality, employeesCount)
+      ? hwQuote.fee
+      : 0
     const monthlyTotal = roundMoney(monthlySoftwareTotal + monthlyHardwareFee)
 
     const quote = {
@@ -306,6 +316,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
       tier: { min_employees: tier.min_employees, max_employees: tier.max_employees },
       billing_modality: billingModality,
       terminals_count: terminalsForPricing,
+      employees_count: employeesCount,
     }
 
     // Persist lead

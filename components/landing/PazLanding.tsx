@@ -116,7 +116,7 @@ export default function PazLanding() {
 
       <nav className="paz-nav">
         <Link href="/" className="flex items-center gap-2 opacity-80 hover:opacity-100 transition-opacity">
-          <Image src="/logo-humano-sisu.png" alt="Humano SISU" width={32} height={32} />
+          <Image src="/brand/logo-humano-sisu-sm.png" alt="Humano SISU" width={64} height={36} className="h-8 w-auto" />
           <span className="paz-serif text-lg font-medium text-[var(--paz-ink)]">Humano SISU</span>
         </Link>
         <Link

@@ -130,8 +130,8 @@ export default function HeroProductWindow() {
             alt={slide.alt}
             fill
             className="object-cover transition-opacity duration-500"
-            priority={currentIndex === 0}
-            loading={currentIndex === 0 ? 'eager' : 'lazy'}
+            // Not LCP (hero copy is). Avoid competing preload on mobile Slow 4G.
+            loading="lazy"
             sizes="(max-width: 1024px) 100vw, 35vw"
           />
           <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-3 sm:p-4">

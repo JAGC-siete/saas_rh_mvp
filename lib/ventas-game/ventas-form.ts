@@ -1,5 +1,9 @@
 import type { QuotationRequest } from '../ventas/types'
 import { VENTAS_MAX_AUTO_QUOTE_TERMINALS } from '../ventas/modality-includes'
+import {
+  isMonthlyModalityAvailable,
+  ventasMonthlyUnavailableMessage,
+} from '../ventas/business-rules'
 import type { CountryCode } from '../country/supported'
 import { isCountryCode } from '../country/supported'
 
@@ -9,6 +13,7 @@ export type VentasValidationErrors = {
   employees_count?: string
   terminals_count?: string
   country_code?: string
+  billing_modality?: string
   submit?: string
 }
 
@@ -25,6 +30,11 @@ export function computeVentasErrors(fd: QuotationRequest): VentasValidationError
 
   const emp = Number(fd.employees_count)
   if (!Number.isFinite(emp) || emp < 1 || emp > 200) e.employees_count = 'Indique entre 1 y 200 empleados.'
+
+  const modality = fd.billing_modality === 'monthly' ? 'monthly' : 'annual'
+  if (modality === 'monthly' && Number.isFinite(emp) && !isMonthlyModalityAvailable(emp)) {
+    e.billing_modality = ventasMonthlyUnavailableMessage()
+  }
 
   const cc = fd.country_code
   if (!cc || !isCountryCode(cc)) {
@@ -47,6 +57,11 @@ export function ventasScopeErrors(fd: QuotationRequest): VentasValidationErrors 
 
   const emp = Number(fd.employees_count)
   if (!Number.isFinite(emp) || emp < 1 || emp > 200) e.employees_count = 'Indique entre 1 y 200 empleados.'
+
+  const modality = fd.billing_modality === 'monthly' ? 'monthly' : 'annual'
+  if (modality === 'monthly' && Number.isFinite(emp) && !isMonthlyModalityAvailable(emp)) {
+    e.billing_modality = ventasMonthlyUnavailableMessage()
+  }
 
   const t = Number(fd.terminals_count)
   if (!Number.isFinite(t) || t < 1 || t > VENTAS_MAX_AUTO_QUOTE_TERMINALS) {

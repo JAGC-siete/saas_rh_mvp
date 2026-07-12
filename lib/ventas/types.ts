@@ -56,7 +56,10 @@ export interface QuotationQuote {
   annual_total: number
   /** Total mensual del software (= annual_total/12) */
   monthly_software_total: number
-  /** Fee mensual por continuidad de hardware (solo mensual) */
+  /**
+   * Fee mensual por Continuidad de Hardware.
+   * Aplica en plan mensual siempre, y en plan anual cuando empleados < 71.
+   */
   monthly_hardware_fee: number
   /** Total mensual final (= monthly_software_total + monthly_hardware_fee) */
   monthly_total: number
@@ -67,6 +70,8 @@ export interface QuotationQuote {
   tier: { min_employees: number; max_employees: number }
   billing_modality: 'annual' | 'monthly'
   terminals_count: number
+  /** Conteo de empleados usado para umbrales de modalidad e inclusión de hardware. */
+  employees_count: number
 }
 
 export interface QuotationUrgencyOffer {

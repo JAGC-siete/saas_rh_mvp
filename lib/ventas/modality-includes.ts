@@ -1,7 +1,11 @@
 import type { QuotationQuote } from './types'
 import { roundMoney } from './pricing'
+import {
+  quoteIncludesBiometricTerminals,
+  type VentasBillingModality,
+} from './business-rules'
 
-export type VentasBillingModality = 'annual' | 'monthly'
+export type { VentasBillingModality }
 
 /** Cuota mensual de la primera terminal (base). */
 export const VENTAS_HARDWARE_BASE_MONTHLY = 958.33
@@ -21,10 +25,10 @@ const SHARED_SERVICE_INCLUDES = [
   'Impuestos',
 ] as const
 
-const ANNUAL_ONLY_INCLUDES = ['Terminal biométrica incluida en la propuesta'] as const
+const TERMINALS_INCLUDED_LINE = 'Terminal biométrica incluida en la propuesta' as const
 
-const MONTHLY_ONLY_NOTES = [
-  'La terminal biométrica se vende por separado (no está incluida en el total mensual de software)',
+const TERMINALS_SEPARATE_NOTES = [
+  'La terminal biométrica se vende por separado (no está incluida en el total de software); se cotiza como Servicio de Continuidad de Hardware',
 ] as const
 
 export interface VentasModalityDefinition {
@@ -36,7 +40,21 @@ export interface VentasModalityDefinition {
   successSummaryLine: string
 }
 
-export function getVentasModalityDefinition(modality: VentasBillingModality): VentasModalityDefinition {
+export type VentasModalityContext = {
+  employeesCount: number
+}
+
+function employeesFromContext(ctx?: VentasModalityContext): number {
+  const n = ctx?.employeesCount
+  return Number.isFinite(n) ? Number(n) : 0
+}
+
+export function getVentasModalityDefinition(
+  modality: VentasBillingModality,
+  ctx?: VentasModalityContext
+): VentasModalityDefinition {
+  const employeesCount = employeesFromContext(ctx)
+
   if (modality === 'monthly') {
     return {
       modality: 'monthly',
@@ -44,9 +62,26 @@ export function getVentasModalityDefinition(modality: VentasBillingModality): Ve
       formHint:
         'Incluye licencia mensual del software, instalación, migración, capacitación, soporte local e impuestos. La terminal biométrica se vende por separado; en esta cotización se suma el Servicio de Continuidad de Hardware según terminales (cuota decreciente por unidad).',
       includes: ['Licencia mensual de software Humano SISU', ...SHARED_SERVICE_INCLUDES],
-      excludesOrNotes: [...MONTHLY_ONLY_NOTES],
+      excludesOrNotes: [...TERMINALS_SEPARATE_NOTES],
       successSummaryLine:
         'Incluye licencia mensual del software y servicios de implementación. La terminal biométrica se vende por separado; continuidad de hardware según terminales indicadas.',
+    }
+  }
+
+  const includesTerminals = quoteIncludesBiometricTerminals('annual', employeesCount)
+
+  if (includesTerminals) {
+    return {
+      modality: 'annual',
+      label: 'Plan Anual',
+      formHint: `Incluye licencia anual del software, terminal biométrica incluida (hasta ${VENTAS_MAX_AUTO_QUOTE_TERMINALS} en cotización automática), instalación, migración, capacitación, soporte local e impuestos.`,
+      includes: [
+        'Licencia anual de software Humano SISU',
+        ...SHARED_SERVICE_INCLUDES,
+        TERMINALS_INCLUDED_LINE,
+      ],
+      excludesOrNotes: [],
+      successSummaryLine: `Incluye licencia anual del software, terminal biométrica (hasta ${VENTAS_MAX_AUTO_QUOTE_TERMINALS} en esta propuesta), instalación, migración, capacitación, soporte local e impuestos.`,
     }
   }
 
@@ -54,11 +89,11 @@ export function getVentasModalityDefinition(modality: VentasBillingModality): Ve
     modality: 'annual',
     label: 'Plan Anual',
     formHint:
-      'Incluye licencia anual del software, terminal biométrica incluida, instalación, migración, capacitación, soporte local e impuestos.',
-    includes: ['Licencia anual de software Humano SISU', ...SHARED_SERVICE_INCLUDES, ...ANNUAL_ONLY_INCLUDES],
-    excludesOrNotes: [],
+      'Incluye licencia anual del software, instalación, migración, capacitación, soporte local e impuestos. La terminal biométrica no está incluida en este rango: se cotiza como Servicio de Continuidad de Hardware (cuota mensual por terminal).',
+    includes: ['Licencia anual de software Humano SISU', ...SHARED_SERVICE_INCLUDES],
+    excludesOrNotes: [...TERMINALS_SEPARATE_NOTES],
     successSummaryLine:
-      'Incluye licencia anual del software, terminal biométrica (hasta 3 en esta propuesta), instalación, migración, capacitación, soporte local e impuestos.',
+      'Incluye licencia anual del software y servicios de implementación. La terminal biométrica se cotiza por separado como continuidad de hardware según terminales indicadas.',
   }
 }
 
@@ -87,19 +122,24 @@ export function hardwareFeeMonthly(terminalsCount: number): { fee: number; speci
 export function buildTerminalsPricingNote(params: {
   modality: VentasBillingModality
   terminalsCount: number
+  employeesCount: number
 }): string {
   const n = params.terminalsCount
   const label = n === 1 ? '1 terminal declarada' : `${n} terminales declaradas`
+  const includes = quoteIncludesBiometricTerminals(params.modality, params.employeesCount)
 
-  if (params.modality === 'annual') {
+  if (includes) {
     return `${label} · terminal biométrica incluida en plan anual (hasta ${VENTAS_MAX_AUTO_QUOTE_TERMINALS} en cotización automática)`
   }
 
-  return `${label} · terminal biométrica vendida por separado; continuidad de hardware en total mensual`
+  return `${label} · terminal biométrica vendida por separado; continuidad de hardware`
 }
 
-export function buildModalityIncludesPlainLines(modality: VentasBillingModality): string[] {
-  const def = getVentasModalityDefinition(modality)
+export function buildModalityIncludesPlainLines(
+  modality: VentasBillingModality,
+  ctx?: VentasModalityContext
+): string[] {
+  const def = getVentasModalityDefinition(modality, ctx)
   const lines = [`${def.label} — qué incluye:`, ...def.includes.map((item) => `✅ ${item}`)]
   for (const note of def.excludesOrNotes) {
     lines.push(`• ${note}`)
@@ -117,13 +157,13 @@ function escapeHtml(v: string): string {
 }
 
 /** Bloque HTML para email de cotización. */
-export function buildModalityIncludesHtml(modality: VentasBillingModality): string {
-  const def = getVentasModalityDefinition(modality)
+export function buildModalityIncludesHtml(
+  modality: VentasBillingModality,
+  ctx?: VentasModalityContext
+): string {
+  const def = getVentasModalityDefinition(modality, ctx)
   const items = def.includes
-    .map(
-      (item) =>
-        `<li style="margin-bottom: 6px;">✅ ${escapeHtml(item)}</li>`
-    )
+    .map((item) => `<li style="margin-bottom: 6px;">✅ ${escapeHtml(item)}</li>`)
     .join('')
   const notes = def.excludesOrNotes
     .map((note) => `<li style="margin-bottom: 6px; color: #555;">${escapeHtml(note)}</li>`)
@@ -141,6 +181,7 @@ export function buildModalityIncludesHtml(modality: VentasBillingModality): stri
 }
 
 export function buildMonthlyPricingBreakdownLines(quote: QuotationQuote, fmt: (n: number) => string): string[] {
+  const employeesCount = quote.employees_count || quote.tier.min_employees
   const lines: string[] = [
     `- Software (mensual): ${fmt(quote.monthly_software_total)} / mes`,
     `- Continuidad de hardware: ${fmt(quote.monthly_hardware_fee)} / mes`,
@@ -153,7 +194,13 @@ export function buildMonthlyPricingBreakdownLines(quote: QuotationQuote, fmt: (n
     lines.push(`- ${label}: −${fmt(quote.annual_discount_amount / 12)} / mes`)
   }
   lines.push(`- Total mensual cotizado: ${fmt(quote.monthly_total)} / mes`)
-  lines.push(buildTerminalsPricingNote({ modality: 'monthly', terminalsCount: quote.terminals_count }))
+  lines.push(
+    buildTerminalsPricingNote({
+      modality: 'monthly',
+      terminalsCount: quote.terminals_count,
+      employeesCount,
+    })
+  )
   return lines
 }
 
@@ -162,8 +209,11 @@ export function buildUrgencyOfferPitchText(_modality: VentasBillingModality): st
   return 'Si aún haces estos procesos a mano, verdaderamente queremos ayudarte. Te otorgamos un 20% de descuento sobre el total del plan de software que elegiste por contratación temprana.'
 }
 
-export function buildModalityPerksSummaryLines(modality: VentasBillingModality): string[] {
-  const def = getVentasModalityDefinition(modality)
+export function buildModalityPerksSummaryLines(
+  modality: VentasBillingModality,
+  ctx?: VentasModalityContext
+): string[] {
+  const def = getVentasModalityDefinition(modality, ctx)
   return [
     ...def.includes.map((item) => `✅ ${item}`),
     ...def.excludesOrNotes.map((note) => `• ${note}`),
@@ -171,6 +221,7 @@ export function buildModalityPerksSummaryLines(modality: VentasBillingModality):
 }
 
 export function buildAnnualPricingBreakdownLines(quote: QuotationQuote, fmt: (n: number) => string): string[] {
+  const employeesCount = quote.employees_count || quote.tier.min_employees
   const lines: string[] = [`- Subtotal anual (licencia): ${fmt(quote.annual_subtotal)} / año`]
   if (quote.coupon_applied) {
     const couponName = quote.coupon_code_applied?.trim()
@@ -178,6 +229,15 @@ export function buildAnnualPricingBreakdownLines(quote: QuotationQuote, fmt: (n:
     lines.push(`- ${label}: −${fmt(quote.annual_discount_amount)} / año`)
   }
   lines.push(`- Total anual cotizado: ${fmt(quote.annual_total)} / año`)
-  lines.push(buildTerminalsPricingNote({ modality: 'annual', terminalsCount: quote.terminals_count }))
+  if (quote.monthly_hardware_fee > 0) {
+    lines.push(`- Continuidad de hardware: ${fmt(quote.monthly_hardware_fee)} / mes`)
+  }
+  lines.push(
+    buildTerminalsPricingNote({
+      modality: 'annual',
+      terminalsCount: quote.terminals_count,
+      employeesCount,
+    })
+  )
   return lines
 }

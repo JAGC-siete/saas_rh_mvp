@@ -85,11 +85,11 @@ export default function MainHeader({ enableScrollEffect = false, fixed = true }:
               <div className="flex items-center cursor-pointer">
                 <div className="bg-white/10 px-2 py-1 rounded-lg border border-white/20 backdrop-blur-sm transition-all">
                   <Image
-                    src="/logo-humano-sisu.png"
+                    src="/brand/logo-humano-sisu-sm.png"
                     alt="Humano SISU Logo"
-                    width={40}
-                    height={40}
-                    className="rounded-lg w-10 h-10"
+                    width={64}
+                    height={36}
+                    className="rounded-md h-10 w-auto"
                   />
                 </div>
               </div>

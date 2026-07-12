@@ -2,15 +2,114 @@
 
 | # | Template | Ángulo | Título anuncio |
 |---|----------|--------|----------------|
-| 1 | Drake Hotline Bling | Recibo no cuadra | No adivines tu sueldo, calculalo legalmente |
-| 2 | Distracted Boyfriend | Recibo no cuadra | Dejando el Excel por la calculadora de SISU |
-| 3 | Change My Mind | RRHH no explica | RRHH no quiere que sepas cuánto es el RAP |
-| 4 | Gru's Plan | RRHH no explica | El plan perfecto para entender tu voucher |
-| 5 | Expanding Brain | Burocracia/Instantáneo | Evolución de cómo saber tu salario neto |
+| 1 | They're The Same Picture | Recibo no cuadra | ¿Tu recibo miente o solo te ocultan la verdad? |
+| 2 | Change My Mind | RRHH no explica | La verdad que RRHH prefiere no discutir |
+| 3 | Woman Yelling At Cat | Recibo no cuadra | Evita el colapso mental cada quincena |
+| 4 | Drake Hotline Bling | Burocracia/Instantáneo | Modo Cavernícola vs Modo Pro |
+| 5 | Expanding Brain | RRHH no explica | Evolución de la inteligencia financiera laboral |
 
 ---
 
-## Propuesta 1 — Drake Hotline Bling
+## Propuesta 1 — [They're The Same Picture]
+
+**Template imgflip:** They're The Same Picture  
+**Link:** https://imgflip.com/memetemplate/They-Are-The-Same-Picture
+
+**Texto en el meme (paneles):**
+
+| Panel / zona | Texto |
+|--------------|-------|
+| Imagen izquierda | Lo que creía que iba a ganar según el contrato |
+| Imagen derecha | El neto de mi voucher quincenal |
+| Mujer de oficina | RRHH dice que los descuentos son legales |
+| Pam | Es la misma decepción |
+
+**Título del anuncio (feed):**  
+¿Tu recibo miente o solo te ocultan la verdad?
+
+**Copy del post:**  
+A veces el voucher parece escrito en otro idioma. 😵
+
+No adivines más. Descubre exactamente cuánto te quitan de IHSS, RAP e ISR en 30 segundos.
+
+¿Te ha pasado que el neto no cuadra con tu cuenta? 👇
+
+Prueba la calculadora gratis aquí:
+
+**CTA:**  
+https://humanosisu.net/calculadora-deducciones?utm_source=facebook&utm_medium=organic&utm_campaign=calc-meme-2026-07-11-1
+
+**Por qué funciona:**  
+Ángulo 'Recibo no cuadra'. Genera indignación relatable y curiosidad por validar el sueldo.
+
+---
+
+## Propuesta 2 — [Change My Mind]
+
+**Template imgflip:** Change My Mind  
+**Link:** https://imgflip.com/memetemplate/Change-My-Mind
+
+**Texto en el meme (paneles):**
+
+| Panel / zona | Texto |
+|--------------|-------|
+| Cartel en la mesa | RRHH nunca te explica la diferencia real entre el techo del IHSS y el RAP |
+| Abajo | Change my mind |
+
+**Título del anuncio (feed):**  
+La verdad que RRHH prefiere no discutir
+
+**Copy del post:**  
+A nadie le gusta que le hablen con tecnicismos cuando se trata de su dinero. 💸
+
+Saca el desglose legal exacto de tu sueldo sin tener que pedir permiso ni esperar una constancia.
+
+¿Crees que te están descontando de más o de menos? Comenta tu salario redondeado y te ayudamos. 👇
+
+Calcula aquí:
+
+**CTA:**  
+https://humanosisu.net/calculadora-deducciones?utm_source=facebook&utm_medium=organic&utm_campaign=calc-meme-2026-07-11-2
+
+**Por qué funciona:**  
+Ángulo 'RRHH no explica'. Posiciona la herramienta como un acto de empoderamiento del empleado.
+
+---
+
+## Propuesta 3 — [Woman Yelling At Cat]
+
+**Template imgflip:** Woman Yelling At Cat  
+**Link:** https://imgflip.com/memetemplate/Woman-Yelling-At-Cat
+
+**Texto en el meme (paneles):**
+
+| Panel / zona | Texto |
+|--------------|-------|
+| Mujer gritando | ¡¿POR QUÉ ME QUITARON TANTO ESTE MES?! |
+| Gato tranquilo | Usa la calculadora y deja de gritar |
+| Mesa (opcional) | Lic. de Planillas |
+
+**Título del anuncio (feed):**  
+Evita el colapso mental cada quincena
+
+**Copy del post:**  
+Ese momento donde ves el neto y sientes que el ISR se llevó hasta tus sueños. 💀
+
+Calcula tu sueldo neto real (mensual o quincenal) con el motor legal de Honduras. Rápido, gratis y sin registros.
+
+Etiqueta a ese compa que siempre anda quebrado el día 2. 👇
+
+Saca tu cuenta aquí:
+
+**CTA:**  
+https://humanosisu.net/calculadora-deducciones?utm_source=facebook&utm_medium=organic&utm_campaign=calc-meme-2026-07-11-3
+
+**Por qué funciona:**  
+Ángulo 'Recibo no cuadra'. Usa humor y caos visual para atraer clics rápidos.
+
+---
+
+## Propuesta 4 — [Drake Hotline Bling]
 
 **Template imgflip:** Drake Hotline Bling  
 **Link:** https://imgflip.com/memetemplate/Drake-Hotline-Bling
@@ -19,105 +118,30 @@
 
 | Panel / zona | Texto |
 |--------------|-------|
-| Panel arriba (No) | Tratar de cuadrar el voucher con una calculadora básica |
-| Panel abajo (Sí) | Usar el motor legal de Humano SISU en 30 segundos |
+| Drake rechaza | Esperar 5 días a que RRHH te dé la constancia de deducciones |
+| Drake acepta | Saber tu neto exacto en 30 segundos con la calculadora |
 
 **Título del anuncio (feed):**  
-Deja de pelear con los números de tu recibo 💸
+Modo Cavernícola vs Modo Pro
 
 **Copy del post:**  
-¿Pasás horas tratando de entender por qué el neto no coincide con lo que esperabas? 🙃 No más estrés quincenal. Obtené el desglose exacto de IHSS, RAP e ISR sin complicaciones. ⚡️ ¿Te ha pasado que el monto varía sin explicación? Contanos 👇
+Todavía hay gente pidiendo favores para saber cuánto ganan libres. 🤦‍♂️
+
+Sáltate la burocracia. Obtén el desglose de IHSS, RAP e ISR al instante y descarga tu PDF.
+
+¿Cuántos días tardan en tu empresa en darte una respuesta? 👇
+
+Hazlo tú mismo aquí:
 
 **CTA:**  
-https://humanosisu.net/calculadora-deducciones?utm_source=facebook&utm_medium=organic&utm_campaign=calc-meme-2026-07-11-1
-
-**Por qué funciona:  **
-Es un formato universal de "opción incorrecta vs correcta", posicionando la herramienta como la decisión inteligente y rápida.
-
----
-
-## Propuesta 2 — Distracted Boyfriend
-
-**Template imgflip:** Distracted Boyfriend  
-**Link:** https://imgflip.com/memetemplate/Distracted-Boyfriend
-
-**Texto en el meme (paneles):**
-
-| Panel / zona | Texto |
-|--------------|-------|
-| Novio | Empleado hondureño |
-| Novia (Enojada) | El Excel complejo de deducciones |
-| Chica caminando | Calculadora de Humano SISU (Gratis) |
-
-**Título del anuncio (feed):**  
-Cuando descubrís que hay una forma más fácil de calcular tu sueldo ✨
-
-**Copy del post:**  
-¿Todavía usás fórmulas de Excel que ni vos mismo entendés para saber cuánto vas a recibir? 📉 Pasate a lo instantáneo. Motor legal actualizado para Honduras, gratis y sin registro. 🚀 ¿Quién más odia pelearse con las fórmulas del ISR? Comentá "YO" 👇
-
-**CTA:  **
-https://humanosisu.net/calculadora-deducciones?utm_source=facebook&utm_medium=organic&utm_campaign=calc-meme-2026-07-11-2
-
-**Por qué funciona:  **
-Sátira visual sobre el abandono de métodos obsoletos (burocracia/Excel) en favor de una solución moderna y eficiente.
-
----
-
-## Propuesta 3 — Change My Mind
-
-**Template imgflip:** Change My Mind  
-**Link:** https://imgflip.com/memetemplate/Change-My-Mind
-
-**Texto en el meme (paneles):**
-
-| Elemento | Texto |
-|----------|-------|
-| Cartel en la mesa | RRHH prefiere que no sepas exactamente cuánto te quitan de RAP e ISR |
-| (abajo) | Change my mind |
-
-**Título del anuncio (feed):**  
-La verdad que RR.HH. no te cuenta sobre tu salario 🤐
-
-**Copy del post:**  
-¿Te han dicho que el cálculo es "estándar" pero nadie te explica la fórmula? 🧐 Tomá el control de tu dinero. Calculá tus deducciones legales en 30 segundos con la herramienta de Humano SISU. 🇭🇳 ¿Crees que es justo que no haya transparencia en los recibos? Debate aquí 👇
-
-**CTA:  **
-https://humanosisu.net/calculadora-deducciones?utm_source=facebook&utm_medium=organic&utm_campaign=calc-meme-2026-07-11-3
-
-**Por qué funciona:  **
-Crea un sentimiento de "nosotros contra ellos" (empleado vs burocracia), incentivando la curiosidad y el deseo de autonomía.
-
----
-
-## Propuesta 4 — Gru's Plan
-
-**Template imgflip:** Gru's Plan  
-**Link:** https://imgflip.com/memetemplate/Gru-Plan
-
-**Texto en el meme (paneles):**
-
-| Panel / zona | Texto |
-|--------------|-------|
-| Panel 1 | Quiero saber cuánto me van a pagar esta quincena |
-| Panel 2 | Le pregunto al Lic. de Planilla para que me explique |
-| Panel 3 | Me dice que me mandará la constancia en 5 días hábiles |
-| Panel 4 | Me dice que me mandará la constancia en 5 días hábiles |
-
-**Título del anuncio (feed):**  
-El ciclo infinito de esperar la respuesta de RRHH 💀
-
-**Copy del post:**  
-¿Harto de esperar días por una respuesta que podrías tener en segundos? 🕒 No dependás de la agenda de nadie. Calculá tu neto mensual o quincenal al instante y con base legal. ⚡️ ¿Cuántas veces te han dejado en visto en RRHH? Contanos tu tragedia 😂👇
-
-**CTA:  **
 https://humanosisu.net/calculadora-deducciones?utm_source=facebook&utm_medium=organic&utm_campaign=calc-meme-2026-07-11-4
 
-**Por qué funciona:  **
-Humor basado en la frustración compartida por la lentitud administrativa, resaltando el beneficio de la inmediatez.
+**Por qué funciona:**  
+Ángulo 'Burocracia/Instantáneo'. Contraste directo entre el dolor del proceso lento y la facilidad de la herramienta.
 
 ---
 
-## Propuesta 5 — Expanding Brain
+## Propuesta 5 — [Expanding Brain]
 
 **Template imgflip:** Expanding Brain  
 **Link:** https://imgflip.com/memetemplate/Expanding-Brain
@@ -126,19 +150,25 @@ Humor basado en la frustración compartida por la lentitud administrativa, resal
 
 | Panel / zona | Texto |
 |--------------|-------|
-| Cerebro 1 | Adivinar el neto basándose en la quincena pasada |
-| Cerebro 2 | Hacer un cálculo manual aproximado en una servilleta |
-| Cerebro 3 | Crear un Excel con 15 pestañas para el ISR progresivo |
-| Cerebro 4 | Usar la calculadora de Humano SISU en 30 segundos |
+| Cerebro 1 | Adivinar el neto basándose en el sueldo base |
+| Cerebro 2 | Hacer un Excel con fórmulas que no funcionan |
+| Cerebro 3 | Pedirle a RRHH que te explique los descuentos |
+| Cerebro 4 | Usar la calculadora de Humano SISU y saber el dato exacto |
 
 **Título del anuncio (feed):**  
-Evolucioná tu forma de revisar el sueldo 🧠✨
+Evolución de la inteligencia financiera laboral
 
-**Copyي del post:**  
-Pasá de la adivinación a la precisión legal. 🚀 Sin registros, sin guardar datos, solo la verdad de tu salario neto en Honduras. El motor más exacto del mercado, ahora gratis para vos. 🇭🇳 ¿En qué nivel de "cerebro" estás hoy? Comentá tu nivel (1-4) 👇
+**Copy del post:**  
+No seas el que se sorprende cuando llega el voucher. 🧠
 
-**CTA:  **
+Domina tus números. La herramienta gratuita que te da el desglose legal exacto sin guardar tus datos.
+
+¿Cuál es tu método para calcular la quincena? 👇
+
+Sube de nivel aquí:
+
+**CTA:**  
 https://humanosisu.net/calculadora-deducciones?utm_source=facebook&utm_medium=organic&utm_campaign=calc-meme-2026-07-11-5
 
-**Por qué funciona:  **
-Utiliza el formato de progresión para ridiculizar los métodos difíciles y elevar la herramienta como la cúspide de la eficiencia.
+**Por qué funciona:**  
+Ángulo 'RRHH no explica' / General. Formato de escala que premia el uso de la herramienta como la opción más inteligente.

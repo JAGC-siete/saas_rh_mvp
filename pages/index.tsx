@@ -74,7 +74,7 @@ export default function LandingPage() {
       <MarketingStyles sheets={['landing', 'landing-liquid']} />
       <Head>
         <title>{pageTitle}</title>
-        <link rel="icon" href="/logo-humano-sisu.png" />
+        <link rel="icon" href="/brand/favicon-humano-sisu.png" />
         <meta name="description" content={pageDescription} />
         <meta name="keywords" content="Humano SISU, software recursos humanos, control de asistencia, nómina automatizada, Honduras El Salvador Guatemala, IHSS RAP ISR, biometría planilla" />
         <meta name="author" content="Humano SISU" />
@@ -91,8 +91,6 @@ export default function LandingPage() {
         <meta name="twitter:description" content={pageDescription} />
         <meta name="twitter:image" content={`https://humanosisu.net${ogImage}`} />
         <link rel="canonical" href="https://humanosisu.net" />
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
       </Head>
 
       <SchemaMarkup schema={[organizationSchema, webSiteSchema, webPageSchema]} />

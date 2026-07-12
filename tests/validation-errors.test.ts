@@ -42,6 +42,16 @@ describe('ventas form step validators', () => {
   it('ventasScopeErrors is empty for valid scope', () => {
     assert.equal(hasValidationErrors(ventasScopeErrors(validQuote)), false)
   })
+
+  it('ventasScopeErrors rejects monthly below 21 employees', () => {
+    const e = ventasScopeErrors({
+      ...validQuote,
+      employees_count: 15,
+      billing_modality: 'monthly',
+    })
+    assert.equal(hasValidationErrors(e), true)
+    assert.match(e.billing_modality || '', /21/)
+  })
 })
 
 describe('activar step validators', () => {

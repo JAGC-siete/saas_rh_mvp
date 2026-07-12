@@ -11,7 +11,7 @@ import { generateVentasQuotationEmailText } from '../lib/ventas/email-template'
 import type { QuotationQuote } from '../lib/ventas/types'
 
 const monthlyQuote: QuotationQuote = {
-  tier: { min_employees: 1, max_employees: 30 },
+  tier: { min_employees: 21, max_employees: 50 },
   billing_modality: 'monthly',
   currency: 'HNL',
   annual_subtotal: 76500,
@@ -23,6 +23,7 @@ const monthlyQuote: QuotationQuote = {
   coupon_applied: false,
   discount_pct_applied: 0,
   terminals_count: 2,
+  employees_count: 30,
 }
 
 describe('ventas quote coherence', () => {
@@ -50,6 +51,8 @@ describe('ventas quote coherence', () => {
       coupon_applied: true,
       discount_pct_applied: 0.2,
       coupon_code_applied: 'aghas',
+      tier: { min_employees: 71, max_employees: 90 },
+      employees_count: 80,
     }
     const summary = buildQuotationPlanSummary({ quote: annualQuote, sentAt, now: sentAt })
     const text = generateVentasQuotationEmailText({

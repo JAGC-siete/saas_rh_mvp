@@ -75,7 +75,7 @@ const nextConfig = {
     return [
       {
         source: '/favicon.ico',
-        destination: '/logo-humano-sisu.png',
+        destination: '/brand/favicon-humano-sisu.png',
       },
       // Public slug → internal pages (files stay at pages/info*)
       {

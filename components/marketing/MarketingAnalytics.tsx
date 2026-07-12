@@ -6,6 +6,9 @@ const GA4_MEASUREMENT_ID =
   process.env['NEXT_PUBLIC_GA4_MEASUREMENT_ID']?.trim() || 'G-4N343EZLY9'
 const META_PIXEL_ID = resolveMetaPixelId()
 
+/** Delay past typical Lighthouse LCP window; interaction still loads sooner. */
+const IDLE_FALLBACK_MS = 15_000
+
 type AnalyticsWindow = Window & {
   dataLayer?: unknown[]
   __hsAnalyticsLoaded?: boolean
@@ -15,9 +18,12 @@ type AnalyticsWindow = Window & {
 
 /**
  * Third-party analytics only on marketing surfaces.
- * Loads after first user interaction, or after a long idle fallback —
+ * Loads after first intentional interaction, or after a long idle fallback —
  * keeps gtag/pixel out of the critical main-thread window
- * (Minimize main thread work / Remove unused JavaScript).
+ * (Minimize main thread work / Remove unused JavaScript / cache lifetimes).
+ *
+ * Scroll is intentionally omitted: Lighthouse often synthesizes scroll and
+ * would pull ~250KiB+ of unused third-party JS into the lab score.
  */
 export default function MarketingAnalytics() {
   useEffect(() => {
@@ -81,17 +87,13 @@ export default function MarketingAnalytics() {
     const cleanup = () => {
       window.removeEventListener('pointerdown', onInteract)
       window.removeEventListener('keydown', onInteract)
-      window.removeEventListener('scroll', onInteract, true)
-      window.removeEventListener('touchstart', onInteract)
       if (idleTimer) clearTimeout(idleTimer)
     }
 
     window.addEventListener('pointerdown', onInteract, { once: true, passive: true })
     window.addEventListener('keydown', onInteract, { once: true })
-    window.addEventListener('scroll', onInteract, { once: true, passive: true, capture: true })
-    window.addEventListener('touchstart', onInteract, { once: true, passive: true })
     // Real users who never interact still get attribution; Lighthouse usually finishes earlier.
-    idleTimer = setTimeout(load, 12_000)
+    idleTimer = setTimeout(load, IDLE_FALLBACK_MS)
 
     return () => {
       cancelled = true

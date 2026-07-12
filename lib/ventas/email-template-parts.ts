@@ -1,7 +1,8 @@
 import type { QuotationQuote } from './types'
-import { buildQuotationPlanSummary } from './quote-display'
+import { buildQuotationPlanSummary, employeesCountFromQuote } from './quote-display'
 import { getVentasModalityDefinition } from './modality-includes'
 import { VENTAS_BRAND as B, buildTerminalsDisplayLabel } from './brand-styles'
+import { quoteIncludesBiometricTerminals } from './business-rules'
 
 export function escapeVentasHtml(v: string): string {
   return v
@@ -35,11 +36,11 @@ export function buildClientFichaHtml(params: {
   countryLabel: string
   tierLabel: string
   terminalsCount: number
-  isAnnual: boolean
+  includesTerminals: boolean
 }): string {
   const terminals = buildTerminalsDisplayLabel({
     terminalsCount: params.terminalsCount,
-    isAnnual: params.isAnnual,
+    includesTerminals: params.includesTerminals,
   })
 
   return `
@@ -77,7 +78,10 @@ export function buildPriceCardHtml(params: {
 }): string {
   const { showPdfNote = true } = params
   const summary = buildQuotationPlanSummary(params)
-  const modalityLabel = getVentasModalityDefinition(params.quote.billing_modality).label
+  const employees = employeesCountFromQuote(params.quote)
+  const modalityLabel = getVentasModalityDefinition(params.quote.billing_modality, {
+    employeesCount: employees,
+  }).label
 
   let inner = ''
   for (const line of summary.lines) {

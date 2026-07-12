@@ -18,7 +18,9 @@ const montserrat = Montserrat({
   subsets: ['latin'],
   weight: ['400', '500', '600', '700'],
   display: 'swap',
+  preload: true,
   variable: '--font-montserrat',
+  adjustFontFallback: true,
 })
 
 // Load environment variables at the top level

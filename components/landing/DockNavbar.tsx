@@ -67,11 +67,12 @@ export default function DockNavbar({
         <div className="flex items-center gap-2 sm:gap-3 h-11 sm:h-12">
           <Link prefetch={false} href="/" className="shrink-0">
             <Image
-              src="/logo-humano-sisu.png"
+              src="/brand/logo-humano-sisu-sm.png"
               alt="Humano SISU"
-              width={32}
-              height={32}
-              className="rounded-lg w-8 h-8"
+              width={64}
+              height={36}
+              priority
+              className="rounded-md h-8 w-auto"
             />
           </Link>
 

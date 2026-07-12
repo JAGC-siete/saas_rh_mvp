@@ -14,6 +14,8 @@ import {
 } from './email-template-parts'
 import { VENTAS_BRAND as B } from './brand-styles'
 import { getVentasModalityDefinition } from './modality-includes'
+import { employeesCountFromQuote } from './quote-display'
+import { quoteIncludesBiometricTerminals } from './business-rules'
 import { wrapLiquidEmailFragment } from '../emails/liquid-layout'
 
 function firstNameFromContact(contactName?: string): string {
@@ -59,6 +61,8 @@ export function generateVentasQuotationEmailHTML(params: {
 
   const companyLabel = companyName?.trim() || 'tu empresa'
   const isAnnual = quote.billing_modality === 'annual'
+  const employees = employeesCountFromQuote(quote)
+  const includesTerminals = quoteIncludesBiometricTerminals(quote.billing_modality, employees)
   const summary = buildQuotationPlanSummary({ quote, sentAt, now })
   const quoteLabel = isAnnual ? 'COTIZACIÓN ANUAL' : 'COTIZACIÓN MENSUAL'
   const refLabel = buildVentasRefLabel(companyName, contactName)
@@ -71,7 +75,7 @@ export function generateVentasQuotationEmailHTML(params: {
         countryLabel,
         tierLabel: summary.tierLabel,
         terminalsCount: quote.terminals_count,
-        isAnnual,
+        includesTerminals,
       })}
       <p style="margin: 0 0 14px 0; font-size: 18px; line-height: 1.4; font-weight: bold; color: ${B.emailText};">${opening}</p>
       ${buildPriceCardHtml({ quote, sentAt, now })}
@@ -98,13 +102,16 @@ export function generateVentasQuotationEmailText(params: {
   const opening = firstName ? `${firstName}, aquí están tus números.` : 'Aquí están tus números.'
   const companyLabel = companyName?.trim() || 'tu empresa'
   const summary = buildQuotationPlanSummary({ quote, sentAt, now })
-  const modalityLabel = getVentasModalityDefinition(quote.billing_modality).label
+  const employees = employeesCountFromQuote(quote)
+  const modalityLabel = getVentasModalityDefinition(quote.billing_modality, {
+    employeesCount: employees,
+  }).label
   const isAnnual = quote.billing_modality === 'annual'
   const quoteLabel = isAnnual ? 'COTIZACIÓN ANUAL' : 'COTIZACIÓN MENSUAL'
   const refLabel = buildVentasRefLabel(companyName, contactName)
   const terminals = buildTerminalsDisplayLabel({
     terminalsCount: quote.terminals_count,
-    isAnnual,
+    includesTerminals: quoteIncludesBiometricTerminals(quote.billing_modality, employees),
   })
 
   const lines: string[] = [

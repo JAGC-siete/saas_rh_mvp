@@ -138,6 +138,8 @@ export const MIDDLEWARE_CONFIG = {
   staticAssets: [
     '/voucher-sample.png',
     '/logo-humano-sisu.png',
+    '/brand/logo-humano-sisu-sm.png',
+    '/brand/favicon-humano-sisu.png',
     '/favicon.ico',
     '/robots.txt',
     '/sitemap.xml'

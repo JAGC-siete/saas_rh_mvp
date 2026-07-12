@@ -1,10 +1,8 @@
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
-import { motion } from 'framer-motion'
 import { CheckCircleIcon, BoltIcon, UserGroupIcon } from '@heroicons/react/24/outline'
 import { trackCTAClick } from '../../lib/analytics/googleAds'
 import { nowInHonduras } from '../../lib/timezone'
-import ScrollReveal from './ScrollReveal'
 
 const HeroProductWindow = dynamic(() => import('./HeroProductWindow'), {
   ssr: false,
@@ -26,8 +24,8 @@ export default function MagneticHero() {
     <section className="relative py-6 sm:py-8 md:py-12 lg:py-16 overflow-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-[7fr_3fr] gap-8 lg:gap-12 items-center">
-          {/* Left 70% */}
-          <ScrollReveal>
+          {/* Above-fold: no opacity:0 motion — LCP was delayed ~94% by ScrollReveal/framer. */}
+          <div>
             <div className="flex flex-wrap gap-2 sm:gap-3 mb-6">
               <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-500/15 text-green-300 text-xs rounded-full border border-green-500/25 font-medium">
                 <CheckCircleIcon className="h-3.5 w-3.5 shrink-0" aria-hidden />
@@ -43,19 +41,14 @@ export default function MagneticHero() {
               </span>
             </div>
 
-            <motion.h1
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
-              className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-5xl font-bold leading-tight"
-            >
+            <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-5xl font-bold leading-tight">
               <span className="bg-gradient-to-r from-white via-brand-200 to-brand-400 bg-clip-text text-transparent">
                 SISU — Control de Asistencia y Software de Recursos Humanos
               </span>
               <span className="block text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-4xl mt-2 bg-gradient-to-r from-brand-200 to-brand-500 bg-clip-text text-transparent font-semibold">
                 Exclusivo para Honduras, El Salvador y Guatemala.
               </span>
-            </motion.h1>
+            </h1>
 
             <p className="text-base sm:text-lg text-slate-400 max-w-2xl mt-4 sm:mt-6 font-medium landing-dark-text">
               Nuestro ecosistema integra reloj biométrico inteligente con software en un solo flujo. Digitaliza el control de asistencia, automatiza deducciones legales, elimina errores de Excel y libera a tu equipo para hacer crecer la empresa.
@@ -65,7 +58,7 @@ export default function MagneticHero() {
               <Link prefetch={false}
                 href="/ventas"
                 onClick={() => trackCTAClick('solicitar_cotizacion', 'landing_hero_primary')}
-                className="btn-shiny inline-flex items-center justify-center rounded-xl px-6 py-3 min-h-[48px] text-base font-semibold bg-brand-500 text-white hover:bg-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-400 shadow-[0_8px_30px_rgb(0,0,0,0.12)] animate-pulse-glow transition-colors text-center"
+                className="btn-shiny inline-flex items-center justify-center rounded-xl px-6 py-3 min-h-[48px] text-base font-semibold bg-brand-500 text-white hover:bg-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-400 shadow-[0_8px_30px_rgb(0,0,0,0.12)] transition-colors text-center"
                 data-analytics="cta_hero_ventas"
               >
                 Solicitar cotización
@@ -86,12 +79,12 @@ export default function MagneticHero() {
               Próximo cierre de planilla (referencia):{' '}
               <span className="text-white font-medium">{nextPayday.toLocaleDateString()}</span>
             </p>
-          </ScrollReveal>
+          </div>
 
-          {/* Right 30% — product window */}
-          <ScrollReveal delay={0.15}>
+          {/* Below critical text — client-only product window */}
+          <div>
             <HeroProductWindow />
-          </ScrollReveal>
+          </div>
         </div>
       </div>
     </section>

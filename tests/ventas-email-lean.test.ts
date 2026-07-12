@@ -5,7 +5,7 @@ import { generateVentasQuotationEmailHTML, generateVentasQuotationEmailText } fr
 import type { QuotationQuote } from '../lib/ventas/types'
 
 const quote: QuotationQuote = {
-  tier: { min_employees: 1, max_employees: 30 },
+  tier: { min_employees: 71, max_employees: 90 },
   billing_modality: 'annual',
   currency: 'HNL',
   annual_subtotal: 76500,
@@ -18,6 +18,7 @@ const quote: QuotationQuote = {
   discount_pct_applied: 0.45,
   coupon_code_applied: 'gastro2026',
   terminals_count: 1,
+  employees_count: 80,
 }
 
 describe('ventas lean quotation email', () => {

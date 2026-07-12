@@ -6,6 +6,7 @@
 import { mkdirSync, writeFileSync } from 'fs'
 import { createAdminClient } from '../lib/supabase/server'
 import { hardwareFeeMonthly } from '../lib/ventas/modality-includes'
+import { shouldChargeHardwareContinuity } from '../lib/ventas/business-rules'
 import { resolveTierByEmployees, roundMoney } from '../lib/ventas/pricing'
 import { generateVentasQuotationPDF } from '../lib/ventas/pdf'
 import { getVentasBankDetailsFromEnv } from '../lib/ventas/bank-details'
@@ -30,7 +31,9 @@ async function main() {
   const annualTotal = roundMoney(annualSubtotal - annualDiscountAmount)
   const monthlySoftwareTotal = roundMoney(annualTotal / 12)
   const hw = hardwareFeeMonthly(TERMINALS_COUNT)
-  const monthlyHardwareFee = BILLING_MODALITY === 'monthly' ? hw.fee : 0
+  const monthlyHardwareFee = shouldChargeHardwareContinuity(BILLING_MODALITY, EMPLOYEES_COUNT)
+    ? hw.fee
+    : 0
   const monthlyTotal = roundMoney(monthlySoftwareTotal + monthlyHardwareFee)
 
   const quote = {
@@ -47,6 +50,7 @@ async function main() {
     tier: { min_employees: tier.min_employees, max_employees: tier.max_employees },
     billing_modality: BILLING_MODALITY,
     terminals_count: TERMINALS_COUNT,
+    employees_count: EMPLOYEES_COUNT,
   }
 
   const sentAt = new Date()
