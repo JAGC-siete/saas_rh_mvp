@@ -2,25 +2,23 @@ import Head from 'next/head'
 import { useCallback, useEffect, useState } from 'react'
 import dynamic from 'next/dynamic'
 import DemoFooter from '../components/DemoFooter'
-import FreeToolsSection from '../components/FreeToolsSection'
-import AWSCertificationsSection from '../components/AWSCertificationsSection'
-// import MailListSection from '../components/MailListSection' // Sección oculta temporalmente
-// import LandingClosingSection from '../components/LandingClosingSection' // Sección oculta temporalmente
 import SchemaMarkup from '../components/SEO/SchemaMarkup'
 import DockNavbar from '../components/landing/DockNavbar'
 import HomeAnnouncementBanner from '../components/landing/HomeAnnouncementBanner'
 import MagneticHero from '../components/landing/MagneticHero'
-import HowItWorksBento from '../components/landing/HowItWorksBento'
-// import BentoServicesGrid from '../components/landing/BentoServicesGrid' // Sección oculta temporalmente
-import ScrollReveal from '../components/landing/ScrollReveal'
 import TrustBar from '../components/landing/TrustBar'
 import MeshBackground from '../components/landing/MeshBackground'
+import MarketingStyles from '../components/marketing/MarketingStyles'
 import { getPageTitle } from '../lib/seo/title'
 import { getPageDescription } from '../lib/seo/description'
 import { generateOrganizationSchema, generateWebSiteSchema, generateWebPageSchema, generateReviewSchema } from '../lib/seo/schema'
 import { initGoogleAdsTracking } from '../lib/analytics/googleAds'
 
 const CursorSpotlight = dynamic(() => import('../components/landing/CursorSpotlight'), { ssr: false })
+const ScrollReveal = dynamic(() => import('../components/landing/ScrollReveal'))
+const HowItWorksBento = dynamic(() => import('../components/landing/HowItWorksBento'))
+const FreeToolsSection = dynamic(() => import('../components/FreeToolsSection'))
+const AWSCertificationsSection = dynamic(() => import('../components/AWSCertificationsSection'))
 
 /** Approx banner height — keeps dock + page padding clear of the stripe. */
 const HOME_BANNER_OFFSET_PX = 36
@@ -73,6 +71,7 @@ export default function LandingPage() {
         bannerVisible ? 'pt-28 sm:pt-32' : 'pt-20 sm:pt-24'
       }`}
     >
+      <MarketingStyles sheets={['landing', 'landing-liquid']} />
       <Head>
         <title>{pageTitle}</title>
         <link rel="icon" href="/logo-humano-sisu.png" />

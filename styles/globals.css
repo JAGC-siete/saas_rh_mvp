@@ -529,3 +529,27 @@ html, body, #__next, #root {
     }
   }
 }
+
+/* App-critical shell tokens (Remove unused CSS — full landing sheets load only on marketing). */
+.bg-mesh {
+  background-color: #020617;
+  background-image:
+    radial-gradient(at 0% 0%, rgba(59, 130, 246, 0.15) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(49, 46, 129, 0.2) 0px, transparent 50%),
+    radial-gradient(at 50% 50%, rgba(30, 58, 138, 0.1) 0px, transparent 50%);
+  background-size: 200% 200%;
+}
+
+.glass-modern {
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+}
+
+@media (max-width: 768px) {
+  .glass-modern {
+    background: rgba(15, 23, 42, 0.75);
+  }
+}

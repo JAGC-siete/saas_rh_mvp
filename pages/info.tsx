@@ -3,6 +3,7 @@ import { useEffect } from 'react'
 import PublicPageShell from '../components/landing/PublicPageShell'
 import PublicPageHead from '../components/SEO/PublicPageHead'
 import SchemaMarkup from '../components/SEO/SchemaMarkup'
+import CampaignStyles from '../components/marketing/CampaignStyles'
 import SealedEnvelopeLead from '../components/info-game/SealedEnvelopeLead'
 import { initGoogleAdsTracking } from '../lib/analytics/googleAds'
 import { generateBreadcrumbListSchema, generateFAQPageSchema, generateWebPageSchema } from '../lib/seo/schema'
@@ -55,6 +56,7 @@ export default function InfoPage() {
 
   return (
     <PublicPageShell showSpotlight loginAlwaysVisible>
+      <CampaignStyles sheets={['viernes']} />
       <PublicPageHead title={pageTitle} description={pageDescription} canonicalPath={INFO_FUNNEL_PUBLIC_PATH} />
       <SchemaMarkup schema={[webPageSchema, breadcrumbSchema, faqSchema]} />
 

@@ -1,18 +1,25 @@
 import React, { createContext } from 'react'
 import { AppProps } from 'next/app'
+import dynamic from 'next/dynamic'
 import { useRouter } from 'next/router'
-import { AuthProvider } from '../lib/auth'
-import { NotificationProvider } from '../components/NotificationProvider'
-import { SessionExpiryWarning } from '../components/SessionExpiryWarning'
+import { Montserrat } from 'next/font/google'
 import { ToastContainer } from '../lib/toast'
 import { cn } from '../lib/utils'
 import { isPublicMarketingRoute } from '../lib/seo/public-ssr-routes'
+import MarketingAnalytics from '../components/marketing/MarketingAnalytics'
 import '../styles/globals.css'
-import '../styles/landing.css'
-import '../styles/landing-liquid.css'
-import '../styles/paz-landing.css'
-import '../styles/viernes-landing.css'
-import '../styles/activar-landing.css'
+
+const AppAuthenticatedProviders = dynamic(
+  () => import('../components/AppAuthenticatedProviders'),
+  { ssr: true }
+)
+
+const montserrat = Montserrat({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  display: 'swap',
+  variable: '--font-montserrat',
+})
 
 // Load environment variables at the top level
 if (typeof window === 'undefined') {
@@ -39,9 +46,10 @@ export default function App({ Component, pageProps }: AppProps) {
   const isAuthEntryRoute =
     router.pathname === '/app/login' || router.pathname === '/app/forgot-password'
 
+  const isMarketingRoute = isPublicMarketingRoute(router.pathname)
+
   // SSR completo solo en landings SEO; shell /app y rutas legacy esperan hidratación.
-  const shouldRenderImmediately =
-    isPublicMarketingRoute(router.pathname) || isAuthEntryRoute
+  const shouldRenderImmediately = isMarketingRoute || isAuthEntryRoute
 
   const needsClientHydrationGate = !shouldRenderImmediately
 
@@ -53,28 +61,28 @@ export default function App({ Component, pageProps }: AppProps) {
     )
   }
 
+  const page = (
+    <div className={cn(montserrat.variable, 'min-h-screen font-sans', !isMeshAppRoute && !isMarketingRoute && 'bg-app')}>
+      <Component {...pageProps} />
+    </div>
+  )
+
+  // Marketing: skip Auth/Notification (unused JS + main-thread) and load analytics late.
+  if (isMarketingRoute) {
+    return (
+      <SupabaseContext.Provider value={null}>
+        {page}
+        <ToastContainer />
+        <MarketingAnalytics />
+      </SupabaseContext.Provider>
+    )
+  }
+
   return (
     <SupabaseContext.Provider value={null}>
-      <AuthProvider>
-        <NotificationProvider>
-          <div className={cn('min-h-screen', !isMeshAppRoute && 'bg-app')}>
-            {/* Title tags are now handled by individual pages to avoid duplication */}
-            <Component {...pageProps} />
-            {/* Idle Timeout Warning - Shows at 80 minutes of inactivity */}
-            {router.pathname.startsWith('/app') && (
-              <SessionExpiryWarning
-                onExpiry={() => {
-                  // Redirect to login on session expiry
-                  if (typeof window !== 'undefined') {
-                    window.location.href = '/app/login'
-                  }
-                }}
-              />
-            )}
-            <ToastContainer />
-          </div>
-        </NotificationProvider>
-      </AuthProvider>
+      <AppAuthenticatedProviders showSessionWarning={router.pathname.startsWith('/app')}>
+        {page}
+      </AppAuthenticatedProviders>
     </SupabaseContext.Provider>
   )
 }

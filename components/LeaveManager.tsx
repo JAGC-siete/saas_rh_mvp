@@ -6,10 +6,20 @@ import type { LeaveAttendanceSummaryPayload } from '../lib/types/leave'
 import { cn } from '../lib/utils'
 import { Button } from './ui/button'
 import { useAuth } from '../lib/auth'
-import LeaveDashboard from './leave/LeaveDashboard'
 import LeaveForm, { type LeaveFormData } from './leave/LeaveForm'
 import LeaveRequestsTable from './leave/LeaveRequestsTable'
 import { useNotificationContext } from './NotificationProvider'
+
+const chartLoading = (
+  <div className="h-48 flex items-center justify-center rounded-xl border border-white/10 bg-white/5 text-gray-400 text-sm">
+    Cargando…
+  </div>
+)
+
+const LeaveDashboard = dynamic(() => import('./leave/LeaveDashboard'), {
+  ssr: false,
+  loading: () => chartLoading,
+})
 
 const LeaveCalendar = dynamic(() => import('./leave/LeaveCalendar'), {
   ssr: false,

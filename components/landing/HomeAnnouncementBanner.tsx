@@ -45,6 +45,7 @@ export default function HomeAnnouncementBanner({ onVisibilityChange }: Props) {
         <p className="text-center text-xs sm:text-sm text-violet-200/90 leading-snug">
           ¿Vienes por la calculadora de deducciones?{' '}
           <Link
+            prefetch={false}
             href="/calculadora"
             className="underline underline-offset-2 decoration-violet-300/70 hover:text-white transition-colors"
           >

@@ -4,6 +4,7 @@ import DemoFooter from '../DemoFooter'
 import DockNavbar from './DockNavbar'
 import MeshBackground from './MeshBackground'
 import TrustBar from './TrustBar'
+import MarketingStyles from '../marketing/MarketingStyles'
 
 const CursorSpotlight = dynamic(() => import('./CursorSpotlight'), { ssr: false })
 
@@ -28,6 +29,7 @@ export default function PublicPageShell({
 }: PublicPageShellProps) {
   return (
     <div className="min-h-screen bg-mesh relative text-white">
+      <MarketingStyles sheets={['landing', 'landing-liquid']} />
       <MeshBackground />
       {showSpotlight && <CursorSpotlight />}
       <DockNavbar loginAlwaysVisible={loginAlwaysVisible} />

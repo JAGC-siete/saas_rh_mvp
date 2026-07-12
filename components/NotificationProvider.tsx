@@ -1,25 +1,15 @@
-import React, { createContext, useContext, useEffect, useMemo, useRef } from 'react'
+import React, { useContext, useEffect, useMemo, useRef } from 'react'
 import { useNotifications, type AddNotificationInput, Notification } from '../lib/hooks/useNotifications'
 import NotificationToast from './NotificationToast'
 import { useAuth } from '../lib/auth'
 import { createClient } from '../lib/supabase/client'
+import {
+  NotificationContext,
+  type NotificationContextType,
+} from './notification-context'
 
-export interface NotificationContextType {
-  notifications: Notification[]
-  // eslint-disable-next-line no-unused-vars
-  addNotification: (notification: AddNotificationInput) => string | null
-  // eslint-disable-next-line no-unused-vars
-  removeNotification: (id: string) => void
-  // eslint-disable-next-line no-unused-vars
-  markAsRead: (id: string) => void
-  markAllAsRead: () => void
-  unreadCount: number
-   
-  filteredNotifications: ReturnType<typeof useNotifications>['filteredNotifications']
-  clearAll: () => void
-}
-
-export const NotificationContext = createContext<NotificationContextType | undefined>(undefined)
+export type { NotificationContextType }
+export { NotificationContext }
 
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
   const { notifications, addNotification, removeNotification, markAsRead, markAllAsRead, unreadCount, filteredNotifications, clearAll } = useNotifications()

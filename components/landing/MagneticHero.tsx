@@ -1,10 +1,17 @@
 import Link from 'next/link'
+import dynamic from 'next/dynamic'
 import { motion } from 'framer-motion'
 import { CheckCircleIcon, BoltIcon, UserGroupIcon } from '@heroicons/react/24/outline'
 import { trackCTAClick } from '../../lib/analytics/googleAds'
 import { nowInHonduras } from '../../lib/timezone'
-import HeroProductWindow from './HeroProductWindow'
 import ScrollReveal from './ScrollReveal'
+
+const HeroProductWindow = dynamic(() => import('./HeroProductWindow'), {
+  ssr: false,
+  loading: () => (
+    <div className="hidden lg:block min-h-[280px] rounded-2xl bg-white/5 border border-white/10" aria-hidden />
+  ),
+})
 
 export default function MagneticHero() {
   const now = nowInHonduras()
@@ -55,7 +62,7 @@ export default function MagneticHero() {
             </p>
 
             <div className="flex flex-col sm:flex-row gap-3 mt-6 sm:mt-8">
-              <Link
+              <Link prefetch={false}
                 href="/ventas"
                 onClick={() => trackCTAClick('solicitar_cotizacion', 'landing_hero_primary')}
                 className="btn-shiny inline-flex items-center justify-center rounded-xl px-6 py-3 min-h-[48px] text-base font-semibold bg-brand-500 text-white hover:bg-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-400 shadow-[0_8px_30px_rgb(0,0,0,0.12)] animate-pulse-glow transition-colors text-center"
@@ -63,7 +70,7 @@ export default function MagneticHero() {
               >
                 Solicitar cotización
               </Link>
-              <Link
+              <Link prefetch={false}
                 href="/activar"
                 onClick={() => trackCTAClick('activar_trial', 'landing_hero_secondary')}
                 className="inline-flex items-center justify-center rounded-xl px-6 py-3 min-h-[48px] text-base font-medium border border-white/25 text-white hover:bg-white/10 transition-colors text-center"

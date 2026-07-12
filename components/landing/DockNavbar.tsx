@@ -65,7 +65,7 @@ export default function DockNavbar({
         }`}
       >
         <div className="flex items-center gap-2 sm:gap-3 h-11 sm:h-12">
-          <Link href="/" className="shrink-0">
+          <Link prefetch={false} href="/" className="shrink-0">
             <Image
               src="/logo-humano-sisu.png"
               alt="Humano SISU"
@@ -79,6 +79,7 @@ export default function DockNavbar({
           <div className="hidden md:flex items-center gap-1 flex-1 justify-center">
             {LANDING_NAV_LINKS.map((link) => (
               <Link
+                prefetch={false}
                 key={link.href}
                 href={link.href}
                 className="text-slate-400 hover:text-white px-2.5 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-colors whitespace-nowrap"
@@ -120,7 +121,7 @@ export default function DockNavbar({
                     {CALCULATOR_MENU_ITEMS.map((item, i) => (
                       <div key={item.href}>
                         {i === 1 && <div className="h-px bg-white/10" />}
-                        <Link
+                        <Link prefetch={false}
                           href={item.href}
                           role="menuitem"
                           className="block px-4 py-3 text-sm text-slate-300 hover:bg-white/5 hover:text-white transition-colors"
@@ -153,7 +154,7 @@ export default function DockNavbar({
                   exit={{ opacity: 0, width: 0 }}
                   transition={{ duration: 0.2 }}
                 >
-                  <Link
+                  <Link prefetch={false}
                     href="/app/login"
                     className="bg-brand-600 hover:bg-brand-700 text-white px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-colors whitespace-nowrap block min-h-[36px] leading-[36px]"
                   >
@@ -194,7 +195,7 @@ export default function DockNavbar({
             className="pointer-events-auto md:hidden mt-2 mx-auto max-w-sm glass-modern rounded-2xl p-3 border border-white/10"
           >
             {LANDING_NAV_LINKS.map((link) => (
-              <Link
+              <Link prefetch={false}
                 key={link.href}
                 href={link.href}
                 className="block px-3 py-2.5 text-sm text-slate-400 hover:text-white rounded-xl transition-colors"
@@ -203,7 +204,7 @@ export default function DockNavbar({
                 {link.label}
               </Link>
             ))}
-            <Link
+            <Link prefetch={false}
               href="/calculadora"
               className="block px-3 py-2.5 text-sm text-slate-400 hover:text-white rounded-xl transition-colors"
               onClick={() => setIsMobileMenuOpen(false)}
@@ -223,7 +224,7 @@ export default function DockNavbar({
             {isCalculatorMobileOpen && (
               <div className="pl-2 pb-1 space-y-0.5">
                 {CALCULATOR_MOBILE_LINKS.map((link) => (
-                  <Link
+                  <Link prefetch={false}
                     key={link.href}
                     href={link.href}
                     className="block px-3 py-2 text-xs text-slate-400 hover:text-white rounded-lg"
@@ -241,7 +242,7 @@ export default function DockNavbar({
             >
               Activación inmediata
             </button>
-            <Link
+            <Link prefetch={false}
               href="/app/login"
               className="block w-full mt-2 text-center bg-brand-600 hover:bg-brand-700 text-white py-3 rounded-xl text-sm font-medium min-h-[48px]"
               onClick={() => setIsMobileMenuOpen(false)}

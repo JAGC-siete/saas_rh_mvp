@@ -131,7 +131,8 @@ module.exports = {
         'severity-safe': '0 0 10px rgba(52,211,153,0.3)',
       },
       fontFamily: {
-        'montserrat': ['Montserrat', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+        'montserrat': ['var(--font-montserrat)', 'Montserrat', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+        sans: ['var(--font-montserrat)', 'Montserrat', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
       },
     },
   },

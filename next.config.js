@@ -1,5 +1,8 @@
 /** @type {import('next').NextConfig} */
 const path = require('path')
+const withBundleAnalyzer = require('@next/bundle-analyzer')({
+  enabled: process.env.ANALYZE === 'true',
+})
 
 const nextConfig = {
   reactStrictMode: true,
@@ -9,6 +12,17 @@ const nextConfig = {
 
   images: {
     formats: ['image/avif', 'image/webp'],
+  },
+
+  /** Tree-shake barrel imports (lucide, heroicons, charts, motion, date-fns). */
+  experimental: {
+    optimizePackageImports: [
+      'lucide-react',
+      '@heroicons/react',
+      'date-fns',
+      'recharts',
+      'framer-motion',
+    ],
   },
 
   /** pdfkit + dependencias usan require/fs; si Webpack los empaqueta mal, el PDF falla en runtime (500). */
@@ -290,4 +304,4 @@ const nextConfig = {
   },
 }
 
-module.exports = nextConfig
+module.exports = withBundleAnalyzer(nextConfig)

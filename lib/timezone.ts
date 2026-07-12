@@ -1,5 +1,3 @@
-import { DateTime } from 'luxon'
-
 /**
  * 🇭🇳 TIMEZONE UTILITY FOR TEGUCIGALPA, HONDURAS
  * 
@@ -7,6 +5,8 @@ import { DateTime } from 'luxon'
  * 
  * This utility ensures CONSISTENT timezone handling across the entire application.
  * NEVER use new Date(), Date.now(), or any other timezone without this utility.
+ *
+ * Note: avoid luxon here — this module is imported by client shared paths (toast/_app).
  */
 
 export const HONDURAS_TIMEZONE = 'America/Tegucigalpa';
@@ -501,7 +501,17 @@ export function isPayrollCalendarPeriodInFuture(
   month: number,
   timeZone: string
 ): boolean {
-  const now = DateTime.now().setZone(timeZone)
-  if (!now.isValid) return false
-  return year > now.year || (year === now.year && month > now.month)
+  try {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone,
+      year: 'numeric',
+      month: 'numeric',
+    }).formatToParts(new Date())
+    const nowYear = Number(parts.find((p) => p.type === 'year')?.value)
+    const nowMonth = Number(parts.find((p) => p.type === 'month')?.value)
+    if (!Number.isFinite(nowYear) || !Number.isFinite(nowMonth)) return false
+    return year > nowYear || (year === nowYear && month > nowMonth)
+  } catch {
+    return false
+  }
 }

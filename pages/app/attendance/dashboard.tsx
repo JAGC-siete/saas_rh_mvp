@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
+import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
 import { motion } from 'framer-motion'
@@ -14,8 +15,21 @@ import DashboardLayout from '../../../components/DashboardLayout'
 import HeaderBar from '../../../components/attendance/HeaderBar'
 import KpiCards from '../../../components/attendance/KpiCards'
 import AttendanceTablesSection from '../../../components/attendance/AttendanceTablesSection'
-import TrendsChart, { type TrendData } from '../../../components/attendance/TrendsChart'
-import KpiBarsChart from '../../../components/attendance/KpiBarsChart'
+import type { TrendData } from '../../../components/attendance/TrendsChart'
+
+const chartFallback = (
+  <div className="h-64 flex items-center justify-center text-gray-400 text-sm">Cargando gráfico…</div>
+)
+
+const TrendsChart = dynamic(() => import('../../../components/attendance/TrendsChart'), {
+  ssr: false,
+  loading: () => chartFallback,
+})
+
+const KpiBarsChart = dynamic(() => import('../../../components/attendance/KpiBarsChart'), {
+  ssr: false,
+  loading: () => chartFallback,
+})
 import { Card } from '../../../components/ui/card'
 import { useCompanyContext } from '../../../lib/useCompanyContext'
 import { getTodayInHonduras } from '../../../lib/timezone'

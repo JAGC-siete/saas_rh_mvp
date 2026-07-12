@@ -4,6 +4,7 @@ import { useRouter } from 'next/router'
 import PublicPageShell from './PublicPageShell'
 import PublicPageHead from '../SEO/PublicPageHead'
 import SchemaMarkup from '../SEO/SchemaMarkup'
+import CampaignStyles from '../marketing/CampaignStyles'
 import PeaceLeadWizard, { type PeaceLeadWizardHandle } from '../info-game/PeaceLeadWizard'
 import { generateFAQPageSchema, generateWebPageSchema } from '../../lib/seo/schema'
 import { VIERNES_COPY, VIERNES_PUBLIC_PATH } from '../../lib/marketing/viernes-copy'
@@ -39,6 +40,7 @@ export default function ViernesLanding() {
 
   return (
     <PublicPageShell showTrustBar loginAlwaysVisible mainClassName="flex flex-col" showFooter={false}>
+      <CampaignStyles sheets={['viernes']} />
       <PublicPageHead
         title={copy.seo.title}
         description={copy.seo.description}

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/router'
 import PublicPageShell from '../components/landing/PublicPageShell'
 import PublicPageHead from '../components/SEO/PublicPageHead'
+import CampaignStyles from '../components/marketing/CampaignStyles'
 import MotorEncendidoLead from '../components/activar-game/MotorEncendidoLead'
 import { initGoogleAdsTracking } from '../lib/analytics/googleAds'
 import { getPageTitle } from '../lib/seo/title'
@@ -35,6 +36,7 @@ export default function ActivarPage() {
 
   return (
     <PublicPageShell showTrustBar loginAlwaysVisible mainClassName="flex flex-col">
+      <CampaignStyles sheets={['activar']} />
       <PublicPageHead
         title={getPageTitle('activate')}
         description={getPageDescription('activate')}

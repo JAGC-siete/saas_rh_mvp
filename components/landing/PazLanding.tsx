@@ -3,6 +3,7 @@ import Head from 'next/head'
 import Image from 'next/image'
 import Link from 'next/link'
 import SchemaMarkup from '../SEO/SchemaMarkup'
+import CampaignStyles from '../marketing/CampaignStyles'
 import { generateFAQPageSchema, generateWebPageSchema } from '../../lib/seo/schema'
 import { PAZ_SOCIAL_LINKS, SOCIAL_LINKS } from '../../lib/marketing/social-links'
 
@@ -98,6 +99,7 @@ export default function PazLanding() {
 
   return (
     <div className="paz-page">
+      <CampaignStyles sheets={['paz']} />
       <Head>
         <title>{PAGE_TITLE}</title>
         <meta name="description" content={PAGE_DESCRIPTION} />
