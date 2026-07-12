@@ -1,6 +1,6 @@
-import Head from 'next/head'
 import Link from 'next/link'
 import PublicPageShell from '../components/landing/PublicPageShell'
+import PublicPageHead from '../components/SEO/PublicPageHead'
 import SchemaMarkup from '../components/SEO/SchemaMarkup'
 import { generateWebPageSchema, generateBreadcrumbListSchema } from '../lib/seo/schema'
 import { generateTitle } from '../lib/seo/title'
@@ -31,18 +31,12 @@ export default function CalculadoraHubPage() {
 
   return (
     <PublicPageShell>
-      <Head>
-        <title>{pageTitle}</title>
-        <meta name="description" content={pageDescription} />
-        <meta
-          name="keywords"
-          content="calculadora deducciones, IHSS RAP ISR Honduras, ISSS AFP El Salvador, IGSS Guatemala, sueldo neto, nómina regional, Humano SISU"
-        />
-        <meta property="og:title" content={pageTitle} />
-        <meta property="og:description" content={pageDescription} />
-        <meta property="og:url" content="https://humanosisu.net/calculadora" />
-        <link rel="canonical" href="https://humanosisu.net/calculadora" />
-      </Head>
+      <PublicPageHead
+        title={pageTitle}
+        description={pageDescription}
+        canonicalPath="/calculadora"
+        keywords="calculadora deducciones, IHSS RAP ISR Honduras, ISSS AFP El Salvador, IGSS Guatemala, sueldo neto, nómina regional, Humano SISU"
+      />
       <SchemaMarkup schema={[webPageSchema, breadcrumbSchema]} />
 
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 relative z-10">

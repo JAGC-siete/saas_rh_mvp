@@ -1,6 +1,8 @@
 import { GetServerSideProps } from 'next'
 import { recursosAdapter } from '../lib/recursos'
 import { INFO_FUNNEL_PUBLIC_PATH } from '../lib/marketing/info-funnel-path'
+import { VIERNES_PUBLIC_PATH } from '../lib/marketing/viernes-copy'
+import { PRIVACY_PUBLIC_PATH, TERMS_PUBLIC_PATH } from '../lib/marketing/legal-paths'
 import { deductionCalculatorPublicPath } from '../lib/marketing/calculator-public-paths'
 
 interface SitemapUrl {
@@ -87,7 +89,7 @@ const publicPages: SitemapUrl[] = [
     lastmod: new Date().toISOString().split('T')[0]
   },
   {
-    loc: '/viernes',
+    loc: VIERNES_PUBLIC_PATH,
     changefreq: 'weekly',
     priority: 0.9,
     lastmod: new Date().toISOString().split('T')[0]
@@ -113,12 +115,12 @@ const publicPages: SitemapUrl[] = [
     priority: 0.75
   },
   {
-    loc: '/politicadeprivacidad',
+    loc: PRIVACY_PUBLIC_PATH,
     changefreq: 'yearly',
     priority: 0.5
   },
   {
-    loc: '/terminos-de-servicio',
+    loc: TERMS_PUBLIC_PATH,
     changefreq: 'yearly',
     priority: 0.4
   },

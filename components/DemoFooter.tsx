@@ -177,7 +177,7 @@ const DemoFooter: React.FC<DemoFooterProps> = ({ variant = 'default' }) => {
             </p>
             <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 justify-center items-center text-xs text-gray-500">
               <a 
-                href="/politicadeprivacidad" 
+                href="/politica-de-privacidad" 
                 className="text-gray-600 hover:text-gray-900 transition-colors underline decoration-gray-400/30 hover:decoration-gray-600"
               >
                 Política de Privacidad

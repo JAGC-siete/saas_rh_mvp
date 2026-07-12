@@ -10,7 +10,7 @@ import {
 describe('marketing mission config', () => {
   it('builds mission page URLs with lead token and choice', () => {
     const url = buildMissionPageUrl(1, 'abc123token', '5-15')
-    assert.ok(url.includes('/secreto/m/1'))
+    assert.ok(url.includes('/cerrar-planilla-en-paz/m/1'))
     assert.ok(url.includes('lead=abc123token'))
     assert.ok(url.includes('choice=5-15'))
   })

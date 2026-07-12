@@ -4,7 +4,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import SchemaMarkup from '../SEO/SchemaMarkup'
 import CampaignStyles from '../marketing/CampaignStyles'
-import { generateFAQPageSchema, generateWebPageSchema } from '../../lib/seo/schema'
+import { generateFAQPageSchema, generateWebPageSchema, generateBreadcrumbListSchema } from '../../lib/seo/schema'
 import { PAZ_SOCIAL_LINKS, SOCIAL_LINKS } from '../../lib/marketing/social-links'
 
 const PAGE_TITLE = 'La forma pacífica de cerrar planilla | Humano SISU'
@@ -96,6 +96,10 @@ export default function PazLanding() {
     description: PAGE_DESCRIPTION,
   })
   const faqSchema = generateFAQPageSchema(FAQS)
+  const breadcrumbSchema = generateBreadcrumbListSchema([
+    { name: 'Inicio', url: '/' },
+    { name: 'Paz al cerrar planilla', url: '/paz' },
+  ])
 
   return (
     <div className="paz-page">
@@ -110,7 +114,7 @@ export default function PazLanding() {
         <meta property="og:url" content="https://humanosisu.net/paz" />
         <meta property="og:type" content="website" />
       </Head>
-      <SchemaMarkup schema={[webPageSchema, faqSchema]} />
+      <SchemaMarkup schema={[webPageSchema, breadcrumbSchema, faqSchema]} />
 
       <div className="paz-grain" aria-hidden="true" />
 

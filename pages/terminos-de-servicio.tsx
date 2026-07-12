@@ -1,20 +1,30 @@
-import Head from 'next/head'
 import Link from 'next/link'
 import PublicPageShell from '../components/landing/PublicPageShell'
+import PublicPageHead from '../components/SEO/PublicPageHead'
+import SchemaMarkup from '../components/SEO/SchemaMarkup'
 import { Card, CardContent } from '../components/ui/card'
+import { generateBreadcrumbListSchema, generateWebPageSchema } from '../lib/seo/schema'
+import { PRIVACY_PUBLIC_PATH, TERMS_PUBLIC_PATH } from '../lib/marketing/legal-paths'
+
+const TITLE = 'Términos de servicio | Humano SISU'
+const DESCRIPTION =
+  'Términos de uso del sitio y del software Humano SISU (nómina y recursos humanos) en El Salvador, Guatemala y Honduras.'
 
 export default function TerminosDeServicio() {
+  const webPageSchema = generateWebPageSchema({
+    url: TERMS_PUBLIC_PATH,
+    title: TITLE,
+    description: DESCRIPTION,
+  })
+  const breadcrumbSchema = generateBreadcrumbListSchema([
+    { name: 'Inicio', url: '/' },
+    { name: 'Términos de servicio', url: TERMS_PUBLIC_PATH },
+  ])
+
   return (
     <PublicPageShell>
-      <Head>
-        <title>Términos de servicio - Humano SISU</title>
-        <meta
-          name="description"
-          content="Términos de uso del sitio y del software Humano SISU (nómina y recursos humanos)."
-        />
-        <meta name="robots" content="index, follow" />
-        <link rel="canonical" href="https://humanosisu.net/terminos-de-servicio" />
-      </Head>
+      <PublicPageHead title={TITLE} description={DESCRIPTION} canonicalPath={TERMS_PUBLIC_PATH} />
+      <SchemaMarkup schema={[webPageSchema, breadcrumbSchema]} />
 
       <div className="max-w-4xl mx-auto px-4 py-8">
         <Link
@@ -86,7 +96,7 @@ export default function TerminosDeServicio() {
                 <h2 className="text-2xl font-semibold text-white mb-4">7) Datos personales</h2>
                 <p className="text-slate-300">
                   El tratamiento de datos personales se describe en la{' '}
-                  <Link href="/politicadeprivacidad" className="text-brand-400 hover:text-brand-300 underline">
+                  <Link href={PRIVACY_PUBLIC_PATH} className="text-brand-400 hover:text-brand-300 underline">
                     Política de privacidad
                   </Link>
                   .

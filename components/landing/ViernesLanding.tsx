@@ -6,7 +6,7 @@ import PublicPageHead from '../SEO/PublicPageHead'
 import SchemaMarkup from '../SEO/SchemaMarkup'
 import CampaignStyles from '../marketing/CampaignStyles'
 import PeaceLeadWizard, { type PeaceLeadWizardHandle } from '../info-game/PeaceLeadWizard'
-import { generateFAQPageSchema, generateWebPageSchema } from '../../lib/seo/schema'
+import { generateFAQPageSchema, generateWebPageSchema, generateBreadcrumbListSchema } from '../../lib/seo/schema'
 import { VIERNES_COPY, VIERNES_PUBLIC_PATH } from '../../lib/marketing/viernes-copy'
 
 function scrollToPeaceWizard() {
@@ -25,6 +25,10 @@ export default function ViernesLanding() {
     description: copy.seo.description,
   })
   const faqSchema = generateFAQPageSchema(copy.faq.map((f) => ({ question: f.question, answer: f.answer })))
+  const breadcrumbSchema = generateBreadcrumbListSchema([
+    { name: 'Inicio', url: '/' },
+    { name: 'Planilla sin domingos', url: VIERNES_PUBLIC_PATH },
+  ])
 
   const openPeaceWizard = () => {
     wizardRef.current?.startUnlock()
@@ -46,7 +50,7 @@ export default function ViernesLanding() {
         description={copy.seo.description}
         canonicalPath={VIERNES_PUBLIC_PATH}
       />
-      <SchemaMarkup schema={[webPageSchema, faqSchema]} />
+      <SchemaMarkup schema={[webPageSchema, breadcrumbSchema, faqSchema]} />
 
       <div className="viernes-page flex-grow">
         <section className="viernes-section pt-8 sm:pt-12 text-center">

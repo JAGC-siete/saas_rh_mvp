@@ -76,7 +76,6 @@ export default function SuscripcionPage() {
   })
   const breadcrumbSchema = generateBreadcrumbListSchema([
     { name: 'Inicio', url: '/' },
-    { name: 'Calculadoras', url: '/calculadora' },
     { name: 'Alertas de sueldo', url: '/suscripcion' },
   ])
   const faqSchema = generateFAQPageSchema(FAQS)

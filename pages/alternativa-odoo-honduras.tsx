@@ -8,7 +8,7 @@ import { getPageTitle } from '../lib/seo/title'
 import { getPageDescription } from '../lib/seo/description'
 import SchemaMarkup from '../components/SEO/SchemaMarkup'
 import RelatedGuides from '../components/SEO/RelatedGuides'
-import { generateWebPageSchema, generateFAQPageSchema } from '../lib/seo/schema'
+import { generateWebPageSchema, generateFAQPageSchema, generateBreadcrumbListSchema } from '../lib/seo/schema'
 import { CheckCircleIcon, XMarkIcon } from '@heroicons/react/24/outline'
 
 export default function AlternativaOdooPage() {
@@ -53,6 +53,10 @@ export default function AlternativaOdooPage() {
   ]
 
   const faqSchema = generateFAQPageSchema(faqs)
+  const breadcrumbSchema = generateBreadcrumbListSchema([
+    { name: 'Inicio', url: '/' },
+    { name: 'Software RH regional', url: '/alternativa-odoo-honduras' },
+  ])
 
   const comparisonFeatures = [
     {
@@ -104,13 +108,14 @@ export default function AlternativaOdooPage() {
       <Head>
         <title>{pageTitle}</title>
         <meta name="description" content={pageDescription} />
+        <meta name="robots" content="index, follow" />
         <meta property="og:title" content={pageTitle} />
         <meta property="og:description" content={pageDescription} />
         <meta property="og:url" content="https://humanosisu.net/alternativa-odoo-honduras" />
         <link rel="canonical" href="https://humanosisu.net/alternativa-odoo-honduras" />
         <meta name="keywords" content="alternativa a Odoo El Salvador Guatemala Honduras, Odoo vs nómina regional, MIPYMES Centroamérica, sistema nómina local" />
       </Head>
-      <SchemaMarkup schema={[webPageSchema, faqSchema]} />
+      <SchemaMarkup schema={[webPageSchema, breadcrumbSchema, faqSchema]} />
 
       {/* Hero Section */}
       <section className="py-4 sm:py-6 md:py-8 relative overflow-hidden">

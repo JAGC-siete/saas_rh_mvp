@@ -5,7 +5,7 @@ import { getPageTitle } from '../lib/seo/title'
 import { getPageDescription } from '../lib/seo/description'
 import SchemaMarkup from '../components/SEO/SchemaMarkup'
 import RelatedGuides from '../components/SEO/RelatedGuides'
-import { generateWebPageSchema, generateFAQPageSchema } from '../lib/seo/schema'
+import { generateWebPageSchema, generateFAQPageSchema, generateBreadcrumbListSchema } from '../lib/seo/schema'
 import { CheckCircleIcon, XMarkIcon } from '@heroicons/react/24/outline'
 import { deductionCalculatorPublicPath } from '../lib/marketing/calculator-public-paths'
 
@@ -47,6 +47,10 @@ export default function DeduccionesHondurasPage() {
   ]
 
   const faqSchema = generateFAQPageSchema(faqs)
+  const breadcrumbSchema = generateBreadcrumbListSchema([
+    { name: 'Inicio', url: '/' },
+    { name: 'Deducciones IHSS RAP ISR', url: '/deducciones-honduras-ihss-rap-isr' },
+  ])
 
   const comparison = [
     {
@@ -86,13 +90,14 @@ export default function DeduccionesHondurasPage() {
       <Head>
         <title>{pageTitle}</title>
         <meta name="description" content={pageDescription} />
+        <meta name="robots" content="index, follow" />
         <meta property="og:title" content={pageTitle} />
         <meta property="og:description" content={pageDescription} />
         <meta property="og:url" content="https://humanosisu.net/deducciones-honduras-ihss-rap-isr" />
         <link rel="canonical" href="https://humanosisu.net/deducciones-honduras-ihss-rap-isr" />
         <meta name="keywords" content="cálculo IHSS RAP ISR automático, deducciones Honduras, planilla con IHSS, cálculo nómina Honduras, IHSS RAP ISR 2026" />
       </Head>
-      <SchemaMarkup schema={[webPageSchema, faqSchema]} />
+      <SchemaMarkup schema={[webPageSchema, breadcrumbSchema, faqSchema]} />
 
       {/* Hero Section */}
       <section className="py-4 sm:py-6 md:py-8 relative overflow-hidden">

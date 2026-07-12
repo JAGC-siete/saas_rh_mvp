@@ -38,7 +38,7 @@ export function generateDescription(options: DescriptionOptions = {}): string {
  * Predefined descriptions for common pages
  */
 export const pageDescriptions = {
-  home: 'Calculadora de deducciones | Impuesto Sobre Renta, Seguro Social, Salario, Sueldo, Neto | Gratis | Honduras, El Salvador y Guatemala',
+  home: 'Asistencia biométrica + nómina local (Honduras, El Salvador, Guatemala): IHSS, RAP, ISR y comprobantes en un solo lugar. Prueba gratis.',
   activate: 'Activa SISU y toca el cielo: entorno de prueba con nómina local en minutos. Sin tarjeta. Alcanzá la paz contable.',
   affiliates: 'Únete al programa de afiliados de Humano SISU. Gana comisiones recomendando la mejor solución de nómina para MIPYMES en la región.',
   calculator: 'Calculadora ISR Honduras y calculadora RAP gratis. IHSS, deducciones y sueldo neto con el motor de nómina Humano SISU.',

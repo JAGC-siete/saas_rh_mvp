@@ -41,10 +41,25 @@ export function generateBreadcrumbs(path: string): Breadcrumb[] {
  * Format URL segment to readable breadcrumb name
  */
 function formatSegmentName(segment: string): string {
-  // Remove query params and hash
   const cleanSegment = segment.split('?')[0].split('#')[0]
-  
-  // Replace hyphens/underscores with spaces and capitalize
+  const known: Record<string, string> = {
+    'cerrar-planilla-en-paz': 'Cerrar planilla en paz',
+    'planilla-sin-domingos': 'Planilla sin domingos',
+    'politica-de-privacidad': 'Política de privacidad',
+    'terminos-de-servicio': 'Términos de servicio',
+    'alternativa-odoo-honduras': 'Software RH regional',
+    'sistema-biometrico-nomina': 'Sistema biométrico con nómina',
+    'implementacion-48-horas': 'Implementación express',
+    'deducciones-honduras-ihss-rap-isr': 'Deducciones IHSS RAP ISR',
+    calculadora: 'Calculadoras laborales',
+    recursos: 'Recursos',
+    afiliados: 'Afiliados',
+    activar: 'Activar',
+    suscripcion: 'Alertas de sueldo',
+    paz: 'Paz al cerrar planilla',
+  }
+  if (known[cleanSegment]) return known[cleanSegment]
+
   return cleanSegment
     .replace(/[-_]/g, ' ')
     .split(' ')

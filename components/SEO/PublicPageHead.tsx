@@ -8,6 +8,7 @@ interface PublicPageHeadProps {
   /** Path only, e.g. `/activar` */
   canonicalPath: string
   noindex?: boolean
+  keywords?: string
 }
 
 export default function PublicPageHead({
@@ -15,6 +16,7 @@ export default function PublicPageHead({
   description,
   canonicalPath,
   noindex = false,
+  keywords,
 }: PublicPageHeadProps) {
   const canonical = `${BASE_URL}${canonicalPath}`
 
@@ -24,6 +26,7 @@ export default function PublicPageHead({
       <meta name="description" content={description} />
       <meta name="robots" content={noindex ? 'noindex, nofollow' : 'index, follow'} />
       <link rel="canonical" href={canonical} />
+      {keywords ? <meta name="keywords" content={keywords} /> : null}
       <meta property="og:title" content={title} />
       <meta property="og:description" content={description} />
       <meta property="og:url" content={canonical} />

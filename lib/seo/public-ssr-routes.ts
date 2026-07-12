@@ -4,6 +4,8 @@
  */
 
 import { INFO_FUNNEL_PUBLIC_PATH } from '../marketing/info-funnel-path'
+import { VIERNES_PUBLIC_PATH, VIERNES_INTERNAL_PATH } from '../marketing/viernes-copy'
+import { PRIVACY_PUBLIC_PATH, PRIVACY_LEGACY_PATH, TERMS_PUBLIC_PATH } from '../marketing/legal-paths'
 import {
   ALL_DEDUCTION_CALCULATOR_INTERNAL_PATHS,
   ALL_DEDUCTION_CALCULATOR_LEGACY_PATHS,
@@ -17,16 +19,19 @@ const PUBLIC_SSR_EXACT = new Set([
   '/gracias',
   INFO_FUNNEL_PUBLIC_PATH,
   '/info',
+  '/secreto',
   '/afiliados',
   '/alternativa-odoo-honduras',
   '/sistema-biometrico-nomina',
   '/implementacion-48-horas',
   '/deducciones-honduras-ihss-rap-isr',
-  '/politicadeprivacidad',
-  '/terminos-de-servicio',
+  PRIVACY_PUBLIC_PATH,
+  PRIVACY_LEGACY_PATH,
+  TERMS_PUBLIC_PATH,
   '/suscripcion',
   '/paz',
-  '/viernes',
+  VIERNES_PUBLIC_PATH,
+  VIERNES_INTERNAL_PATH,
   '/calculadora',
   ...ALL_DEDUCTION_CALCULATOR_PUBLIC_PATHS,
   ...ALL_DEDUCTION_CALCULATOR_INTERNAL_PATHS,
@@ -41,5 +46,6 @@ export function isPublicMarketingRoute(pathname: string): boolean {
   if (pathname.startsWith('/recursos')) return true
   if (pathname.startsWith(`${INFO_FUNNEL_PUBLIC_PATH}/m/`)) return true
   if (pathname.startsWith('/info/m/')) return true
+  if (pathname.startsWith('/secreto/m/')) return true
   return false
 }

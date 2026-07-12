@@ -7,7 +7,7 @@ import PublicPageShell from '../components/landing/PublicPageShell'
 import { getPageTitle } from '../lib/seo/title'
 import { getPageDescription } from '../lib/seo/description'
 import SchemaMarkup from '../components/SEO/SchemaMarkup'
-import { generateWebPageSchema } from '../lib/seo/schema'
+import { generateWebPageSchema, generateBreadcrumbListSchema } from '../lib/seo/schema'
 
 export default function AfiliadosPage() {
   const [email, setEmail] = useState('')
@@ -53,18 +53,23 @@ export default function AfiliadosPage() {
     title: pageTitle,
     description: pageDescription
   })
+  const breadcrumbSchema = generateBreadcrumbListSchema([
+    { name: 'Inicio', url: '/' },
+    { name: 'Afiliados', url: '/afiliados' },
+  ])
 
   return (
     <PublicPageShell>
       <Head>
         <title>{pageTitle}</title>
         <meta name="description" content={pageDescription} />
+        <meta name="robots" content="index, follow" />
         <meta property="og:title" content={pageTitle} />
         <meta property="og:description" content={pageDescription} />
         <meta property="og:url" content="https://humanosisu.net/afiliados" />
         <link rel="canonical" href="https://humanosisu.net/afiliados" />
       </Head>
-      <SchemaMarkup schema={webPageSchema} />
+      <SchemaMarkup schema={[webPageSchema, breadcrumbSchema]} />
 
       <div className="container mx-auto px-4 py-8">
         <section className="text-center mb-12">

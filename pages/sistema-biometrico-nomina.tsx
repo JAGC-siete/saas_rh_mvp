@@ -5,7 +5,7 @@ import { getPageTitle } from '../lib/seo/title'
 import { getPageDescription } from '../lib/seo/description'
 import SchemaMarkup from '../components/SEO/SchemaMarkup'
 import RelatedGuides from '../components/SEO/RelatedGuides'
-import { generateWebPageSchema, generateSoftwareApplicationSchema, generateFAQPageSchema } from '../lib/seo/schema'
+import { generateWebPageSchema, generateSoftwareApplicationSchema, generateFAQPageSchema, generateBreadcrumbListSchema } from '../lib/seo/schema'
 import { CheckCircleIcon } from '@heroicons/react/24/outline'
 
 export default function SistemaBiometricoNominaPage() {
@@ -47,6 +47,10 @@ export default function SistemaBiometricoNominaPage() {
   ]
 
   const faqSchema = generateFAQPageSchema(faqs)
+  const breadcrumbSchema = generateBreadcrumbListSchema([
+    { name: 'Inicio', url: '/' },
+    { name: 'Sistema biométrico con nómina', url: '/sistema-biometrico-nomina' },
+  ])
 
   const benefits = [
     {
@@ -104,13 +108,14 @@ export default function SistemaBiometricoNominaPage() {
       <Head>
         <title>{pageTitle}</title>
         <meta name="description" content={pageDescription} />
+        <meta name="robots" content="index, follow" />
         <meta property="og:title" content={pageTitle} />
         <meta property="og:description" content={pageDescription} />
         <meta property="og:url" content="https://humanosisu.net/sistema-biometrico-nomina" />
         <link rel="canonical" href="https://humanosisu.net/sistema-biometrico-nomina" />
         <meta name="keywords" content="sistema biométrico con nómina, control asistencia biométrico, biométrico integrado nómina, asistencia nómina El Salvador Guatemala Honduras" />
       </Head>
-      <SchemaMarkup schema={[webPageSchema, softwareSchema, faqSchema]} />
+      <SchemaMarkup schema={[webPageSchema, softwareSchema, breadcrumbSchema, faqSchema]} />
 
       {/* Hero Section */}
       <section className="py-4 sm:py-6 md:py-8 relative overflow-hidden">

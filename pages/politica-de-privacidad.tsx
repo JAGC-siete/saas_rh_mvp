@@ -1,17 +1,30 @@
-import Head from 'next/head'
 import Link from 'next/link'
 import PublicPageShell from '../components/landing/PublicPageShell'
+import PublicPageHead from '../components/SEO/PublicPageHead'
+import SchemaMarkup from '../components/SEO/SchemaMarkup'
 import { Card, CardContent } from '../components/ui/card'
+import { generateBreadcrumbListSchema, generateWebPageSchema } from '../lib/seo/schema'
+import { PRIVACY_PUBLIC_PATH } from '../lib/marketing/legal-paths'
+
+const TITLE = 'Política de Privacidad | Humano SISU'
+const DESCRIPTION =
+  'Política de privacidad y manejo de datos de Humano SISU. Contacto, conservación y derechos de datos en El Salvador, Guatemala y Honduras.'
 
 export default function PoliticaPrivacidad() {
+  const webPageSchema = generateWebPageSchema({
+    url: PRIVACY_PUBLIC_PATH,
+    title: TITLE,
+    description: DESCRIPTION,
+  })
+  const breadcrumbSchema = generateBreadcrumbListSchema([
+    { name: 'Inicio', url: '/' },
+    { name: 'Política de privacidad', url: PRIVACY_PUBLIC_PATH },
+  ])
+
   return (
     <PublicPageShell>
-      <Head>
-        <title>Política de Privacidad - Humano SISU</title>
-        <meta name="description" content="Política de privacidad y manejo de datos de Humano SISU" />
-        <meta name="robots" content="index, follow" />
-        <link rel="canonical" href="https://humanosisu.net/politicadeprivacidad" />
-      </Head>
+      <PublicPageHead title={TITLE} description={DESCRIPTION} canonicalPath={PRIVACY_PUBLIC_PATH} />
+      <SchemaMarkup schema={[webPageSchema, breadcrumbSchema]} />
 
       <div className="max-w-4xl mx-auto px-4 py-8">
         <Link

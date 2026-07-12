@@ -77,14 +77,18 @@ const nextConfig = {
         source: '/favicon.ico',
         destination: '/brand/favicon-humano-sisu.png',
       },
-      // Public slug → internal pages (files stay at pages/info*)
+      // Public descriptive slugs → internal page files
       {
-        source: '/secreto',
+        source: '/cerrar-planilla-en-paz',
         destination: '/info',
       },
       {
-        source: '/secreto/m/:id',
+        source: '/cerrar-planilla-en-paz/m/:id',
         destination: '/info/m/:id',
+      },
+      {
+        source: '/planilla-sin-domingos',
+        destination: '/viernes',
       },
     ]
   },
@@ -146,21 +150,43 @@ const nextConfig = {
         destination: '/app/login',
         permanent: false,
       },
-      // Funnel TOFU: slug público /secreto (legacy /info → 301)
+      // Funnel TOFU: canonical /cerrar-planilla-en-paz (legacy /secreto, /info → 301)
+      {
+        source: '/secreto',
+        destination: '/cerrar-planilla-en-paz',
+        permanent: true,
+      },
+      {
+        source: '/secreto/m/:id',
+        destination: '/cerrar-planilla-en-paz/m/:id',
+        permanent: true,
+      },
       {
         source: '/info',
-        destination: '/secreto',
+        destination: '/cerrar-planilla-en-paz',
         permanent: true,
       },
       {
         source: '/info/m/:id',
-        destination: '/secreto/m/:id',
+        destination: '/cerrar-planilla-en-paz/m/:id',
+        permanent: true,
+      },
+      // Campaign: canonical /planilla-sin-domingos (legacy /viernes, /domingo → 301)
+      {
+        source: '/viernes',
+        destination: '/planilla-sin-domingos',
         permanent: true,
       },
       {
         source: '/domingo',
-        destination: '/viernes',
-        permanent: false,
+        destination: '/planilla-sin-domingos',
+        permanent: true,
+      },
+      // Legal: hyphenated privacy path
+      {
+        source: '/politicadeprivacidad',
+        destination: '/politica-de-privacidad',
+        permanent: true,
       },
       // Calculadoras deducciones: canónico calculadora-deducciones* (calcusisu* → 301)
       {

@@ -4,7 +4,7 @@ import SchemaMarkup from '../../components/SEO/SchemaMarkup'
 import RecursosBentoHub from '../../components/recursos/RecursosBentoHub'
 import { getPageTitle } from '../../lib/seo/title'
 import { getPageDescription } from '../../lib/seo/description'
-import { generateWebPageSchema } from '../../lib/seo/schema'
+import { generateWebPageSchema, generateBreadcrumbListSchema } from '../../lib/seo/schema'
 import { recursosAdapter } from '../../lib/recursos'
 import type { RecursoCategory } from '../../lib/recursos'
 import { GetServerSideProps } from 'next'
@@ -21,12 +21,17 @@ export default function RecursosIndex({ counts }: RecursosIndexProps) {
     title: pageTitle,
     description: pageDescription,
   })
+  const breadcrumbSchema = generateBreadcrumbListSchema([
+    { name: 'Inicio', url: '/' },
+    { name: 'Recursos', url: '/recursos' },
+  ])
 
   return (
     <PublicPageShell>
       <Head>
         <title>{pageTitle}</title>
         <meta name="description" content={pageDescription} />
+        <meta name="robots" content="index, follow" />
         <meta property="og:title" content={pageTitle} />
         <meta property="og:description" content={pageDescription} />
         <meta property="og:url" content="https://humanosisu.net/recursos" />
@@ -36,7 +41,7 @@ export default function RecursosIndex({ counts }: RecursosIndexProps) {
           content="automatización RH regional, nómina local, artículos, recursos, MIPYMES, liderazgo"
         />
       </Head>
-      <SchemaMarkup schema={webPageSchema} />
+      <SchemaMarkup schema={[webPageSchema, breadcrumbSchema]} />
 
       <div className="flex-1 max-w-6xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
         <header className="mb-10 sm:mb-14 max-w-2xl">

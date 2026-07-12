@@ -1,6 +1,11 @@
-/** Copy for /viernes — warm B2B: recuperar el viernes via digitalizar/automatizar (info sequence). */
+/** Copy for /planilla-sin-domingos — warm B2B: recuperar el viernes via digitalizar/automatizar (info sequence). */
 
-export const VIERNES_PUBLIC_PATH = '/viernes'
+/** Canonical public URL (pages/viernes.tsx served via rewrite). */
+export const VIERNES_PUBLIC_PATH = '/planilla-sin-domingos'
+
+/** Internal Pages route / legacy slug. */
+export const VIERNES_INTERNAL_PATH = '/viernes'
+export const VIERNES_LEGACY_PATHS = ['/viernes', '/domingo'] as const
 
 export const VIERNES_COPY = {
   seo: {

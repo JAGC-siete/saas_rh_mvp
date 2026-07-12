@@ -6,7 +6,7 @@ import { getPageTitle } from '../lib/seo/title'
 import { getPageDescription } from '../lib/seo/description'
 import SchemaMarkup from '../components/SEO/SchemaMarkup'
 import RelatedGuides from '../components/SEO/RelatedGuides'
-import { generateWebPageSchema, generateFAQPageSchema } from '../lib/seo/schema'
+import { generateWebPageSchema, generateFAQPageSchema, generateBreadcrumbListSchema } from '../lib/seo/schema'
 import { ClockIcon, CheckCircleIcon } from '@heroicons/react/24/outline'
 import { SERVICE_GUARANTEES } from '../lib/marketing/service-guarantees'
 
@@ -53,6 +53,10 @@ export default function Implementacion48HorasPage() {
   ]
 
   const faqSchema = generateFAQPageSchema(faqs)
+  const breadcrumbSchema = generateBreadcrumbListSchema([
+    { name: 'Inicio', url: '/' },
+    { name: 'Implementación express', url: '/implementacion-48-horas' },
+  ])
 
   const steps = [
     {
@@ -109,13 +113,14 @@ export default function Implementacion48HorasPage() {
       <Head>
         <title>{pageTitle}</title>
         <meta name="description" content={pageDescription} />
+        <meta name="robots" content="index, follow" />
         <meta property="og:title" content={pageTitle} />
         <meta property="og:description" content={pageDescription} />
         <meta property="og:url" content="https://humanosisu.net/implementacion-48-horas" />
         <link rel="canonical" href="https://humanosisu.net/implementacion-48-horas" />
         <meta name="keywords" content="implementación nómina express, sistema nómina rápido regional, implementación rápida nómina, setup nómina El Salvador Guatemala Honduras" />
       </Head>
-      <SchemaMarkup schema={[webPageSchema, faqSchema]} />
+      <SchemaMarkup schema={[webPageSchema, breadcrumbSchema, faqSchema]} />
 
       {/* Hero Section */}
       <section className="py-4 sm:py-6 md:py-8 relative overflow-hidden">
