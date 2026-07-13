@@ -2,6 +2,8 @@ import type { QuotationQuote } from './types'
 import { roundMoney } from './pricing'
 import {
   quoteIncludesBiometricTerminals,
+  shouldChargeHardwareSale,
+  VENTAS_HARDWARE_SALE_UNIT_PRICE,
   type VentasBillingModality,
 } from './business-rules'
 
@@ -27,8 +29,12 @@ const SHARED_SERVICE_INCLUDES = [
 
 const TERMINALS_INCLUDED_LINE = 'Terminal biométrica incluida en la propuesta' as const
 
-const TERMINALS_SEPARATE_NOTES = [
+const TERMINALS_CONTINUITY_NOTES = [
   'La terminal biométrica se vende por separado (no está incluida en el total de software); se cotiza como Servicio de Continuidad de Hardware',
+] as const
+
+const TERMINALS_SALE_NOTES = [
+  'La terminal biométrica se vende por separado a L. 6,500 c/u (descuento por volumen desde 2 unidades)',
 ] as const
 
 export interface VentasModalityDefinition {
@@ -62,7 +68,7 @@ export function getVentasModalityDefinition(
       formHint:
         'Incluye licencia mensual del software, instalación, migración, capacitación, soporte local e impuestos. La terminal biométrica se vende por separado; en esta cotización se suma el Servicio de Continuidad de Hardware según terminales (cuota decreciente por unidad).',
       includes: ['Licencia mensual de software Humano SISU', ...SHARED_SERVICE_INCLUDES],
-      excludesOrNotes: [...TERMINALS_SEPARATE_NOTES],
+      excludesOrNotes: [...TERMINALS_CONTINUITY_NOTES],
       successSummaryLine:
         'Incluye licencia mensual del software y servicios de implementación. La terminal biométrica se vende por separado; continuidad de hardware según terminales indicadas.',
     }
@@ -88,12 +94,11 @@ export function getVentasModalityDefinition(
   return {
     modality: 'annual',
     label: 'Plan Anual',
-    formHint:
-      'Incluye licencia anual del software, instalación, migración, capacitación, soporte local e impuestos. La terminal biométrica no está incluida en este rango: se cotiza como Servicio de Continuidad de Hardware (cuota mensual por terminal).',
+    formHint: `Incluye licencia anual del software, instalación, migración, capacitación, soporte local e impuestos. La terminal biométrica no está incluida en este rango: se vende por separado a L. ${VENTAS_HARDWARE_SALE_UNIT_PRICE.toLocaleString('es-HN')} c/u (descuento por volumen desde 2 unidades).`,
     includes: ['Licencia anual de software Humano SISU', ...SHARED_SERVICE_INCLUDES],
-    excludesOrNotes: [...TERMINALS_SEPARATE_NOTES],
+    excludesOrNotes: [...TERMINALS_SALE_NOTES],
     successSummaryLine:
-      'Incluye licencia anual del software y servicios de implementación. La terminal biométrica se cotiza por separado como continuidad de hardware según terminales indicadas.',
+      'Incluye licencia anual del software y servicios de implementación. La terminal biométrica se vende por separado según cantidad indicada.',
   }
 }
 
@@ -130,6 +135,10 @@ export function buildTerminalsPricingNote(params: {
 
   if (includes) {
     return `${label} · terminal biométrica incluida en plan anual (hasta ${VENTAS_MAX_AUTO_QUOTE_TERMINALS} en cotización automática)`
+  }
+
+  if (shouldChargeHardwareSale(params.modality, params.employeesCount)) {
+    return `${label} · venta por separado (L. ${VENTAS_HARDWARE_SALE_UNIT_PRICE.toLocaleString('es-HN')} c/u, descuento por volumen)`
   }
 
   return `${label} · terminal biométrica vendida por separado; continuidad de hardware`
@@ -229,6 +238,14 @@ export function buildAnnualPricingBreakdownLines(quote: QuotationQuote, fmt: (n:
     lines.push(`- ${label}: −${fmt(quote.annual_discount_amount)} / año`)
   }
   lines.push(`- Total anual cotizado: ${fmt(quote.annual_total)} / año`)
+  if ((quote.hardware_sale_total || 0) > 0) {
+    const discPct = Math.round((quote.hardware_sale_discount_pct || 0) * 100)
+    const saleLabel =
+      discPct > 0
+        ? `Terminales (venta, −${discPct}% volumen)`
+        : 'Terminales (venta)'
+    lines.push(`- ${saleLabel}: ${fmt(quote.hardware_sale_total)}`)
+  }
   if (quote.monthly_hardware_fee > 0) {
     lines.push(`- Continuidad de hardware: ${fmt(quote.monthly_hardware_fee)} / mes`)
   }

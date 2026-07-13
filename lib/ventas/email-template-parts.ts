@@ -37,10 +37,12 @@ export function buildClientFichaHtml(params: {
   tierLabel: string
   terminalsCount: number
   includesTerminals: boolean
+  hardwareMode?: 'included' | 'sale' | 'continuity'
 }): string {
   const terminals = buildTerminalsDisplayLabel({
     terminalsCount: params.terminalsCount,
     includesTerminals: params.includesTerminals,
+    hardwareMode: params.hardwareMode,
   })
 
   return `

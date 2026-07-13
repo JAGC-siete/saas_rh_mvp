@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { computeFrozenQuoteAmounts } from '../lib/billing/quote-amounts'
 
 describe('computeFrozenQuoteAmounts', () => {
-  it('freezes 50% deposit on monthly quote at list price', () => {
+  it('monthly deposit is 100% of first month (software + HW)', () => {
     const result = computeFrozenQuoteAmounts({
       billingModality: 'monthly',
       monthlySoftwareTotal: 6375,
@@ -12,18 +12,32 @@ describe('computeFrozenQuoteAmounts', () => {
     })
 
     assert.equal(result.expectedTotalHnl, 8196.66)
-    assert.equal(result.expectedDepositHnl, 4098.33)
+    assert.equal(result.expectedDepositHnl, 8196.66)
   })
 
-  it('freezes annual total at quoted amount (no urgency discount)', () => {
+  it('annual without sale: 50% of software only', () => {
     const result = computeFrozenQuoteAmounts({
       billingModality: 'annual',
       monthlySoftwareTotal: 6375,
       monthlyHardwareFee: 0,
       annualTotal: 42075,
+      hardwareSaleTotal: 0,
     })
 
     assert.equal(result.expectedTotalHnl, 42075)
     assert.equal(result.expectedDepositHnl, 21037.5)
+  })
+
+  it('annual with terminal sale: 50% of (software + sale)', () => {
+    const result = computeFrozenQuoteAmounts({
+      billingModality: 'annual',
+      monthlySoftwareTotal: 1250,
+      monthlyHardwareFee: 0,
+      annualTotal: 15000,
+      hardwareSaleTotal: 6500,
+    })
+
+    assert.equal(result.expectedTotalHnl, 21500)
+    assert.equal(result.expectedDepositHnl, 10750)
   })
 })

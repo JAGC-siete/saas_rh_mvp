@@ -2,8 +2,11 @@ import type { QuotationQuote } from './types'
 import { formatMoney } from './pricing'
 import { hardwareFeeMonthly } from './modality-includes'
 import {
+  hardwareSaleTotal,
   quoteIncludesBiometricTerminals,
+  resolveHardwareMode,
   shouldChargeHardwareContinuity,
+  shouldChargeHardwareSale,
 } from './business-rules'
 import {
   computeQuotationUrgencyOffer,
@@ -24,7 +27,7 @@ function resolveListedHardwareFee(quote: QuotationQuote): number {
   return hw.special ? 0 : hw.fee
 }
 
-/** Hardware fee to show for a given modality, applying business rules. */
+/** Continuity HW fee to show for a given modality. */
 export function resolveHardwareFeeForModality(
   quote: QuotationQuote,
   modality: 'annual' | 'monthly'
@@ -32,6 +35,19 @@ export function resolveHardwareFeeForModality(
   const employees = employeesCountFromQuote(quote)
   if (!shouldChargeHardwareContinuity(modality, employees)) return 0
   return resolveListedHardwareFee(quote)
+}
+
+/** One-shot terminal sale total for a given modality. */
+export function resolveHardwareSaleForModality(
+  quote: QuotationQuote,
+  modality: 'annual' | 'monthly'
+): number {
+  const employees = employeesCountFromQuote(quote)
+  if (!shouldChargeHardwareSale(modality, employees)) return 0
+  if ((quote.hardware_sale_total || 0) > 0 && modality === quote.billing_modality) {
+    return quote.hardware_sale_total
+  }
+  return hardwareSaleTotal(quote.terminals_count || 1).total
 }
 
 function resolveMonthlyTotal(quote: QuotationQuote): number {
@@ -76,20 +92,20 @@ export function buildUrgencyPriceDisplay(params: {
   const { periodLabel, isMonthly } = summary
   const count = quote.terminals_count
   const terminalWord = count === 1 ? 'terminal' : 'terminales'
-  const includesTerminals = quoteIncludesBiometricTerminals(
+  const mode = resolveHardwareMode(
     isMonthly ? 'monthly' : 'annual',
     employeesCountFromQuote(quote)
   )
 
   const listPriceLabel = isMonthly
     ? `Precio mensual con ${count} ${terminalWord}`
-    : includesTerminals
+    : mode === 'included'
       ? count === 1
         ? 'Precio anual con 1 terminal incluida'
         : `Precio anual con ${count} terminales incluidas`
       : count === 1
-        ? 'Precio anual (terminal por continuidad de hardware)'
-        : `Precio anual (${count} terminales por continuidad de hardware)`
+        ? 'Precio anual (terminal en venta por separado)'
+        : `Precio anual (${count} terminales en venta por separado)`
 
   return {
     listPriceLabel,
@@ -104,8 +120,9 @@ export function getContractIncludesLabels(params: {
   isAnnual: boolean
   terminalsCount: number
   includesTerminals: boolean
+  hardwareMode?: 'included' | 'sale' | 'continuity'
 }): string[] {
-  const { isAnnual, terminalsCount, includesTerminals } = params
+  const { isAnnual, terminalsCount, includesTerminals, hardwareMode } = params
 
   if (isAnnual && includesTerminals) {
     const terminalPhrase =
@@ -123,12 +140,16 @@ export function getContractIncludesLabels(params: {
   }
 
   if (isAnnual) {
+    const saleNote =
+      hardwareMode === 'sale' || !hardwareMode
+        ? 'Terminal biométrica: venta por separado (L. 6,500 c/u, descuento por volumen)'
+        : 'Terminal biométrica: Servicio de Continuidad de Hardware (mensual, por separado)'
     return [
       'Subscripción anual de software',
       'Migración y capacitación del personal',
       'Actualizaciones',
       'Impuestos',
-      'Terminal biométrica: Servicio de Continuidad de Hardware (mensual, por separado)',
+      saleNote,
     ]
   }
 
@@ -162,6 +183,7 @@ export function buildQuotationPlanSummary(params: {
   const terminalsLabel = terminalsLabelFromCount(quote.terminals_count)
 
   const monthlyHardwareFee = resolveHardwareFeeForModality(quote, resolvedModality)
+  const saleTotal = resolveHardwareSaleForModality(quote, resolvedModality)
 
   const urgency = computeQuotationUrgencyOffer({
     billingModality: resolvedModality,
@@ -191,6 +213,12 @@ export function buildQuotationPlanSummary(params: {
         value: `${fmt(monthlyHardwareFee)} / mes`,
       })
     }
+    if (saleTotal > 0) {
+      lines.push({
+        label: `Terminales biométricas (venta) (${terminalsLabel})`,
+        value: fmt(saleTotal),
+      })
+    }
 
     return {
       tierLabel,
@@ -200,13 +228,14 @@ export function buildQuotationPlanSummary(params: {
       urgency,
       lines,
       totalLabel: `Tu inversión ${isMonthly ? 'mensual' : 'anual'} total hoy`,
-      totalValue: `${fmt(urgency.discountedTotal)} / ${periodLabel}`,
+      totalValue: `${fmt(urgency.discountedTotal + saleTotal)} / ${periodLabel}`,
       expiryText: `Esta oferta expira el ${formatUrgencyOfferExpiryFriendly(urgency.expiresAt)} (Hora Honduras).`,
       pdfNote: 'Tienes el PDF adjunto con las especificaciones técnicas completas.',
     }
   }
 
-  const quotedTotal = isMonthly ? resolveMonthlyTotal(quote) : quote.annual_total
+  const softwareTotal = isMonthly ? resolveMonthlyTotal(quote) : quote.annual_total
+  const quotedTotal = isMonthly ? softwareTotal : softwareTotal + saleTotal
   const lines: PlanSummaryLine[] = []
 
   if (quote.coupon_applied && quote.annual_discount_amount > 0) {
@@ -251,6 +280,18 @@ export function buildQuotationPlanSummary(params: {
     })
   }
 
+  if (saleTotal > 0) {
+    const discPct = Math.round((quote.hardware_sale_discount_pct || 0) * 100)
+    const saleLabel =
+      !isMonthly && discPct > 0 && modalityMatchesSaleQuote(quote, resolvedModality)
+        ? `Terminales biométricas (venta, −${discPct}% volumen) (${terminalsLabel})`
+        : `Terminales biométricas (venta) (${terminalsLabel})`
+    lines.push({
+      label: saleLabel,
+      value: fmt(saleTotal),
+    })
+  }
+
   return {
     tierLabel,
     terminalsLabel,
@@ -258,9 +299,24 @@ export function buildQuotationPlanSummary(params: {
     isMonthly,
     urgency,
     lines,
-    totalLabel: `Total ${isMonthly ? 'mensual' : 'anual'} cotizado`,
-    totalValue: `${fmt(quotedTotal)} / ${periodLabel}`,
+    totalLabel: isMonthly
+      ? 'Total mensual cotizado'
+      : saleTotal > 0
+        ? 'Total compromiso (software anual + terminales)'
+        : 'Total anual cotizado',
+    totalValue: isMonthly
+      ? `${fmt(quotedTotal)} / ${periodLabel}`
+      : saleTotal > 0
+        ? fmt(quotedTotal)
+        : `${fmt(quotedTotal)} / ${periodLabel}`,
     expiryText: null,
     pdfNote: 'Tienes el PDF adjunto con las especificaciones técnicas completas.',
   }
+}
+
+function modalityMatchesSaleQuote(
+  quote: QuotationQuote,
+  modality: 'annual' | 'monthly'
+): boolean {
+  return modality === quote.billing_modality && (quote.hardware_sale_discount_pct || 0) > 0
 }

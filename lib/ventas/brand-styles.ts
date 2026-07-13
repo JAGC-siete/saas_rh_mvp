@@ -30,12 +30,17 @@ export function buildVentasRefLabel(companyName?: string, contactName?: string):
 
 export function buildTerminalsDisplayLabel(params: {
   terminalsCount: number
-  /** When true, terminals are included in the plan (no continuity fee). */
+  /** When true, terminals are included in the plan (no extra charge). */
   includesTerminals: boolean
+  /** sale = one-shot purchase; continuity = monthly HW fee. Ignored if includesTerminals. */
+  hardwareMode?: 'included' | 'sale' | 'continuity'
 }): string {
-  const { terminalsCount, includesTerminals } = params
-  if (includesTerminals) {
+  const { terminalsCount, includesTerminals, hardwareMode } = params
+  if (includesTerminals || hardwareMode === 'included') {
     return terminalsCount === 1 ? '1 (incluida)' : `${terminalsCount} (incluidas)`
+  }
+  if (hardwareMode === 'sale') {
+    return terminalsCount === 1 ? '1 · venta' : `${terminalsCount} · venta`
   }
   return `${terminalsCount} · continuidad hardware`
 }

@@ -20,6 +20,7 @@ const monthlyQuote: QuotationQuote = {
   monthly_software_total: 6375,
   monthly_hardware_fee: 1821.66,
   monthly_total: 8196.66,
+  hardware_sale_total: 0,
   coupon_applied: false,
   discount_pct_applied: 0,
   terminals_count: 2,
@@ -48,11 +49,12 @@ describe('ventas quote coherence', () => {
       monthly_software_total: 5100,
       monthly_hardware_fee: 0,
       monthly_total: 5100,
+      hardware_sale_total: 0,
       coupon_applied: true,
       discount_pct_applied: 0.2,
       coupon_code_applied: 'aghas',
-      tier: { min_employees: 71, max_employees: 90 },
-      employees_count: 80,
+      tier: { min_employees: 51, max_employees: 70 },
+      employees_count: 60,
     }
     const summary = buildQuotationPlanSummary({ quote: annualQuote, sentAt, now: sentAt })
     const text = generateVentasQuotationEmailText({

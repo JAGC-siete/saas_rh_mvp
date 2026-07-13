@@ -6,7 +6,11 @@
 import { mkdirSync, writeFileSync } from 'fs'
 import { createAdminClient } from '../lib/supabase/server'
 import { hardwareFeeMonthly } from '../lib/ventas/modality-includes'
-import { shouldChargeHardwareContinuity } from '../lib/ventas/business-rules'
+import {
+  hardwareSaleTotal,
+  shouldChargeHardwareContinuity,
+  shouldChargeHardwareSale,
+} from '../lib/ventas/business-rules'
 import { resolveTierByEmployees, roundMoney } from '../lib/ventas/pricing'
 import { generateVentasQuotationPDF } from '../lib/ventas/pdf'
 import { getVentasBankDetailsFromEnv } from '../lib/ventas/bank-details'
@@ -34,6 +38,9 @@ async function main() {
   const monthlyHardwareFee = shouldChargeHardwareContinuity(BILLING_MODALITY, EMPLOYEES_COUNT)
     ? hw.fee
     : 0
+  const sale = shouldChargeHardwareSale(BILLING_MODALITY, EMPLOYEES_COUNT)
+    ? hardwareSaleTotal(TERMINALS_COUNT)
+    : null
   const monthlyTotal = roundMoney(monthlySoftwareTotal + monthlyHardwareFee)
 
   const quote = {
@@ -44,6 +51,9 @@ async function main() {
     monthly_software_total: monthlySoftwareTotal,
     monthly_hardware_fee: monthlyHardwareFee,
     monthly_total: monthlyTotal,
+    hardware_sale_total: sale?.total ?? 0,
+    hardware_sale_unit_price: sale?.unitPrice,
+    hardware_sale_discount_pct: sale?.discountPct,
     coupon_applied: promo.isCouponValid,
     discount_pct_applied: promo.discountPctApplied,
     coupon_code_applied: promo.couponCodeApplied,

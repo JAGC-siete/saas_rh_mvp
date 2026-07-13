@@ -5,7 +5,7 @@ import { generateVentasQuotationPDF } from '../lib/ventas/pdf'
 import type { QuotationQuote } from '../lib/ventas/types'
 
 const annualQuote: QuotationQuote = {
-  tier: { min_employees: 71, max_employees: 90 },
+  tier: { min_employees: 51, max_employees: 70 },
   billing_modality: 'annual',
   currency: 'HNL',
   annual_subtotal: 76500,
@@ -14,10 +14,11 @@ const annualQuote: QuotationQuote = {
   monthly_software_total: 5416.67,
   monthly_hardware_fee: 0,
   monthly_total: 5416.67,
+  hardware_sale_total: 0,
   coupon_applied: true,
   discount_pct_applied: 0.45,
   terminals_count: 1,
-  employees_count: 80,
+  employees_count: 60,
 }
 
 describe('ventas quotation pdf layout', () => {
@@ -29,7 +30,7 @@ describe('ventas quotation pdf layout', () => {
       contactName: 'Carlos Prueba',
       companyName: 'Empresa Prueba Anual S.A.',
       phone: '98765432',
-      employeesCount: 80,
+      employeesCount: 60,
       terminalsCount: 1,
       couponCodeSubmitted: 'gastro2026',
       countryLabel: 'Honduras',

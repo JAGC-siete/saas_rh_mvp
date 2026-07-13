@@ -11,8 +11,10 @@ import type { QuotationRequest, QuotationResponse, VentasPricingTier, CurrencyCo
 import { clampInt, resolveTierByEmployees, roundMoney } from '../../lib/ventas/pricing'
 import { hardwareFeeMonthly, ventasTooManyTerminalsErrorMessage } from '../../lib/ventas/modality-includes'
 import {
+  hardwareSaleTotal,
   isMonthlyModalityAvailable,
   shouldChargeHardwareContinuity,
+  shouldChargeHardwareSale,
   ventasMonthlyUnavailableMessage,
 } from '../../lib/ventas/business-rules'
 import { loadActiveVentasConfig, resolveSubmittedPromo } from '../../lib/ventas/load-ventas-config'
@@ -300,6 +302,10 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
     const monthlyHardwareFee = shouldChargeHardwareContinuity(billingModality, employeesCount)
       ? hwQuote.fee
       : 0
+    const saleQuote = shouldChargeHardwareSale(billingModality, employeesCount)
+      ? hardwareSaleTotal(terminalsForPricing)
+      : null
+    const hardwareSaleTotalAmount = saleQuote?.total ?? 0
     const monthlyTotal = roundMoney(monthlySoftwareTotal + monthlyHardwareFee)
 
     const quote = {
@@ -310,6 +316,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
       monthly_software_total: monthlySoftwareTotal,
       monthly_hardware_fee: monthlyHardwareFee,
       monthly_total: monthlyTotal,
+      hardware_sale_total: hardwareSaleTotalAmount,
+      hardware_sale_unit_price: saleQuote?.unitPrice,
+      hardware_sale_discount_pct: saleQuote?.discountPct,
       coupon_applied: isCouponValid,
       discount_pct_applied: discountPctApplied,
       coupon_code_applied: couponCodeApplied,
@@ -329,6 +338,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
       billing_modality: billingModality,
       terminals_count: terminalsForPricing,
       monthly_hardware_fee: monthlyHardwareFee || undefined,
+      hardware_sale_total: hardwareSaleTotalAmount || undefined,
+      hardware_sale_unit_price: saleQuote?.unitPrice,
+      hardware_sale_discount_pct: saleQuote?.discountPct,
       monthly_total: monthlyTotal || undefined,
       comparison_snapshot: buildModalityComparisonSnapshot(quote),
     }
@@ -508,6 +520,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
         monthlySoftwareTotal: quote.monthly_software_total,
         monthlyHardwareFee: quote.monthly_hardware_fee,
         annualTotal: quote.annual_total,
+        hardwareSaleTotal: quote.hardware_sale_total,
       })
 
       await (supabase as any)

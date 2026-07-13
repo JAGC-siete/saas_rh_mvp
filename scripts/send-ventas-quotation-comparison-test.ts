@@ -5,7 +5,11 @@
 
 import { getResendFromContact } from '../lib/resend-from'
 import { hardwareFeeMonthly } from '../lib/ventas/modality-includes'
-import { shouldChargeHardwareContinuity } from '../lib/ventas/business-rules'
+import {
+  hardwareSaleTotal,
+  shouldChargeHardwareContinuity,
+  shouldChargeHardwareSale,
+} from '../lib/ventas/business-rules'
 import { roundMoney } from '../lib/ventas/pricing'
 import { generateVentasQuotationPDF } from '../lib/ventas/pdf'
 import {
@@ -26,6 +30,7 @@ function buildSampleQuote(modality: 'monthly' | 'annual'): QuotationQuote {
   const monthlySoftware = roundMoney(annualTotal / 12)
   const hw = hardwareFeeMonthly(2)
   const monthlyHardware = shouldChargeHardwareContinuity(modality, EMPLOYEES_COUNT) ? hw.fee : 0
+  const sale = shouldChargeHardwareSale(modality, EMPLOYEES_COUNT) ? hardwareSaleTotal(2) : null
 
   return {
     currency: 'HNL',
@@ -35,6 +40,9 @@ function buildSampleQuote(modality: 'monthly' | 'annual'): QuotationQuote {
     monthly_software_total: monthlySoftware,
     monthly_hardware_fee: monthlyHardware,
     monthly_total: roundMoney(monthlySoftware + monthlyHardware),
+    hardware_sale_total: sale?.total ?? 0,
+    hardware_sale_unit_price: sale?.unitPrice,
+    hardware_sale_discount_pct: sale?.discountPct,
     coupon_applied: true,
     discount_pct_applied: 0.45,
     tier: { min_employees: 21, max_employees: 50 },

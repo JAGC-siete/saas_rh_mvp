@@ -57,12 +57,20 @@ export interface QuotationQuote {
   /** Total mensual del software (= annual_total/12) */
   monthly_software_total: number
   /**
-   * Fee mensual por Continuidad de Hardware.
-   * Aplica en plan mensual siempre, y en plan anual cuando empleados < 71.
+   * Fee mensual por Continuidad de Hardware (solo modalidad mensual).
    */
   monthly_hardware_fee: number
   /** Total mensual final (= monthly_software_total + monthly_hardware_fee) */
   monthly_total: number
+  /**
+   * Venta one-shot de terminales (solo anual con empleados < 51).
+   * 0 cuando están incluidas o aplica Continuidad.
+   */
+  hardware_sale_total: number
+  /** Precio lista unitario de venta (si aplica). */
+  hardware_sale_unit_price?: number
+  /** Descuento volumen aplicado a la venta (0–0.2). */
+  hardware_sale_discount_pct?: number
   coupon_applied: boolean
   discount_pct_applied: number
   /** Código normalizado del cupón aplicado (si coupon_applied). */

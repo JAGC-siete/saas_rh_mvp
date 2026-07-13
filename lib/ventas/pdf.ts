@@ -9,7 +9,7 @@ import type { VentasBankDetails } from './bank-details'
 import { buildModalityComparison } from './modality-comparison'
 import { getVentasModalityDefinition } from './modality-includes'
 import { buildTerminalsDisplayLabel, buildVentasRefLabel } from './brand-styles'
-import { quoteIncludesBiometricTerminals } from './business-rules'
+import { quoteIncludesBiometricTerminals, resolveHardwareMode } from './business-rules'
 import { PDF_TYPE as TYPE, VENTAS_PDF_THEME as T } from './pdf-theme'
 
 const MARGIN = 40
@@ -40,6 +40,7 @@ export async function generateVentasQuotationPDF(params: {
 
   const employees = quote.employees_count || employeesCount || employeesCountFromQuote(quote)
   const includesTerminals = quoteIncludesBiometricTerminals(quote.billing_modality, employees)
+  const hardwareMode = resolveHardwareMode(quote.billing_modality, employees)
   const planSummary = buildQuotationPlanSummary({ quote, sentAt })
   const modalityComparison = buildModalityComparison({ quote, sentAt })
   const modalityDef = getVentasModalityDefinition(quote.billing_modality, {
@@ -87,6 +88,7 @@ export async function generateVentasQuotationPDF(params: {
         tierLabel: planSummary.tierLabel,
         terminalsCount: quote.terminals_count,
         includesTerminals,
+        hardwareMode,
       })
 
       const featuresY = 178
@@ -96,6 +98,7 @@ export async function generateVentasQuotationPDF(params: {
         isAnnual,
         terminalsCount: quote.terminals_count,
         includesTerminals,
+        hardwareMode,
       })
 
       const priceY = featuresY + featuresH + 10
@@ -179,6 +182,7 @@ function drawClientFicha(
     tierLabel: string
     terminalsCount: number
     includesTerminals: boolean
+    hardwareMode: 'included' | 'sale' | 'continuity'
   }
 ) {
   const {
@@ -190,6 +194,7 @@ function drawClientFicha(
     tierLabel,
     terminalsCount,
     includesTerminals,
+    hardwareMode,
   } = params
   const boxH = 76
   const colW = (contentW - 36) / 2
@@ -218,7 +223,7 @@ function drawClientFicha(
   drawMetaValue(doc, countryLabel, colAX, rowY, colW)
   drawMetaValue(
     doc,
-    buildTerminalsDisplayLabel({ terminalsCount, includesTerminals }),
+    buildTerminalsDisplayLabel({ terminalsCount, includesTerminals, hardwareMode }),
     colBX,
     rowY,
     colW
@@ -233,10 +238,16 @@ function drawFeaturesRow(
     isAnnual: boolean
     terminalsCount: number
     includesTerminals: boolean
+    hardwareMode: 'included' | 'sale' | 'continuity'
   }
 ): number {
-  const { y, contentW, isAnnual, terminalsCount, includesTerminals } = params
-  const labels = getContractIncludesLabels({ isAnnual, terminalsCount, includesTerminals })
+  const { y, contentW, isAnnual, terminalsCount, includesTerminals, hardwareMode } = params
+  const labels = getContractIncludesLabels({
+    isAnnual,
+    terminalsCount,
+    includesTerminals,
+    hardwareMode,
+  })
   const colGap = 16
   const colW = (contentW - colGap) / 2
   const rowH = 14
@@ -346,9 +357,9 @@ function drawFooter(
 
   const paymentIntro = isAnnual
     ? includesTerminals
-      ? '50% anticipo para programar la instalación y enlace de las terminales y 50% únicamente contra la instalación y enlace efectivos de las terminales con el sistema.'
-      : '50% anticipo sobre la licencia anual para programar la instalación. Las terminales se cotizan por separado como Servicio de Continuidad de Hardware (mensual).'
-    : 'El siguiente paso es enviar el comprobante de depósito de la primera mensualidad.'
+      ? '50% anticipo (licencia anual) para programar la instalación y enlace de las terminales y 50% únicamente contra la instalación y enlace efectivos con el sistema.'
+      : 'Anticipo del 50% sobre (licencia anual + terminales en venta) para programar la instalación. El saldo de la licencia se cancela contra instalación.'
+    : 'El siguiente paso es enviar el comprobante del 100% de la primera mensualidad (software + continuidad de hardware).'
 
   drawSectionTitle(doc, implementationTitle, MARGIN, y)
   doc.roundedRect(MARGIN, y + 14, boxW, boxH, 8).fill(T.panelBgAlt)

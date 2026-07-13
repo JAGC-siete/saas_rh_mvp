@@ -62,7 +62,7 @@ export function buildModalityComparison(params: {
   } else if (quoteIncludesBiometricTerminals('annual', employees)) {
     footnote = `Incluye terminal biométrica en la propuesta. ${listPriceNote}`
   } else {
-    footnote = `La terminal biométrica no está incluida en el plan anual de este rango; se cotiza como continuidad de hardware. ${listPriceNote}`
+    footnote = `La terminal biométrica no está incluida en el plan anual de este rango; se vende por separado. ${listPriceNote}`
   }
 
   return {
@@ -91,6 +91,7 @@ export function buildModalityComparisonSnapshot(quote: QuotationQuote) {
     monthly_total: quote.monthly_software_total + monthlyHardwareFee,
     monthly_software_total: quote.monthly_software_total,
     monthly_hardware_fee: monthlyHardwareFee,
+    hardware_sale_total: quote.hardware_sale_total || 0,
     currency: quote.currency,
   }
 }
