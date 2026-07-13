@@ -42,6 +42,7 @@ export async function buildAuthorizedPayrollPreviewPayload(
         id,
         name,
         dni,
+        employee_code,
         base_salary,
         bank_name,
         bank_account,
@@ -89,7 +90,7 @@ export async function buildAuthorizedPayrollPreviewPayload(
         typeof meta.days_worked === 'number' ? meta.days_worked : 0
       planilla_hourly.push({
         employee_id: emp.id,
-        id: (emp.dni as string) || emp.id,
+        id: (emp.employee_code as string) || '',
         name: (emp.name as string) || 'Sin nombre',
         bank: (emp.bank_name as string) || 'No especificado',
         bank_account: (emp.bank_account as string) || 'No especificado',
@@ -114,7 +115,7 @@ export async function buildAuthorizedPayrollPreviewPayload(
     } else {
       planilla_fixed.push({
         employee_id: emp.id,
-        id: (emp.dni as string) || emp.id,
+        id: (emp.employee_code as string) || '',
         name: (emp.name as string) || 'Sin nombre',
         bank: (emp.bank_name as string) || 'No especificado',
         bank_account: (emp.bank_account as string) || 'No especificado',

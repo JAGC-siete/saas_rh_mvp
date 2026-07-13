@@ -358,23 +358,27 @@ export function todayInHonduras(): string {
 
 /**
  * 🇭🇳 FORMAT DATE FOR DISPLAY IN HONDURAS LOCALE
- * Returns date formatted for Honduras (dd/mm/yyyy)
+ * Returns date formatted for Honduras (dd/mm/yyyy).
+ * Pass a real absolute instant (`new Date()` / DB UTC), not `nowInHonduras()`.
  */
 export function formatDateForHonduras(date: Date | string): string {
   const d = typeof date === 'string' ? new Date(date) : date;
-  const hondurasDate = convertToHondurasTime(d);
-  
-  return hondurasDate.toLocaleDateString('es-HN', {
+
+  return d.toLocaleDateString('es-HN', {
     timeZone: HONDURAS_TIMEZONE,
     day: '2-digit',
-    month: '2-digit', 
+    month: '2-digit',
     year: 'numeric'
   });
 }
 
 /**
  * 🇭🇳 FORMAT DATETIME FOR DISPLAY IN HONDURAS LOCALE
- * Returns datetime formatted for Honduras with timezone
+ * Returns datetime formatted for Honduras with timezone.
+ *
+ * Pass a real absolute instant (`new Date()` / DB UTC). Do NOT pass
+ * `nowInHonduras()` — that value is already offset by -6h, and combining it
+ * with `timeZone: America/Tegucigalpa` double-shifts another -6h.
  */
 export function formatDateTimeForHonduras(date: Date | string): string {
   const d = typeof date === 'string' ? new Date(date) : date;

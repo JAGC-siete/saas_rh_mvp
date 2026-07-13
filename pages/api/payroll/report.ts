@@ -115,7 +115,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           : 0
 
         return {
-          id: line.employees?.dni || line.employees?.employee_code || '',
+          id: line.employees?.employee_code || '',
           name: line.employees?.name || '',
           bank: line.employees?.bank_name || 'No especificado',
           bank_account: line.employees?.bank_account || 'No especificado',

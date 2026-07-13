@@ -1,7 +1,7 @@
 import { Buffer } from 'buffer'
 import { normalizeCountryCode } from '../country/supported'
 import { statutoryDeductionLabels } from '../country/payroll-labels'
-import { formatDateForHonduras, nowInHonduras, formatDateTimeForHonduras } from '../timezone'
+import { formatDateForHonduras, formatDateTimeForHonduras } from '../timezone'
 import { formatPeriodRangeForDisplay } from './period-dates'
 import { resolveStatutoryDeductionColumns } from './statutory-deduction-columns'
 import { formatVoucherCompanyName } from './voucher-pdf-options'
@@ -112,7 +112,10 @@ export async function generateConsolidatedPayrollPDF(
     reportVisual?.branding,
     companyName || 'SISTEMA HONDUREÑO DE RECURSOS HUMANOS'
   )
-  const generatedAt = formatDateTimeForHonduras(nowInHonduras())
+  // Pass the real UTC instant. nowInHonduras() already shifts -6h; pairing it with
+  // formatDateTimeForHonduras (timeZone America/Tegucigalpa) double-offsets another -6h.
+  const generatedAt = formatDateTimeForHonduras(new Date())
+  const footerBrandLine = `Reporte facilitado por el Sistema Hondureño de Recursos Humanos para ${displayCompanyName}`
 
   return new Promise<Buffer>((resolve, reject) => {
     try {
@@ -199,7 +202,7 @@ export async function generateConsolidatedPayrollPDF(
         }
       })
 
-      registerLiquidPageFooter(doc, { generatedAt })
+      registerLiquidPageFooter(doc, { generatedAt, brandLine: footerBrandLine })
 
       const buffers: Buffer[] = []
       doc.on('error', (err: Error) => reject(err))
@@ -252,7 +255,7 @@ export async function generateConsolidatedPayrollPDF(
       drawLiquidSectionTitle(doc, 'Información del período', margin, bodyY)
       doc.font('Helvetica').fontSize(10).fillColor(PDF.bodyMuted).text(`Período: ${periodo}`, margin, bodyY + 16)
       doc.fontSize(10).text(`Rango: ${periodRangeDisplay ?? quincenaText}`, margin, bodyY + 32)
-      doc.fontSize(10).text(`Fecha de generación: ${formatDateForHonduras(nowInHonduras())}`, margin, bodyY + 48)
+      doc.fontSize(10).text(`Fecha de generación: ${formatDateForHonduras(new Date())}`, margin, bodyY + 48)
       if (generatedByEmail) {
         doc.fontSize(10).text(`Generado por: ${generatedByEmail}`, margin, bodyY + 64)
       }

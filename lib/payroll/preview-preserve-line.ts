@@ -28,6 +28,7 @@ export function shouldPreservePayrollLineOnPreview(
 type EmployeePreviewContext = {
   id: string
   dni?: string | null
+  employee_code?: string | null
   name?: string | null
   bank_name?: string | null
   bank_account?: string | null
@@ -54,7 +55,7 @@ export function buildFixedPlanillaRowFromPersistedLine(ctx: BuildRowBase) {
 
   return {
     employee_id: emp.id,
-    id: emp.dni || emp.id,
+    id: emp.employee_code || '',
     name: emp.name || 'Sin nombre',
     bank: emp.bank_name || 'No especificado',
     bank_account: emp.bank_account || 'No especificado',
@@ -94,7 +95,7 @@ export function buildHourlyPlanillaRowFromPersistedLine(
 
   return {
     employee_id: emp.id,
-    id: emp.dni || emp.id,
+    id: emp.employee_code || '',
     name: emp.name || 'Sin nombre',
     bank: emp.bank_name || 'No especificado',
     bank_account: emp.bank_account || 'No especificado',

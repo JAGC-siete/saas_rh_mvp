@@ -316,7 +316,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     const { data: employees, error: empError } = await salaryClient
       .from('employees')
       .select(`
-        id, name, dni, base_salary, bank_name, bank_account, status, department_id, pay_type, attendance_required, work_schedule_id, position, role,
+        id, name, dni, employee_code, base_salary, bank_name, bank_account, status, department_id, pay_type, attendance_required, work_schedule_id, position, role,
         departments:department_id(name),
         work_schedules:work_schedule_id(monday_start, tuesday_start, wednesday_start, thursday_start, friday_start, saturday_start, sunday_start)
       `)
@@ -899,7 +899,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
         planilla_fixed.push({
           employee_id: emp.id,
-          id: emp.dni || emp.id,
+          id: emp.employee_code || '',
           name: emp?.name || 'Sin nombre',
           bank: emp.bank_name || 'No especificado',
           bank_account: emp.bank_account || 'No especificado',
@@ -1202,7 +1202,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
         planilla_hourly.push({
           employee_id: emp.id,
-          id: emp.dni || emp.id,
+          id: emp.employee_code || '',
           name: emp?.name || 'Sin nombre',
           bank: emp.bank_name || 'No especificado',
           bank_account: emp.bank_account || 'No especificado',

@@ -84,7 +84,7 @@ export async function loadPlanillaFromRun(
     .select(`
       *,
       employees!payroll_run_lines_employee_id_fkey(
-        id, name, dni, base_salary, bank_name, bank_account, pay_type,
+        id, name, dni, employee_code, base_salary, bank_name, bank_account, pay_type,
         team, role,
         departments!employees_department_id_fkey(name)
       )
@@ -131,7 +131,7 @@ export async function loadPlanillaFromRun(
         payType === 'hourly' && totalHours > 0 ? (Number(line.eff_bruto) || 0) / totalHours : 0
 
       return {
-        id: String(employees?.dni || ''),
+        id: String(employees?.employee_code || ''),
         name: String(employees?.name || ''),
         bank: String(employees?.bank_name || 'No especificado'),
         bank_account: String(employees?.bank_account || 'No especificado'),

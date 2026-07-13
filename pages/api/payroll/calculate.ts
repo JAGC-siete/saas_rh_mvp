@@ -283,7 +283,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Obtener empleados activos (incluir pay_type para cálculo hourly)
     let employeesQuery = salaryClient
       .from('employees')
-      .select('id, name, dni, base_salary, bank_name, bank_account, status, department_id, pay_type, attendance_required')
+      .select('id, name, dni, employee_code, base_salary, bank_name, bank_account, status, department_id, pay_type, attendance_required')
       .eq('status', 'active')
       .order('name')
 
@@ -567,7 +567,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
 
       return {
-        id: emp.dni,
+        id: emp.employee_code || '',
         name: emp?.name,
         bank: emp.bank_name || '',
         bank_account: emp.bank_account || '',
@@ -592,7 +592,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Guardar en payroll_records
     const payrollRecords = planilla.map((item: PlanillaItem) => ({
-      employee_id: empleadosParaNomina.find((e: any) => e.dni === item.id)?.id,
+      employee_id: empleadosParaNomina.find((e: any) => e.employee_code === item.id || e.dni === item.id)?.id,
       period_start: fechaInicio,
       period_end: fechaFin,
       period_type: frequencyForCalc === 'mensual' ? 'monthly' : frequencyForCalc === 'semanal' ? 'weekly' : 'biweekly',
