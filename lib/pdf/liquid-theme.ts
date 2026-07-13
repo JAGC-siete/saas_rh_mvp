@@ -44,28 +44,64 @@ export const PDF_TYPE = {
 
 type PdfDoc = PDFKit.PDFDocument
 
-/** Dark brand header band. Returns Y position for body content. */
+/**
+ * Dark brand header band. Returns Y position for body content.
+ * - Default: Humano SISU tagline + optional subtitle + title
+ * - `tagline: false`: company-first layout (subtitle = company name, no brand line)
+ */
 export function drawLiquidPdfHeader(
   doc: PdfDoc,
-  options: { title: string; subtitle?: string; tagline?: string; height?: number }
+  options: {
+    title: string
+    subtitle?: string
+    /** Brand line above content. Pass `false` to omit (company reports). Default: Humano SISU */
+    tagline?: string | false
+    height?: number
+  }
 ): number {
   const pageWidth = doc.page.width
-  const h = options.height ?? 80
+  const contentW = pageWidth - 60
+  const showTagline = options.tagline !== false
+  const tagline = showTagline ? options.tagline ?? 'Humano SISU' : null
+  const h = options.height ?? (tagline ? 80 : 70)
 
   doc.rect(0, 0, pageWidth, h).fill(PDF.headerBg)
   doc.fillColor(PDF.headerText)
 
-  const tagline = options.tagline ?? 'Humano SISU'
-  doc.fontSize(18).text(tagline.toUpperCase(), 30, 14, { align: 'center', width: pageWidth - 60 })
-
-  if (options.subtitle) {
-    doc.fontSize(10).text(options.subtitle, 30, 36, { align: 'center', width: pageWidth - 60 })
+  if (tagline) {
+    doc.font('Helvetica-Bold').fontSize(18).text(tagline.toUpperCase(), 30, 14, {
+      align: 'center',
+      width: contentW,
+    })
+    if (options.subtitle) {
+      doc.font('Helvetica').fontSize(10).text(options.subtitle, 30, 36, {
+        align: 'center',
+        width: contentW,
+      })
+    }
+    doc.font('Helvetica').fontSize(12).text(options.title, 30, options.subtitle ? 52 : 38, {
+      align: 'center',
+      width: contentW,
+    })
+  } else {
+    // Company name prominent; report title below — no Humano SISU
+    const company = options.subtitle?.trim()
+    if (company) {
+      doc.font('Helvetica-Bold').fontSize(13).text(company, 30, 18, {
+        align: 'center',
+        width: contentW,
+      })
+      doc.font('Helvetica').fontSize(11).text(options.title, 30, 42, {
+        align: 'center',
+        width: contentW,
+      })
+    } else {
+      doc.font('Helvetica-Bold').fontSize(14).text(options.title, 30, 26, {
+        align: 'center',
+        width: contentW,
+      })
+    }
   }
-
-  doc.fontSize(12).text(options.title, 30, options.subtitle ? 52 : 38, {
-    align: 'center',
-    width: pageWidth - 60,
-  })
 
   doc.fillColor(PDF.bodyText)
   return h + 20
@@ -165,7 +201,8 @@ export function registerLiquidPageFooter(
   doc: PdfDoc,
   options: { brandLine?: string; generatedAt?: string }
 ): void {
-  const brandLine = options.brandLine ?? 'Humano SISU · Sistema Hondureño de Recursos Humanos'
+  const brandLine =
+    options.brandLine ?? 'Reporte facilitado por el Sistema Hondureño de Recursos Humanos'
   const generatedAt = options.generatedAt
   let painting = false
 
@@ -195,6 +232,11 @@ export function registerLiquidPageFooter(
 
   doc.on('pageAdded', () => paint())
   paint()
+}
+
+/** Standard report footer brand line including company name. */
+export function liquidReportFooterBrandLine(companyName: string): string {
+  return `Reporte facilitado por el Sistema Hondureño de Recursos Humanos para ${companyName}`
 }
 
 export function drawLiquidTableRowBackground(

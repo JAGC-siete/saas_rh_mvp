@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { PAID_PLAN_TYPES } from '../billing/plans'
 import { createAdminClient } from '../supabase/server'
 import { sendLateAttendanceReportEmail } from '../emails/late-attendance-report'
 import { logger } from '../logger'
@@ -222,10 +223,13 @@ export async function runLateAttendanceReportCron(
     dryRun,
   }
 
+  // Paid customers only — trials / inactive subscription must not get these reports.
   const { data: companies, error: companiesError } = await supabase
     .from('companies')
-    .select('id, name, timezone, is_active')
+    .select('id, name, timezone, is_active, plan_type, subscription_status')
     .eq('is_active', true)
+    .in('plan_type', [...PAID_PLAN_TYPES])
+    .eq('subscription_status', 'active')
 
   if (companiesError) {
     throw new Error(companiesError.message)

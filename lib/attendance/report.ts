@@ -14,6 +14,7 @@ import {
   PDF_FOOTER_RESERVE,
   registerLiquidPageFooter,
   strokeLiquidTableCells,
+  liquidReportFooterBrandLine,
 } from '../pdf/liquid-theme'
 
 export interface AttendanceItem {
@@ -90,7 +91,7 @@ export async function generateConsolidatedAttendancePDF(
     options?.branding,
     (options?.companyDisplayName || 'Empresa').trim()
   )
-  const generatedAt = formatDateTimeForHonduras(nowInHonduras())
+  const generatedAt = formatDateTimeForHonduras(new Date())
 
   return new Promise<Buffer>((resolve, reject) => {
     try {
@@ -128,7 +129,10 @@ export async function generateConsolidatedAttendancePDF(
       const L = left()
       const W = innerW()
 
-      registerLiquidPageFooter(doc, { generatedAt })
+      registerLiquidPageFooter(doc, {
+        generatedAt,
+        brandLine: liquidReportFooterBrandLine(companyName),
+      })
 
       // ===== PAGE 1: HEADER & EXEC SUMMARY =====
       let blockY = drawBrandedReceiptHeader(doc, {

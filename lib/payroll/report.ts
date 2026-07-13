@@ -20,6 +20,7 @@ import {
   drawLiquidSectionTitle,
   drawLiquidTableHeader,
   drawLiquidTableRowBackground,
+  liquidReportFooterBrandLine,
   PDF,
   PDF_FOOTER_RESERVE,
   registerLiquidPageFooter,
@@ -133,7 +134,7 @@ export async function generateConsolidatedPayrollPDF(
   // Pass the real UTC instant. nowInHonduras() already shifts -6h; pairing it with
   // formatDateTimeForHonduras (timeZone America/Tegucigalpa) double-offsets another -6h.
   const generatedAt = formatDateTimeForHonduras(new Date())
-  const footerBrandLine = `Reporte facilitado por el Sistema Hondureño de Recursos Humanos para ${displayCompanyName}`
+  const footerBrandLine = liquidReportFooterBrandLine(displayCompanyName)
 
   return new Promise<Buffer>((resolve, reject) => {
     try {

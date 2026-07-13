@@ -4,7 +4,8 @@ import { logger } from '../../../lib/logger'
 
 /**
  * POST /api/cron/late-attendance-report
- * Runs at end of each company's pay period (daily check: yesterday = period end).
+ * Runs at end of each paid company's pay period (daily check: yesterday = period end).
+ * Skips trial companies and inactive subscriptions.
  * Schedule on Railway: 0 13 * * * (07:00 America/Tegucigalpa)
  */
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {

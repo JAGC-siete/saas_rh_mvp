@@ -1,4 +1,5 @@
 import { Resend } from 'resend'
+import { LIQUID } from '../brand/liquid-tokens'
 import {
   escapeHtml,
   transactionalInfoBox,
@@ -13,9 +14,19 @@ import type {
   LateReportDetail,
   LateReportEmployee,
 } from '../reports/late-attendance-pdf'
-import { generateLateAttendanceReportPDF } from '../reports/late-attendance-pdf'
+import {
+  LATE_ARRIVAL_REPORT_TITLE,
+  formatLateMinutes,
+  generateLateAttendanceReportPDF,
+} from '../reports/late-attendance-pdf'
 
 export type LateAttendanceEmailPayload = LateAttendanceReportData
+
+const T = LIQUID
+const CELL =
+  `padding:6px 8px;border:1px solid ${T.glassBorderLight};color:${T.text};font-size:13px;`
+const CELL_SM =
+  `padding:5px 6px;border:1px solid ${T.glassBorderLight};color:${T.text};font-size:12px;`
 
 function buildObservations(data: LateAttendanceReportData): string[] {
   const notes: string[] = []
@@ -49,7 +60,7 @@ function buildObservations(data: LateAttendanceReportData): string[] {
     }
   }
   if (maxDay && maxCount >= 3) {
-    notes.push(`Día con más incidentes: ${maxDay} (${maxCount} tardanzas).`)
+    notes.push(`Día con más incidentes: ${maxDay} (${maxCount} llegadas tarde).`)
   }
 
   return notes
@@ -60,21 +71,21 @@ function renderEmployeeTable(employees: LateReportEmployee[]): string {
   const rows = employees
     .map(
       (e) => `<tr>
-        <td style="padding:6px 8px;border:1px solid #e2e8f0;">${escapeHtml(e.employee_code ?? '—')}</td>
-        <td style="padding:6px 8px;border:1px solid #e2e8f0;">${escapeHtml(e.employee_name)}</td>
-        <td style="padding:6px 8px;border:1px solid #e2e8f0;">${escapeHtml(e.department_name ?? '—')}</td>
-        <td style="padding:6px 8px;border:1px solid #e2e8f0;text-align:center;">${e.late_days}</td>
-        <td style="padding:6px 8px;border:1px solid #e2e8f0;text-align:center;">${Number(e.avg_late_minutes).toFixed(1)} min</td>
+        <td style="${CELL}">${escapeHtml(e.employee_code ?? '—')}</td>
+        <td style="${CELL}">${escapeHtml(e.employee_name)}</td>
+        <td style="${CELL}">${escapeHtml(e.department_name ?? '—')}</td>
+        <td style="${CELL}text-align:center;">${e.late_days}</td>
+        <td style="${CELL}text-align:center;">${escapeHtml(formatLateMinutes(Number(e.avg_late_minutes)))}</td>
       </tr>`
     )
     .join('')
-  return `<table style="width:100%;border-collapse:collapse;font-size:13px;margin:12px 0;">
-    <thead><tr style="background:#0f172a;color:#fff;">
-      <th style="padding:8px;text-align:left;">Código</th>
-      <th style="padding:8px;text-align:left;">Empleado</th>
-      <th style="padding:8px;text-align:left;">Departamento</th>
-      <th style="padding:8px;text-align:center;">Días tarde</th>
-      <th style="padding:8px;text-align:center;">Promedio/día</th>
+  return `<table role="presentation" style="width:100%;border-collapse:collapse;margin:12px 0;color:${T.text};">
+    <thead><tr style="background:${T.brand900};color:#ffffff;">
+      <th style="padding:8px;text-align:left;color:#ffffff;font-size:12px;">Código</th>
+      <th style="padding:8px;text-align:left;color:#ffffff;font-size:12px;">Empleado</th>
+      <th style="padding:8px;text-align:left;color:#ffffff;font-size:12px;">Departamento</th>
+      <th style="padding:8px;text-align:center;color:#ffffff;font-size:12px;">Días tarde</th>
+      <th style="padding:8px;text-align:center;color:#ffffff;font-size:12px;">Promedio/día</th>
     </tr></thead>
     <tbody>${rows}</tbody>
   </table>`
@@ -85,22 +96,22 @@ function renderDetailTable(details: LateReportDetail[]): string {
   const rows = details
     .map(
       (d) => `<tr>
-        <td style="padding:5px 6px;border:1px solid #e2e8f0;font-size:12px;">${escapeHtml(d.record_date)}</td>
-        <td style="padding:5px 6px;border:1px solid #e2e8f0;font-size:12px;">${escapeHtml(d.employee_name)}</td>
-        <td style="padding:5px 6px;border:1px solid #e2e8f0;font-size:12px;text-align:center;">${escapeHtml(d.expected_start ?? '—')}</td>
-        <td style="padding:5px 6px;border:1px solid #e2e8f0;font-size:12px;text-align:center;">${escapeHtml(d.check_in ?? '—')}</td>
-        <td style="padding:5px 6px;border:1px solid #e2e8f0;font-size:12px;text-align:center;">${d.late_minutes}</td>
+        <td style="${CELL_SM}">${escapeHtml(d.record_date)}</td>
+        <td style="${CELL_SM}">${escapeHtml(d.employee_name)}</td>
+        <td style="${CELL_SM}text-align:center;">${escapeHtml(d.expected_start ?? '—')}</td>
+        <td style="${CELL_SM}text-align:center;">${escapeHtml(d.check_in ?? '—')}</td>
+        <td style="${CELL_SM}text-align:center;">${Math.round(Number(d.late_minutes) || 0)}</td>
       </tr>`
     )
     .join('')
-  return `<p style="font-weight:600;margin-top:20px;">Detalle por fecha (${details.length} incidentes)</p>
-  <table style="width:100%;border-collapse:collapse;margin:8px 0;">
-    <thead><tr style="background:#334155;color:#fff;">
-      <th style="padding:6px;text-align:left;font-size:12px;">Fecha</th>
-      <th style="padding:6px;text-align:left;font-size:12px;">Empleado</th>
-      <th style="padding:6px;text-align:center;font-size:12px;">Esperada</th>
-      <th style="padding:6px;text-align:center;font-size:12px;">Entrada</th>
-      <th style="padding:6px;text-align:center;font-size:12px;">Min. tarde</th>
+  return `<p style="font-weight:600;margin:20px 0 8px 0;color:${T.text};font-size:15px;">Detalle por fecha (${details.length} incidentes)</p>
+  <table role="presentation" style="width:100%;border-collapse:collapse;margin:8px 0;color:${T.text};">
+    <thead><tr style="background:${T.brand800};color:#ffffff;">
+      <th style="padding:6px;text-align:left;font-size:12px;color:#ffffff;">Fecha</th>
+      <th style="padding:6px;text-align:left;font-size:12px;color:#ffffff;">Empleado</th>
+      <th style="padding:6px;text-align:center;font-size:12px;color:#ffffff;">Esperada</th>
+      <th style="padding:6px;text-align:center;font-size:12px;color:#ffffff;">Entrada</th>
+      <th style="padding:6px;text-align:center;font-size:12px;color:#ffffff;">Min. tarde</th>
     </tr></thead>
     <tbody>${rows}</tbody>
   </table>`
@@ -122,7 +133,7 @@ export function buildLateAttendanceReportHtml(data: LateAttendanceReportData): s
         value: 'Entrada más de 5 min después del horario asignado (tolerancia del sistema).',
       },
     ]),
-    transactionalParagraph('<strong>Resumen general</strong>'),
+    transactionalParagraph(`<strong style="color:${T.text};">Resumen general</strong>`),
     transactionalKeyValueTable([
       { label: 'Registros de asistencia', value: String(m.total_attendance_records ?? 0) },
       { label: 'Incidentes de tardanza', value: String(m.total_late_incidents ?? 0) },
@@ -135,17 +146,21 @@ export function buildLateAttendanceReportHtml(data: LateAttendanceReportData): s
 
   if (!hasLate) {
     bodyParts.push(
-      `<div style="background:#ecfdf5;border:1px solid #10b981;color:#047857;padding:14px 16px;border-radius:16px;margin:18px 0;font-size:14px;line-height:1.55;">
-        <strong>¡Felicitaciones por la puntualidad!</strong><br>
-        0 tardanzas encontradas en este periodo. El equipo cumplió con los horarios asignados dentro de la tolerancia permitida.
+      `<div style="background:${T.successBg};border:1px solid ${T.successBorder};color:${T.success};padding:14px 16px;border-radius:16px;margin:18px 0;font-size:14px;line-height:1.55;">
+        <strong style="color:#ffffff;">¡Felicitaciones por la puntualidad!</strong><br>
+        0 llegadas tarde en este periodo. El equipo cumplió con los horarios asignados dentro de la tolerancia permitida.
       </div>`
     )
   } else {
-    bodyParts.push(transactionalParagraph('<strong>Ranking por empleado</strong>'))
+    bodyParts.push(
+      transactionalParagraph(`<strong style="color:${T.text};">Ranking por empleado</strong>`)
+    )
     bodyParts.push(renderEmployeeTable(data.employees))
     bodyParts.push(renderDetailTable(data.details))
     if (observations.length > 0) {
-      bodyParts.push(transactionalParagraph('<strong>Observaciones</strong>'))
+      bodyParts.push(
+        transactionalParagraph(`<strong style="color:${T.text};">Observaciones</strong>`)
+      )
       bodyParts.push(
         transactionalInfoBox(observations.map((o) => `• ${escapeHtml(o)}`).join('<br>'), 'neutral')
       )
@@ -154,12 +169,12 @@ export function buildLateAttendanceReportHtml(data: LateAttendanceReportData): s
 
   bodyParts.push(
     transactionalParagraph(
-      'Se adjunta el reporte completo en PDF. La tardanza se calculó contra el horario efectivo de cada empleado cuando el registro no incluía expected_check_in ni late_minutes.'
+      'Se adjunta el reporte completo en PDF. La llegada tarde se calculó contra el horario efectivo de cada empleado cuando el registro no incluía expected_check_in ni late_minutes.'
     )
   )
 
   return wrapTransactionalEmail({
-    title: hasLate ? 'Reporte de tardanzas' : 'Reporte de puntualidad',
+    title: hasLate ? LATE_ARRIVAL_REPORT_TITLE : 'Reporte de puntualidad',
     subtitle: data.companyName,
     bodyHtml: bodyParts.join(''),
   })
@@ -175,12 +190,12 @@ export async function sendLateAttendanceReportEmail(
   const periodLabel = formatPeriodRangeForDisplay(data.periodStart, data.periodEnd)
   const hasLate = (data.metrics.total_late_incidents ?? 0) > 0
   const subject = hasLate
-    ? `Reporte de tardanzas — ${data.companyName} — ${periodLabel}`
+    ? `${LATE_ARRIVAL_REPORT_TITLE} — ${data.companyName} — ${periodLabel}`
     : `¡Puntualidad excelente! — ${data.companyName} — ${periodLabel}`
 
   const html = buildLateAttendanceReportHtml(data)
   const pdfBuffer = await generateLateAttendanceReportPDF(data)
-  const filename = `tardanzas-${data.periodStart}_${data.periodEnd}.pdf`
+  const filename = `llegadas-tarde-${data.periodStart}_${data.periodEnd}.pdf`
 
   const resend = new Resend(apiKey)
   const { error } = await resend.emails.send({

@@ -1,7 +1,19 @@
 import { Buffer } from 'buffer'
-import { PDF, drawLiquidPdfHeader, drawLiquidSectionTitle } from '../pdf/liquid-theme'
+import {
+  PDF,
+  PDF_FOOTER_RESERVE,
+  drawLiquidPdfHeader,
+  drawLiquidSectionTitle,
+  drawLiquidTableHeader,
+  drawLiquidTableRowBackground,
+  liquidReportFooterBrandLine,
+  registerLiquidPageFooter,
+  strokeLiquidTableCells,
+} from '../pdf/liquid-theme'
 import { formatPeriodRangeForDisplay } from '../payroll/period-dates'
-import { formatDateOnlyForLocale } from '../timezone'
+import { formatDateOnlyForLocale, formatDateTimeForHonduras } from '../timezone'
+
+export const LATE_ARRIVAL_REPORT_TITLE = 'Reporte de llegadas tarde'
 
 export type LateReportMetrics = {
   total_attendance_records: number
@@ -46,13 +58,15 @@ export type LateAttendanceReportData = {
   timeZone?: string
 }
 
-function formatMinutes(m: number): string {
-  if (m >= 60) {
-    const h = Math.floor(m / 60)
-    const min = m % 60
+/** Round float avg minutes (avoids `9h 51.10000000000002min`). */
+export function formatLateMinutes(m: number): string {
+  const total = Math.max(0, Math.round(Number(m) || 0))
+  if (total >= 60) {
+    const h = Math.floor(total / 60)
+    const min = total % 60
     return min > 0 ? `${h}h ${min}min` : `${h}h`
   }
-  return `${m} min`
+  return `${total} min`
 }
 
 export async function generateLateAttendanceReportPDF(data: LateAttendanceReportData): Promise<Buffer> {
@@ -63,15 +77,18 @@ export async function generateLateAttendanceReportPDF(data: LateAttendanceReport
       const tz = data.timeZone ?? 'America/Tegucigalpa'
       const periodLabel = formatPeriodRangeForDisplay(data.periodStart, data.periodEnd)
       const hasLate = (data.metrics.total_late_incidents ?? 0) > 0
+      // Use real UTC instant — formatDateTimeForHonduras applies America/Tegucigalpa once.
+      const generatedAt = formatDateTimeForHonduras(new Date())
+      const footerBrandLine = liquidReportFooterBrandLine(data.companyName)
 
       const doc = new PDFDocument({
         size: 'A4',
         layout: 'portrait',
         margin: 36,
         info: {
-          Title: `Reporte de tardanzas — ${data.companyName}`,
-          Author: 'Humano SISU',
-          Subject: 'Reporte de tardanzas por periodo',
+          Title: `${LATE_ARRIVAL_REPORT_TITLE} — ${data.companyName}`,
+          Author: data.companyName,
+          Subject: LATE_ARRIVAL_REPORT_TITLE,
         },
       })
 
@@ -80,137 +97,163 @@ export async function generateLateAttendanceReportPDF(data: LateAttendanceReport
       doc.on('end', () => resolve(Buffer.concat(buffers)))
       doc.on('error', reject)
 
+      registerLiquidPageFooter(doc, {
+        brandLine: footerBrandLine,
+        generatedAt,
+      })
+
       const pageW = () => doc.page.width
       const left = () => doc.page.margins.left
       const innerW = () => pageW() - doc.page.margins.left - doc.page.margins.right
-      const bottomSafe = () => doc.page.height - doc.page.margins.bottom - 24
+      const bottomSafe = () => doc.page.height - PDF_FOOTER_RESERVE - 8
 
       let y = drawLiquidPdfHeader(doc, {
-        title: 'Reporte de tardanzas',
+        title: LATE_ARRIVAL_REPORT_TITLE,
         subtitle: data.companyName,
-        tagline: 'Humano SISU',
+        tagline: false,
       })
 
-      doc.font('Helvetica').fontSize(9).fillColor(PDF.bodyMuted)
-      doc.text(`ID: ${data.companyId}`, left(), y)
-      y += 14
-      doc.text(`Período: ${periodLabel}`, left(), y)
-      y += 14
+      // Meta panel
+      const metaH = 54
+      doc.roundedRect(left(), y, innerW(), metaH, 8).fillAndStroke(PDF.panelBg, PDF.panelBorder)
+      doc.font('Helvetica').fontSize(8).fillColor(PDF.bodyMuted)
+      doc.text(`ID: ${data.companyId}`, left() + 12, y + 10, { width: innerW() - 24 })
+      doc.font('Helvetica-Bold').fontSize(9).fillColor(PDF.bodyText)
+      doc.text(`Período: ${periodLabel}`, left() + 12, y + 24, { width: innerW() - 24 })
+      doc.font('Helvetica').fontSize(8).fillColor(PDF.bodyMuted)
       doc.text(
-        'Criterio: entrada más de 5 minutos después del horario asignado (tolerancia del sistema).',
-        left(),
-        y,
-        { width: innerW() }
+        'Criterio: entrada más de 5 min después del horario asignado (tolerancia del sistema).',
+        left() + 12,
+        y + 38,
+        { width: innerW() - 24 }
       )
-      y += 28
+      y += metaH + 18
 
       drawLiquidSectionTitle(doc, 'Resumen general', left(), y)
-      y += 18
+      y += 16
+
       const m = data.metrics
-      const summaryLines = [
-        ['Registros de asistencia', String(m.total_attendance_records ?? 0)],
-        ['Incidentes de tardanza', String(m.total_late_incidents ?? 0)],
-        ['Empleados con tardanza', `${m.employees_with_late ?? 0} de ${m.active_employees ?? 0} activos`],
+      const summaryCards: Array<[string, string]> = [
+        ['Registros', String(m.total_attendance_records ?? 0)],
+        ['Incidentes', String(m.total_late_incidents ?? 0)],
+        ['Con tardanza', `${m.employees_with_late ?? 0} / ${m.active_employees ?? 0}`],
       ]
-      summaryLines.forEach(([label, val]) => {
-        doc.font('Helvetica').fontSize(9).fillColor(PDF.bodyText)
-        doc.text(`${label}:`, left(), y, { continued: true, width: 180 })
-        doc.font('Helvetica-Bold').text(` ${val}`)
-        y += 14
+      const cardGap = 10
+      const cardW = Math.floor((innerW() - cardGap * 2) / 3)
+      summaryCards.forEach(([label, val], i) => {
+        const x = left() + i * (cardW + cardGap)
+        doc.roundedRect(x, y, cardW, 42, 8).fillAndStroke(PDF.panelBg, PDF.panelBorder)
+        doc.font('Helvetica').fontSize(7).fillColor(PDF.bodyMuted).text(label.toUpperCase(), x + 10, y + 8, {
+          width: cardW - 20,
+        })
+        doc.font('Helvetica-Bold').fontSize(14).fillColor(PDF.accentDark).text(val, x + 10, y + 20, {
+          width: cardW - 20,
+        })
       })
+      y += 56
 
       if (!hasLate) {
-        y += 8
+        doc.roundedRect(left(), y, innerW(), 36, 8).fillAndStroke(PDF.successBg, PDF.successBorder)
         doc.font('Helvetica-Bold').fontSize(10).fillColor(PDF.successText)
-        doc.text('¡Felicitaciones! 0 tardanzas encontradas en este periodo.', left(), y, { width: innerW() })
-        y += 24
+        doc.text('¡Felicitaciones! 0 llegadas tarde en este periodo.', left() + 12, y + 12, {
+          width: innerW() - 24,
+        })
+        y += 48
       } else {
-        y += 12
         drawLiquidSectionTitle(doc, 'Ranking por empleado', left(), y)
-        y += 16
+        y += 14
 
         const empHeaders = ['Código', 'Empleado', 'Departamento', 'Días tarde', 'Promedio/día']
-        const empWidths = [52, 130, 90, 52, 58]
-        const drawRow = (cells: string[], header: boolean, rowY: number) => {
-          let x = left()
-          cells.forEach((cell, i) => {
-            const w = empWidths[i] ?? 60
-            if (header) {
-              doc.rect(x, rowY, w, 18).fillAndStroke(PDF.tableHeader, PDF.tableBorder)
-              doc.fillColor(PDF.tableHeaderText).font('Helvetica-Bold').fontSize(7)
-            } else {
-              doc.rect(x, rowY, w, 16).stroke(PDF.tableBorder)
-              doc.fillColor(PDF.bodyText).font('Helvetica').fontSize(7)
-            }
-            doc.text(cell, x + 3, rowY + (header ? 5 : 4), { width: w - 6, lineBreak: false })
-            x += w
+        const empWidths = [48, 148, 100, 55, 68]
+        const empTableW = empWidths.reduce((a, b) => a + b, 0)
+        const empRowH = 16
+        const empHeaderH = 18
+
+        const drawEmpHeader = (rowY: number) => {
+          drawLiquidTableHeader(doc, left(), rowY, empWidths, empHeaders, empHeaderH, {
+            fontSize: 7,
+            padX: 3,
           })
         }
 
-        drawRow(empHeaders, true, y)
-        y += 18
+        drawEmpHeader(y)
+        y += empHeaderH
 
-        for (const emp of data.employees) {
-          if (y > bottomSafe() - 20) {
+        data.employees.forEach((emp, idx) => {
+          if (y > bottomSafe() - empRowH) {
             doc.addPage()
             y = doc.page.margins.top
+            drawEmpHeader(y)
+            y += empHeaderH
           }
-          drawRow(
-            [
-              emp.employee_code ?? '—',
-              emp.employee_name,
-              emp.department_name ?? '—',
-              String(emp.late_days),
-              formatMinutes(Number(emp.avg_late_minutes)),
-            ],
-            false,
-            y
-          )
-          y += 16
-        }
+          drawLiquidTableRowBackground(doc, left(), y, empTableW, empRowH, idx)
+          strokeLiquidTableCells(doc, left(), y, empWidths, empRowH)
 
-        y += 16
+          const cells = [
+            emp.employee_code ?? '—',
+            emp.employee_name,
+            emp.department_name ?? '—',
+            String(emp.late_days),
+            formatLateMinutes(Number(emp.avg_late_minutes)),
+          ]
+          let x = left()
+          cells.forEach((cell, i) => {
+            const w = empWidths[i]
+            const align = i >= 3 ? 'center' : 'left'
+            doc.fillColor(PDF.bodyText).font('Helvetica').fontSize(7)
+            doc.text(cell, x + 3, y + 4, { width: w - 6, align, lineBreak: false })
+            x += w
+          })
+          y += empRowH
+        })
+
+        y += 18
         drawLiquidSectionTitle(doc, 'Detalle por fecha', left(), y)
-        y += 16
+        y += 14
 
         const detHeaders = ['Fecha', 'Empleado', 'Esperada', 'Entrada', 'Min. tarde']
-        const detWidths = [52, 120, 42, 42, 48]
+        const detWidths = [58, 168, 55, 55, 55]
+        const detTableW = detWidths.reduce((a, b) => a + b, 0)
+        const detRowH = 15
+        const detHeaderH = 18
+
         const drawDetHeader = (rowY: number) => {
-          let x = left()
-          detHeaders.forEach((h, i) => {
-            const w = detWidths[i]
-            doc.rect(x, rowY, w, 18).fillAndStroke(PDF.tableHeader, PDF.tableBorder)
-            doc.fillColor(PDF.tableHeaderText).font('Helvetica-Bold').fontSize(7).text(h, x + 2, rowY + 5, { width: w - 4 })
-            x += w
+          drawLiquidTableHeader(doc, left(), rowY, detWidths, detHeaders, detHeaderH, {
+            fontSize: 7,
+            padX: 2,
           })
         }
 
         drawDetHeader(y)
-        y += 18
+        y += detHeaderH
 
-        for (const row of data.details) {
-          if (y > bottomSafe() - 18) {
+        data.details.forEach((row, idx) => {
+          if (y > bottomSafe() - detRowH) {
             doc.addPage()
             y = doc.page.margins.top
             drawDetHeader(y)
-            y += 18
+            y += detHeaderH
           }
-          let x = left()
+          drawLiquidTableRowBackground(doc, left(), y, detTableW, detRowH, idx)
+          strokeLiquidTableCells(doc, left(), y, detWidths, detRowH)
+
           const cells = [
             formatDateOnlyForLocale(row.record_date, locale, tz),
             row.employee_name,
             row.expected_start ?? '—',
             row.check_in ?? '—',
-            String(row.late_minutes),
+            String(Math.round(Number(row.late_minutes) || 0)),
           ]
+          let x = left()
           cells.forEach((cell, i) => {
             const w = detWidths[i]
-            doc.rect(x, y, w, 15).stroke(PDF.tableBorder)
-            doc.fillColor(PDF.bodyText).font('Helvetica').fontSize(7).text(cell, x + 2, y + 4, { width: w - 4 })
+            const align = i >= 2 ? 'center' : 'left'
+            doc.fillColor(PDF.bodyText).font('Helvetica').fontSize(7)
+            doc.text(cell, x + 2, y + 3, { width: w - 4, align, lineBreak: false })
             x += w
           })
-          y += 15
-        }
+          y += detRowH
+        })
       }
 
       doc.end()
