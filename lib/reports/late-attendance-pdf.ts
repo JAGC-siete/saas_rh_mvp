@@ -69,6 +69,17 @@ export function formatLateMinutes(m: number): string {
   return `${total} min`
 }
 
+/** Absolute text — never advances PDFKit flow cursor / auto page-break. */
+function absText(
+  doc: PDFKit.PDFDocument,
+  text: string,
+  x: number,
+  y: number,
+  opts: PDFKit.Mixins.TextOptions = {}
+): void {
+  doc.text(text, x, y, { lineBreak: false, ellipsis: true, ...opts })
+}
+
 export async function generateLateAttendanceReportPDF(data: LateAttendanceReportData): Promise<Buffer> {
   return new Promise<Buffer>((resolve, reject) => {
     try {
@@ -77,14 +88,16 @@ export async function generateLateAttendanceReportPDF(data: LateAttendanceReport
       const tz = data.timeZone ?? 'America/Tegucigalpa'
       const periodLabel = formatPeriodRangeForDisplay(data.periodStart, data.periodEnd)
       const hasLate = (data.metrics.total_late_incidents ?? 0) > 0
-      // Use real UTC instant — formatDateTimeForHonduras applies America/Tegucigalpa once.
       const generatedAt = formatDateTimeForHonduras(new Date())
       const footerBrandLine = liquidReportFooterBrandLine(data.companyName)
 
+      // Larger bottom margin so manual layout never collides with footer → blank pages.
       const doc = new PDFDocument({
         size: 'A4',
         layout: 'portrait',
-        margin: 36,
+        margins: { top: 36, bottom: 56, left: 36, right: 36 },
+        autoFirstPage: true,
+        bufferPages: true,
         info: {
           Title: `${LATE_ARRIVAL_REPORT_TITLE} — ${data.companyName}`,
           Author: data.companyName,
@@ -102,10 +115,9 @@ export async function generateLateAttendanceReportPDF(data: LateAttendanceReport
         generatedAt,
       })
 
-      const pageW = () => doc.page.width
       const left = () => doc.page.margins.left
-      const innerW = () => pageW() - doc.page.margins.left - doc.page.margins.right
-      const bottomSafe = () => doc.page.height - PDF_FOOTER_RESERVE - 8
+      const innerW = () => doc.page.width - doc.page.margins.left - doc.page.margins.right
+      const bottomSafe = () => doc.page.height - Math.max(PDF_FOOTER_RESERVE, doc.page.margins.bottom) - 4
 
       let y = drawLiquidPdfHeader(doc, {
         title: LATE_ARRIVAL_REPORT_TITLE,
@@ -117,11 +129,12 @@ export async function generateLateAttendanceReportPDF(data: LateAttendanceReport
       const metaH = 54
       doc.roundedRect(left(), y, innerW(), metaH, 8).fillAndStroke(PDF.panelBg, PDF.panelBorder)
       doc.font('Helvetica').fontSize(8).fillColor(PDF.bodyMuted)
-      doc.text(`ID: ${data.companyId}`, left() + 12, y + 10, { width: innerW() - 24 })
+      absText(doc, `ID: ${data.companyId}`, left() + 12, y + 10, { width: innerW() - 24 })
       doc.font('Helvetica-Bold').fontSize(9).fillColor(PDF.bodyText)
-      doc.text(`Período: ${periodLabel}`, left() + 12, y + 24, { width: innerW() - 24 })
+      absText(doc, `Período: ${periodLabel}`, left() + 12, y + 24, { width: innerW() - 24 })
       doc.font('Helvetica').fontSize(8).fillColor(PDF.bodyMuted)
-      doc.text(
+      absText(
+        doc,
         'Criterio: entrada más de 5 min después del horario asignado (tolerancia del sistema).',
         left() + 12,
         y + 38,
@@ -143,22 +156,19 @@ export async function generateLateAttendanceReportPDF(data: LateAttendanceReport
       summaryCards.forEach(([label, val], i) => {
         const x = left() + i * (cardW + cardGap)
         doc.roundedRect(x, y, cardW, 42, 8).fillAndStroke(PDF.panelBg, PDF.panelBorder)
-        doc.font('Helvetica').fontSize(7).fillColor(PDF.bodyMuted).text(label.toUpperCase(), x + 10, y + 8, {
-          width: cardW - 20,
-        })
-        doc.font('Helvetica-Bold').fontSize(14).fillColor(PDF.accentDark).text(val, x + 10, y + 20, {
-          width: cardW - 20,
-        })
+        doc.font('Helvetica').fontSize(7).fillColor(PDF.bodyMuted)
+        absText(doc, label.toUpperCase(), x + 10, y + 8, { width: cardW - 20 })
+        doc.font('Helvetica-Bold').fontSize(14).fillColor(PDF.accentDark)
+        absText(doc, val, x + 10, y + 20, { width: cardW - 20 })
       })
       y += 56
 
       if (!hasLate) {
         doc.roundedRect(left(), y, innerW(), 36, 8).fillAndStroke(PDF.successBg, PDF.successBorder)
         doc.font('Helvetica-Bold').fontSize(10).fillColor(PDF.successText)
-        doc.text('¡Felicitaciones! 0 llegadas tarde en este periodo.', left() + 12, y + 12, {
+        absText(doc, '¡Felicitaciones! 0 llegadas tarde en este periodo.', left() + 12, y + 12, {
           width: innerW() - 24,
         })
-        y += 48
       } else {
         drawLiquidSectionTitle(doc, 'Ranking por empleado', left(), y)
         y += 14
@@ -169,6 +179,13 @@ export async function generateLateAttendanceReportPDF(data: LateAttendanceReport
         const empRowH = 16
         const empHeaderH = 18
 
+        const ensureSpace = (needed: number): boolean => {
+          if (y + needed <= bottomSafe()) return false
+          doc.addPage()
+          y = doc.page.margins.top
+          return true
+        }
+
         const drawEmpHeader = (rowY: number) => {
           drawLiquidTableHeader(doc, left(), rowY, empWidths, empHeaders, empHeaderH, {
             fontSize: 7,
@@ -176,13 +193,12 @@ export async function generateLateAttendanceReportPDF(data: LateAttendanceReport
           })
         }
 
+        ensureSpace(empHeaderH + empRowH)
         drawEmpHeader(y)
         y += empHeaderH
 
         data.employees.forEach((emp, idx) => {
-          if (y > bottomSafe() - empRowH) {
-            doc.addPage()
-            y = doc.page.margins.top
+          if (ensureSpace(empRowH)) {
             drawEmpHeader(y)
             y += empHeaderH
           }
@@ -201,13 +217,14 @@ export async function generateLateAttendanceReportPDF(data: LateAttendanceReport
             const w = empWidths[i]
             const align = i >= 3 ? 'center' : 'left'
             doc.fillColor(PDF.bodyText).font('Helvetica').fontSize(7)
-            doc.text(cell, x + 3, y + 4, { width: w - 6, align, lineBreak: false })
+            absText(doc, cell, x + 3, y + 4, { width: w - 6, align })
             x += w
           })
           y += empRowH
         })
 
         y += 18
+        ensureSpace(40)
         drawLiquidSectionTitle(doc, 'Detalle por fecha', left(), y)
         y += 14
 
@@ -224,13 +241,12 @@ export async function generateLateAttendanceReportPDF(data: LateAttendanceReport
           })
         }
 
+        ensureSpace(detHeaderH + detRowH)
         drawDetHeader(y)
         y += detHeaderH
 
         data.details.forEach((row, idx) => {
-          if (y > bottomSafe() - detRowH) {
-            doc.addPage()
-            y = doc.page.margins.top
+          if (ensureSpace(detRowH)) {
             drawDetHeader(y)
             y += detHeaderH
           }
@@ -249,7 +265,7 @@ export async function generateLateAttendanceReportPDF(data: LateAttendanceReport
             const w = detWidths[i]
             const align = i >= 2 ? 'center' : 'left'
             doc.fillColor(PDF.bodyText).font('Helvetica').fontSize(7)
-            doc.text(cell, x + 2, y + 3, { width: w - 4, align, lineBreak: false })
+            absText(doc, cell, x + 2, y + 3, { width: w - 4, align })
             x += w
           })
           y += detRowH

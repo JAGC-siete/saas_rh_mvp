@@ -72,16 +72,19 @@ export function drawLiquidPdfHeader(
     doc.font('Helvetica-Bold').fontSize(18).text(tagline.toUpperCase(), 30, 14, {
       align: 'center',
       width: contentW,
+      lineBreak: false,
     })
     if (options.subtitle) {
       doc.font('Helvetica').fontSize(10).text(options.subtitle, 30, 36, {
         align: 'center',
         width: contentW,
+        lineBreak: false,
       })
     }
     doc.font('Helvetica').fontSize(12).text(options.title, 30, options.subtitle ? 52 : 38, {
       align: 'center',
       width: contentW,
+      lineBreak: false,
     })
   } else {
     // Company name prominent; report title below — no Humano SISU
@@ -90,15 +93,18 @@ export function drawLiquidPdfHeader(
       doc.font('Helvetica-Bold').fontSize(13).text(company, 30, 18, {
         align: 'center',
         width: contentW,
+        lineBreak: false,
       })
       doc.font('Helvetica').fontSize(11).text(options.title, 30, 42, {
         align: 'center',
         width: contentW,
+        lineBreak: false,
       })
     } else {
       doc.font('Helvetica-Bold').fontSize(14).text(options.title, 30, 26, {
         align: 'center',
         width: contentW,
+        lineBreak: false,
       })
     }
   }
@@ -171,6 +177,8 @@ export function drawLiquidTableHeader(
     doc.text(label, cx + padX, textY, {
       ...textOpts,
       height: rowHeight - 2,
+      lineBreak: false,
+      ellipsis: true,
     })
     cx += w
   }
@@ -189,9 +197,13 @@ export function drawLiquidFooter(
   const y = options?.y ?? pageHeight - 40
   const fontSize = options?.fontSize ?? 8
 
+  // lineBreak:false is required — wrapped footer text past the bottom margin
+  // causes PDFKit to auto-create blank pages (pageAdded loops).
   doc.fontSize(fontSize).fillColor(PDF.footerMuted).text(text, 30, y, {
     align: 'center',
     width: pageWidth - 60,
+    lineBreak: false,
+    ellipsis: true,
   })
   doc.fillColor(PDF.bodyText)
 }
@@ -213,18 +225,25 @@ export function registerLiquidPageFooter(
       const pageWidth = doc.page.width
       const pageHeight = doc.page.height
       const margin = 30
-      // Stay above PDFKit's bottom margin to avoid auto page-break → pageAdded recursion.
       const footerY = pageHeight - PDF_FOOTER_RESERVE
       const contentWidth = pageWidth - margin * 2
+
+      // PDFKit auto-paginates any text past page.margins.bottom. Footers must
+      // temporarily clear the bottom margin or each paint creates blank pages.
+      const savedBottom = doc.page.margins.bottom
+      doc.page.margins.bottom = 0
 
       if (generatedAt) {
         doc.fontSize(7).fillColor(PDF.footerMuted).text(`Fecha de generación: ${generatedAt}`, margin, footerY - 12, {
           align: 'center',
           width: contentWidth,
           lineBreak: false,
+          ellipsis: true,
         })
       }
       drawLiquidFooter(doc, brandLine, { y: footerY, fontSize: 7 })
+
+      doc.page.margins.bottom = savedBottom
     } finally {
       painting = false
     }
