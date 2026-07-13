@@ -7,6 +7,7 @@ export interface ResolvedColumn {
   label: string
   sourceField: string
   source: 'standard' | 'payroll_config'
+  order: number
 }
 
 export interface ResolvedReportConfig {
@@ -130,7 +131,8 @@ export async function resolveReportConfig(
       id,
       label: v.label,
       sourceField: v.sourceField ?? id,
-      source: (v.source ?? 'standard') as 'standard' | 'payroll_config'
+      source: (v.source ?? 'standard') as 'standard' | 'payroll_config',
+      order: v.order
     }))
 
   if (resolved.length === 0 && standardColumns.length > 0) {
@@ -139,7 +141,8 @@ export async function resolveReportConfig(
         id: sc.id,
         label: sc.label,
         sourceField: sc.sourceField,
-        source: 'standard' as const
+        source: 'standard' as const,
+        order: sc.order
       })),
       branding,
       includeCustomPayrollFields

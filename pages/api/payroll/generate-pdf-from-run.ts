@@ -52,6 +52,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     let reportVisual: { primaryColor?: string; branding?: Record<string, unknown> } | undefined
     let visibleColumnIds: string[] | undefined
     let columnLabels: Record<string, string> | undefined
+    let columnOrder: Record<string, number> | undefined
     let includeCustomPayrollFields: boolean | undefined
     try {
       const resolvedConfig = await resolveReportConfig(companyId, 'payroll', supabase)
@@ -64,6 +65,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       if (resolvedConfig?.columns?.length) {
         visibleColumnIds = resolvedConfig.columns.map((c) => c.id)
         columnLabels = Object.fromEntries(resolvedConfig.columns.map((c) => [c.id, c.label]))
+        columnOrder = Object.fromEntries(resolvedConfig.columns.map((c) => [c.id, c.order]))
       }
       includeCustomPayrollFields = resolvedConfig?.includeCustomPayrollFields
     } catch (configErr) {
@@ -86,6 +88,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         watermarkText: loaded.isDraftPreview ? 'VISTA PREVIA - NO AUTORIZADA' : undefined,
         visibleColumnIds,
         columnLabels,
+        columnOrder,
         includeCustomPayrollFields,
       }
     )

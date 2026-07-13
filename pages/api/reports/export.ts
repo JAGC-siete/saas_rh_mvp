@@ -1352,6 +1352,7 @@ async function generatePayrollPDF(
           groupBy: 'none',
           visibleColumnIds: resolvedConfig.columns.map((c) => c.id),
           columnLabels: Object.fromEntries(resolvedConfig.columns.map((c) => [c.id, c.label])),
+          columnOrder: Object.fromEntries(resolvedConfig.columns.map((c) => [c.id, c.order])),
           includeCustomPayrollFields: resolvedConfig.includeCustomPayrollFields,
         }
       : { groupBy: 'none' }

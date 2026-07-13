@@ -173,6 +173,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     let reportVisual: { primaryColor?: string; branding?: Record<string, unknown> } | undefined
     let visibleColumnIds: string[] | undefined
     let columnLabels: Record<string, string> | undefined
+    let columnOrder: Record<string, number> | undefined
     let includeCustomPayrollFields: boolean | undefined
     try {
       if (companyId) {
@@ -186,6 +187,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         if (resolvedConfig?.columns?.length) {
           visibleColumnIds = resolvedConfig.columns.map((c) => c.id)
           columnLabels = Object.fromEntries(resolvedConfig.columns.map((c) => [c.id, c.label]))
+          columnOrder = Object.fromEntries(resolvedConfig.columns.map((c) => [c.id, c.order]))
         }
         includeCustomPayrollFields = resolvedConfig?.includeCustomPayrollFields
       }
@@ -208,6 +210,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         groupBy: 'none',
         visibleColumnIds,
         columnLabels,
+        columnOrder,
         includeCustomPayrollFields,
       }
     )

@@ -113,6 +113,8 @@ export async function generateConsolidatedPayrollPDF(
     visibleColumnIds?: string[]
     /** Optional label overrides from report config */
     columnLabels?: Record<string, string>
+    /** Print order by column id (lower first). When omitted, builder insertion order is kept. */
+    columnOrder?: Record<string, number>
     /**
      * When true with visibleColumnIds, custom payroll fields are filtered by visibility.
      * When false/undefined, custom fields from payroll config still print (legacy).
@@ -142,9 +144,21 @@ export async function generateConsolidatedPayrollPDF(
         ? new Set(layout.visibleColumnIds)
         : null
       const columnLabels = layout?.columnLabels ?? {}
+      const columnOrder = layout?.columnOrder ?? null
       const filterCustomFields = Boolean(layout?.includeCustomPayrollFields && visibleColumnIds)
       const colVisible = (id: string) => visibleColumnIds == null || visibleColumnIds.has(id)
       const colLabel = (id: string, fallback: string) => columnLabels[id]?.trim() || fallback
+      const sortBuiltColumns = (built: { id: string }[]) => {
+        if (!columnOrder) return
+        built.sort((a, b) => {
+          const ao = columnOrder[a.id]
+          const bo = columnOrder[b.id]
+          const aRank = ao == null ? 10_000 : ao
+          const bRank = bo == null ? 10_000 : bo
+          if (aRank !== bRank) return aRank - bRank
+          return a.id.localeCompare(b.id)
+        })
+      }
       
       // Configuración de payroll con valores por defecto
       const currency = payrollConfig?.currency || 'HNL'
@@ -608,6 +622,8 @@ export async function generateConsolidatedPayrollPDF(
           value: (row) => formatCurrency(row.total),
           number: (row) => row.total,
         })
+
+        sortBuiltColumns(cols)
 
         if (cols.length === 0) {
           cols.push({
