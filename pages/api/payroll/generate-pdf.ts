@@ -183,7 +183,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (resolvedConfig?.columns?.length) {
         visibleColumnIds = resolvedConfig.columns.map((c) => c.id)
         columnLabels = Object.fromEntries(resolvedConfig.columns.map((c) => [c.id, c.label]))
-        columnOrder = Object.fromEntries(resolvedConfig.columns.map((c) => [c.id, c.order]))
+        columnOrder = Object.fromEntries(
+          resolvedConfig.columns.map((c, i) => [c.id, c.order ?? i])
+        )
       }
       includeCustomPayrollFields = resolvedConfig?.includeCustomPayrollFields
     } catch (configErr) {

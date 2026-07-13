@@ -7,7 +7,8 @@ export interface ResolvedColumn {
   label: string
   sourceField: string
   source: 'standard' | 'payroll_config'
-  order: number
+  /** Present when resolved from report config / standard catalog; optional on legacy fallbacks. */
+  order?: number
 }
 
 export interface ResolvedReportConfig {
