@@ -24,12 +24,23 @@ const ATTENDANCE_COLUMNS: StandardColumnDef[] = [
 
 const PAYROLL_COLUMNS: StandardColumnDef[] = [
   { id: 'emp_code', label: 'Código', order: 1, sourceField: 'employee_code', source: 'standard' },
-  { id: 'emp_name', label: 'Empleado', order: 2, sourceField: 'employee_name', source: 'standard' },
-  { id: 'period', label: 'Período', order: 3, sourceField: 'period', source: 'standard' },
-  { id: 'gross_salary', label: 'Devengado', order: 4, sourceField: 'gross_salary', source: 'standard' },
-  { id: 'total_deductions', label: 'Deducciones', order: 5, sourceField: 'total_deductions', source: 'standard' },
-  { id: 'net_salary', label: 'Neto', order: 6, sourceField: 'net_salary', source: 'standard' },
-  { id: 'status', label: 'Estado', order: 7, sourceField: 'status', source: 'standard' }
+  { id: 'emp_name', label: 'Nombre', order: 2, sourceField: 'employee_name', source: 'standard' },
+  { id: 'department', label: 'Departamento', order: 3, sourceField: 'department', source: 'standard' },
+  { id: 'position', label: 'Puesto', order: 4, sourceField: 'position', source: 'standard' },
+  { id: 'days_worked', label: 'Días', order: 5, sourceField: 'days_worked', source: 'standard' },
+  { id: 'hours', label: 'Horas', order: 6, sourceField: 'total_hours_worked', source: 'standard' },
+  { id: 'hourly_rate', label: 'Tarifa/Hora', order: 7, sourceField: 'hourly_rate', source: 'standard' },
+  { id: 'base_salary', label: 'Salario Base', order: 8, sourceField: 'base_salary', source: 'standard' },
+  { id: 'septimo_dia', label: 'Séptimo Día', order: 9, sourceField: 'septimo_dia', source: 'standard' },
+  { id: 'gross_salary', label: 'Devengado', order: 10, sourceField: 'gross_salary', source: 'standard' },
+  { id: 'ihss', label: 'IHSS', order: 11, sourceField: 'IHSS', source: 'standard' },
+  { id: 'rap', label: 'RAP', order: 12, sourceField: 'RAP', source: 'standard' },
+  { id: 'isr', label: 'ISR', order: 13, sourceField: 'ISR', source: 'standard' },
+  { id: 'total_deductions', label: 'Deducciones', order: 14, sourceField: 'total_deductions', source: 'standard' },
+  { id: 'net_salary', label: 'Neto', order: 15, sourceField: 'net_salary', source: 'standard' },
+  /** Solo listados / export CSV-XLSX; no forman parte de la tabla del PDF de planilla. */
+  { id: 'period', label: 'Período', order: 16, sourceField: 'period', source: 'standard' },
+  { id: 'status', label: 'Estado', order: 17, sourceField: 'status', source: 'standard' }
 ]
 
 const EMPLOYEES_COLUMNS: StandardColumnDef[] = [

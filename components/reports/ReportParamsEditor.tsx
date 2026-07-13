@@ -243,6 +243,14 @@ export default function ReportParamsEditor({ companyId, onSave }: ReportParamsEd
 
           <div>
             <h4 className="text-sm font-medium text-white mb-3">Columnas</h4>
+            {reportType === 'payroll' && (
+              <p className="text-xs text-gray-400 mb-3">
+                Visibilidad aplicada al PDF de planilla. Horas / Tarifa / Séptimo día solo aparecen en
+                tablas por hora. Período y Estado afectan listados/export, no la tabla del PDF.
+                Campos custom del PDF se controlan al activar “Incluir campos custom”.
+                Resumen ejecutivo e información bancaria del PDF no son configurables aquí.
+              </p>
+            )}
             {(reportType === 'payroll' || reportType === 'voucher') && availableCustomFields.length > 0 && (
               <div className="mb-4 flex items-center gap-2">
                 <input

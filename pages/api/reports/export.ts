@@ -1346,7 +1346,15 @@ async function generatePayrollPDF(
     pdfCustomFieldsConfig,
     pdfPayrollLegal,
     undefined,
-    reportVisual
+    reportVisual,
+    resolvedConfig?.columns?.length
+      ? {
+          groupBy: 'none',
+          visibleColumnIds: resolvedConfig.columns.map((c) => c.id),
+          columnLabels: Object.fromEntries(resolvedConfig.columns.map((c) => [c.id, c.label])),
+          includeCustomPayrollFields: resolvedConfig.includeCustomPayrollFields,
+        }
+      : { groupBy: 'none' }
   )
   res.setHeader('Content-Type', 'application/pdf')
   res.setHeader('Content-Disposition', `attachment; filename=planilla_${periodo}_q${quincena}.pdf`)

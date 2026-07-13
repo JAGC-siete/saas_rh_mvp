@@ -50,6 +50,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     const pdfGroupBy = loaded.defaultPdfGroupBy
 
     let reportVisual: { primaryColor?: string; branding?: Record<string, unknown> } | undefined
+    let visibleColumnIds: string[] | undefined
+    let columnLabels: Record<string, string> | undefined
+    let includeCustomPayrollFields: boolean | undefined
     try {
       const resolvedConfig = await resolveReportConfig(companyId, 'payroll', supabase)
       if (resolvedConfig?.branding) {
@@ -58,8 +61,13 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           branding: resolvedConfig.branding,
         }
       }
+      if (resolvedConfig?.columns?.length) {
+        visibleColumnIds = resolvedConfig.columns.map((c) => c.id)
+        columnLabels = Object.fromEntries(resolvedConfig.columns.map((c) => [c.id, c.label]))
+      }
+      includeCustomPayrollFields = resolvedConfig?.includeCustomPayrollFields
     } catch (configErr) {
-      console.warn('generate-pdf-from-run: branding config skipped', configErr)
+      console.warn('generate-pdf-from-run: report config skipped', configErr)
     }
 
     const pdf = await generateConsolidatedPayrollPDF(
@@ -76,6 +84,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       {
         groupBy: pdfGroupBy,
         watermarkText: loaded.isDraftPreview ? 'VISTA PREVIA - NO AUTORIZADA' : undefined,
+        visibleColumnIds,
+        columnLabels,
+        includeCustomPayrollFields,
       }
     )
 

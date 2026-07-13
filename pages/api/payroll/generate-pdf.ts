@@ -7,6 +7,7 @@ import {
   payrollPdfGroupByFilenameSuffix
 } from '../../../lib/payroll/pdf-layout'
 import { requirePlanAndQuota, incrementUsage } from '../../../lib/billing/enforce'
+import { resolveReportConfig } from '../../../lib/reports/column-resolver'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -166,6 +167,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const planillaFixed = planilla.filter(p => (p as any).pay_type !== 'hourly')
     const planillaHourly = planilla.filter(p => (p as any).pay_type === 'hourly')
 
+    let reportVisual: { primaryColor?: string; branding?: Record<string, unknown> } | undefined
+    let visibleColumnIds: string[] | undefined
+    let columnLabels: Record<string, string> | undefined
+    let includeCustomPayrollFields: boolean | undefined
+    try {
+      const resolvedConfig = await resolveReportConfig(companyId, 'payroll', supabase)
+      if (resolvedConfig?.branding) {
+        reportVisual = {
+          primaryColor: resolvedConfig.branding.primaryColor,
+          branding: resolvedConfig.branding,
+        }
+      }
+      if (resolvedConfig?.columns?.length) {
+        visibleColumnIds = resolvedConfig.columns.map((c) => c.id)
+        columnLabels = Object.fromEntries(resolvedConfig.columns.map((c) => [c.id, c.label]))
+      }
+      includeCustomPayrollFields = resolvedConfig?.includeCustomPayrollFields
+    } catch (configErr) {
+      console.warn('generate-pdf: report config skipped', configErr)
+    }
+
     const pdf = await generateConsolidatedPayrollPDF(
       planillaFixed,
       planillaHourly,
@@ -176,8 +198,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       pdfCustomFieldsForPdf,
       pdfPayrollConfig,
       undefined,
-      undefined,
-      { groupBy: pdfGroupBy }
+      reportVisual,
+      { groupBy: pdfGroupBy, visibleColumnIds, columnLabels, includeCustomPayrollFields }
     )
     
     // Increment usage meter for PDF generation

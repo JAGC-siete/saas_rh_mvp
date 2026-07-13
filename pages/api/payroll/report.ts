@@ -6,6 +6,7 @@ import {
   buildCustomDeductionsList,
   formatCustomDeductionsNotes,
 } from '../../../lib/payroll/custom-deductions-list'
+import { resolveReportConfig } from '../../../lib/reports/column-resolver'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (!['POST', 'GET'].includes(req.method || '')) {
@@ -169,6 +170,29 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const planillaFixed = planillaAll.filter(p => (p as any).pay_type !== 'hourly')
     const planillaHourly = planillaAll.filter(p => (p as any).pay_type === 'hourly')
 
+    let reportVisual: { primaryColor?: string; branding?: Record<string, unknown> } | undefined
+    let visibleColumnIds: string[] | undefined
+    let columnLabels: Record<string, string> | undefined
+    let includeCustomPayrollFields: boolean | undefined
+    try {
+      if (companyId) {
+        const resolvedConfig = await resolveReportConfig(companyId, 'payroll', supabase)
+        if (resolvedConfig?.branding) {
+          reportVisual = {
+            primaryColor: resolvedConfig.branding.primaryColor,
+            branding: resolvedConfig.branding,
+          }
+        }
+        if (resolvedConfig?.columns?.length) {
+          visibleColumnIds = resolvedConfig.columns.map((c) => c.id)
+          columnLabels = Object.fromEntries(resolvedConfig.columns.map((c) => [c.id, c.label]))
+        }
+        includeCustomPayrollFields = resolvedConfig?.includeCustomPayrollFields
+      }
+    } catch (configErr) {
+      console.warn('payroll/report: report config skipped', configErr)
+    }
+
     const pdf = await generateConsolidatedPayrollPDF(
       planillaFixed,
       planillaHourly,
@@ -177,7 +201,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       user.email, 
       company?.name,
       pdfCustomFieldsConfig,
-      pdfPayrollConfig
+      pdfPayrollConfig,
+      undefined,
+      reportVisual,
+      {
+        groupBy: 'none',
+        visibleColumnIds,
+        columnLabels,
+        includeCustomPayrollFields,
+      }
     )
     res.setHeader('Content-Type', 'application/pdf')
     res.setHeader('Content-Disposition', `attachment; filename=planilla_${periodo}_q${quincena}.pdf`)

@@ -12,6 +12,8 @@ export interface ResolvedColumn {
 export interface ResolvedReportConfig {
   columns: ResolvedColumn[]
   branding: BrandingConfig
+  /** When true, payroll/voucher PDFs should only print custom_* columns present in `columns`. */
+  includeCustomPayrollFields: boolean
 }
 
 const DEFAULT_BRANDING: BrandingConfig = {
@@ -139,9 +141,10 @@ export async function resolveReportConfig(
         sourceField: sc.sourceField,
         source: 'standard' as const
       })),
-      branding
+      branding,
+      includeCustomPayrollFields
     }
   }
 
-  return { columns: resolved, branding }
+  return { columns: resolved, branding, includeCustomPayrollFields }
 }

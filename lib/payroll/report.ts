@@ -102,7 +102,23 @@ export async function generateConsolidatedPayrollPDF(
   },
   periodDates?: { period_start: string; period_end: string },
   reportVisual?: { primaryColor?: string; branding?: BrandingConfig },
-  layout?: { groupBy: PayrollPdfGroupBy; watermarkText?: string }
+  layout?: {
+    groupBy: PayrollPdfGroupBy
+    watermarkText?: string
+    /**
+     * When set, only these column IDs are printed in the planilla table.
+     * Matches Parámetros de Reportes → Nómina (`resolveReportConfig` visible columns).
+     * Omit for legacy callers (all columns, including all custom fields).
+     */
+    visibleColumnIds?: string[]
+    /** Optional label overrides from report config */
+    columnLabels?: Record<string, string>
+    /**
+     * When true with visibleColumnIds, custom payroll fields are filtered by visibility.
+     * When false/undefined, custom fields from payroll config still print (legacy).
+     */
+    includeCustomPayrollFields?: boolean
+  }
 ): Promise<Buffer> {
   const headerPrimary = defaultPdfPrimaryColor(
     reportVisual?.primaryColor ?? reportVisual?.branding?.primaryColor
@@ -122,6 +138,13 @@ export async function generateConsolidatedPayrollPDF(
       const PDFDocument = require('pdfkit')
       const pdfGroupBy: PayrollPdfGroupBy = layout?.groupBy ?? 'none'
       const watermarkText = layout?.watermarkText?.trim() || ''
+      const visibleColumnIds = layout?.visibleColumnIds
+        ? new Set(layout.visibleColumnIds)
+        : null
+      const columnLabels = layout?.columnLabels ?? {}
+      const filterCustomFields = Boolean(layout?.includeCustomPayrollFields && visibleColumnIds)
+      const colVisible = (id: string) => visibleColumnIds == null || visibleColumnIds.has(id)
+      const colLabel = (id: string, fallback: string) => columnLabels[id]?.trim() || fallback
       
       // Configuración de payroll con valores por defecto
       const currency = payrollConfig?.currency || 'HNL'
@@ -360,30 +383,113 @@ export async function generateConsolidatedPayrollPDF(
         drawLiquidSectionTitle(doc, title, 30, 24)
 
         const hasSeptimoDia = isHourly && planillaData.some((r) => (r.septimo_dia ?? 0) > 0)
-        let baseHeaders: string[]
-        if (isHourly) {
-          baseHeaders = hasSeptimoDia
-            ? ['Código', 'Nombre', 'Departamento', 'Días', 'Horas', 'Tarifa/Hora', 'Salario Base', 'Séptimo Día']
-            : ['Código', 'Nombre', 'Departamento', 'Días', 'Horas', 'Tarifa/Hora', 'Salario Base']
-        } else {
-          baseHeaders = ['Código', 'Nombre', 'Departamento', 'Días Trab.', 'Salario Base Mensual']
-        }
-
         const statutoryCols = resolveStatutoryDeductionColumns(
           payrollConfig?.legal_deductions,
           customFieldsConfig as Record<string, CustomFieldDef | string> | undefined,
           jurisdictionCountry
         )
 
-        const earningsHeaders: string[] = []
-        const deductionsHeaders: string[] = []
-        const standardDeductionsHeaders: string[] = []
-        if (statutoryCols.ihss) standardDeductionsHeaders.push(dedLabels.primarySocial)
-        if (statutoryCols.rap && dedLabels.secondarySocial !== '—') {
-          standardDeductionsHeaders.push(dedLabels.secondarySocial)
+        type PdfTableCol = {
+          id: string
+          header: string
+          width: number
+          isText: boolean
+          totalFormat: 'days' | 'hours' | 'currency' | 'none'
+          value: (row: PlanillaItem) => string
+          number: (row: PlanillaItem) => number | null
         }
-        if (statutoryCols.isr) standardDeductionsHeaders.push(dedLabels.incomeTax)
-        const finalHeaders = ['Devengado', 'Deducciones', 'Neto']
+
+        const cols: PdfTableCol[] = []
+        const pushCol = (col: PdfTableCol) => {
+          if (!colVisible(col.id)) return
+          cols.push(col)
+        }
+
+        pushCol({
+          id: 'emp_code',
+          header: colLabel('emp_code', 'Código'),
+          width: isHourly ? 55 : 60,
+          isText: true,
+          totalFormat: 'none',
+          value: (row) => row.id || '',
+          number: () => null,
+        })
+        pushCol({
+          id: 'emp_name',
+          header: colLabel('emp_name', 'Nombre'),
+          width: isHourly ? 100 : 110,
+          isText: true,
+          totalFormat: 'none',
+          value: (row) => row.name || '',
+          number: () => null,
+        })
+        pushCol({
+          id: 'department',
+          header: colLabel('department', 'Departamento'),
+          width: 70,
+          isText: true,
+          totalFormat: 'none',
+          value: (row) => row.department || '',
+          number: () => null,
+        })
+        pushCol({
+          id: 'position',
+          header: colLabel('position', 'Puesto'),
+          width: 70,
+          isText: true,
+          totalFormat: 'none',
+          value: (row) => (row.position || row.role || '').trim(),
+          number: () => null,
+        })
+        pushCol({
+          id: 'days_worked',
+          header: colLabel('days_worked', isHourly ? 'Días' : 'Días Trab.'),
+          width: isHourly ? 35 : 45,
+          isText: false,
+          totalFormat: 'days',
+          value: (row) => row.days_worked.toFixed(1),
+          number: (row) => row.days_worked,
+        })
+        if (isHourly) {
+          pushCol({
+            id: 'hours',
+            header: colLabel('hours', 'Horas'),
+            width: 45,
+            isText: false,
+            totalFormat: 'hours',
+            value: (row) => (row.total_hours_worked || 0).toFixed(2),
+            number: (row) => row.total_hours_worked || 0,
+          })
+          pushCol({
+            id: 'hourly_rate',
+            header: colLabel('hourly_rate', 'Tarifa/Hora'),
+            width: 55,
+            isText: false,
+            totalFormat: 'currency',
+            value: (row) => formatCurrency(row.hourly_rate || 0),
+            number: (row) => row.hourly_rate || 0,
+          })
+        }
+        pushCol({
+          id: 'base_salary',
+          header: colLabel('base_salary', isHourly ? 'Salario Base' : 'Salario Base Mensual'),
+          width: isHourly ? 65 : 70,
+          isText: false,
+          totalFormat: 'currency',
+          value: (row) => formatCurrency(row.monthly_salary),
+          number: (row) => row.monthly_salary,
+        })
+        if (isHourly && hasSeptimoDia) {
+          pushCol({
+            id: 'septimo_dia',
+            header: colLabel('septimo_dia', 'Séptimo Día'),
+            width: 55,
+            isText: false,
+            totalFormat: 'currency',
+            value: (row) => formatCurrency(row.septimo_dia ?? 0),
+            number: (row) => row.septimo_dia ?? 0,
+          })
+        }
 
         if (customFieldsConfig) {
           for (const [fieldName, fieldDef] of Object.entries(customFieldsConfig)) {
@@ -394,58 +500,143 @@ export async function generateConsolidatedPayrollPDF(
                     category: 'earnings' as const,
                     type: 'number' as const,
                     required: false,
-                    default: 0
+                    default: 0,
                   }
                 : fieldDef
-
-            if (def.category === 'earnings') {
-              earningsHeaders.push(def.label || fieldName)
-            } else if (def.category === 'deductions') {
-              deductionsHeaders.push(def.label || fieldName)
-            }
+            if (def.category !== 'earnings') continue
+            const customId = `custom_${fieldName}`
+            // Legacy / toggle off: show all custom earnings. Filtered mode: only visible ones.
+            if (filterCustomFields && !visibleColumnIds!.has(customId)) continue
+            cols.push({
+              id: customId,
+              header: colLabel(customId, def.label || fieldName),
+              width: 42,
+              isText: false,
+              totalFormat: 'currency',
+              value: (row) => getCustomFieldValue(row, fieldName),
+              number: (row) => getCustomFieldNumber(row, fieldName),
+            })
           }
         }
 
-        const allHeaders = [
-          ...baseHeaders,
-          ...earningsHeaders,
-          ...finalHeaders.slice(0, 1),
-          ...standardDeductionsHeaders,
-          ...deductionsHeaders,
-          ...finalHeaders.slice(1)
-        ]
+        pushCol({
+          id: 'gross_salary',
+          header: colLabel('gross_salary', 'Devengado'),
+          width: 58,
+          isText: false,
+          totalFormat: 'currency',
+          value: (row) => formatCurrency(row.total_earnings),
+          number: (row) => row.total_earnings,
+        })
 
-        const baseColWidths = isHourly
-          ? hasSeptimoDia
-            ? [55, 110, 70, 35, 45, 55, 65, 55]
-            : [60, 115, 75, 40, 50, 60, 70]
-          : [60, 118, 75, 50, 80]
-        const customFieldWidth = 42
-        const earningsColWidths = earningsHeaders.map(() => customFieldWidth)
-        const devengadoWidth = 58
-        const standardDeductionsWidths = standardDeductionsHeaders.map(() => 38)
-        const deductionsColWidths = deductionsHeaders.map(() => customFieldWidth)
-        const finalColWidths = [58, 58]
+        if (statutoryCols.ihss) {
+          pushCol({
+            id: 'ihss',
+            header: colLabel('ihss', dedLabels.primarySocial),
+            width: 38,
+            isText: false,
+            totalFormat: 'currency',
+            value: (row) => formatCurrency(row.IHSS),
+            number: (row) => row.IHSS,
+          })
+        }
+        if (statutoryCols.rap && dedLabels.secondarySocial !== '—') {
+          pushCol({
+            id: 'rap',
+            header: colLabel('rap', dedLabels.secondarySocial),
+            width: 38,
+            isText: false,
+            totalFormat: 'currency',
+            value: (row) => formatCurrency(row.RAP),
+            number: (row) => row.RAP,
+          })
+        }
+        if (statutoryCols.isr) {
+          pushCol({
+            id: 'isr',
+            header: colLabel('isr', dedLabels.incomeTax),
+            width: 38,
+            isText: false,
+            totalFormat: 'currency',
+            value: (row) => formatCurrency(row.ISR),
+            number: (row) => row.ISR,
+          })
+        }
 
-        const colWidths = [
-          ...baseColWidths,
-          ...earningsColWidths,
-          devengadoWidth,
-          ...standardDeductionsWidths,
-          ...deductionsColWidths,
-          ...finalColWidths
-        ]
+        if (customFieldsConfig) {
+          for (const [fieldName, fieldDef] of Object.entries(customFieldsConfig)) {
+            const def =
+              typeof fieldDef === 'string'
+                ? {
+                    label: fieldDef,
+                    category: 'deductions' as const,
+                    type: 'number' as const,
+                    required: false,
+                    default: 0,
+                  }
+                : fieldDef
+            if (def.category !== 'deductions') continue
+            const customId = `custom_${fieldName}`
+            if (filterCustomFields && !visibleColumnIds!.has(customId)) continue
+            cols.push({
+              id: customId,
+              header: colLabel(customId, def.label || fieldName),
+              width: 42,
+              isText: false,
+              totalFormat: 'currency',
+              value: (row) => getCustomFieldValue(row, fieldName),
+              number: (row) => getCustomFieldNumber(row, fieldName),
+            })
+          }
+        }
+
+        pushCol({
+          id: 'total_deductions',
+          header: colLabel('total_deductions', 'Deducciones'),
+          width: 58,
+          isText: false,
+          totalFormat: 'currency',
+          value: (row) => formatCurrency(row.total_deductions),
+          number: (row) => row.total_deductions,
+        })
+        pushCol({
+          id: 'net_salary',
+          header: colLabel('net_salary', 'Neto'),
+          width: 58,
+          isText: false,
+          totalFormat: 'currency',
+          value: (row) => formatCurrency(row.total),
+          number: (row) => row.total,
+        })
+
+        if (cols.length === 0) {
+          cols.push({
+            id: 'emp_name',
+            header: 'Nombre',
+            width: 120,
+            isText: true,
+            totalFormat: 'none',
+            value: (row) => row.name || '',
+            number: () => null,
+          })
+        }
+
+        const allHeaders = cols.map((c) => c.header)
+        const colWidths = cols.map((c) => c.width)
 
         const totalWidth = colWidths.reduce((a, b) => a + b, 0)
         const availableWidth = tablePageWidth - 80
         if (totalWidth > availableWidth) {
-          // Prefer shrinking numeric/custom columns so Código/Nombre stay readable on one line.
-          const protectedSum = colWidths[0] + colWidths[1]
+          const protectedIdx = cols.findIndex((c) => c.id === 'emp_name')
+          const codeIdx = cols.findIndex((c) => c.id === 'emp_code')
+          const protect = [codeIdx, protectedIdx].filter((i) => i >= 0)
+          const protectedSum = protect.reduce((s, i) => s + colWidths[i], 0) || colWidths[0] + (colWidths[1] || 0)
           const restSum = totalWidth - protectedSum
           const restAvailable = availableWidth - protectedSum
-          if (restAvailable > 80 && restSum > 0) {
+          if (restAvailable > 80 && restSum > 0 && protect.length > 0) {
             const restScale = restAvailable / restSum
-            for (let i = 2; i < colWidths.length; i++) {
+            for (let i = 0; i < colWidths.length; i++) {
+              if (protect.includes(i)) continue
               colWidths[i] = Math.max(28, Math.floor(colWidths[i] * restScale))
             }
             const after = colWidths.reduce((a, b) => a + b, 0)
@@ -470,154 +661,15 @@ export async function generateConsolidatedPayrollPDF(
         const headerFontSize = 6
         const totalsFontSize = 5.5
 
-        /** Text columns (no totals): Código, Nombre, Departamento */
-        const textColCount = 3
+        const buildRowValues = (row: PlanillaItem): string[] => cols.map((c) => c.value(row))
 
-        const buildRowValues = (row: PlanillaItem): string[] => {
-          const values: string[] = []
-
-          if (isHourly) {
-            values.push(
-              row.id || '',
-              row.name || '',
-              row.department || '',
-              row.days_worked.toFixed(1),
-              (row.total_hours_worked || 0).toFixed(2),
-              formatCurrency(row.hourly_rate || 0),
-              formatCurrency(row.monthly_salary)
-            )
-            if (hasSeptimoDia) {
-              values.push(formatCurrency(row.septimo_dia ?? 0))
-            }
-          } else {
-            values.push(
-              row.id || '',
-              row.name || '',
-              row.department || '',
-              row.days_worked.toFixed(1),
-              formatCurrency(row.monthly_salary)
-            )
-          }
-
-          if (customFieldsConfig) {
-            for (const [fieldName, fieldDef] of Object.entries(customFieldsConfig)) {
-              const def =
-                typeof fieldDef === 'string'
-                  ? {
-                      label: fieldDef,
-                      category: 'earnings' as const,
-                      type: 'number' as const,
-                      required: false,
-                      default: 0
-                    }
-                  : fieldDef
-              if (def.category === 'earnings') {
-                values.push(getCustomFieldValue(row, fieldName))
-              }
-            }
-          }
-
-          values.push(formatCurrency(row.total_earnings))
-
-          if (statutoryCols.ihss) values.push(formatCurrency(row.IHSS))
-          if (statutoryCols.rap && dedLabels.secondarySocial !== '—') {
-            values.push(formatCurrency(row.RAP))
-          }
-          if (statutoryCols.isr) values.push(formatCurrency(row.ISR))
-
-          if (customFieldsConfig) {
-            for (const [fieldName, fieldDef] of Object.entries(customFieldsConfig)) {
-              const def =
-                typeof fieldDef === 'string'
-                  ? {
-                      label: fieldDef,
-                      category: 'deductions' as const,
-                      type: 'number' as const,
-                      required: false,
-                      default: 0
-                    }
-                  : fieldDef
-              if (def.category === 'deductions') {
-                values.push(getCustomFieldValue(row, fieldName))
-              }
-            }
-          }
-
-          values.push(formatCurrency(row.total_deductions))
-          values.push(formatCurrency(row.total))
-          return values
-        }
-
-        /** Numeric contribution per column; null = text column (skip in totals). */
-        const buildRowNumericContributions = (row: PlanillaItem): (number | null)[] => {
-          const nums: (number | null)[] = []
-
-          if (isHourly) {
-            nums.push(null, null, null, row.days_worked, row.total_hours_worked || 0, row.hourly_rate || 0, row.monthly_salary)
-            if (hasSeptimoDia) {
-              nums.push(row.septimo_dia ?? 0)
-            }
-          } else {
-            nums.push(null, null, null, row.days_worked, row.monthly_salary)
-          }
-
-          if (customFieldsConfig) {
-            for (const [fieldName, fieldDef] of Object.entries(customFieldsConfig)) {
-              const def =
-                typeof fieldDef === 'string'
-                  ? {
-                      label: fieldDef,
-                      category: 'earnings' as const,
-                      type: 'number' as const,
-                      required: false,
-                      default: 0
-                    }
-                  : fieldDef
-              if (def.category === 'earnings') {
-                nums.push(getCustomFieldNumber(row, fieldName))
-              }
-            }
-          }
-
-          nums.push(row.total_earnings)
-
-          if (statutoryCols.ihss) nums.push(row.IHSS)
-          if (statutoryCols.rap && dedLabels.secondarySocial !== '—') {
-            nums.push(row.RAP)
-          }
-          if (statutoryCols.isr) nums.push(row.ISR)
-
-          if (customFieldsConfig) {
-            for (const [fieldName, fieldDef] of Object.entries(customFieldsConfig)) {
-              const def =
-                typeof fieldDef === 'string'
-                  ? {
-                      label: fieldDef,
-                      category: 'deductions' as const,
-                      type: 'number' as const,
-                      required: false,
-                      default: 0
-                    }
-                  : fieldDef
-              if (def.category === 'deductions') {
-                nums.push(getCustomFieldNumber(row, fieldName))
-              }
-            }
-          }
-
-          nums.push(row.total_deductions)
-          nums.push(row.total)
-          return nums
-        }
+        const buildRowNumericContributions = (row: PlanillaItem): (number | null)[] =>
+          cols.map((c) => c.number(row))
 
         const formatTotalCell = (colIndex: number, sum: number): string => {
-          // Días / Horas: plain number; Tarifa and money columns: currency
-          if (isHourly) {
-            if (colIndex === 3) return sum.toFixed(1) // Días
-            if (colIndex === 4) return sum.toFixed(2) // Horas
-          } else if (colIndex === 3) {
-            return sum.toFixed(1) // Días Trab.
-          }
+          const fmt = cols[colIndex]?.totalFormat
+          if (fmt === 'days') return sum.toFixed(1)
+          if (fmt === 'hours') return sum.toFixed(2)
           return formatCurrency(sum)
         }
 
@@ -633,8 +685,8 @@ export async function generateConsolidatedPayrollPDF(
         const paintTotalsRow = (rows: PlanillaItem[], y: number): number => {
           const y2 = y + 4
           const totalsWidth = colWidths.reduce((a, b) => a + b, 0)
-          const sums = new Array(allHeaders.length).fill(0) as number[]
-          const isNumeric = new Array(allHeaders.length).fill(false) as boolean[]
+          const sums = new Array(cols.length).fill(0) as number[]
+          const isNumeric = new Array(cols.length).fill(false) as boolean[]
 
           for (const row of rows) {
             const contrib = buildRowNumericContributions(row)
@@ -649,7 +701,7 @@ export async function generateConsolidatedPayrollPDF(
           drawLiquidTableRowBackground(doc, startX, y2, totalsWidth, dataRowHeight, 0)
           strokeLiquidTableCells(doc, startX, y2, colWidths, dataRowHeight)
 
-          for (let i = 0; i < allHeaders.length; i++) {
+          for (let i = 0; i < cols.length; i++) {
             const x = startX + colWidths.slice(0, i).reduce((a, b) => a + b, 0)
             const cellW = colWidths[i] - 2
             if (i === 0) {
@@ -665,7 +717,7 @@ export async function generateConsolidatedPayrollPDF(
                 })
               continue
             }
-            if (i < textColCount || !isNumeric[i]) {
+            if (cols[i].isText || !isNumeric[i] || cols[i].totalFormat === 'none') {
               continue
             }
             doc

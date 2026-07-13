@@ -128,6 +128,31 @@ function getPayrollRowValue(
       return empCode
     case 'employee_name':
       return empName
+    case 'department':
+      return (
+        emp?.departments?.name ??
+        (Array.isArray(emp?.departments) ? emp?.departments[0]?.name : undefined) ??
+        record.department ??
+        ''
+      )
+    case 'position':
+      return emp?.position ?? emp?.role ?? record.position ?? record.role ?? ''
+    case 'days_worked':
+      return record.days_worked ?? record.eff_hours ?? ''
+    case 'total_hours_worked':
+      return record.total_hours_worked ?? record.eff_hours ?? ''
+    case 'hourly_rate':
+      return record.hourly_rate ?? ''
+    case 'base_salary':
+      return emp?.base_salary ?? record.base_salary ?? record.monthly_salary ?? ''
+    case 'septimo_dia':
+      return record.septimo_dia ?? record.seventh_day_pay ?? 0
+    case 'IHSS':
+      return record.IHSS ?? record.eff_ihss ?? 0
+    case 'RAP':
+      return record.RAP ?? record.eff_rap ?? 0
+    case 'ISR':
+      return record.ISR ?? record.eff_isr ?? 0
     case 'period':
       return record.period_start && record.period_end
         ? `${parseDateOnlyAsHonduras(record.period_start).toLocaleDateString(ctx.locale, { timeZone: ctx.timeZone, month: 'short', day: 'numeric' })} - ${parseDateOnlyAsHonduras(record.period_end).toLocaleDateString(ctx.locale, { timeZone: ctx.timeZone, month: 'short', day: 'numeric' })}`
@@ -137,11 +162,11 @@ function getPayrollRowValue(
     case 'period_end':
       return record.period_end ? formatDateOnlyForLocale(record.period_end, ctx.locale, ctx.timeZone) : ''
     case 'gross_salary':
-      return record.gross_salary ?? 0
+      return record.gross_salary ?? record.eff_bruto ?? record.total_earnings ?? 0
     case 'total_deductions':
       return record.total_deductions ?? 0
     case 'net_salary':
-      return record.net_salary ?? 0
+      return record.net_salary ?? record.eff_neto ?? record.total ?? 0
     case 'status':
       return record.status === 'paid' ? 'Pagado' : record.status === 'approved' ? 'Aprobado' : record.status ?? 'Borrador'
     default:
