@@ -33,6 +33,8 @@ interface AddEmployeeFormProps {
   companyCalculationMode?: 'daily' | 'hourly'
   canEditSalary?: boolean
   canViewSalary?: boolean
+  /** Solo Enlace: código auto = inicial + últimos 5 del DNI */
+  autoGenerateEmployeeCode?: boolean
 }
 
 function AddEmployeeForm({
@@ -49,6 +51,7 @@ function AddEmployeeForm({
   onProfileImageError,
   companyCalculationMode = 'daily',
   canEditSalary = true,
+  autoGenerateEmployeeCode = false,
 }: AddEmployeeFormProps) {
   // Helper to keep inputs controlled and avoid React warnings
   const v = (value: any) => (value ?? '')
@@ -113,13 +116,19 @@ function AddEmployeeForm({
                   id="employee_code"
                   name="employee_code"
                   autoComplete="off"
-                  disabled={loading}
+                  disabled={loading || (autoGenerateEmployeeCode && !isEditing)}
+                  readOnly={autoGenerateEmployeeCode && !isEditing}
                   value={v(formData?.employee_code)}
                   onChange={(e) => onFormChange('employee_code', e.target.value)}
-                  placeholder="EMP001"
-                  required
+                  placeholder={autoGenerateEmployeeCode ? 'J00731' : 'EMP001'}
+                  required={!(autoGenerateEmployeeCode && !isEditing)}
                   className="bg-white/10 border-white/20 text-white placeholder-gray-400"
                 />
+                {autoGenerateEmployeeCode && !isEditing ? (
+                  <p className="text-xs text-gray-400 mt-1">
+                    Se genera solo: inicial del nombre + últimos 5 dígitos del DNI (ej. J00731).
+                  </p>
+                ) : null}
               </div>
 
               <div>

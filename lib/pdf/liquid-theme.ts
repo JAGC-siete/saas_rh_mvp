@@ -113,14 +113,30 @@ export function drawLiquidTableHeader(
   y: number,
   colWidths: number[],
   labels: string[],
-  rowHeight: number
+  rowHeight: number,
+  options?: {
+    fontSize?: number
+    align?: 'left' | 'center' | 'right'
+    padX?: number
+  }
 ): void {
+  const fontSize = options?.fontSize ?? 8
+  const align = options?.align ?? 'left'
+  const padX = options?.padX ?? 4
   let cx = x
   for (let i = 0; i < labels.length; i++) {
-    doc.rect(cx, y, colWidths[i], rowHeight).fillAndStroke(PDF.tableHeader, PDF.bodyText)
-    doc.fillColor(PDF.tableHeaderText).font('Helvetica-Bold').fontSize(8)
-    doc.text(labels[i], cx + 4, y + 4, { width: colWidths[i] - 8 })
-    cx += colWidths[i]
+    const w = colWidths[i] ?? 0
+    const label = labels[i] ?? ''
+    doc.rect(cx, y, w, rowHeight).fillAndStroke(PDF.tableHeader, PDF.bodyText)
+    doc.fillColor(PDF.tableHeaderText).font('Helvetica-Bold').fontSize(fontSize)
+    const textOpts = { width: Math.max(1, w - padX * 2), align, lineGap: 0 as const }
+    const textH = Math.min(doc.heightOfString(label, textOpts), rowHeight - 2)
+    const textY = y + Math.max(1, (rowHeight - textH) / 2)
+    doc.text(label, cx + padX, textY, {
+      ...textOpts,
+      height: rowHeight - 2,
+    })
+    cx += w
   }
   doc.fillColor(PDF.bodyText).font('Helvetica')
 }

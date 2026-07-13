@@ -19,6 +19,11 @@ import {
   getTerminationReasonLabel
 } from '../lib/employees/termination-reasons'
 import {
+  isEnlaceCompany,
+  resolveEnlaceEmployeeCode,
+  suggestEnlaceEmployeeCode,
+} from '../lib/employees/enlace-employee-code'
+import {
   groupKeyForRow,
   type PlanillaRowForGrouping,
   type PayrollPdfGroupBy
@@ -403,8 +408,36 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
   }, [])
 
   const handleFormChange = useCallback((field: string, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }))
-  }, [])
+    setFormData((prev) => {
+      const next = { ...prev, [field]: value }
+      // Enlace: sugerir código = inicial + últimos 5 del DNI (solo alta, no edición)
+      if (
+        !editingEmployee &&
+        isEnlaceCompany(companyId) &&
+        (field === 'name' || field === 'dni')
+      ) {
+        const suggested = suggestEnlaceEmployeeCode(
+          field === 'name' ? value : next.name,
+          field === 'dni' ? value : next.dni
+        )
+        if (suggested) {
+          const taken = new Set(
+            employees
+              .map((e) => e.employee_code)
+              .filter((c): c is string => !!c)
+              .map((c) => c.toUpperCase())
+          )
+          next.employee_code =
+            resolveEnlaceEmployeeCode(
+              field === 'name' ? value : next.name,
+              field === 'dni' ? value : next.dni,
+              taken
+            ) || suggested
+        }
+      }
+      return next
+    })
+  }, [companyId, editingEmployee, employees])
 
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault()
@@ -1067,6 +1100,7 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
             companyCalculationMode={companyCalculationMode}
             canEditSalary={canEditSalary}
             canViewSalary={canViewSalary}
+            autoGenerateEmployeeCode={isEnlaceCompany(companyId)}
           />
         </div>
       ) : (
