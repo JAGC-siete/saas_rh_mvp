@@ -64,6 +64,14 @@ export type LoadedPlanillaFromRun = {
   isDraftPreview: boolean
 }
 
+/**
+ * Load planilla rows for PDF / on-screen planilla preview from a payroll run.
+ *
+ * Amounts (eff_*) are a run-line snapshot. Identity fields (name, department, etc.)
+ * come from a live employee join. Authorized/distributed runs intentionally keep
+ * every line — including employees later marked inactive — for historical fidelity.
+ * Draft sync removes orphans on preview regenerate (see findOrphanPayrollLineIds).
+ */
 export async function loadPlanillaFromRun(
   supabase: SupabaseClient,
   companyId: string,

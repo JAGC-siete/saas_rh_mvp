@@ -9,6 +9,7 @@ import type { BrandingConfig } from '../reports/report-config-schema'
 import { resolveCompanyLogoBuffer } from '../reports/resolve-company-logo'
 import {
   type PayrollPdfGroupBy,
+  buildExecutiveBreakdownLines,
   executiveBreakdownLabel,
   groupKeyForRow,
   groupPlanillaLikeRows
@@ -307,7 +308,8 @@ export async function generateConsolidatedPayrollPDF(
       const totalHourly = planillaHourly.length
 
       const summaryTop = bodyY + 88
-      const summaryBoxH = 110
+      // Taller box so ~7 breakdown rows fit (Enlace has 7 depts); overflow uses "+N más".
+      const summaryBoxH = 140
       drawLiquidPanel(doc, margin, summaryTop, pageWidth - margin * 2, summaryBoxH)
       drawLiquidSectionTitle(doc, 'Resumen ejecutivo', margin + 8, summaryTop + 8)
       doc.font('Helvetica').fontSize(9).fillColor(PDF.bodyMuted).text('Total Empleados:', margin + 14, summaryTop + 30)
@@ -338,17 +340,22 @@ export async function generateConsolidatedPayrollPDF(
         360,
         summaryTop + 30
       )
-      let deptY = summaryTop + 44
-      Object.entries(deptTotals).forEach(([dept, totals]) => {
-        if (deptY < summaryTop + 92) {
-          doc.font('Helvetica').fontSize(8).fillColor(PDF.bodyText).text(
-            `${dept}: ${totals.count} emp. - ${formatCurrency(totals.net)}`,
-            360,
-            deptY
-          )
-          deptY += 11
-        }
-      })
+      const deptListStartY = summaryTop + 44
+      const deptListMaxY = summaryTop + summaryBoxH - 10
+      const maxDeptLines = Math.max(1, Math.floor((deptListMaxY - deptListStartY) / 11))
+      const breakdownLines = buildExecutiveBreakdownLines(
+        Object.entries(deptTotals).map(([key, totals]) => ({
+          key,
+          count: totals.count,
+          net: totals.net,
+        })),
+        { maxLines: maxDeptLines, formatNet: formatCurrency }
+      )
+      let deptY = deptListStartY
+      for (const line of breakdownLines) {
+        doc.font('Helvetica').fontSize(8).fillColor(PDF.bodyText).text(line, 360, deptY)
+        deptY += 11
+      }
 
       // Helper to get custom field value from metadata
       const getCustomFieldNumber = (row: PlanillaItem, fieldName: string): number => {

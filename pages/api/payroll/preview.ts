@@ -53,6 +53,7 @@ import {
   buildFixedPlanillaRowFromPersistedLine,
   buildHourlyPlanillaRowFromPersistedLine,
 } from '../../../lib/payroll/preview-preserve-line'
+import { findOrphanPayrollLineIds } from '../../../lib/payroll/preview-orphan-lines'
 import { resolvePayrollDeductionMode } from '../../../lib/payroll/deduction-mode'
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -1262,6 +1263,30 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       }
     }
 
+    // Draft/edited only (authorized returns earlier): drop lines for employees no longer in calc
+    // so PDF from this run matches the preview table (e.g. inactive H01878 orphans).
+    const orphanLineIds = findOrphanPayrollLineIds(
+      existingRunLinesForSkip || [],
+      empleadosParaNomina.map((e: { id: string }) => e.id)
+    )
+    let orphanLinesRemoved = 0
+    if (orphanLineIds.length > 0) {
+      const { error: orphanDeleteError } = await supabase
+        .from('payroll_run_lines')
+        .delete()
+        .in('id', orphanLineIds)
+        .eq('run_id', runId)
+        .eq('company_id', companyId)
+      if (orphanDeleteError) {
+        console.error('Error eliminando líneas huérfanas del preview:', orphanDeleteError)
+      } else {
+        orphanLinesRemoved = orphanLineIds.length
+        console.log(
+          `Preview: eliminadas ${orphanLinesRemoved} línea(s) huérfana(s) fuera del set de cálculo`
+        )
+      }
+    }
+
     const totalEmpleados = planilla_fixed.length + planilla_hourly.length
     console.log(`Preview de nómina generado exitosamente: ${planilla_fixed.length} empleados fijos, ${planilla_hourly.length} empleados por hora`)
     console.log('🔍 DEBUG - RunId generado:', runId)
@@ -1334,6 +1359,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           : undefined,
       incompleteRecordsAlert: incompleteRecordsAlert.length > 0 ? incompleteRecordsAlert : undefined,
       preserved_edited_lines: preservedEditedLines,
+      orphan_lines_removed: orphanLinesRemoved,
       preservedEditedSummary:
         preservedEditedLines > 0
           ? {
