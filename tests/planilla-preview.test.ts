@@ -58,7 +58,7 @@ describe('buildPlanillaPreviewPayload', () => {
     assert.equal(preview.fixedRows[0]?.daysWorked, 15)
     assert.equal(preview.summary.employees, 1)
     assert.equal(preview.summary.totalNet, 7179.19)
-    assert.ok(preview.periodRange.includes('2026'))
+    assert.ok(preview.periodRange.includes('Jun'))
     assert.ok(preview.defaultFilename.includes('planilla_2026-06_q2'))
   })
 })
@@ -68,7 +68,12 @@ describe('resolvePlanillaDaysWorked', () => {
     assert.equal(resolvePlanillaDaysWorked('fixed', 15), 15)
   })
 
-  it('converts eff_hours to days for hourly employees', () => {
+  it('prefers metadata.days_worked for hour-based types', () => {
+    assert.equal(resolvePlanillaDaysWorked('admin_floor', 97.96, 15), 15)
+    assert.equal(resolvePlanillaDaysWorked('hourly', 80, 10), 10)
+  })
+
+  it('legacy: converts eff_hours to days for hourly when metadata missing', () => {
     assert.equal(resolvePlanillaDaysWorked('hourly', 80), 10)
   })
 })

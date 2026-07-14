@@ -1,6 +1,12 @@
 // Unified payroll data fetching and merging
 // Merges planilla and detalle data in the client without backend changes
 
+import {
+  coalescePlanillaPayType,
+  isHourBasedPlanillaPayType,
+  type EffectivePayType,
+} from './payroll/resolve-effective-pay-type'
+
 export type PlanillaRow = {
   employee_id: string;
   name: string;
@@ -37,6 +43,111 @@ export type DetalleRow = {
 };
 
 export type UnifiedRow = PlanillaRow & DetalleRow;
+
+export type RunLineMergeSource = {
+  eff_hours?: number | null
+  eff_bruto?: number | null
+  eff_neto?: number | null
+  eff_ihss?: number | null
+  eff_rap?: number | null
+  eff_isr?: number | null
+  edited?: boolean | null
+  metadata?: Record<string, unknown> | null
+}
+
+/**
+ * days_worked for display/merge.
+ * fixed: eff_hours stores days.
+ * hourly|admin_floor: eff_hours stores clock hours — use metadata.days_worked (or row fallback), never eff_hours.
+ */
+export function resolveDaysWorkedForUnifiedRow(
+  payType: EffectivePayType | string | undefined,
+  line: Pick<RunLineMergeSource, 'eff_hours' | 'metadata'>,
+  rowFallbackDays?: number
+): number {
+  const meta = line.metadata || {}
+  const metaDays = Number(meta.days_worked)
+  if (Number.isFinite(metaDays) && metaDays >= 0) return metaDays
+
+  const effective = coalescePlanillaPayType(payType ?? meta.pay_type)
+  if (isHourBasedPlanillaPayType(effective)) {
+    const fb = Number(rowFallbackDays)
+    return Number.isFinite(fb) && fb >= 0 ? fb : 0
+  }
+
+  const eff = Number(line.eff_hours)
+  if (Number.isFinite(eff)) return eff
+  const fb = Number(rowFallbackDays)
+  return Number.isFinite(fb) ? fb : 0
+}
+
+/** Merge payroll_run_lines effective values without corrupting days↔hours. */
+export function mergeRunLineIntoUnifiedRow(
+  row: UnifiedRow,
+  line: RunLineMergeSource
+): UnifiedRow {
+  const meta = line.metadata || undefined
+  const payType = coalescePlanillaPayType(
+    meta?.pay_type ?? row.pay_type
+  )
+  const days_worked = resolveDaysWorkedForUnifiedRow(payType, line, row.days_worked)
+
+  const metaHx = Number(meta?.horas_extras)
+  const extrasHoras = Number.isFinite(metaHx)
+    ? metaHx
+    : Number(row.horas_extras ?? row.extras?.horas) || 0
+
+  let total_hours_worked = row.total_hours_worked
+  if (isHourBasedPlanillaPayType(payType)) {
+    const metaHours = Number(meta?.total_hours_worked)
+    if (Number.isFinite(metaHours) && metaHours >= 0) {
+      total_hours_worked = metaHours
+    } else {
+      const effH = Number(line.eff_hours)
+      if (Number.isFinite(effH)) total_hours_worked = effH
+    }
+  }
+
+  const effBruto =
+    line.eff_bruto !== undefined && line.eff_bruto !== null
+      ? Number(line.eff_bruto)
+      : Number(row.total_earnings) || 0
+  const effNeto =
+    line.eff_neto !== undefined && line.eff_neto !== null
+      ? Number(line.eff_neto)
+      : row.total
+  const totalDeducciones = effBruto - (effNeto ?? 0)
+
+  return {
+    ...row,
+    pay_type: payType,
+    days_worked,
+    ...(total_hours_worked !== undefined ? { total_hours_worked } : {}),
+    ...(meta ? { metadata: meta } : {}),
+    ...(line.eff_neto !== undefined && line.eff_neto !== null
+      ? { total: Number(line.eff_neto) }
+      : {}),
+    ...(line.eff_bruto !== undefined && line.eff_bruto !== null
+      ? { total_earnings: Number(line.eff_bruto) }
+      : {}),
+    ...(line.eff_ihss !== undefined && line.eff_ihss !== null
+      ? { IHSS: Number(line.eff_ihss) }
+      : {}),
+    ...(line.eff_rap !== undefined && line.eff_rap !== null
+      ? { RAP: Number(line.eff_rap) }
+      : {}),
+    ...(line.eff_isr !== undefined && line.eff_isr !== null
+      ? { ISR: Number(line.eff_isr) }
+      : {}),
+    ...(line.edited !== undefined && line.edited !== null
+      ? { edited: Boolean(line.edited) }
+      : {}),
+    horas_extras: extrasHoras,
+    horas_trabajadas: total_hours_worked ?? row.horas_trabajadas ?? 0,
+    extras: { horas: extrasHoras, monto: row.extras?.monto ?? 0 },
+    total_deducciones: Math.round(Math.max(0, totalDeducciones) * 100) / 100,
+  } as UnifiedRow
+}
 
 export type UnifiedResumen = {
   empleados: number;
@@ -158,30 +269,12 @@ export async function fetchUnifiedPayroll(
             if (l?.employee_id) byEmployee[l.employee_id] = l
           })
 
-          // Merge metadata and effective values into rows
+          // Merge metadata and effective values into rows (never map clock hours → days_worked)
           rows = rows.map((r) => {
             const lid = (r as any).line_id as string | undefined
             const line =
               (lid && byLineId[lid]) || byEmployee[r.employee_id]
-            if (line) {
-              const effBruto = Number(line.eff_bruto) || Number(r.total_earnings) || 0
-              const effNeto = Number(line.eff_neto) ?? r.total
-              // total_deducciones = bruto - neto (incluye IHSS, RAP, ISR + deducciones de planes)
-              const totalDeducciones = effBruto - (effNeto ?? 0)
-              return { 
-                ...r, 
-                ...(line.metadata ? { metadata: line.metadata } : {}),
-                ...(line.eff_neto !== undefined ? { total: Number(line.eff_neto) } : {}),
-                ...(line.eff_bruto !== undefined ? { total_earnings: Number(line.eff_bruto) } : {}),
-                ...(line.eff_ihss !== undefined ? { IHSS: Number(line.eff_ihss) } : {}),
-                ...(line.eff_rap !== undefined ? { RAP: Number(line.eff_rap) } : {}),
-                ...(line.eff_isr !== undefined ? { ISR: Number(line.eff_isr) } : {}),
-                ...(line.eff_hours !== undefined ? { days_worked: Number(line.eff_hours) } : {}),
-                ...(line.edited !== undefined ? { edited: line.edited } : {}),
-                total_deducciones: Math.round(Math.max(0, totalDeducciones) * 100) / 100
-              } as any
-            }
-            return r
+            return line ? mergeRunLineIntoUnifiedRow(r, line) : r
           })
         } else {
           console.warn('No se pudo cargar run-lines para metadata:', linesRes.status)

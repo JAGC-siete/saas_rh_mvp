@@ -10,7 +10,7 @@ import { Textarea } from './ui/textarea'
 import { Icon } from './Icon'
 
 const HORAS_EXTRA_AHC_INFO =
-  'Suma de horas extra en AHC (período de nómina: diurna, nocturna y feriado). El salario proporcional de esta vista sigue calculándose por días; un ajuste de monto por extras se hace vía campos personalizados o la política de pago de horas extra, según corresponda.'
+  'Admin por día: suma informativa de horas extra AHC del período (el bruto sigue por días). Admin con piso horario: excedente sobre el tope de horas ordinarias/día de la empresa; entra al bruto cuando aplica pago de HE.'
 
 interface PayrollFixedTableProps {
   rows: UnifiedRow[]
@@ -184,7 +184,7 @@ export default function PayrollFixedTable({
   return (
     <div className="mb-8">
       <h3 className="text-lg font-semibold text-white mb-4 pb-2 border-b border-white/20">
-        Nómina — Empleados Fijos (fixed)
+        Nómina — Detalle por Empleado
       </h3>
       <div className="mb-4 grid grid-cols-3 gap-4">
         <div className="text-center p-3 bg-blue-500/20 rounded-lg border border-blue-500/20">
@@ -247,7 +247,7 @@ export default function PayrollFixedTable({
                   <td className="px-4 py-3 text-sm text-gray-200">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="tabular-nums font-medium text-white">{row.days_worked || 0}</span>
-                      {onAdjustFixedDays && row.line_id ? (
+                      {onAdjustFixedDays && row.line_id && row.pay_type !== 'admin_floor' ? (
                         <Button
                           type="button"
                           variant="outline"

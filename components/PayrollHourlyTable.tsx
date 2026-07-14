@@ -42,7 +42,7 @@ export default function PayrollHourlyTable({
   return (
     <div className="mb-8">
       <h3 className="text-lg font-semibold text-white mb-4 pb-2 border-b border-white/20">
-        Nómina — Detalle por Empleado (hourly)
+        Nómina — Detalle por Empleado (por hora exacta)
       </h3>
       <div className="mb-4 grid grid-cols-4 gap-4">
         <div className="text-center p-3 bg-blue-500/20 rounded-lg border border-blue-500/20">

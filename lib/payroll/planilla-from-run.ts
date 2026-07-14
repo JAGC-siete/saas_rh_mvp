@@ -17,8 +17,12 @@ import { coalescePlanillaPayType, isHourBasedPlanillaPayType } from './resolve-e
 /** eff_hours on payroll_run_lines stores days for fixed employees and clock hours for hour-based types. */
 export function resolvePlanillaDaysWorked(
   payType: 'fixed' | 'hourly' | 'admin_floor' | string,
-  effHours: number
+  effHours: number,
+  metadataDaysWorked?: unknown
 ): number {
+  const md = Number(metadataDaysWorked)
+  if (Number.isFinite(md) && md >= 0) return md
+  // Legacy fallback when metadata.days_worked missing: approx days from clock hours.
   if (payType === 'hourly' || payType === 'admin_floor') return effHours / 8
   return effHours
 }
@@ -147,7 +151,7 @@ export async function loadPlanillaFromRun(
         position: (employees?.role as string | null) ?? null,
         role: (employees?.role as string | null) ?? null,
         monthly_salary: Number(employees?.base_salary) || 0,
-        days_worked: resolvePlanillaDaysWorked(payType, totalHours),
+        days_worked: resolvePlanillaDaysWorked(payType, totalHours, metadata.days_worked),
         days_absent: 0,
         late_days: 0,
         total_earnings: Number(line.eff_bruto) || 0,

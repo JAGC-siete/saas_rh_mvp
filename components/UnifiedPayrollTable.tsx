@@ -163,16 +163,19 @@ export default function UnifiedPayrollTable({
     return Array.from(depts).sort()
   }, [rows])
 
-  // Separate rows by pay_type
+  // Split UI:
+  // - fixed + admin_floor → same detail table (product: one cuadro for daily + HE cotizantes)
+  // - hourly (exact hours) → separate table only when present
   const { fixedRows, hourlyRows } = useMemo(() => {
     const fixed: typeof rows = []
     const hourly: typeof rows = []
     
     rows.forEach(row => {
       const payType = (row as any).pay_type || 'fixed'
-      if (payType === 'hourly' || payType === 'admin_floor') {
+      if (payType === 'hourly') {
         hourly.push(row)
       } else {
+        // fixed | admin_floor | unknown → main detail
         fixed.push(row)
       }
     })
@@ -467,7 +470,8 @@ export default function UnifiedPayrollTable({
 
           {/* Results count */}
           <div className="flex items-center text-sm text-gray-300 sm:ml-auto">
-            {fixedRows.length} fijos • {hourlyRows.length} por hora
+            {fixedRows.length} en detalle
+            {hourlyRows.length > 0 ? ` • ${hourlyRows.length} por hora exacta` : ''}
           </div>
         </div>
 
