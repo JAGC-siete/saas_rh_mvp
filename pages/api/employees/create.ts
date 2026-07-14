@@ -12,6 +12,7 @@ import {
 import { resolveFieldAccessContext } from '../../../lib/security/field-access'
 import { shapeEmployee, validateCreateSalaryRequirement } from '../../../lib/security/shape-employee'
 import { parseAttendanceRequiredInput } from '../../../lib/payroll/payroll-attendance-inclusion'
+import { parseEmployeePayOvertimeInput } from '../../../lib/payroll/overtime-pay'
 import {
   isEnlaceCompany,
   resolveEnlaceEmployeeCode,
@@ -69,6 +70,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       payment_frequency,
       pay_type,
       attendance_required,
+      pay_overtime,
       hire_date,
       termination_date,
       termination_reason_code,
@@ -168,6 +170,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         pay_type === 'hourly'
           ? true
           : parseAttendanceRequiredInput(attendance_required),
+      pay_overtime: parseEmployeePayOvertimeInput(pay_overtime),
       hire_date: hire_date || null,
       termination_date: termination_date || null,
       termination_reason_code:

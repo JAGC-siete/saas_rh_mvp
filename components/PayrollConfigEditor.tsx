@@ -1731,8 +1731,9 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
                         Pagar horas extras en nómina
                       </span>
                       <span className="text-xs text-gray-400 mt-1 block leading-relaxed">
-                        Activado: las horas extraordinarias impactan el bruto de empleados por hora.
+                        Activado: las horas extraordinarias impactan el bruto de empleados por hora elegibles.
                         Desactivado: solo se registran y muestran en asistencia/nómina sin monto adicional.
+                        La elegibilidad por empleado se define en Información Laboral → Horas extras.
                         Los empleados administrativos (fijos) siguen viendo horas AHC de forma informativa.
                       </span>
                     </div>

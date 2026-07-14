@@ -407,6 +407,36 @@ function AddEmployeeForm({
               </div>
 
               <div>
+                <label className="block text-sm font-medium text-white mb-1" htmlFor="pay_overtime">
+                  Horas extras
+                </label>
+                <select
+                  id="pay_overtime"
+                  name="pay_overtime"
+                  disabled={loading}
+                  value={formData?.pay_overtime === false ? 'false' : 'true'}
+                  onChange={(e) =>
+                    onFormChange('pay_overtime', e.target.value === 'true')
+                  }
+                  className="w-full p-2 border border-white/20 rounded-md focus:ring-2 focus:ring-brand-500 focus:border-brand-500 bg-white/10 text-white"
+                >
+                  <option value="true" className="bg-brand-900 text-white">
+                    Sí
+                  </option>
+                  <option value="false" className="bg-brand-900 text-white">
+                    No
+                  </option>
+                </select>
+                <p className="text-xs text-gray-400 mt-1">
+                  <strong>Sí:</strong> elegible — si el parámetro de empresa &quot;Pagar horas extras&quot; está activo, las HE impactan el bruto (empleados por hora).
+                  <br />
+                  <strong>No:</strong> las HE pueden registrarse en asistencia, pero no impactan el bruto de este empleado.
+                  <br />
+                  Administrativos (fijos): las horas AHC siguen siendo informativas. Requiere el switch de empresa activo para pago.
+                </p>
+              </div>
+
+              <div>
                 <label className="block text-sm font-medium text-white mb-1" htmlFor="hire_date">
                   Fecha de Contratación
                 </label>

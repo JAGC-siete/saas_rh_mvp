@@ -1536,6 +1536,7 @@ export type Database = {
           is_b2c: boolean
           metadata: Json | null
           name: string
+          pay_overtime: boolean
           phone: string | null
           role: string | null
           status: string | null
@@ -1565,6 +1566,7 @@ export type Database = {
           is_b2c?: boolean
           metadata?: Json | null
           name: string
+          pay_overtime?: boolean
           phone?: string | null
           role?: string | null
           status?: string | null
@@ -1594,6 +1596,7 @@ export type Database = {
           is_b2c?: boolean
           metadata?: Json | null
           name?: string
+          pay_overtime?: boolean
           phone?: string | null
           role?: string | null
           status?: string | null

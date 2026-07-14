@@ -316,7 +316,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     const { data: employees, error: empError } = await salaryClient
       .from('employees')
       .select(`
-        id, name, dni, employee_code, base_salary, bank_name, bank_account, status, department_id, pay_type, attendance_required, work_schedule_id, position, role,
+        id, name, dni, employee_code, base_salary, bank_name, bank_account, status, department_id, pay_type, attendance_required, pay_overtime, work_schedule_id, position, role,
         departments:department_id(name),
         work_schedules:work_schedule_id(monday_start, tuesday_start, wednesday_start, thursday_start, friday_start, saturday_start, sunday_start)
       `)
@@ -964,7 +964,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
         let total_hours_worked: number
         const ahcEmp = ahcByEmployee[emp.id]
-        const payOvertimeMoney = shouldPayOvertimeToEmployee(companyPayOvertime, effectivePayType)
+        const payOvertimeMoney = shouldPayOvertimeToEmployee(
+          companyPayOvertime,
+          effectivePayType,
+          emp.pay_overtime
+        )
         if (ahcEmp && (ahcEmp.total_hours > 0 || ahcEmp.normal_hours > 0)) {
           // Statu quo when paying OT: all AHC hours at base rate. When off: only ordinary hours count toward bruto.
           total_hours_worked = payOvertimeMoney ? ahcEmp.total_hours : ahcEmp.normal_hours

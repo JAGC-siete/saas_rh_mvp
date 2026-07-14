@@ -283,7 +283,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Obtener empleados activos (incluir pay_type para cálculo hourly)
     let employeesQuery = salaryClient
       .from('employees')
-      .select('id, name, dni, employee_code, base_salary, bank_name, bank_account, status, department_id, pay_type, attendance_required')
+      .select('id, name, dni, employee_code, base_salary, bank_name, bank_account, status, department_id, pay_type, attendance_required, pay_overtime')
       .eq('status', 'active')
       .order('name')
 
@@ -446,7 +446,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           (overtime.overtime_diurno || 0) +
           (overtime.overtime_nocturno || 0) +
           (overtime.overtime_feriado || 0)
-        const hoursWorked = shouldPayOvertimeToEmployee(companyPayOvertime, effectivePayType)
+        const hoursWorked = shouldPayOvertimeToEmployee(
+          companyPayOvertime,
+          effectivePayType,
+          emp.pay_overtime
+        )
           ? overtime.total_hours || 0
           : overtime.normal_hours ?? Math.max(0, (overtime.total_hours || 0) - otSum)
         total_earnings = calculatePeriodBaseSalary(
@@ -475,7 +479,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           ? periodBase * (days_worked / diasPeriodo)
           : periodBase
       }
-      if (shouldPayOvertimeToEmployee(companyPayOvertime, effectivePayType)) {
+      if (
+        shouldPayOvertimeToEmployee(companyPayOvertime, effectivePayType, emp.pay_overtime)
+      ) {
         total_earnings += overtimePay
       }
       

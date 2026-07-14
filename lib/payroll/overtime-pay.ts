@@ -13,8 +13,22 @@ export function resolveCompanyPayOvertime(
   return metadata?.pay_overtime !== false
 }
 
+/** Capa 2: default Sí (true); only false opts out. */
+export function resolveEmployeePayOvertime(
+  employeePayOvertime: boolean | null | undefined
+): boolean {
+  return employeePayOvertime !== false
+}
+
+export function parseEmployeePayOvertimeInput(value: unknown): boolean {
+  if (value === false || value === 'false' || value === 0 || value === '0') return false
+  return true
+}
+
 /**
- * MVP: company master switch + hourly only (fixed stays informational unless phase-2 override).
+ * Company master (Capa 1 param) + employee eligibility (Capa 2).
+ * Fixed/admin: AHC overtime stays informational (never impacts bruto via this gate).
+ * Hourly: paid only when company ON and employee pay_overtime !== false.
  */
 export function shouldPayOvertimeToEmployee(
   companyPayOvertime: boolean,
@@ -22,9 +36,8 @@ export function shouldPayOvertimeToEmployee(
   employeePayOvertime?: boolean | null
 ): boolean {
   if (!companyPayOvertime) return false
-  if (effectivePayType === 'hourly') return true
-  // Phase 2: explicit employee override for fixed
-  return employeePayOvertime === true
+  if (!resolveEmployeePayOvertime(employeePayOvertime)) return false
+  return effectivePayType === 'hourly'
 }
 
 export function calculateOvertimePayFromAhc(

@@ -14,6 +14,7 @@ import {
   shapeEmployee,
 } from '../../../lib/security/shape-employee'
 import { parseAttendanceRequiredInput } from '../../../lib/payroll/payroll-attendance-inclusion'
+import { parseEmployeePayOvertimeInput } from '../../../lib/payroll/overtime-pay'
 
 /** Solo columnas permitidas vía API (evita mass-assignment). */
 const ALLOWED_UPDATE_KEYS = new Set([
@@ -40,6 +41,7 @@ const ALLOWED_UPDATE_KEYS = new Set([
   'pay_type',
   'quincena_config',
   'attendance_required',
+  'pay_overtime',
   'termination_reason_code',
   'termination_reason_detail'
 ])
@@ -174,6 +176,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if ('attendance_required' in updateData) {
       updateData.attendance_required = parseAttendanceRequiredInput(updateData.attendance_required)
+    }
+
+    if ('pay_overtime' in updateData) {
+      updateData.pay_overtime = parseEmployeePayOvertimeInput(updateData.pay_overtime)
     }
 
     const effectivePayTypeForAttendance =

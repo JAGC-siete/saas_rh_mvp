@@ -46,21 +46,29 @@ describe('resolveCompanyPayOvertime', () => {
   })
 })
 
-describe('shouldPayOvertimeToEmployee (MVP)', () => {
-  it('company false → nobody paid', () => {
+describe('shouldPayOvertimeToEmployee (Capa 2)', () => {
+  it('company false → nobody paid (Capa 2 irrelevant)', () => {
     assert.equal(shouldPayOvertimeToEmployee(false, 'hourly'), false)
+    assert.equal(shouldPayOvertimeToEmployee(false, 'hourly', true), false)
     assert.equal(shouldPayOvertimeToEmployee(false, 'fixed'), false)
   })
 
-  it('company true + hourly → paid', () => {
+  it('company true + hourly + Sí (default) → paid', () => {
     assert.equal(shouldPayOvertimeToEmployee(true, 'hourly'), true)
+    assert.equal(shouldPayOvertimeToEmployee(true, 'hourly', true), true)
+    assert.equal(shouldPayOvertimeToEmployee(true, 'hourly', null), true)
+    assert.equal(shouldPayOvertimeToEmployee(true, 'hourly', undefined), true)
   })
 
-  it('company true + fixed → not paid unless employee override (phase 2)', () => {
+  it('company true + hourly + No → not paid', () => {
+    assert.equal(shouldPayOvertimeToEmployee(true, 'hourly', false), false)
+  })
+
+  it('company true + fixed → never paid (AHC informational)', () => {
     assert.equal(shouldPayOvertimeToEmployee(true, 'fixed'), false)
     assert.equal(shouldPayOvertimeToEmployee(true, 'fixed', null), false)
     assert.equal(shouldPayOvertimeToEmployee(true, 'fixed', false), false)
-    assert.equal(shouldPayOvertimeToEmployee(true, 'fixed', true), true)
+    assert.equal(shouldPayOvertimeToEmployee(true, 'fixed', true), false)
   })
 })
 

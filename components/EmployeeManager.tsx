@@ -54,6 +54,7 @@ const INITIAL_FORM_DATA = {
   base_salary: '',
   pay_type: '', // vacío = default de empresa (hereda calculation_mode)
   attendance_required: true,
+  pay_overtime: true,
   payment_frequency: '', // vacío = usa default de empresa (Capa 2)
   hire_date: '',
   termination_date: '',
@@ -508,6 +509,7 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
       } else {
         sanitizedFormData.attendance_required = sanitizedFormData.attendance_required !== false
       }
+      sanitizedFormData.pay_overtime = sanitizedFormData.pay_overtime !== false
       // payment_frequency: vacío = usa default de empresa (Capa 2)
       if (typeof sanitizedFormData.payment_frequency === 'string') {
         const pf = sanitizedFormData.payment_frequency.trim()
@@ -610,6 +612,7 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
         : '',
       pay_type: (employee as any).pay_type ?? '',
       attendance_required: (employee as any).attendance_required !== false,
+      pay_overtime: (employee as any).pay_overtime !== false,
       payment_frequency: (employee as any).payment_frequency || '',
       hire_date: employee.hire_date || '',
       termination_date: employee.termination_date || '',
