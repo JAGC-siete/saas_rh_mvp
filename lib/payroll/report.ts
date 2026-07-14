@@ -52,7 +52,7 @@ export interface PlanillaItem {
   notes_on_ingress?: string
   notes_on_deductions?: string
   metadata?: Record<string, any> // Custom fields metadata
-  pay_type?: 'fixed' | 'hourly'
+  pay_type?: 'fixed' | 'hourly' | 'admin_floor'
   total_hours_worked?: number
   hourly_rate?: number
   septimo_dia?: number

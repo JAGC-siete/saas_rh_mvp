@@ -12,7 +12,7 @@ import {
   type PreviewPaymentFrequency,
   type PaymentCutDatesInput
 } from '../../../lib/payroll/fixed-line-recalc'
-import { resolveEffectivePayType } from '../../../lib/payroll/resolve-effective-pay-type'
+import { resolveEffectivePayType, parseCompanyCalculationMode } from '../../../lib/payroll/resolve-effective-pay-type'
 import {
   assertNonHndStatutoryConfigParses,
   payrollStatutoryErrorResponse,
@@ -197,11 +197,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const payrollMetadata = payrollConfig?.metadata || {}
-    const companyCalculationMode =
-      (payrollConfig?.calculation_mode as string) === 'hourly' ||
-      payrollMetadata.calculation_mode === 'hourly'
-        ? 'hourly'
-        : 'daily'
+    const companyCalculationMode = parseCompanyCalculationMode(
+      payrollConfig?.calculation_mode ?? payrollMetadata.calculation_mode
+    )
 
     if (resolveEffectivePayType(employee.pay_type, companyCalculationMode) !== 'fixed') {
       return res.status(400).json({

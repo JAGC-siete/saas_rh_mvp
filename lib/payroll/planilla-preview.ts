@@ -4,6 +4,7 @@ import { formatPeriodRangeForDisplay } from './period-dates'
 import type { LoadedPlanillaFromRun } from './planilla-from-run'
 import type { PlanillaItem } from './report'
 import { payrollPdfGroupByFilenameSuffix } from './pdf-layout'
+import { coalescePlanillaPayType, isHourBasedPlanillaPayType } from './resolve-effective-pay-type'
 
 export type PlanillaPreviewEmployeeRow = {
   name: string
@@ -16,7 +17,7 @@ export type PlanillaPreviewEmployeeRow = {
   isr: number
   totalDeductions: number
   net: number
-  payType: 'fixed' | 'hourly'
+  payType: 'fixed' | 'hourly' | 'admin_floor'
 }
 
 export type PlanillaPreviewSummary = {
@@ -46,12 +47,12 @@ export type PlanillaPreviewData = {
 }
 
 function mapEmployeeRow(item: PlanillaItem): PlanillaPreviewEmployeeRow {
-  const payType = item.pay_type === 'hourly' ? 'hourly' : 'fixed'
+  const payType = coalescePlanillaPayType(item.pay_type)
   return {
     name: item.name,
     department: item.department,
     daysWorked: item.days_worked,
-    hoursWorked: payType === 'hourly' ? item.total_hours_worked : undefined,
+    hoursWorked: isHourBasedPlanillaPayType(payType) ? item.total_hours_worked : undefined,
     gross: item.total_earnings,
     ihss: item.IHSS,
     rap: item.RAP,

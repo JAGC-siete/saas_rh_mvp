@@ -12,13 +12,14 @@ import {
   getWeeklyPeriodDates,
 } from './period-dates'
 import type { PlanillaItem } from './report'
+import { coalescePlanillaPayType, isHourBasedPlanillaPayType } from './resolve-effective-pay-type'
 
-/** eff_hours on payroll_run_lines stores days for fixed employees and clock hours for hourly. */
+/** eff_hours on payroll_run_lines stores days for fixed employees and clock hours for hour-based types. */
 export function resolvePlanillaDaysWorked(
-  payType: 'fixed' | 'hourly' | string,
+  payType: 'fixed' | 'hourly' | 'admin_floor' | string,
   effHours: number
 ): number {
-  if (payType === 'hourly') return effHours / 8
+  if (payType === 'hourly' || payType === 'admin_floor') return effHours / 8
   return effHours
 }
 
@@ -125,10 +126,16 @@ export async function loadPlanillaFromRun(
       const statutoryDeductions =
         (Number(line.eff_ihss) || 0) + (Number(line.eff_rap) || 0) + (Number(line.eff_isr) || 0)
       const totalDeductions = statutoryDeductions + customDeductions
-      const payType = (employees?.pay_type as string) || 'fixed'
+      const payType = coalescePlanillaPayType(
+        (employees?.pay_type as string) ||
+          ((metadata as Record<string, unknown>).pay_type as string) ||
+          'fixed'
+      )
       const totalHours = Number(line.eff_hours) || 0
       const hourlyRate =
-        payType === 'hourly' && totalHours > 0 ? (Number(line.eff_bruto) || 0) / totalHours : 0
+        isHourBasedPlanillaPayType(payType) && totalHours > 0
+          ? (Number(line.eff_bruto) || 0) / totalHours
+          : 0
 
       return {
         id: String(employees?.employee_code || ''),
@@ -152,9 +159,9 @@ export async function loadPlanillaFromRun(
         notes_on_ingress: line.edited ? 'Editado' : '',
         notes_on_deductions: deductionsNotes,
         metadata,
-        pay_type: payType === 'hourly' ? 'hourly' : 'fixed',
-        total_hours_worked: payType === 'hourly' ? totalHours : undefined,
-        hourly_rate: payType === 'hourly' ? hourlyRate : undefined,
+        pay_type: payType,
+        total_hours_worked: isHourBasedPlanillaPayType(payType) ? totalHours : undefined,
+        hourly_rate: isHourBasedPlanillaPayType(payType) ? hourlyRate : undefined,
         septimo_dia:
           Number(line.seventh_day_pay) ||
           Number((metadata as Record<string, unknown>)?.septimo_dia) ||
@@ -269,8 +276,8 @@ export async function loadPlanillaFromRun(
     country_code: normalizeCountryCode(company?.country_code),
   }
 
-  const planillaFixed = planilla.filter((p) => p.pay_type !== 'hourly')
-  const planillaHourly = planilla.filter((p) => p.pay_type === 'hourly')
+  const planillaFixed = planilla.filter((p) => !isHourBasedPlanillaPayType(p.pay_type))
+  const planillaHourly = planilla.filter((p) => isHourBasedPlanillaPayType(p.pay_type))
 
   const [year, month] = periodo.split('-').map(Number)
   let periodDates: { period_start: string; period_end: string }

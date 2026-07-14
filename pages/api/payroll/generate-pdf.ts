@@ -8,6 +8,10 @@ import {
 } from '../../../lib/payroll/pdf-layout'
 import { requirePlanAndQuota, incrementUsage } from '../../../lib/billing/enforce'
 import { resolveReportConfig } from '../../../lib/reports/column-resolver'
+import {
+  coalescePlanillaPayType,
+  isHourBasedPlanillaPayType,
+} from '../../../lib/payroll/resolve-effective-pay-type'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -64,11 +68,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Mapear datos del draft a estructura de PlanillaItem
     const planilla: PlanillaItem[] = draftData.rows.map((row: any) => {
       const employee = employees.find((e: any) => e.id === row.employee_id)
-      const payType = employee?.pay_type || 'fixed'
+      const payType = coalescePlanillaPayType(employee?.pay_type || row.pay_type || 'fixed')
       const totalHours = Number(row.total_hours_worked) || (Number(row.days_worked) || 0) * 8
-      const hourlyRate = payType === 'hourly' && totalHours > 0 
-        ? (Number(row.gross_salary) || 0) / totalHours 
-        : 0
+      const hourlyRate =
+        isHourBasedPlanillaPayType(payType) && totalHours > 0
+          ? (Number(row.gross_salary) || 0) / totalHours
+          : 0
       
       return {
         id: employee?.employee_code || row.employee_code || '',
@@ -92,8 +97,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         notes_on_ingress: row.adj_bonus ? `Bono: L. ${row.adj_bonus.toFixed(2)}` : '',
         notes_on_deductions: row.adj_discount ? `Descuento: L. ${row.adj_discount.toFixed(2)}` : '',
         pay_type: payType,
-        total_hours_worked: payType === 'hourly' ? totalHours : undefined,
-        hourly_rate: payType === 'hourly' ? hourlyRate : undefined
+        total_hours_worked: isHourBasedPlanillaPayType(payType) ? totalHours : undefined,
+        hourly_rate: isHourBasedPlanillaPayType(payType) ? hourlyRate : undefined
       }
     })
 
@@ -164,8 +169,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // Separate fixed and hourly employees
-    const planillaFixed = planilla.filter(p => (p as any).pay_type !== 'hourly')
-    const planillaHourly = planilla.filter(p => (p as any).pay_type === 'hourly')
+    const planillaFixed = planilla.filter(p => !isHourBasedPlanillaPayType((p as any).pay_type))
+    const planillaHourly = planilla.filter(p => isHourBasedPlanillaPayType((p as any).pay_type))
 
     let reportVisual: { primaryColor?: string; branding?: Record<string, unknown> } | undefined
     let visibleColumnIds: string[] | undefined

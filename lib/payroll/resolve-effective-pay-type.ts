@@ -43,3 +43,17 @@ export function isHourBasedPayType(effective: EffectivePayType): boolean {
 export function isFixedDayPayType(effective: EffectivePayType): boolean {
   return effective === 'fixed'
 }
+
+/**
+ * Normalize raw pay_type for planilla/PDF splitting.
+ * Prefer explicit value; unknown → fixed.
+ */
+export function coalescePlanillaPayType(raw: unknown): EffectivePayType {
+  if (raw === 'hourly' || raw === 'admin_floor' || raw === 'fixed') return raw
+  return 'fixed'
+}
+
+/** Alias used by PDF/planilla filters (hour engines share the hourly table). */
+export function isHourBasedPlanillaPayType(raw: unknown): boolean {
+  return isHourBasedPayType(coalescePlanillaPayType(raw))
+}

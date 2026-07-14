@@ -82,9 +82,20 @@ export function buildHourlyPlanillaRowFromPersistedLine(
   ctx: BuildRowBase & {
     daysWorked: number
     hourlyRate: number
+    /** Preserve admin_floor vs hourly on regenerate */
+    payType?: 'hourly' | 'admin_floor'
   }
 ) {
-  const { emp, departmentName, prevLine, horasExtras, diasPeriodo, daysWorked, hourlyRate } = ctx
+  const {
+    emp,
+    departmentName,
+    prevLine,
+    horasExtras,
+    diasPeriodo,
+    daysWorked,
+    hourlyRate,
+    payType = 'hourly',
+  } = ctx
   const effH = Number(prevLine.eff_hours) || 0
   const effBruto = Number(prevLine.eff_bruto) || 0
   const effIhss = Number(prevLine.eff_ihss) || 0
@@ -114,7 +125,7 @@ export function buildHourlyPlanillaRowFromPersistedLine(
     total_deducciones: Math.round(Math.max(0, totalDed) * 100) / 100,
     total: Math.round(effNeto * 100) / 100,
     line_id: prevLine.id,
-    pay_type: 'hourly' as const,
+    pay_type: payType,
     metadata: prevLine.metadata,
     edited: prevLine.edited === true,
   }

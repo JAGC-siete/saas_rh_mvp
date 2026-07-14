@@ -63,7 +63,7 @@ export function mapPlanillaItemToUnifiedRow(p: PlanillaRow | Record<string, unkn
     extras: { horas: extrasHoras, monto: 0 },
     observaciones: '',
     status: 'completo' as const,
-    pay_type: (p as { pay_type?: 'fixed' | 'hourly' }).pay_type || 'fixed',
+    pay_type: (p as { pay_type?: 'fixed' | 'hourly' | 'admin_floor' }).pay_type || 'fixed',
   }
 }
 

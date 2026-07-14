@@ -60,7 +60,7 @@ interface PlanillaItem {
   notes_on_ingress: string
   notes_on_deductions: string
   total_hours_worked?: number
-  pay_type?: 'fixed' | 'hourly'
+  pay_type?: 'fixed' | 'hourly' | 'admin_floor'
   septimo_dia?: number
 }
 
@@ -625,7 +625,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         total: Math.round(total * 100) / 100,
         notes_on_ingress,
         notes_on_deductions,
-        total_hours_worked: effectivePayType === 'hourly' ? overtime.total_hours : undefined,
+        total_hours_worked: isHourBasedPayType(effectivePayType) ? overtime.total_hours : undefined,
         pay_type: effectivePayType,
         septimo_dia: septimoDia > 0 ? septimoDia : undefined
       }
@@ -654,7 +654,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       metadata: {
         tax_year: year,
         country_code: countryCode,
-        ...(item.pay_type === 'hourly' && item.total_hours_worked != null
+        ...(item.pay_type && isHourBasedPayType(item.pay_type) && item.total_hours_worked != null
           ? { total_hours_worked: item.total_hours_worked }
           : {}),
         ...(item.septimo_dia != null && item.septimo_dia > 0 && { septimo_dia: item.septimo_dia })

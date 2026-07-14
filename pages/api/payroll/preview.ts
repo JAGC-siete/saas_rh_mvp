@@ -955,11 +955,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
               diasPeriodo,
               daysWorked: days_worked_preserved,
               hourlyRate: hourly_rate_preserved,
+              payType: effectivePayType === 'admin_floor' ? 'admin_floor' : 'hourly',
             })
-          planilla_hourly.push({
-            ...preservedRow,
-            pay_type: effectivePayType === 'admin_floor' ? 'admin_floor' : 'hourly',
-          })
+          planilla_hourly.push(preservedRow)
           continue
         }
 
@@ -1180,6 +1178,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         }
         if (septimoDia > 0) lineMetadata.septimo_dia = septimoDia
         if (total_hours_worked > 0) lineMetadata.total_hours_worked = total_hours_worked
+        lineMetadata.pay_type = effectivePayType === 'admin_floor' ? 'admin_floor' : 'hourly'
+        lineMetadata.horas_extras = horasExtrasDisplay
+        lineMetadata.days_worked = days_worked
         const planIdsHourly: string[] = []
         for (const plan of empPlansHourly) {
           lineMetadata[plan.field_key] = plan.monto_por_plazo
