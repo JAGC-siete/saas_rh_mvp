@@ -3,6 +3,7 @@
  */
 
 import type { CountryCode } from '../country/supported'
+import { PUBLIC_CALCULATOR_CONFIGS } from '../public-calculator/config'
 import {
   liquidCta,
   liquidCtaWhatsApp,
@@ -31,33 +32,29 @@ export interface DeductionEmailData {
   audience?: 'empleado' | 'empresa'
 }
 
-const COUNTRY_META: Record<
-  CountryCode,
-  { currencyPrefix: string; legalName: string; deductionsPitch: string; secondaryLabel: string }
-> = {
+const COUNTRY_META: Record<CountryCode, { legalName: string; deductionsPitch: string }> = {
   HND: {
-    currencyPrefix: 'L.',
     legalName: 'Honduras',
     deductionsPitch: 'Seguro Social, RAP e ISR',
-    secondaryLabel: 'RAP',
   },
   SLV: {
-    currencyPrefix: '$',
     legalName: 'El Salvador',
     deductionsPitch: 'ISSS, AFP e ISR',
-    secondaryLabel: 'AFP',
   },
   GTM: {
-    currencyPrefix: 'Q',
     legalName: 'Guatemala',
     deductionsPitch: 'IGSS e ISR',
-    secondaryLabel: 'RAP',
   },
 }
 
 function formatMoney(country: CountryCode, value: number): string {
-  const prefix = COUNTRY_META[country].currencyPrefix
-  return `${prefix}${value.toFixed(2)}`
+  const cfg = PUBLIC_CALCULATOR_CONFIGS[country]
+  return new Intl.NumberFormat(cfg.locale, {
+    style: 'currency',
+    currency: cfg.currency,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(Number(value || 0))
 }
 
 function utmSource(country: CountryCode): string {
@@ -79,20 +76,24 @@ export function generateDeductionEmailHTML(data: DeductionEmailData): string {
     `Hola, tengo una consulta sobre la validación de deducciones de mi nómina (${meta.legalName}).`
   )}`
 
+  const resultLabels = PUBLIC_CALCULATOR_CONFIGS[country].resultLabels
   const summaryRows: Array<{ label: string; value: string; emphasize?: boolean }> = [
     {
       label: `Salario ${data.paymentModality === 'quincenal' ? 'Quincenal' : 'Mensual'}`,
       value: formatMoney(country, data.grossSalary),
     },
     {
-      label: 'Seguro Social',
+      label: resultLabels.socialPrimary,
       value: `${formatMoney(country, data.ihss)} (${data.ihssPercentage.toFixed(2)}%)`,
     },
   ]
 
-  if (data.rap > 0 || country === 'HND' || country === 'SLV') {
+  if (
+    resultLabels.socialSecondary &&
+    (data.rap > 0 || country === 'HND' || country === 'SLV')
+  ) {
     summaryRows.push({
-      label: meta.secondaryLabel,
+      label: resultLabels.socialSecondary,
       value: `${formatMoney(country, data.rap)} (${data.rapPercentage.toFixed(2)}%)`,
     })
   }

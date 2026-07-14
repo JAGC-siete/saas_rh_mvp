@@ -405,7 +405,10 @@ export default function PublicDeductionCalculator({ config }: { config: PublicCa
     const option = config.deductionOptions.find((o) => o.key === key)
     if (option && !option.showInResults) return null
     return (
-      <div key={key} className="glass rounded-xl p-4 border border-white/10 backdrop-blur-sm">
+      <div
+        key={key}
+        className="glass-modern rounded-xl p-4 border border-white/12 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]"
+      >
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
             <span className="text-white font-medium">{label}</span>
@@ -414,7 +417,7 @@ export default function PublicDeductionCalculator({ config }: { config: PublicCa
             </Tooltip>
           </div>
           <div className="text-right">
-            <div className="text-lg font-bold text-white">{formatCurrency(amount)}</div>
+            <div className="text-lg font-bold text-white tracking-tight">{formatCurrency(amount)}</div>
             <div className="text-sm text-brand-300">{percentage.toFixed(2)}%</div>
           </div>
         </div>
@@ -687,13 +690,13 @@ export default function PublicDeductionCalculator({ config }: { config: PublicCa
                         </p>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                        <div className="bg-white/5 backdrop-blur-sm rounded-xl p-5 border border-white/10">
+                        <div className="glass-modern rounded-xl p-5 border border-white/15 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
                           <div className="text-sm text-brand-300/80 mb-2 font-medium">Salario Bruto</div>
-                          <div className="text-3xl font-bold text-white">{formatCurrency(result.grossSalary)}</div>
+                          <div className="text-3xl font-bold text-white tracking-tight">{formatCurrency(result.grossSalary)}</div>
                         </div>
-                        <div className="bg-gradient-to-br from-green-500/20 to-emerald-500/20 backdrop-blur-sm rounded-xl p-5 border border-green-500/30">
+                        <div className="glass-modern rounded-xl p-5 border border-green-400/35 bg-gradient-to-br from-green-500/25 to-emerald-500/10 shadow-[inset_0_1px_0_rgba(52,211,153,0.25)]">
                           <div className="text-sm text-green-300 mb-2 font-medium">Salario Neto</div>
-                          <div className="text-3xl font-bold text-green-400">{formatCurrency(result.netSalary)}</div>
+                          <div className="text-3xl font-bold text-green-400 tracking-tight">{formatCurrency(result.netSalary)}</div>
                         </div>
                       </div>
                     </>

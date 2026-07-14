@@ -215,7 +215,8 @@ async function sendReportHandler(
       isrPercentage,
       totalDeductions,
       netSalary,
-      constants
+      constants,
+      countryCode: resolvedCountry,
     })
 
     // Generar HTML del email usando plantilla

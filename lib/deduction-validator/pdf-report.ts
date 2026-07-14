@@ -1,5 +1,11 @@
 import { Buffer } from 'buffer'
-import { PDF, drawLiquidPdfHeader } from '../pdf/liquid-theme'
+import type { CountryCode } from '../country/supported'
+import { PUBLIC_CALCULATOR_CONFIGS } from '../public-calculator/config'
+import {
+  PDF,
+  drawLiquidPdfHeader,
+  drawLiquidPanel,
+} from '../pdf/liquid-theme'
 
 export interface DeductionReportData {
   salary: number
@@ -19,6 +25,51 @@ export interface DeductionReportData {
     minimumWage: number
     ihssCeiling: number
   }
+  countryCode?: CountryCode
+}
+
+const LEGAL_NAMES: Record<CountryCode, string> = {
+  HND: 'Honduras',
+  SLV: 'El Salvador',
+  GTM: 'Guatemala',
+}
+
+const DEDUCTIONS_PITCH: Record<CountryCode, string> = {
+  HND: 'Seguro Social, RAP e ISR',
+  SLV: 'ISSS, AFP e ISR',
+  GTM: 'IGSS e ISR',
+}
+
+function stripParens(label: string): string {
+  return label.replace(/^\(|\)$/g, '').trim()
+}
+
+function formatMoney(country: CountryCode, value: number): string {
+  const cfg = PUBLIC_CALCULATOR_CONFIGS[country]
+  return new Intl.NumberFormat(cfg.locale, {
+    style: 'currency',
+    currency: cfg.currency,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(Number(value || 0))
+}
+
+function linkedCenteredText(
+  doc: PDFKit.PDFDocument,
+  text: string,
+  url: string,
+  x: number,
+  y: number,
+  width: number,
+  color: string
+): void {
+  doc.fontSize(9).fillColor(color).text(text, x, y, {
+    align: 'center',
+    width,
+    link: url,
+    underline: true,
+    lineBreak: false,
+  })
 }
 
 export async function generateDeductionReportPDF(
@@ -27,155 +78,219 @@ export async function generateDeductionReportPDF(
   return new Promise<Buffer>((resolve, reject) => {
     try {
       const PDFDocument = require('pdfkit')
-      const formatHNL = (n: number) => 
-        `L. ${Number(n || 0).toLocaleString('es-HN', { 
-          minimumFractionDigits: 2, 
-          maximumFractionDigits: 2 
-        })}`
+      const country: CountryCode = data.countryCode ?? 'HND'
+      const cfg = PUBLIC_CALCULATOR_CONFIGS[country]
+      const legalName = LEGAL_NAMES[country]
+      const money = (n: number) => formatMoney(country, n)
 
       const doc = new PDFDocument({
         size: 'A4',
         layout: 'portrait',
         margin: 30,
         info: {
-          Title: `Reporte de Deducciones de Nómina - ${data.year} - Humano SISU`,
+          Title: `Reporte de Deducciones de Nómina - ${data.year} - ${legalName} - Humano SISU`,
           Author: 'Humano SISU',
-          Subject: 'Reporte de Validación de Deducciones',
-          Keywords: 'deducciones, nómina, IHSS, RAP, ISR, Honduras',
-          Creator: 'Humano SISU - Calculadora de Deducciones'
-        }
+          Subject: `Reporte de Validación de Deducciones — ${legalName}`,
+          Keywords: `deducciones, nómina, ${DEDUCTIONS_PITCH[country]}, ${legalName}`,
+          Creator: 'Humano SISU - Calculadora de Deducciones',
+        },
       })
 
       const buffers: Buffer[] = []
       doc.on('data', (chunk: Buffer) => buffers.push(chunk))
       doc.on('end', () => {
         try {
-          const pdf = Buffer.concat(buffers)
-          resolve(pdf)
+          resolve(Buffer.concat(buffers))
         } catch (e) {
           reject(e)
         }
       })
 
+      const pageWidth = doc.page.width
+      const pageHeight = doc.page.height
+      const contentW = pageWidth - 60
+
       let yPos = drawLiquidPdfHeader(doc, {
         title: 'Reporte de Validación de Deducciones de Nómina',
-        subtitle: 'Sistema de Recursos Humanos — Honduras',
+        subtitle: `Sistema de Recursos Humanos — ${legalName}`,
       })
 
       // Información del cálculo
-      const pageWidth = doc.page.width
-      const pageHeight = doc.page.height
-      doc.fontSize(12).fillColor(PDF.bodyText).text('INFORMACIÓN DEL CÁLCULO:', 30, yPos)
-      yPos += 20
-      doc.rect(30, yPos, pageWidth - 60, 70).stroke(PDF.panelBorder)
-      
-      doc.fontSize(10).fillColor(PDF.bodyText)
-      doc.text('Modalidad de Pago:', 40, yPos + 8)
-      doc.text(data.paymentModality === 'quincenal' ? 'Quincenal' : 'Mensual', 180, yPos + 8)
-      
-      doc.text('Año Fiscal:', 40, yPos + 24)
-      doc.text(data.year.toString(), 180, yPos + 24)
-      
-      doc.text('Salario Bruto:', 40, yPos + 40)
-      doc.text(formatHNL(data.grossSalary), 180, yPos + 40)
-      
-      if (data.paymentModality === 'quincenal') {
-        doc.text('Salario Mensual Equivalente:', 300, yPos + 8)
-        doc.text(formatHNL(data.monthlyGrossSalary), 480, yPos + 8)
-      }
+      doc.font('Helvetica-Bold').fontSize(11).fillColor(PDF.accentDark)
+        .text('INFORMACIÓN DEL CÁLCULO', 30, yPos)
+      yPos += 18
 
-      // Constantes fiscales
-      yPos += 85
-      doc.fontSize(10).fillColor(PDF.bodyMuted)
-      doc.text(`Salario Mínimo (${data.year}): ${formatHNL(data.constants.minimumWage)}`, 40, yPos)
-      doc.text(`Tope Seguro Social (${data.year}): ${formatHNL(data.constants.ihssCeiling)}`, 300, yPos)
-
-      // Resumen de resultados
-      yPos += 25
-      doc.fontSize(12).fillColor(PDF.bodyText).text('RESUMEN DE RESULTADOS:', 30, yPos)
-      yPos += 20
-
-      // Salario neto destacado
-      doc.rect(30, yPos, pageWidth - 60, 35).fill(PDF.successBg).stroke(PDF.successBorder)
-      doc.fontSize(11).fillColor(PDF.successText).text('SALARIO NETO', 40, yPos + 8)
-      doc.fontSize(16).fillColor(PDF.success).text(formatHNL(data.netSalary), 40, yPos + 20)
-
-      // Desglose de deducciones
-      yPos += 50
-      doc.fontSize(12).fillColor(PDF.bodyText).text('DESGLOSE DE DEDUCCIONES:', 30, yPos)
-      yPos += 20
-
-      // Tabla de deducciones
-      const deductionsTable = [
-        { label: 'Seguro Social', description: 'Instituto Hondureño de Seguridad Social (IHSS)', amount: data.ihss, percentage: data.ihssPercentage },
-        { label: 'RAP', description: 'Régimen de Ahorro para Pensiones', amount: data.rap, percentage: data.rapPercentage },
-        { label: 'ISR', description: 'Impuesto sobre la Renta', amount: data.isr, percentage: data.isrPercentage }
-      ]
-
-      deductionsTable.forEach((ded, index) => {
-        if (yPos > pageHeight - 100) {
-          doc.addPage()
-          yPos = 30
-        }
-
-        doc.rect(30, yPos, pageWidth - 60, 35).stroke(PDF.panelBorder)
-        doc.fontSize(10).fillColor(PDF.bodyText)
-        doc.text(ded.label, 40, yPos + 8)
-        doc.fontSize(8).fillColor(PDF.bodyMuted).text(ded.description, 40, yPos + 18)
-        doc.fontSize(11).fillColor(PDF.bodyText).text(formatHNL(ded.amount), 450, yPos + 8, { align: 'right', width: 80 })
-        doc.fontSize(9).fillColor(PDF.bodyMuted).text(`${ded.percentage.toFixed(2)}%`, 450, yPos + 18, { align: 'right', width: 80 })
-        yPos += 40
+      drawLiquidPanel(doc, 30, yPos, contentW, 72, {
+        fill: PDF.panelBg,
+        stroke: PDF.panelBorder,
+        radius: 10,
       })
 
-      // Total de deducciones
-      if (yPos > pageHeight - 80) {
-        doc.addPage()
-        yPos = 30
+      doc.font('Helvetica').fontSize(10).fillColor(PDF.bodyMuted)
+      doc.text('Modalidad de Pago', 44, yPos + 12)
+      doc.font('Helvetica-Bold').fillColor(PDF.bodyText)
+        .text(data.paymentModality === 'quincenal' ? 'Quincenal' : 'Mensual', 44, yPos + 26)
+
+      doc.font('Helvetica').fillColor(PDF.bodyMuted).text('Año Fiscal', 200, yPos + 12)
+      doc.font('Helvetica-Bold').fillColor(PDF.bodyText)
+        .text(String(data.year), 200, yPos + 26)
+
+      doc.font('Helvetica').fillColor(PDF.bodyMuted).text('Salario Bruto', 320, yPos + 12)
+      doc.font('Helvetica-Bold').fillColor(PDF.bodyText)
+        .text(money(data.grossSalary), 320, yPos + 26)
+
+      if (data.paymentModality === 'quincenal') {
+        doc.font('Helvetica').fillColor(PDF.bodyMuted)
+          .text('Salario mensual equivalente', 44, yPos + 48)
+        doc.font('Helvetica-Bold').fillColor(PDF.bodyText)
+          .text(money(data.monthlyGrossSalary), 200, yPos + 48)
       }
 
-      doc.rect(30, yPos, pageWidth - 60, 30).fill('#ffebee').stroke('#f44336')
-      doc.fontSize(11).fillColor('#c62828').text('TOTAL DE DEDUCCIONES', 40, yPos + 6)
-      doc.fontSize(14).fillColor('#b71c1c').text(formatHNL(data.totalDeductions), 450, yPos + 6, { align: 'right', width: 80 })
-
-      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://humanosisu.net'
-      const activarUrl = `${siteUrl}/activar?country=HND&utm_source=calculadora-deducciones-hnd&utm_medium=pdf&utm_campaign=deduction-report`
-      const demoWhatsApp = 'https://wa.me/50432226773?text=' + encodeURIComponent(
-        'Hola, calculé deducciones en Humano SISU (Honduras) y me gustaría una demo personalizada.'
+      yPos += 86
+      doc.font('Helvetica').fontSize(9).fillColor(PDF.bodyMuted)
+      doc.text(
+        `${cfg.trust.minimumWageLabel} (${data.year}): ${money(data.constants.minimumWage)}`,
+        34,
+        yPos,
+        { width: contentW / 2 - 8, lineBreak: false }
+      )
+      doc.text(
+        `${cfg.trust.ceilingLabel} (${data.year}): ${money(data.constants.ihssCeiling)}`,
+        30 + contentW / 2,
+        yPos,
+        { width: contentW / 2 - 4, lineBreak: false }
       )
 
-      const footerHeight = 88
-      const footerY = pageHeight - footerHeight
-      doc.rect(0, footerY, pageWidth, footerHeight).fill('#f5f5f5')
-      doc.fontSize(8).fillColor('#666666').text(
-        'Generado por la Calculadora de Deducciones de Humano SISU — mismo motor que la nómina profesional.',
+      // Salario neto
+      yPos += 22
+      doc.font('Helvetica-Bold').fontSize(11).fillColor(PDF.accentDark)
+        .text('RESUMEN DE RESULTADOS', 30, yPos)
+      yPos += 16
+
+      doc.roundedRect(30, yPos, contentW, 44, 10).fill(PDF.successBg)
+      doc.roundedRect(30, yPos, contentW, 44, 10).lineWidth(1).stroke(PDF.successBorder)
+      doc.font('Helvetica-Bold').fontSize(10).fillColor(PDF.successText)
+        .text('SALARIO NETO', 44, yPos + 10)
+      doc.font('Helvetica-Bold').fontSize(18).fillColor(PDF.success)
+        .text(money(data.netSalary), 44, yPos + 24)
+
+      // Desglose
+      yPos += 58
+      doc.font('Helvetica-Bold').fontSize(11).fillColor(PDF.accentDark)
+        .text('DESGLOSE DE DEDUCCIONES', 30, yPos)
+      yPos += 16
+
+      const labels = cfg.resultLabels
+      const deductionsTable: Array<{
+        label: string
+        description: string
+        amount: number
+        percentage: number
+      }> = [
+        {
+          label: labels.socialPrimary,
+          description: stripParens(labels.socialPrimaryLong),
+          amount: data.ihss,
+          percentage: data.ihssPercentage,
+        },
+      ]
+
+      if (labels.socialSecondary && (data.rap > 0 || country === 'HND' || country === 'SLV')) {
+        deductionsTable.push({
+          label: labels.socialSecondary,
+          description: stripParens(labels.socialSecondaryLong || labels.socialSecondary),
+          amount: data.rap,
+          percentage: data.rapPercentage,
+        })
+      }
+
+      deductionsTable.push({
+        label: 'ISR',
+        description: stripParens(labels.isrLong),
+        amount: data.isr,
+        percentage: data.isrPercentage,
+      })
+
+      const footerReserve = 64
+      for (const ded of deductionsTable) {
+        drawLiquidPanel(doc, 30, yPos, contentW, 40, {
+          fill: '#ffffff',
+          stroke: PDF.panelBorder,
+          radius: 8,
+        })
+        doc.font('Helvetica-Bold').fontSize(10).fillColor(PDF.bodyText)
+          .text(ded.label, 44, yPos + 8, { width: 280, lineBreak: false })
+        doc.font('Helvetica').fontSize(8).fillColor(PDF.bodyMuted)
+          .text(ded.description, 44, yPos + 22, { width: 300, lineBreak: false, ellipsis: true })
+        doc.font('Helvetica-Bold').fontSize(11).fillColor(PDF.bodyText)
+          .text(money(ded.amount), 360, yPos + 8, { align: 'right', width: contentW - 346, lineBreak: false })
+        doc.font('Helvetica').fontSize(9).fillColor(PDF.bodyMuted)
+          .text(`${ded.percentage.toFixed(2)}%`, 360, yPos + 22, {
+            align: 'right',
+            width: contentW - 346,
+            lineBreak: false,
+          })
+        yPos += 48
+      }
+
+      doc.roundedRect(30, yPos, contentW, 34, 8).fill('#fef2f2')
+      doc.roundedRect(30, yPos, contentW, 34, 8).lineWidth(1).stroke('#fca5a5')
+      doc.font('Helvetica-Bold').fontSize(10).fillColor('#b91c1c')
+        .text('TOTAL DE DEDUCCIONES', 44, yPos + 11)
+      doc.font('Helvetica-Bold').fontSize(13).fillColor('#991b1b')
+        .text(money(data.totalDeductions), 360, yPos + 10, {
+          align: 'right',
+          width: contentW - 346,
+          lineBreak: false,
+        })
+
+      const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://humanosisu.net').replace(/\/$/, '')
+      const utmSource = `calculadora-deducciones-${country.toLowerCase()}`
+      const activarUrl =
+        `${siteUrl}/activar?country=${country}` +
+        `&utm_source=${utmSource}&utm_medium=pdf&utm_campaign=deduction-report`
+      const demoWhatsApp =
+        'https://wa.me/50432226773?text=' +
+        encodeURIComponent(
+          `Hola, calculé deducciones en Humano SISU (${legalName}) y me gustaría una demo personalizada.`
+        )
+
+      // Footers must clear bottom margin or PDFKit auto-creates overflow pages.
+      const savedBottom = doc.page.margins.bottom
+      doc.page.margins.bottom = 0
+
+      const footerY = pageHeight - footerReserve
+      doc.rect(0, footerY, pageWidth, footerReserve).fill('#f1f5f9')
+      doc.rect(0, footerY, pageWidth, 2).fill(PDF.accent)
+
+      doc.font('Helvetica').fontSize(7.5).fillColor(PDF.footerMuted).text(
+        `Generado por Humano SISU — mismas reglas de ${legalName} que la nómina profesional.`,
         30,
-        footerY + 8,
-        { align: 'center', width: 535 }
+        footerY + 10,
+        { align: 'center', width: contentW, lineBreak: false, ellipsis: true }
       )
-      doc.fontSize(10).fillColor(PDF.accent).text(
-        'Deja de calcular en Excel. Automatiza Seguro Social, RAP e ISR sin errores.',
+      doc.font('Helvetica-Bold').fontSize(8.5).fillColor(PDF.accentDark).text(
+        `Automatiza ${DEDUCTIONS_PITCH[country]} sin errores de Excel.`,
         30,
         footerY + 24,
-        { align: 'center', width: 535 }
-      )
-      doc.fontSize(9).fillColor('#1976d2').text(
-        `Activar gratis: ${activarUrl}`,
-        30,
-        footerY + 42,
-        { align: 'center', width: 535 }
-      )
-      doc.fontSize(9).fillColor('#128c7e').text(
-        `Agendar demo por WhatsApp: ${demoWhatsApp}`,
-        30,
-        footerY + 58,
-        { align: 'center', width: 535 }
+        { align: 'center', width: contentW, lineBreak: false, ellipsis: true }
       )
 
+      linkedCenteredText(doc, 'Activar gratis →', activarUrl, 30, footerY + 38, contentW / 2 - 8, '#1d4ed8')
+      linkedCenteredText(
+        doc,
+        'Agendar demo por WhatsApp →',
+        demoWhatsApp,
+        30 + contentW / 2,
+        footerY + 38,
+        contentW / 2 - 4,
+        '#0f766e'
+      )
+
+      doc.page.margins.bottom = savedBottom
       doc.end()
-
-    } catch (error: any) {
+    } catch (error: unknown) {
       reject(error)
     }
   })
 }
-
