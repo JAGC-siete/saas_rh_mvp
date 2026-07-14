@@ -264,7 +264,7 @@ export async function generateDeductionReportPDF(
       doc.rect(0, footerY, pageWidth, 2).fill(PDF.accent)
 
       doc.font('Helvetica').fontSize(7.5).fillColor(PDF.footerMuted).text(
-        `Generado por Humano SISU — mismas reglas de ${legalName} que la nómina profesional.`,
+        `Reporte generado por SISU — aplicando la legislación laboral de ${legalName}.`,
         30,
         footerY + 10,
         { align: 'center', width: contentW, lineBreak: false, ellipsis: true }
