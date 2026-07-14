@@ -415,10 +415,14 @@ export default function PayrollFixedTable({
                           <Icon name="edit" className="h-4 w-4" />
                         </Button>
                       )}
-                      {canResetLineRecalc && onResetLineRecalc && row.line_id &&
-                        ((row as { edited?: boolean }).edited ||
-                          meta?.days_adjusted_at ||
-                          meta?.statutory_zeroed_at) && (
+                      {canResetLineRecalc &&
+                        onResetLineRecalc &&
+                        row.line_id &&
+                        Boolean(
+                          (row as { edited?: boolean }).edited ||
+                            meta?.days_adjusted_at ||
+                            meta?.statutory_zeroed_at
+                        ) && (
                         <Button
                           variant="outline"
                           size="sm"
