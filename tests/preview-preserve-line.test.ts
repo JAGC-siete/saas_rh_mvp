@@ -35,6 +35,16 @@ describe('preview-preserve-line', () => {
     ).toBe(false)
   })
 
+  it('preserves when statutory deductions were zeroed', () => {
+    expect(
+      shouldPreservePayrollLineOnPreview({
+        id: 'line-1',
+        edited: false,
+        metadata: { statutory_zeroed_at: '2026-07-14T00:00:00.000Z' },
+      })
+    ).toBe(true)
+  })
+
   it('strips manual adjustment metadata keys', () => {
     expect(
       stripManualPayrollLineMetadata({
@@ -42,6 +52,8 @@ describe('preview-preserve-line', () => {
         days_adjusted_at: '2026-01-01',
         days_adjusted_by: 'user-1',
         days_adjusted_reason: 'ajuste',
+        statutory_zeroed_at: '2026-07-14',
+        statutory_zeroed_reason: 'finiquito',
         bono: 100,
       })
     ).toEqual({

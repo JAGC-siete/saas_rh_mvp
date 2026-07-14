@@ -43,6 +43,9 @@ interface UnifiedPayrollTableProps {
   }) => Promise<void>
   onResetLineRecalc?: (_runLineId: string) => Promise<void>
   canResetLineRecalc?: boolean
+  canZeroStatutory?: boolean
+  // eslint-disable-next-line no-unused-vars
+  onZeroStatutory?: (_payload: { run_line_id: string; reason: string }) => Promise<void>
   loading?: boolean
   canAuthorize?: boolean
   canSend?: boolean
@@ -78,6 +81,8 @@ export default function UnifiedPayrollTable({
   onAdjustFixedDays,
   onResetLineRecalc,
   canResetLineRecalc = false,
+  canZeroStatutory = false,
+  onZeroStatutory,
   loading = false,
   // eslint-disable-next-line no-unused-vars
   canAuthorize: _canAuthorize = false,
@@ -488,6 +493,8 @@ export default function UnifiedPayrollTable({
             onAdjustFixedDays={onAdjustFixedDays}
             onResetLineRecalc={onResetLineRecalc}
             canResetLineRecalc={canResetLineRecalc}
+            canZeroStatutory={canZeroStatutory}
+            onZeroStatutory={onZeroStatutory}
             loading={loading}
             hasCustom={hasCustom}
             statutoryDeductions={statutoryDeductionColumns}

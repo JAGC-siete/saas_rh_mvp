@@ -22,6 +22,7 @@ export function shouldPreservePayrollLineOnPreview(
   if (line.edited === true) return true
   const meta = line.metadata
   if (meta != null && meta.days_adjusted_at != null) return true
+  if (meta != null && meta.statutory_zeroed_at != null) return true
   return false
 }
 
@@ -136,6 +137,13 @@ export const PAYROLL_LINE_MANUAL_METADATA_KEYS = [
   'days_adjusted_at',
   'days_adjusted_by',
   'days_adjusted_reason',
+  'days_adjust_reason',
+  'statutory_zeroed_at',
+  'statutory_zeroed_by',
+  'statutory_zeroed_reason',
+  'statutory_zero_ihss',
+  'statutory_zero_rap',
+  'statutory_zero_isr',
 ] as const
 
 export function stripManualPayrollLineMetadata(

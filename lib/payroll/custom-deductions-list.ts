@@ -31,6 +31,13 @@ const METADATA_SKIP_KEYS = new Set([
   'days_adjusted_at',
   'days_adjusted_by',
   'days_adjusted_reason',
+  'days_adjust_reason',
+  'statutory_zeroed_at',
+  'statutory_zeroed_by',
+  'statutory_zeroed_reason',
+  'statutory_zero_ihss',
+  'statutory_zero_rap',
+  'statutory_zero_isr',
   'septimo_dia',
   '_deduction_plan_ids',
 ])

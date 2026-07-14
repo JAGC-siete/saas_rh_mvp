@@ -211,6 +211,23 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
     [payroll]
   )
 
+  const handleZeroStatutory = useCallback(
+    async (payload: { run_line_id: string; reason: string }) => {
+      const res = await fetch('/api/payroll/zero-statutory-deductions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(payload),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        throw new Error(data.message || data.error || 'Error al omitir retenciones de ley')
+      }
+      await payroll.loadUnifiedData()
+    },
+    [payroll]
+  )
+
   // Persist custom fields immediately when saving the modal
   const handleSaveCustomFields = useCallback(async (metadata: Record<string, unknown>) => {
     if (!modalState) {
@@ -594,6 +611,10 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
           onAdjustFixedDays={handleAdjustFixedDays}
           onResetLineRecalc={handleResetLineRecalc}
           canResetLineRecalc={payroll.status === 'draft' || payroll.status === 'edited'}
+          canZeroStatutory={
+            !!payroll.runId && (payroll.status === 'draft' || payroll.status === 'edited')
+          }
+          onZeroStatutory={handleZeroStatutory}
           loading={payroll.loading}
           canAuthorize={payroll.canAuthorize}
           canSend={payroll.canSend}

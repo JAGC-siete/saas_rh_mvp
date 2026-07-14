@@ -61,7 +61,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (line.edited !== true) {
       const meta = (line.metadata || {}) as Record<string, unknown>
-      if (meta.days_adjusted_at == null) {
+      if (meta.days_adjusted_at == null && meta.statutory_zeroed_at == null) {
         return res.status(200).json({
           ok: true,
           message: 'La línea ya se recalcula desde asistencia en el preview',

@@ -32,6 +32,10 @@ interface PayrollFixedTableProps {
   }) => Promise<void>
   onResetLineRecalc?: (_runLineId: string) => Promise<void>
   canResetLineRecalc?: boolean
+  /** Omitir IHSS/RAP/ISR en esta línea (draft/edited) */
+  canZeroStatutory?: boolean
+  // eslint-disable-next-line no-unused-vars
+  onZeroStatutory?: (_payload: { run_line_id: string; reason: string }) => Promise<void>
   loading?: boolean
   hasCustom?: boolean
   statutoryDeductions?: { ihss: boolean; rap: boolean; isr: boolean }
@@ -47,6 +51,8 @@ export default function PayrollFixedTable({
   onAdjustFixedDays,
   onResetLineRecalc,
   canResetLineRecalc = false,
+  canZeroStatutory = false,
+  onZeroStatutory,
   loading = false,
   hasCustom = false,
   statutoryDeductions = { ihss: true, rap: true, isr: true }
@@ -59,6 +65,12 @@ export default function PayrollFixedTable({
   const [daysInput, setDaysInput] = useState('')
   const [daysReason, setDaysReason] = useState('')
   const [daysSaving, setDaysSaving] = useState(false)
+  const [statutoryModal, setStatutoryModal] = useState<{
+    runLineId: string
+    employeeName: string
+  } | null>(null)
+  const [statutoryReason, setStatutoryReason] = useState('')
+  const [statutorySaving, setStatutorySaving] = useState(false)
   const [ahcInfoOpen, setAhcInfoOpen] = useState(false)
   const [ahcPopoverPos, setAhcPopoverPos] = useState<{ top: number; left: number } | null>(null)
   const ahcInfoBtnRef = useRef<HTMLButtonElement>(null)
@@ -174,6 +186,52 @@ export default function PayrollFixedTable({
     }
   }
 
+  const openStatutoryModal = (row: UnifiedRow) => {
+    if (!row.line_id) {
+      alert('No hay línea de corrida para este empleado. Genere vista previa primero.')
+      return
+    }
+    setStatutoryModal({
+      runLineId: row.line_id,
+      employeeName: row.name || 'Empleado',
+    })
+    setStatutoryReason('')
+  }
+
+  const closeStatutoryModal = () => {
+    setStatutoryModal(null)
+    setStatutoryReason('')
+  }
+
+  const submitStatutoryZero = async () => {
+    if (!statutoryModal || !onZeroStatutory) return
+    const reason = statutoryReason.trim()
+    if (reason.length < 3) {
+      alert('Indique un motivo (mín. 3 caracteres)')
+      return
+    }
+    if (
+      !confirm(
+        `¿Poner IHSS, RAP e ISR en cero para ${statutoryModal.employeeName}? El bruto no cambia; el neto se recalcula. Las retenciones deben cobrarse en finiquito u otro proceso.`
+      )
+    ) {
+      return
+    }
+    setStatutorySaving(true)
+    try {
+      await onZeroStatutory({
+        run_line_id: statutoryModal.runLineId,
+        reason,
+      })
+      closeStatutoryModal()
+    } catch (e) {
+      console.error(e)
+      alert(e instanceof Error ? e.message : 'Error al omitir retenciones de ley')
+    } finally {
+      setStatutorySaving(false)
+    }
+  }
+
   const summary = rows.reduce((acc, r) => {
     acc.totalBruto += r.total_earnings || 0
     acc.totalDeducciones += r.total_deducciones || 0
@@ -233,12 +291,27 @@ export default function PayrollFixedTable({
           </thead>
           <tbody className="bg-transparent divide-y divide-white/20">
             {rows.length > 0 ? (
-              rows.map((row) => (
+              rows.map((row) => {
+                const meta = (row as { metadata?: Record<string, unknown> }).metadata
+                const statutoryZeroed = meta?.statutory_zeroed_at != null
+                return (
                 <tr key={row.employee_id} className="hover:bg-white/10 transition-colors duration-200">
                   <td className="px-4 py-3 align-top min-w-[10rem] max-w-[18rem]">
                     <div>
                       <div className="text-sm font-medium text-white break-words leading-snug">{row.name}</div>
                       <div className="text-xs text-gray-300 break-words mt-0.5">{row.department || 'N/A'}</div>
+                      {statutoryZeroed ? (
+                        <div
+                          className="mt-1 inline-block rounded border border-amber-400/40 bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-amber-200"
+                          title={
+                            typeof meta?.statutory_zeroed_reason === 'string'
+                              ? meta.statutory_zeroed_reason
+                              : 'Retenciones de ley omitidas en esta corrida'
+                          }
+                        >
+                          Sin retenciones de ley
+                        </div>
+                      ) : null}
                     </div>
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-200">
@@ -289,6 +362,20 @@ export default function PayrollFixedTable({
                         <div>ISR: {formatCurrency(row.ISR || 0)}</div>
                       )}
                       <div className="font-semibold mt-1">Total: {formatCurrency(row.total_deducciones || 0)}</div>
+                      {canZeroStatutory && onZeroStatutory && row.line_id && !statutoryZeroed ? (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openStatutoryModal(row)}
+                          disabled={loading}
+                          className="mt-1.5 h-7 border-amber-400/30 bg-amber-500/10 px-2 text-[10px] text-amber-100 hover:bg-amber-500/20"
+                          title="Omitir IHSS/RAP/ISR en este período (p. ej. se retienen en finiquito)"
+                        >
+                          <Icon name="minus" className="mr-1 h-3 w-3" />
+                          Omitir retenciones
+                        </Button>
+                      ) : null}
                     </div>
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm font-bold text-white">
@@ -329,7 +416,9 @@ export default function PayrollFixedTable({
                         </Button>
                       )}
                       {canResetLineRecalc && onResetLineRecalc && row.line_id &&
-                        ((row as any).edited || (row as any).metadata?.days_adjusted_at) && (
+                        ((row as { edited?: boolean }).edited ||
+                          meta?.days_adjusted_at ||
+                          meta?.statutory_zeroed_at) && (
                         <Button
                           variant="outline"
                           size="sm"
@@ -339,7 +428,7 @@ export default function PayrollFixedTable({
                           onClick={async () => {
                             if (
                               !confirm(
-                                '¿Recalcular esta línea desde asistencia? Se perderán las ediciones manuales de este empleado.'
+                                '¿Recalcular esta línea desde asistencia? Se perderán las ediciones manuales de este empleado (incl. override de retenciones de ley).'
                               )
                             ) {
                               return
@@ -357,7 +446,8 @@ export default function PayrollFixedTable({
                     </div>
                   </td>
                 </tr>
-              ))
+                )
+              })
             ) : (
               <tr>
                 <td colSpan={8} className="px-4 py-8 text-center text-gray-400">
@@ -433,6 +523,46 @@ export default function PayrollFixedTable({
               </Button>
               <Button type="button" onClick={submitDaysAdjust} disabled={daysSaving}>
                 {daysSaving ? 'Guardando…' : 'Recalcular y guardar'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {statutoryModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-lg border border-white/20 bg-gray-900 p-6 text-white shadow-xl">
+            <h3 className="text-lg font-semibold">Omitir retenciones de ley</h3>
+            <p className="mt-1 text-sm text-gray-300">{statutoryModal.employeeName}</p>
+            <p className="mt-2 text-xs text-amber-200/90">
+              IHSS, RAP e ISR quedan en cero en esta corrida. El bruto no cambia. Use cuando esas
+              retenciones se aplicarán en finiquito u otro proceso. No apaga la política de la
+              empresa.
+            </p>
+            <div className="mt-4">
+              <label htmlFor="statutory-reason" className="block text-sm font-medium text-gray-200">
+                Motivo (requerido)
+              </label>
+              <Textarea
+                id="statutory-reason"
+                value={statutoryReason}
+                onChange={(e) => setStatutoryReason(e.target.value)}
+                rows={3}
+                className="mt-1 border-white/20 bg-white/10 text-white"
+                placeholder="Ej. Retenciones de ley se aplicarán en finiquito"
+              />
+            </div>
+            <div className="mt-6 flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={closeStatutoryModal}
+                disabled={statutorySaving}
+              >
+                Cancelar
+              </Button>
+              <Button type="button" onClick={submitStatutoryZero} disabled={statutorySaving}>
+                {statutorySaving ? 'Aplicando…' : 'Confirmar y poner en cero'}
               </Button>
             </div>
           </div>
