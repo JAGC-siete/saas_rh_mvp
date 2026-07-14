@@ -24,7 +24,7 @@ export interface Employee {
   department_id: string | null
   work_schedule_id: string | null
   payment_frequency: 'quincenal' | 'mensual' | 'semanal' | null
-  pay_type?: 'fixed' | 'hourly' | null
+  pay_type?: 'fixed' | 'hourly' | 'admin_floor' | null
   /** false = exento de checada (fixed, pago período completo en nómina). Default true. */
   attendance_required?: boolean
   /**

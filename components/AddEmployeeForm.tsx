@@ -30,7 +30,7 @@ interface AddEmployeeFormProps {
   onProfileImageUploaded?: (fileId: string, storagePath: string) => void
   onProfileImageError?: (error: string) => void
   /** Company calculation_mode for dynamic "Default de la empresa" label */
-  companyCalculationMode?: 'daily' | 'hourly'
+  companyCalculationMode?: 'daily' | 'hourly' | 'admin_floor'
   canEditSalary?: boolean
   canViewSalary?: boolean
   /** Solo Enlace: código auto = inicial + últimos 5 del DNI */
@@ -60,18 +60,22 @@ function AddEmployeeForm({
     v(formData?.pay_type) === ''
       ? companyCalculationMode === 'hourly'
         ? 'hourly'
-        : 'fixed'
+        : companyCalculationMode === 'admin_floor'
+          ? 'admin_floor'
+          : 'fixed'
       : v(formData?.pay_type) || 'fixed'
 
   const defaultPayTypeLabel =
     companyCalculationMode === 'hourly'
       ? 'Default de la empresa (Por hora)'
-      : 'Default de la empresa (Administrativo)'
+      : companyCalculationMode === 'admin_floor'
+        ? 'Default de la empresa (Admin con piso horario)'
+        : 'Default de la empresa (Administrativo)'
 
   const handleSubmit = (e: React.FormEvent) => {
     const payType = resolvedPayType
     const baseSalary = Number(formData?.base_salary) || 0
-    if (payType === 'hourly' && baseSalary > 0 && baseSalary < 2000) {
+    if ((payType === 'hourly' || payType === 'admin_floor') && baseSalary > 0 && baseSalary < 2000) {
       e.preventDefault()
       return
     }
@@ -303,14 +307,19 @@ function AddEmployeeForm({
                   <option value="fixed" className="bg-brand-900 text-white">
                     Administrativo (por día de asistencia)
                   </option>
+                  <option value="admin_floor" className="bg-brand-900 text-white">
+                    Admin con piso horario
+                  </option>
                   <option value="hourly" className="bg-brand-900 text-white">
                     Por hora
                   </option>
                 </select>
                 <p className="text-xs text-gray-400 mt-1">
-                  <strong>Default de la empresa:</strong> hereda el método por defecto de Nómina (administrativo o por hora).
+                  <strong>Default de la empresa:</strong> hereda el método por defecto de Nómina.
                   <br />
                   <strong>Administrativo:</strong> Salario mensual por día de asistencia. Usa horario fijo para inferir entrada/salida.
+                  <br />
+                  <strong>Admin con piso horario:</strong> Tarifa horaria (base ÷ 240). Por día asistido nunca paga menos del tope ordinario; con ambas marcas y horas &gt; tope, el exceso es HE.
                   <br />
                   <strong>Por hora:</strong> Ingresa el salario mensual equivalente. La tarifa por hora se calcula automáticamente (base ÷ 240).
                 </p>
@@ -346,9 +355,11 @@ function AddEmployeeForm({
                 </div>
               )}
 
-              {resolvedPayType === 'hourly' && (
+              {(resolvedPayType === 'hourly' || resolvedPayType === 'admin_floor') && (
                 <div className="md:col-span-2 text-xs text-gray-400">
-                  Empleados por hora siempre requieren control de asistencia. Sin marcas en el período aparecen con 0 horas en la nómina para que pueda ajustarlas manualmente.
+                  {resolvedPayType === 'admin_floor'
+                    ? 'Admin con piso horario siempre requiere asistencia. Sin salida o con horas bajo el tope, se acredita el tope ordinario del día (parámetros de empresa).'
+                    : 'Empleados por hora siempre requieren control de asistencia. Sin marcas en el período aparecen con 0 horas en la nómina para que pueda ajustarlas manualmente.'}
                 </div>
               )}
 
@@ -371,12 +382,14 @@ function AddEmployeeForm({
                   required
                   className="bg-white/10 border-white/20 text-white placeholder-gray-400"
                 />
-                {resolvedPayType === 'hourly' && Number(formData?.base_salary) > 0 && (
+                {resolvedPayType === 'hourly' || resolvedPayType === 'admin_floor' ? (
+                  Number(formData?.base_salary) > 0 && (
                   <p className="text-sm text-blue-400 mt-1">
                     Tarifa por hora: L. {(Number(formData?.base_salary) / HONDURAS_LABOR_FACTOR).toFixed(2)} (basado en 240h/mes)
                   </p>
-                )}
-                {resolvedPayType === 'hourly' && Number(formData?.base_salary) > 0 && Number(formData?.base_salary) < 2000 && (
+                  )
+                ) : null}
+                {(resolvedPayType === 'hourly' || resolvedPayType === 'admin_floor') && Number(formData?.base_salary) > 0 && Number(formData?.base_salary) < 2000 && (
                   <p className="text-sm text-amber-400 mt-1">
                     Por favor ingresa el salario mensual equivalente. El sistema calculará la tarifa por hora automáticamente.
                   </p>

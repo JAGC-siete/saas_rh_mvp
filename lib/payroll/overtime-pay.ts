@@ -26,9 +26,9 @@ export function parseEmployeePayOvertimeInput(value: unknown): boolean {
 }
 
 /**
- * Company master (Capa 1 param) + employee eligibility (Capa 2).
- * Fixed/admin: AHC overtime stays informational (never impacts bruto via this gate).
- * Hourly: paid only when company ON and employee pay_overtime !== false.
+ * Company master (pay_overtime) + employee eligibility (pay_overtime).
+ * Fixed: AHC overtime stays informational (never impacts bruto via this gate).
+ * Hourly + admin_floor: paid when company ON and employee !== false.
  */
 export function shouldPayOvertimeToEmployee(
   companyPayOvertime: boolean,
@@ -37,7 +37,7 @@ export function shouldPayOvertimeToEmployee(
 ): boolean {
   if (!companyPayOvertime) return false
   if (!resolveEmployeePayOvertime(employeePayOvertime)) return false
-  return effectivePayType === 'hourly'
+  return effectivePayType === 'hourly' || effectivePayType === 'admin_floor'
 }
 
 export function calculateOvertimePayFromAhc(

@@ -25,7 +25,7 @@ import { calculateSeptimoDia } from '../../../lib/payroll/septimo-dia'
 import { HONDURAS_LABOR_FACTOR, HORAS_PERIODO_MENSUAL, HORAS_PERIODO_QUINCENAL } from '../../../lib/payroll/constants'
 import { buildAuthorizedPayrollPreviewPayload } from '../../../lib/payroll/preview-authorized-readonly'
 import { calculateEmployerContributions } from '../../../lib/payroll/employer-contributions'
-import { resolveEffectivePayType } from '../../../lib/payroll/resolve-effective-pay-type'
+import { resolveEffectivePayType, parseCompanyCalculationMode, isHourBasedPayType } from '../../../lib/payroll/resolve-effective-pay-type'
 import {
   hasValidPayrollAttendanceRecords,
   resolveFixedDaysWorkedForPayroll,
@@ -35,6 +35,11 @@ import {
   resolveCompanyPayOvertime,
   shouldPayOvertimeToEmployee
 } from '../../../lib/payroll/overtime-pay'
+import {
+  resolveOrdinaryHoursCap,
+  sumAdminFloorPeriodHours,
+} from '../../../lib/payroll/admin-floor-hours'
+import { parseOrdinaryHoursOverrideInput } from '../../../lib/payroll/ordinary-hours-override'
 import { createEmployeeSalaryClient } from '../../../lib/security/employee-data-access'
 import {
   loadEmployeeScheduleAssignments,
@@ -167,8 +172,13 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       infop: false
     }
     const calculationMode = (payrollConfig as any)?.calculation_mode ?? payrollMetadata?.calculation_mode ?? 'daily'
-    const companyCalculationMode = calculationMode === 'hourly' ? 'hourly' : 'daily'
+    const companyCalculationMode = parseCompanyCalculationMode(calculationMode)
     const companyPayOvertime = resolveCompanyPayOvertime(payrollMetadata as Record<string, unknown>)
+    const ordinaryHoursCap = resolveOrdinaryHoursCap(
+      parseOrdinaryHoursOverrideInput(
+        (payrollMetadata as Record<string, unknown>)?.ordinary_hours_override
+      )
+    )
     const incompleteRecordDefaultHours = (payrollConfig as any)?.incomplete_record_default_hours ?? payrollMetadata?.incomplete_record_default_hours ?? null
     const semanalProration = (payrollMetadata?.semanal_proration || 'proportional') as 'proportional' | 'fixed'
 
@@ -428,8 +438,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
     // attendance_hours_calculation:
     // (1) Tracking overtime hours — ALL employees (columna Horas extra AHC); independent of calculation_mode.
-    // (2) Hour aggregates for bruto — only effectivePayType === 'hourly' (inherits pay_type null from company).
-    const effectivePayTypeByEmployee: Record<string, 'fixed' | 'hourly'> = {}
+    // (2) Hour aggregates for bruto — hour-based effective types (hourly + admin_floor).
+    const effectivePayTypeByEmployee: Record<string, 'fixed' | 'hourly' | 'admin_floor'> = {}
     for (const emp of employees || []) {
       effectivePayTypeByEmployee[emp.id] = resolveEffectivePayType(emp.pay_type, companyCalculationMode)
     }
@@ -466,7 +476,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
             Number(row.overtime_feriado_hours || 0)
           const eid = row.employee_id as string
           ahcOvertimeByEmployee[eid] = (ahcOvertimeByEmployee[eid] || 0) + ot
-          if (effectivePayTypeByEmployee[eid] !== 'hourly') continue
+          if (!isHourBasedPayType(effectivePayTypeByEmployee[eid])) continue
           if (!ahcByEmployee[eid]) {
             ahcByEmployee[eid] = { total_hours: 0, normal_hours: 0, by_record: {} }
           }
@@ -924,14 +934,13 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         })
         
       } else {
-        // ========== EMPLEADOS POR HORA (HOURLY) ==========
+        // ========== EMPLEADOS POR HORA / ADMIN PISO ==========
         const prevLineHourly = existingLineByEmployee[emp.id]
         if (shouldPreservePayrollLineOnPreview(prevLineHourly)) {
           preservedEditedLines += 1
           const hourly_rate_preserved = base_salary / HONDURAS_LABOR_FACTOR
           const days_worked_preserved = registros.length
-          planilla_hourly.push(
-            buildHourlyPlanillaRowFromPersistedLine({
+          const preservedRow = buildHourlyPlanillaRowFromPersistedLine({
               emp: {
                 id: emp.id,
                 dni: emp.dni,
@@ -947,7 +956,10 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
               daysWorked: days_worked_preserved,
               hourlyRate: hourly_rate_preserved,
             })
-          )
+          planilla_hourly.push({
+            ...preservedRow,
+            pay_type: effectivePayType === 'admin_floor' ? 'admin_floor' : 'hourly',
+          })
           continue
         }
 
@@ -963,13 +975,32 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         }
 
         let total_hours_worked: number
+        let horasExtrasDisplay = Math.round((ahcOvertimeByEmployee[emp.id] || 0) * 100) / 100
         const ahcEmp = ahcByEmployee[emp.id]
         const payOvertimeMoney = shouldPayOvertimeToEmployee(
           companyPayOvertime,
           effectivePayType,
           emp.pay_overtime
         )
-        if (ahcEmp && (ahcEmp.total_hours > 0 || ahcEmp.normal_hours > 0)) {
+
+        if (effectivePayType === 'admin_floor') {
+          const floorDays = registros.map((r: any) => {
+            const fromAhc = ahcEmp?.by_record?.[r.id]
+            let total_hours = Number(fromAhc)
+            if (!Number.isFinite(total_hours) || total_hours < 0) {
+              total_hours =
+                r.check_in && r.check_out ? calculateHoursWorked([r]) : 0
+            }
+            return {
+              check_in: r.check_in,
+              check_out: r.check_out,
+              total_hours,
+            }
+          })
+          const floor = sumAdminFloorPeriodHours(floorDays, ordinaryHoursCap)
+          total_hours_worked = payOvertimeMoney ? floor.payable : floor.ordinary
+          horasExtrasDisplay = floor.overtime
+        } else if (ahcEmp && (ahcEmp.total_hours > 0 || ahcEmp.normal_hours > 0)) {
           // Statu quo when paying OT: all AHC hours at base rate. When off: only ordinary hours count toward bruto.
           total_hours_worked = payOvertimeMoney ? ahcEmp.total_hours : ahcEmp.normal_hours
           if (incompleteRecordDefaultHours != null && incompleteRecordDefaultHours > 0 && incompleteRegistros.length > 0) {
@@ -991,10 +1022,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         // Calcular salario bruto del período basado en horas trabajadas
         let total_earnings = total_hours_worked * hourly_rate
 
-        // Séptimo Día (Art. 338-340): solo para pay_type === 'hourly'
+        // Séptimo Día (Art. 338-340): solo para pay_type === 'hourly' (no admin_floor)
         let septimoDia = 0
         if (effectivePayType === 'hourly' && hourly_rate > 0) {
-          const ahcEmp = ahcByEmployee[emp.id]
           const ordinaryHours = ahcEmp?.normal_hours ?? Math.max(0, total_hours_worked)
           septimoDia = calculateSeptimoDia({
             hourlyRate: hourly_rate,
@@ -1215,7 +1245,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           monthly_salary: base_salary,
           days_worked,
           days_absent,
-          horas_extras: Math.round((ahcOvertimeByEmployee[emp.id] || 0) * 100) / 100,
+          horas_extras: horasExtrasDisplay,
           total_hours_worked: Math.round(total_hours_worked * 100) / 100,
           hourly_rate: Math.round(hourly_rate * 100) / 100,
           total_earnings: Math.round(total_earnings * 100) / 100,
@@ -1225,7 +1255,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           total_deducciones: Math.round(total_deductions * 100) / 100,
           total: Math.round(total * 100) / 100,
           line_id: insertedLine.id,
-          pay_type: 'hourly',
+          pay_type: effectivePayType === 'admin_floor' ? 'admin_floor' : 'hourly',
           metadata: lineMetadata
         })
       }

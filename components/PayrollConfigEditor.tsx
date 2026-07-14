@@ -66,7 +66,7 @@ interface PayrollConfig {
   // Configuración básica de payroll
   payment_frequency: 'monthly' | 'biweekly' | 'weekly' // mensual, quincenal o semanal
   currency: 'HNL' | 'USD' // Lempiras o Dólares
-  calculation_mode?: 'daily' | 'hourly' // Default empresa: administrativo (daily) o por hora (hourly)
+  calculation_mode?: 'daily' | 'hourly' | 'admin_floor' // Default empresa
   semanal_proration?: 'proportional' | 'fixed' // Semanal: proporcional a días o monto fijo (mensual/4)
   incomplete_record_default_hours?: number | null // Horas por defecto si falta check_out (solo hourly)
   /** Tope diario de horas ordinarias antes de HE; null = usar labor_laws.legal_daily_hours en el RPC. */
@@ -619,14 +619,14 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
     }
     
     if ((cfg.calculation_mode ?? 'daily') !== (initialConfig.calculation_mode ?? 'daily')) {
-      const oldMode =
-        (initialConfig.calculation_mode ?? 'daily') === 'daily'
-          ? 'Administrativo (por día de asistencia)'
-          : 'Por hora'
-      const newMode =
-        (cfg.calculation_mode ?? 'daily') === 'daily'
-          ? 'Administrativo (por día de asistencia)'
-          : 'Por hora'
+      const labelMode = (m: string) =>
+        m === 'hourly'
+          ? 'Por hora'
+          : m === 'admin_floor'
+            ? 'Admin con piso horario'
+            : 'Administrativo (por día de asistencia)'
+      const oldMode = labelMode(initialConfig.calculation_mode ?? 'daily')
+      const newMode = labelMode(cfg.calculation_mode ?? 'daily')
       changes.push(`método de cálculo de ${oldMode} a ${newMode}`)
     }
     if ((cfg.incomplete_record_default_hours ?? null) !== (initialConfig.incomplete_record_default_hours ?? null)) {
@@ -926,10 +926,11 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
                 </div>
               </button>
               <div className={`overflow-hidden transition-all duration-300 ease-in-out ${
-                expandedSections.calculationMode ? 'max-h-[320px] opacity-100 mt-4' : 'max-h-0 opacity-0'
+                expandedSections.calculationMode ? 'max-h-[520px] opacity-100 mt-4' : 'max-h-0 opacity-0'
               }`}>
                 <div className="flex flex-col gap-4">
-                  <div className="flex gap-4">
+                <div className="flex flex-col gap-3">
+                  <div className="flex flex-col sm:flex-row gap-3">
                     <label className="flex items-center gap-2 cursor-pointer p-3 glass border border-white/20 rounded-lg hover:border-emerald-400/50 transition-colors flex-1">
                       <input
                         type="radio"
@@ -966,6 +967,30 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
                       </div>
                     </label>
                   </div>
+                  <label className="flex items-center gap-2 cursor-pointer p-3 glass border border-white/20 rounded-lg hover:border-emerald-400/50 transition-colors">
+                    <input
+                      type="radio"
+                      name="calculation_mode"
+                      value="admin_floor"
+                      checked={(config.calculation_mode ?? 'daily') === 'admin_floor'}
+                      onChange={() =>
+                        setConfig((prev) => ({
+                          ...prev,
+                          calculation_mode: 'admin_floor',
+                          incomplete_record_default_hours: null,
+                        }))
+                      }
+                      className="w-4 h-4 text-emerald-600"
+                    />
+                    <div>
+                      <span className="text-white font-medium">Admin con piso horario</span>
+                      <p className="text-xs text-gray-400 mt-0.5">
+                        Tarifa horaria (base÷240). Por día asistido nunca paga menos del tope ordinario;
+                        con entrada+salida y horas &gt; tope, el exceso es HE.
+                      </p>
+                    </div>
+                  </label>
+                </div>
                   {(config.calculation_mode ?? 'daily') === 'hourly' && (
                     <div className="p-3 glass border border-amber-500/30 rounded-lg">
                       <label className="flex items-center gap-2 text-sm text-amber-200">

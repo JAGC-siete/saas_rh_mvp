@@ -9,11 +9,11 @@ import { HONDURAS_LABOR_FACTOR } from './constants'
 
 export interface EmployeeForPeriodSalary {
   base_salary: number
-  pay_type?: 'fixed' | 'hourly' | null
+  pay_type?: 'fixed' | 'hourly' | 'admin_floor' | null
 }
 
 export interface CalculatePeriodBaseSalaryOptions {
-  /** Horas trabajadas en el período (requerido si pay_type === 'hourly') */
+  /** Horas trabajadas en el período (requerido si pay_type hour-based) */
   hoursWorked?: number
   /** Metadata del registro (puede contener hours_worked, total_hours_worked) */
   metadata?: Record<string, unknown>
@@ -25,9 +25,7 @@ export interface CalculatePeriodBaseSalaryOptions {
  * - Fixed + mensual: base_salary íntegro
  * - Fixed + quincenal: base_salary / 2
  * - Fixed + semanal: base_salary / 4
- * - Hourly: (base_salary / 240) * hours_worked
- *   - base_salary es salario mensual; tarifa = base_salary / HONDURAS_LABOR_FACTOR.
- *   - Busca horas en options.hoursWorked o options.metadata?.hours_worked o metadata?.total_hours_worked
+ * - Hourly / admin_floor: (base_salary / 240) * hours_worked
  */
 export function calculatePeriodBaseSalary(
   employee: EmployeeForPeriodSalary,
@@ -37,7 +35,7 @@ export function calculatePeriodBaseSalary(
   const baseSalary = Number(employee?.base_salary) || 0
   const payType = employee?.pay_type ?? 'fixed'
 
-  if (payType === 'hourly') {
+  if (payType === 'hourly' || payType === 'admin_floor') {
     const hoursWorked =
       options?.hoursWorked ??
       Number((options?.metadata as Record<string, unknown>)?.hours_worked) ??
@@ -46,7 +44,6 @@ export function calculatePeriodBaseSalary(
 
     if (hoursWorked <= 0) return 0
 
-    // salario_bruto = (base_salary / 240) * hours_worked; base_salary siempre mensual
     const hourlyRate = baseSalary / HONDURAS_LABOR_FACTOR
     return hourlyRate * hoursWorked
   }

@@ -164,12 +164,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const pt = updateData.pay_type
       if (pt === '' || pt === null) {
         updateData.pay_type = null
-      } else if (pt === 'fixed' || pt === 'hourly') {
+      } else if (pt === 'fixed' || pt === 'hourly' || pt === 'admin_floor') {
         updateData.pay_type = pt
       } else {
         return res.status(400).json({
           error: 'pay_type inválido',
-          message: "pay_type debe ser 'fixed', 'hourly' o null (default de la empresa)."
+          message: "pay_type debe ser 'fixed', 'hourly', 'admin_floor' o null (default de la empresa)."
         })
       }
     }
@@ -186,7 +186,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       updateData.pay_type !== undefined
         ? (updateData.pay_type as string | null)
         : (existing as { pay_type?: string | null }).pay_type
-    if (effectivePayTypeForAttendance === 'hourly') {
+    if (effectivePayTypeForAttendance === 'hourly' || effectivePayTypeForAttendance === 'admin_floor') {
       updateData.attendance_required = true
     }
 

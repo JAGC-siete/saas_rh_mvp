@@ -70,6 +70,11 @@ describe('shouldPayOvertimeToEmployee (Capa 2)', () => {
     assert.equal(shouldPayOvertimeToEmployee(true, 'fixed', false), false)
     assert.equal(shouldPayOvertimeToEmployee(true, 'fixed', true), false)
   })
+
+  it('company true + admin_floor + Sí → paid', () => {
+    assert.equal(shouldPayOvertimeToEmployee(true, 'admin_floor', true), true)
+    assert.equal(shouldPayOvertimeToEmployee(true, 'admin_floor', false), false)
+  })
 })
 
 describe('calculateOvertimePayFromAhc', () => {

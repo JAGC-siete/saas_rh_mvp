@@ -170,7 +170,7 @@ export default function UnifiedPayrollTable({
     
     rows.forEach(row => {
       const payType = (row as any).pay_type || 'fixed'
-      if (payType === 'hourly') {
+      if (payType === 'hourly' || payType === 'admin_floor') {
         hourly.push(row)
       } else {
         fixed.push(row)

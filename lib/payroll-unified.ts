@@ -16,11 +16,11 @@ export type PlanillaRow = {
   late_days: number;
   department?: string;
   line_id?: string;
-  pay_type?: 'fixed' | 'hourly';
+  pay_type?: 'fixed' | 'hourly' | 'admin_floor';
   edited?: boolean;
-  /** Horas extra (AHC diurno+nocturno+feriado) en el período — informativo en preview fijo */
+  /** Horas extra (AHC o piso admin) en el período */
   horas_extras?: number;
-  // Campos específicos para hourly
+  // Campos específicos para hourly / admin_floor
   total_hours_worked?: number;
   hourly_rate?: number;
 };

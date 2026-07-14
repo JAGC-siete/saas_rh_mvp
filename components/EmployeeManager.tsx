@@ -218,7 +218,7 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
   const [searchTerm, setSearchTerm] = useState('')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
   const [departmentFilter, setDepartmentFilter] = useState('all')
-  const [companyCalculationMode, setCompanyCalculationMode] = useState<'daily' | 'hourly'>('daily')
+  const [companyCalculationMode, setCompanyCalculationMode] = useState<'daily' | 'hourly' | 'admin_floor'>('daily')
   const [sortBy, setSortBy] = useState<EmployeeListSortBy>('name')
   const [currentPage, setCurrentPage] = useState(1)
   const [uploadedProfileImagePath, setUploadedProfileImagePath] = useState<string | null>(null)
@@ -487,24 +487,32 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
         const trd = String(sanitizedFormData.termination_reason_detail || '').trim()
         sanitizedFormData.termination_reason_detail = trd || null
       }
-      // pay_type: constraint permite 'fixed' | 'hourly'
+      // pay_type: constraint permite 'fixed' | 'hourly' | 'admin_floor'
       if (typeof sanitizedFormData.pay_type === 'string') {
         const rawPayType = sanitizedFormData.pay_type.trim()
         if (rawPayType === '') {
           sanitizedFormData.pay_type = null
-        } else if (rawPayType !== 'fixed' && rawPayType !== 'hourly') {
+        } else if (
+          rawPayType !== 'fixed' &&
+          rawPayType !== 'hourly' &&
+          rawPayType !== 'admin_floor'
+        ) {
           sanitizedFormData.pay_type = 'fixed'
         }
       }
       const resolvedPayForAttendance =
         sanitizedFormData.pay_type === 'hourly'
           ? 'hourly'
-          : sanitizedFormData.pay_type === 'fixed'
-            ? 'fixed'
-            : companyCalculationMode === 'hourly'
-              ? 'hourly'
-              : 'fixed'
-      if (resolvedPayForAttendance === 'hourly') {
+          : sanitizedFormData.pay_type === 'admin_floor'
+            ? 'admin_floor'
+            : sanitizedFormData.pay_type === 'fixed'
+              ? 'fixed'
+              : companyCalculationMode === 'hourly'
+                ? 'hourly'
+                : companyCalculationMode === 'admin_floor'
+                  ? 'admin_floor'
+                  : 'fixed'
+      if (resolvedPayForAttendance === 'hourly' || resolvedPayForAttendance === 'admin_floor') {
         sanitizedFormData.attendance_required = true
       } else {
         sanitizedFormData.attendance_required = sanitizedFormData.attendance_required !== false
@@ -965,7 +973,9 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         const mode = data?.config?.calculation_mode
-        setCompanyCalculationMode(mode === 'hourly' ? 'hourly' : 'daily')
+        setCompanyCalculationMode(
+          mode === 'hourly' || mode === 'admin_floor' ? mode : 'daily'
+        )
       })
       .catch(() => setCompanyCalculationMode('daily'))
   }, [companyId])

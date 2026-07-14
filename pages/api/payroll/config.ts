@@ -361,10 +361,10 @@ async function upsertPayrollConfig(
     }
 
     // Validar calculation_mode
-    const validCalcModes = ['daily', 'hourly']
+    const validCalcModes = ['daily', 'hourly', 'admin_floor']
     if (calculation_mode && !validCalcModes.includes(calculation_mode)) {
       return res.status(400).json({
-        error: 'Modo de c?lculo inv?lido',
+        error: 'Modo de cálculo inválido',
         message: `calculation_mode debe ser uno de: ${validCalcModes.join(', ')}`
       })
     }

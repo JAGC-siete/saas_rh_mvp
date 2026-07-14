@@ -165,9 +165,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       work_schedule_id: work_schedule_id || null,
       base_salary: typeof base_salary === 'string' ? parseFloat(base_salary) : base_salary,
       payment_frequency: (payment_frequency === 'quincenal' || payment_frequency === 'mensual' || payment_frequency === 'semanal') ? payment_frequency : null,
-      pay_type: pay_type === 'fixed' || pay_type === 'hourly' ? pay_type : null,
+      pay_type: pay_type === 'fixed' || pay_type === 'hourly' || pay_type === 'admin_floor' ? pay_type : null,
       attendance_required:
-        pay_type === 'hourly'
+        pay_type === 'hourly' || pay_type === 'admin_floor'
           ? true
           : parseAttendanceRequiredInput(attendance_required),
       pay_overtime: parseEmployeePayOvertimeInput(pay_overtime),

@@ -1,9 +1,14 @@
 /**
  * Payroll preview inclusion rules for attendance_required (employees module).
- * Hourly: always included (0 hours when no marks). Fixed exempt: full period days.
+ * Hourly / admin_floor: always included (0 hours when no marks). Fixed exempt: full period days.
  */
 
-import type { EffectivePayType } from './resolve-effective-pay-type'
+import {
+  resolveEffectivePayType,
+  type CompanyCalculationMode,
+  type EffectivePayType,
+  type EmployeePayType,
+} from './resolve-effective-pay-type'
 
 export function employeeRequiresAttendance(
   attendanceRequired: boolean | null | undefined
@@ -31,7 +36,8 @@ export function shouldIncludeEmployeeInPayrollPreview(
   periodHasAttendanceRecords: boolean
 ): boolean {
   if (!periodHasAttendanceRecords) return true
-  if (effectivePayType === 'hourly') return true
+  // Hour-based (exact or admin floor): always include (0 hours if no marks)
+  if (effectivePayType === 'hourly' || effectivePayType === 'admin_floor') return true
   if (isFixedAttendanceExempt(effectivePayType, attendanceRequired)) return true
   return hasValidRecords
 }
@@ -69,18 +75,13 @@ export function parseAttendanceRequiredInput(value: unknown): boolean {
   return true
 }
 
-/** Hourly employees always require attendance tracking; coerce on write. */
+/** Hour-based employees always require attendance tracking; coerce on write. */
 export function coerceAttendanceRequiredForPayType(
-  payType: 'fixed' | 'hourly' | null | undefined,
-  companyCalculationMode: 'daily' | 'hourly',
+  payType: EmployeePayType,
+  companyCalculationMode: CompanyCalculationMode,
   attendanceRequired: unknown
 ): boolean {
-  const effective: EffectivePayType =
-    payType === 'fixed' || payType === 'hourly'
-      ? payType
-      : companyCalculationMode === 'hourly'
-        ? 'hourly'
-        : 'fixed'
-  if (effective === 'hourly') return true
+  const effective = resolveEffectivePayType(payType, companyCalculationMode)
+  if (effective === 'hourly' || effective === 'admin_floor') return true
   return parseAttendanceRequiredInput(attendanceRequired)
 }

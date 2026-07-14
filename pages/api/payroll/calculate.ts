@@ -22,17 +22,22 @@ import {
 import { calculatePeriodBaseSalary, normalizeFrequency } from '../../../lib/payroll/calculate-period-base-salary'
 import { calculateSeptimoDia } from '../../../lib/payroll/septimo-dia'
 import { HONDURAS_LABOR_FACTOR } from '../../../lib/payroll/constants'
-import { resolveEffectivePayType } from '../../../lib/payroll/resolve-effective-pay-type'
+import { resolveEffectivePayType, parseCompanyCalculationMode, isHourBasedPayType } from '../../../lib/payroll/resolve-effective-pay-type'
 import {
   hasValidPayrollAttendanceRecords,
   resolveFixedDaysWorkedForPayroll,
   shouldIncludeEmployeeInPayrollPreview,
 } from '../../../lib/payroll/payroll-attendance-inclusion'
 import {
-  calculateOvertimePayFromAhc,
   resolveCompanyPayOvertime,
-  shouldPayOvertimeToEmployee
+  shouldPayOvertimeToEmployee,
+  calculateOvertimePayFromAhc
 } from '../../../lib/payroll/overtime-pay'
+import {
+  resolveOrdinaryHoursCap,
+  sumAdminFloorPeriodHours,
+} from '../../../lib/payroll/admin-floor-hours'
+import { parseOrdinaryHoursOverrideInput } from '../../../lib/payroll/ordinary-hours-override'
 import { createEmployeeSalaryClient } from '../../../lib/security/employee-data-access'
 import { fetchPaidLeaveCreditsByEmployee } from '../../../lib/leave/paid-leave-days'
 
@@ -182,9 +187,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       (payrollConfig?.calculation_mode as string) ||
       (payrollMetadata.calculation_mode as string) ||
       'daily'
-    const companyCalculationMode =
-      calculationMode === 'hourly' ? 'hourly' : 'daily'
+    const companyCalculationMode = parseCompanyCalculationMode(calculationMode)
     const companyPayOvertime = resolveCompanyPayOvertime(payrollMetadata as Record<string, unknown>)
+    const ordinaryHoursCap = resolveOrdinaryHoursCap(
+      parseOrdinaryHoursOverrideInput(
+        (payrollMetadata as Record<string, unknown>)?.ordinary_hours_override
+      )
+    )
     const quincenaConfig = payrollConfig?.quincena_config || {}
     const metaCutDates = payrollMetadata?.payment_cut_dates || {}
     
@@ -320,6 +329,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Obtener cálculos de horas (total_hours, normal_hours, overtime por tipo)
     const recordIds = (attendanceRecords || []).map((r: any) => r.id).filter(Boolean)
     let hoursCalculations: Record<string, { total_hours: number; normal_hours: number; overtime_diurno: number; overtime_nocturno: number; overtime_feriado: number }> = {}
+    const ahcHoursByRecordId: Record<string, number> = {}
     if (recordIds.length > 0) {
       const { data: ahcResults } = await supabase
         .from('attendance_hours_calculation')
@@ -329,10 +339,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const recordToEmp = Object.fromEntries((attendanceRecords || []).map((r: any) => [r.id, r.employee_id]))
         for (const ahc of ahcResults) {
           const empId = recordToEmp[ahc.attendance_record_id]
+          const h = Number(ahc.total_hours || 0)
+          ahcHoursByRecordId[ahc.attendance_record_id] = h
           if (empId) {
             if (!hoursCalculations[empId]) hoursCalculations[empId] = { total_hours: 0, normal_hours: 0, overtime_diurno: 0, overtime_nocturno: 0, overtime_feriado: 0 }
-            hoursCalculations[empId].total_hours += Number(ahc.total_hours || 0)
-            const total = Number(ahc.total_hours || 0)
+            hoursCalculations[empId].total_hours += h
+            const total = h
             const ot = Number(ahc.overtime_diurno_hours || 0) + Number(ahc.overtime_nocturno_hours || 0) + Number(ahc.overtime_feriado_hours || 0)
             hoursCalculations[empId].normal_hours += Number(ahc.normal_hours ?? Math.max(0, total - ot))
             hoursCalculations[empId].overtime_diurno += Number(ahc.overtime_diurno_hours || 0)
@@ -352,7 +364,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           (record: any) => record.employee_id === emp.id
         )
         const effectivePayType = resolveEffectivePayType(emp.pay_type, companyCalculationMode)
-        if (effectivePayType === 'hourly') {
+        if (isHourBasedPayType(effectivePayType)) {
           return shouldIncludeEmployeeInPayrollPreview(
             emp.attendance_required,
             effectivePayType,
@@ -404,7 +416,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const effectivePayType = resolveEffectivePayType(emp.pay_type, companyCalculationMode)
       const registros = attendanceRecords.filter((record: any) => {
         if (record.employee_id !== emp.id || !record.check_in) return false
-        if (effectivePayType === 'fixed') return true
+        // fixed + admin_floor: check_in enough (floor handles missing checkout)
+        if (effectivePayType === 'fixed' || effectivePayType === 'admin_floor') return true
         return Boolean(record.check_out)
       })
 
@@ -438,6 +451,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       // CALCULAR SALARIO SEGÚN payment_frequency y pay_type (helper unificado)
       // Hourly: salario_bruto = base_salary (tarifa/hora) * hours_worked
+      // Admin floor: piso = tope ordinario/día; HE solo con ambas marcas y > tope
       // Fixed: periodBase (mensual/2 o /4) * (days_worked/diasPeriodo)
       let total_earnings = 0
       let septimoDia = 0
@@ -468,6 +482,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           semanalProration: semanalProration
         })
         total_earnings += septimoDia
+      } else if (effectivePayType === 'admin_floor') {
+        const floor = sumAdminFloorPeriodHours(
+          registros.map((r: any) => ({
+            check_in: r.check_in,
+            check_out: r.check_out,
+            total_hours: ahcHoursByRecordId[r.id] ?? 0,
+          })),
+          ordinaryHoursCap
+        )
+        const payOt = shouldPayOvertimeToEmployee(
+          companyPayOvertime,
+          effectivePayType,
+          emp.pay_overtime
+        )
+        const hoursWorked = payOt ? floor.payable : floor.ordinary
+        total_earnings = calculatePeriodBaseSalary(
+          { base_salary, pay_type: 'admin_floor' },
+          frequencyForCalc,
+          { hoursWorked }
+        )
       } else {
         const periodBase = calculatePeriodBaseSalary(
           { base_salary, pay_type: 'fixed' },
@@ -480,6 +514,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           : periodBase
       }
       if (
+        effectivePayType === 'hourly' &&
         shouldPayOvertimeToEmployee(companyPayOvertime, effectivePayType, emp.pay_overtime)
       ) {
         total_earnings += overtimePay
@@ -495,7 +530,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const baseParaDeducciones = base_salary
         const factor2Pagos = tipoDeduccion === '2PAGOS' ? 0.5 : 1
 
-        const periodIncomeForIsr = effectivePayType === 'hourly' ? total_earnings : baseParaDeducciones
+        const periodIncomeForIsr = isHourBasedPayType(effectivePayType) ? total_earnings : baseParaDeducciones
 
         const statutory = await computePayrollEmployeeStatutoryDeductions({
           countryCode,
