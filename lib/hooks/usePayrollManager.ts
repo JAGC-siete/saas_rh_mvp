@@ -5,7 +5,7 @@
 import { useReducer, useCallback, useMemo, useEffect, useState, useRef } from 'react'
 import { useCompanyContext } from '../useCompanyContext'
 import { useToast } from '../toast'
-import { fetchUnifiedPayroll, getCurrentPeriod, UnifiedRow, UnifiedResumen } from '../payroll-unified'
+import { fetchUnifiedPayroll, getCurrentPeriod, mapPlanillaItemToUnifiedRow, summarizeUnifiedRows, UnifiedRow, UnifiedResumen } from '../payroll-unified'
 import { usePayrollMetrics } from './usePayrollMetrics'
 import { payrollApi, mapPayrollError } from '../payroll-api'
 import { BULK_VOUCHER_EMAIL_TRIAL_MESSAGE } from '../billing/messages'
@@ -501,35 +501,11 @@ export const usePayrollManager = () => {
       if (response.planilla && Array.isArray(response.planilla)) {
         console.log('🔍 DEBUG - Actualizando tabla con datos del preview:', response.planilla.length, 'empleados')
         
-        // Convertir datos del preview a formato unificado
-        const rows: UnifiedRow[] = response.planilla.map((p: any) => ({
-          ...p,
-          horas_trabajadas: 0,
-          extras: { horas: 0, monto: 0 },
-          observaciones: '',
-          status: 'completo' as const
-        }))
-        
-        // Calcular resumen
-        const resumen = rows.reduce((acc, r) => {
-          acc.empleados += 1
-          acc.total_bruto += r.total_earnings
-          acc.total_deducciones.IHSS += r.IHSS || 0
-          acc.total_deducciones.RAP += r.RAP || 0
-          acc.total_deducciones.ISR += r.ISR || 0
-          acc.total_deducciones.otros += 0
-          acc.total_neto += r.total
-          acc.total_dias_trabajados += r.days_worked || 0
-          acc.total_horas_extras += 0
-          return acc
-        }, {
-          empleados: 0,
-          total_bruto: 0,
-          total_deducciones: { IHSS: 0, RAP: 0, ISR: 0, otros: 0 },
-          total_neto: 0,
-          total_dias_trabajados: 0,
-          total_horas_extras: 0
-        })
+        // Convertir datos del preview a formato unificado (incluye horas_extras AHC)
+        const rows: UnifiedRow[] = response.planilla.map((p: any) =>
+          mapPlanillaItemToUnifiedRow(p)
+        )
+        const resumen = summarizeUnifiedRows(rows)
         
         // Actualizar estado inmediatamente
         dispatch({

@@ -52,6 +52,47 @@ export type UnifiedResumen = {
   total_horas_extras: number;
 };
 
+/** Map preview/planilla row → UnifiedRow, preserving AHC overtime hours (Caso 1 display). */
+export function mapPlanillaItemToUnifiedRow(p: PlanillaRow | Record<string, unknown>): UnifiedRow {
+  const hx = Number((p as { horas_extras?: unknown }).horas_extras)
+  const extrasHoras = Number.isFinite(hx) ? hx : 0
+  const totalHours = Number((p as { total_hours_worked?: unknown }).total_hours_worked) || 0
+  return {
+    ...(p as PlanillaRow),
+    horas_trabajadas: totalHours,
+    extras: { horas: extrasHoras, monto: 0 },
+    observaciones: '',
+    status: 'completo' as const,
+    pay_type: (p as { pay_type?: 'fixed' | 'hourly' }).pay_type || 'fixed',
+  }
+}
+
+export function summarizeUnifiedRows(rows: UnifiedRow[]): UnifiedResumen {
+  return rows.reduce(
+    (acc, r) => {
+      acc.empleados += 1
+      acc.total_bruto += r.total_earnings || 0
+      acc.total_deducciones.IHSS += r.IHSS || 0
+      acc.total_deducciones.RAP += r.RAP || 0
+      acc.total_deducciones.ISR += r.ISR || 0
+      acc.total_deducciones.otros +=
+        (r.total_deducciones || 0) - (r.IHSS || 0) - (r.RAP || 0) - (r.ISR || 0)
+      acc.total_neto += r.total || 0
+      acc.total_dias_trabajados += r.days_worked || 0
+      acc.total_horas_extras += r.extras?.horas || 0
+      return acc
+    },
+    {
+      empleados: 0,
+      total_bruto: 0,
+      total_deducciones: { IHSS: 0, RAP: 0, ISR: 0, otros: 0 },
+      total_neto: 0,
+      total_dias_trabajados: 0,
+      total_horas_extras: 0,
+    } as UnifiedResumen
+  )
+}
+
 export async function fetchUnifiedPayroll(
   companyId: string, 
   year: number, 
@@ -101,18 +142,7 @@ export async function fetchUnifiedPayroll(
     console.log('🔍 DEBUG - Planilla data sample:', planilla.slice(0, 3));
 
     // Convert planilla data to unified format (base rows without metadata)
-    let rows: UnifiedRow[] = planilla.map((p) => {
-      const hx = Number((p as any).horas_extras)
-      const extrasHoras = Number.isFinite(hx) ? hx : 0
-      return {
-        ...p,
-        horas_trabajadas: (p as any).total_hours_worked || 0, // Para hourly, usar horas trabajadas
-        extras: { horas: extrasHoras, monto: 0 },
-        observaciones: '',
-        status: 'completo' as const,
-        pay_type: (p as any).pay_type || 'fixed', // Incluir pay_type
-      }
-    })
+    let rows: UnifiedRow[] = planilla.map((p) => mapPlanillaItemToUnifiedRow(p))
 
     // If we have a run_id, fetch run lines to enrich rows with metadata
     if (planillaData.run_id) {
@@ -161,26 +191,7 @@ export async function fetchUnifiedPayroll(
       }
     }
 
-    // Calculate summary
-    const resumen = rows.reduce((acc, r) => {
-      acc.empleados += 1;
-      acc.total_bruto += r.total_earnings || 0;
-      acc.total_deducciones.IHSS += r.IHSS || 0;
-      acc.total_deducciones.RAP += r.RAP || 0;
-      acc.total_deducciones.ISR += r.ISR || 0;
-      acc.total_deducciones.otros += (r.total_deducciones || 0) - (r.IHSS || 0) - (r.RAP || 0) - (r.ISR || 0);
-      acc.total_neto += r.total || 0;
-      acc.total_dias_trabajados += r.days_worked || 0;
-      acc.total_horas_extras += r.extras?.horas || 0;
-      return acc;
-    }, {
-      empleados: 0,
-      total_bruto: 0,
-      total_deducciones: { IHSS: 0, RAP: 0, ISR: 0, otros: 0 },
-      total_neto: 0,
-      total_dias_trabajados: 0,
-      total_horas_extras: 0
-    } as UnifiedResumen);
+    const resumen = summarizeUnifiedRows(rows)
 
     // Incluir run_id y status si están disponibles en la respuesta
     const result: { rows: UnifiedRow[]; resumen: UnifiedResumen; runId?: string; status?: string; incompleteRecordsAlert?: { employee_id: string; employee_name: string; dates: string[] }[] } = { rows, resumen };
