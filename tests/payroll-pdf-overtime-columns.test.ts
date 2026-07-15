@@ -50,6 +50,7 @@ describe('payroll PDF column catalog', () => {
       isHourly: false,
       hasSeptimoDia: false,
       hasOvertimePay: true,
+      customEarningsWithValues: new Set(['bono_asistencia']),
       legalDeductions: { ihss: true, rap: true, isr: true },
       countryCode: 'HND',
       customFieldsConfig: {
@@ -60,8 +61,15 @@ describe('payroll PDF column catalog', () => {
           required: false,
           default: 0,
         },
-        ingreso_he_manual: {
-          label: 'Ingreso HE manual',
+        bono_asistencia: {
+          label: 'Bono asistencia',
+          type: 'number',
+          category: 'earnings',
+          required: false,
+          default: 0,
+        },
+        horas_extra_manual: {
+          label: 'Horas extra',
           type: 'number',
           category: 'earnings',
           required: false,
@@ -72,13 +80,14 @@ describe('payroll PDF column catalog', () => {
 
     const ids = cols.map((c) => c.id)
     assert.equal(ids.includes('horas_extras'), false)
+    assert.equal(ids.includes('custom_horas_extra_manual'), false, 'empty OT alias hidden when Pago HE shows')
     assert.ok(ids.includes('overtime_pay'))
     assert.ok(ids.includes('biweekly_salary'))
 
     const monthly = ids.indexOf('base_salary')
     const quincenal = ids.indexOf('biweekly_salary')
     const he = ids.indexOf('overtime_pay')
-    const customEarn = ids.indexOf('custom_ingreso_he_manual')
+    const customEarn = ids.indexOf('custom_bono_asistencia')
     const gross = ids.indexOf('gross_salary')
     const customDed = ids.indexOf('custom_cooperativa_elga')
     const totalDed = ids.indexOf('total_deductions')
@@ -92,6 +101,44 @@ describe('payroll PDF column catalog', () => {
     assert.equal(cols.find((c) => c.id === 'overtime_pay')?.header, 'Pago HE')
     assert.equal(cols.find((c) => c.id === 'gross_salary')?.header, 'Total ingresos')
     assert.equal(cols.find((c) => c.id === 'net_salary')?.header, 'Neto a Pagar')
+  })
+
+  it('shows horas_extra_manual only when it has values and Pago HE is absent', () => {
+    const withManual = buildPayrollPdfColumnMeta({
+      isHourly: false,
+      hasSeptimoDia: false,
+      hasOvertimePay: false,
+      customEarningsWithValues: new Set(['horas_extra_manual']),
+      customFieldsConfig: {
+        horas_extra_manual: {
+          label: 'Horas extra',
+          type: 'number',
+          category: 'earnings',
+          required: false,
+          default: 0,
+        },
+      },
+      countryCode: 'HND',
+    })
+    assert.ok(withManual.map((c) => c.id).includes('custom_horas_extra_manual'))
+
+    const emptyWithPagoHe = buildPayrollPdfColumnMeta({
+      isHourly: false,
+      hasSeptimoDia: false,
+      hasOvertimePay: true,
+      customEarningsWithValues: new Set(),
+      customFieldsConfig: {
+        horas_extra_manual: {
+          label: 'Horas extra',
+          type: 'number',
+          category: 'earnings',
+          required: false,
+          default: 0,
+        },
+      },
+      countryCode: 'HND',
+    })
+    assert.equal(emptyWithPagoHe.map((c) => c.id).includes('custom_horas_extra_manual'), false)
   })
 
   it('uses columnLabels overrides', () => {

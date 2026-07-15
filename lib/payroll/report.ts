@@ -411,6 +411,22 @@ export async function generateConsolidatedPayrollPDF(
 
         const hasSeptimoDia = isHourly && planillaData.some((r) => (r.septimo_dia ?? 0) > 0)
         const hasOvertimePay = planillaData.some((r) => (r.overtime_pay ?? 0) > 0)
+        const customEarningsWithValues = new Set<string>()
+        if (customFieldsConfig) {
+          for (const [fieldName, fieldDef] of Object.entries(customFieldsConfig)) {
+            const cat =
+              typeof fieldDef === 'string'
+                ? 'earnings'
+                : fieldDef?.category || 'deductions'
+            if (cat !== 'earnings') continue
+            const hasVal = planillaData.some((r) => {
+              const raw = r.metadata?.[fieldName]
+              const n = typeof raw === 'number' ? raw : Number(raw)
+              return Number.isFinite(n) && n !== 0
+            })
+            if (hasVal) customEarningsWithValues.add(fieldName)
+          }
+        }
 
         type PdfTableCol = {
           id: string
@@ -585,6 +601,7 @@ export async function generateConsolidatedPayrollPDF(
           customFieldsConfig: customFieldsConfig as PayrollPdfCustomFieldsConfig | undefined,
           legalDeductions: payrollConfig?.legal_deductions,
           countryCode: jurisdictionCountry,
+          customEarningsWithValues,
         })
           .map((meta) => {
             const binding = resolveColBinding(meta.id)

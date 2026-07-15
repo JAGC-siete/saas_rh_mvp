@@ -30,6 +30,12 @@ export interface BuildPayrollPdfColumnsInput {
   customFieldsConfig?: PayrollPdfCustomFieldsConfig
   legalDeductions?: { ihss?: boolean; rap?: boolean; isr?: boolean }
   countryCode?: CountryCode | string | null
+  /**
+   * Custom earnings field names with at least one non-zero value in the table.
+   * OT-alias earnings (e.g. horas_extra_manual) are omitted when empty so they
+   * do not duplicate the "Pago HE" / overtime_pay column.
+   */
+  customEarningsWithValues?: Set<string> | null
 }
 
 export interface PayrollPdfColumnMeta {
@@ -82,6 +88,14 @@ function normalizeCustomField(
   return fieldDef
 }
 
+/** Manual/legacy HE earnings that collide with standard `overtime_pay` ("Pago HE"). */
+export function isOvertimeEarningsAlias(fieldName: string): boolean {
+  const n = fieldName.trim().toLowerCase()
+  if (!n) return false
+  if (n === 'horas_extra_manual' || n === 'horas_extras' || n === 'ingreso_he_manual') return true
+  return /hora.*extra|extra.*hora|overtime/.test(n)
+}
+
 /**
  * Builds ordered column metadata for the planilla PDF table.
  * Does not include the hours-quantity column (`horas_extras`).
@@ -97,6 +111,7 @@ export function buildPayrollPdfColumnMeta(input: BuildPayrollPdfColumnsInput): P
     customFieldsConfig,
     legalDeductions,
     countryCode,
+    customEarningsWithValues = null,
   } = input
   const filterCustomFields = Boolean(input.includeCustomPayrollFields && visibleColumnIds)
   const country = normalizeCountryCode(countryCode)
@@ -146,6 +161,11 @@ export function buildPayrollPdfColumnMeta(input: BuildPayrollPdfColumnsInput): P
       const def = normalizeCustomField(fieldName, fieldDef, 'earnings')
       const customId = `custom_${fieldName}`
       if (filterCustomFields && !visibleColumnIds!.has(customId)) continue
+      // Avoid Julio-style dual HE columns: "Pago HE" + empty "Horas Extra".
+      if (isOvertimeEarningsAlias(fieldName)) {
+        const hasValue = customEarningsWithValues?.has(fieldName) ?? false
+        if (hasOvertimePay || !hasValue) continue
+      }
       cols.push({ id: customId, header: colLabel(columnLabels, customId, def.label || fieldName) })
     }
   }
