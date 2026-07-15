@@ -11,6 +11,7 @@ import {
   coalescePlanillaPayType,
   isHourBasedPlanillaPayType,
 } from '../../../lib/payroll/resolve-effective-pay-type'
+import { resolveDisplayNet } from '../../../lib/payroll/resolve-display-net'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (!['POST', 'GET'].includes(req.method || '')) {
@@ -112,6 +113,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
         const statutoryDeductions = (Number(line.eff_ihss) || 0) + (Number(line.eff_rap) || 0) + (Number(line.eff_isr) || 0)
         const totalDeductions = statutoryDeductions + customDeductions
+        const displayNet = resolveDisplayNet({
+          bruto: Number(line.eff_bruto) || 0,
+          totalDeductions,
+          customDeductions,
+          storedNeto: Number(line.eff_neto) || 0,
+        })
 
         const payType = coalescePlanillaPayType(line.employees?.pay_type || 'fixed')
         const totalHours = Number(line.eff_hours) || 0
@@ -135,7 +142,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           RAP: Number(line.eff_rap) || 0,
           ISR: Number(line.eff_isr) || 0,
           total_deductions: totalDeductions,
-          total: Number(line.eff_neto) || 0,
+          total: displayNet,
           notes_on_ingress: line.edited ? 'Editado' : '',
           notes_on_deductions: deductionsNotes,
           metadata: line.metadata || {}, // Include metadata for custom fields display

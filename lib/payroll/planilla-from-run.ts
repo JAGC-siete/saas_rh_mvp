@@ -13,6 +13,7 @@ import {
 } from './period-dates'
 import type { PlanillaItem } from './report'
 import { coalescePlanillaPayType, isHourBasedPlanillaPayType } from './resolve-effective-pay-type'
+import { resolveDisplayNet } from './resolve-display-net'
 
 /** eff_hours on payroll_run_lines stores days for fixed employees and clock hours for hour-based types. */
 export function resolvePlanillaDaysWorked(
@@ -138,6 +139,12 @@ export async function loadPlanillaFromRun(
       const statutoryDeductions =
         (Number(line.eff_ihss) || 0) + (Number(line.eff_rap) || 0) + (Number(line.eff_isr) || 0)
       const totalDeductions = statutoryDeductions + customDeductions
+      const displayNet = resolveDisplayNet({
+        bruto: effBruto,
+        totalDeductions,
+        customDeductions,
+        storedNeto: Number(line.eff_neto) || 0,
+      })
       const payType = coalescePlanillaPayType(
         (employees?.pay_type as string) ||
           ((metadata as Record<string, unknown>).pay_type as string) ||
@@ -167,7 +174,7 @@ export async function loadPlanillaFromRun(
         RAP: Number(line.eff_rap) || 0,
         ISR: Number(line.eff_isr) || 0,
         total_deductions: totalDeductions,
-        total: Number(line.eff_neto) || 0,
+        total: displayNet,
         notes_on_ingress: line.edited ? 'Editado' : '',
         notes_on_deductions: deductionsNotes,
         metadata,

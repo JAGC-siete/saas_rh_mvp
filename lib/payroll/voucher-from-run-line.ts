@@ -1,6 +1,7 @@
 import { calculatePayroll } from '../payroll-client-specific'
 import type { EmployeeReceiptInput } from './receipt'
 import { buildCustomDeductionsList } from './custom-deductions-list'
+import { resolveDisplayNet } from './resolve-display-net'
 
 export interface VoucherFromRunLineResult {
   record: EmployeeReceiptInput
@@ -103,6 +104,12 @@ export async function buildVoucherFromRunLine(
   const statutoryDeductions =
     (lineData.eff_ihss || 0) + (lineData.eff_rap || 0) + (lineData.eff_isr || 0)
   const totalDeductions = statutoryDeductions + customDeductions
+  const netSalary = resolveDisplayNet({
+    bruto: brutoTotal,
+    totalDeductions,
+    customDeductions,
+    storedNeto: lineData.eff_neto || 0,
+  })
 
   const septimoDia =
     Number(lineData.seventh_day_pay) ||
@@ -143,7 +150,7 @@ export async function buildVoucherFromRunLine(
       professional_tax: lineData.eff_rap || 0,
       social_security: lineData.eff_ihss || 0,
       total_deductions: totalDeductions,
-      net_salary: lineData.eff_neto || 0,
+      net_salary: netSalary,
       bank_name: employee.bank_name || '',
       bank_account: employee.bank_account || '',
       custom_deductions: customDeductionsList,
