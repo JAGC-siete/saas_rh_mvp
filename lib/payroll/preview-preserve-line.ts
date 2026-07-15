@@ -1,6 +1,16 @@
 /**
  * Rules for skipping preview recalculation when a payroll line was manually edited.
+ *
+ * If the employee's effective pay_type changed since the line was stamped
+ * (`metadata.pay_type`), never preserve — force a full recalculation even when
+ * `edited` / days / OT / statutory overrides are present (those edits were under
+ * the old wage engine).
  */
+
+import {
+  parseEmployeePayType,
+  type EffectivePayType,
+} from './resolve-effective-pay-type'
 
 export type PersistedPayrollLine = {
   id: string
@@ -15,10 +25,23 @@ export type PersistedPayrollLine = {
   eff_neto?: number | null
 }
 
+export type ShouldPreservePayrollLineOptions = {
+  /** Live effective pay type for this employee in the current preview pass. */
+  currentEffectivePayType?: EffectivePayType | null
+}
+
 export function shouldPreservePayrollLineOnPreview(
-  line: PersistedPayrollLine | null | undefined
+  line: PersistedPayrollLine | null | undefined,
+  options?: ShouldPreservePayrollLineOptions
 ): boolean {
   if (!line) return false
+
+  const current = options?.currentEffectivePayType
+  if (current === 'fixed' || current === 'hourly' || current === 'admin_floor') {
+    const stamped = parseEmployeePayType(line.metadata?.pay_type)
+    if (stamped != null && stamped !== current) return false
+  }
+
   if (line.edited === true) return true
   const meta = line.metadata
   if (meta != null && meta.days_adjusted_at != null) return true

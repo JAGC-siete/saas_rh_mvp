@@ -148,7 +148,12 @@ export const payrollApi = {
     })
     const data = await response.json().catch(() => ({}))
     if (!response.ok || !data?.success) {
-      throw new Error(data?.error || data?.message || 'No se pudo cargar la planilla')
+      const record = data && typeof data === 'object' ? (data as Record<string, unknown>) : {}
+      const msg =
+        (typeof record.error === 'string' && record.error.trim()) ||
+        (typeof record.message === 'string' && record.message.trim()) ||
+        'No se pudo cargar la planilla'
+      throw new Error(msg)
     }
     return data.data
   },

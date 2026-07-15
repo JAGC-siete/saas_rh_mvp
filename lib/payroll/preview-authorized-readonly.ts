@@ -5,9 +5,8 @@
 
 import { HONDURAS_LABOR_FACTOR } from './constants'
 import {
-  coalescePlanillaPayType,
   isHourBasedPayType,
-  type EffectivePayType,
+  resolvePlanillaRowPayType,
 } from './resolve-effective-pay-type'
 
 export type AuthorizedRunRow = {
@@ -21,15 +20,6 @@ export type AuthorizedRunRow = {
 
 function round2(n: number): number {
   return Math.round(n * 100) / 100
-}
-
-function resolveLinePayType(
-  empPayType: unknown,
-  meta: Record<string, unknown>
-): EffectivePayType {
-  // Prefer frozen metadata from when the line was calculated
-  if (meta.pay_type != null) return coalescePlanillaPayType(meta.pay_type)
-  return coalescePlanillaPayType(empPayType)
 }
 
 export async function buildAuthorizedPayrollPreviewPayload(
@@ -83,7 +73,10 @@ export async function buildAuthorizedPayrollPreviewPayload(
       string,
       unknown
     >
-    const payType = resolveLinePayType(emp.pay_type, meta)
+    const payType = resolvePlanillaRowPayType({
+      employeePayType: emp.pay_type,
+      metadataPayType: meta.pay_type,
+    })
     const base_salary = Number(emp.base_salary) || 0
     const departmentName =
       (emp.departments as { name?: string } | undefined)?.name || 'Sin Departamento'

@@ -736,7 +736,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       if (effectivePayType === 'fixed') {
         // ========== EMPLEADOS FIJOS (FIXED) ==========
         const prevLine = existingLineByEmployee[emp.id]
-        if (shouldPreservePayrollLineOnPreview(prevLine)) {
+        if (shouldPreservePayrollLineOnPreview(prevLine, {
+          currentEffectivePayType: effectivePayType,
+        })) {
           preservedEditedLines += 1
           planilla_fixed.push(
             buildFixedPlanillaRowFromPersistedLine({
@@ -989,7 +991,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       } else {
         // ========== EMPLEADOS POR HORA / ADMIN PISO ==========
         const prevLineHourly = existingLineByEmployee[emp.id]
-        if (shouldPreservePayrollLineOnPreview(prevLineHourly)) {
+        if (shouldPreservePayrollLineOnPreview(prevLineHourly, {
+          currentEffectivePayType: effectivePayType,
+        })) {
           preservedEditedLines += 1
           const hourly_rate_preserved = base_salary / HONDURAS_LABOR_FACTOR
           const days_worked_preserved = registros.length

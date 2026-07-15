@@ -13,6 +13,10 @@ import {
 import { withPayrollRateLimit } from '../../../lib/security/rate-limiting'
 import { loadPlanillaFromRun } from '../../../lib/payroll/planilla-from-run'
 import { resolveReportConfig } from '../../../lib/reports/column-resolver'
+import {
+  PAYROLL_NEEDS_REGENERATE_CODE,
+  PayrollNeedsRegenerateError,
+} from '../../../lib/payroll/resolve-effective-pay-type'
 
 function toErrorMessage(error: unknown, fallback: string): string {
   if (error instanceof Error && error.message.trim()) return error.message
@@ -113,6 +117,13 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     )
     return res.send(pdf)
   } catch (error: unknown) {
+    if (error instanceof PayrollNeedsRegenerateError) {
+      return res.status(409).json({
+        error: error.message,
+        message: error.message,
+        code: PAYROLL_NEEDS_REGENERATE_CODE,
+      })
+    }
     const message = toErrorMessage(error, 'Error generando PDF de planilla')
     console.error('Error generando PDF desde run:', {
       run_id,

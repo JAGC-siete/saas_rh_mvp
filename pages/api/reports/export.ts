@@ -18,8 +18,8 @@ import { resolveFieldAccessContext } from '../../../lib/security/field-access'
 import { canExportReports, canExportAttendanceReports, EXPORT_REPORTS_FORBIDDEN } from '../../../lib/security/permissions'
 import { applyFieldAccessToReportData } from '../../../lib/security/apply-field-access-to-report'
 import {
-  coalescePlanillaPayType,
   isExactHourlyPlanillaTablePayType,
+  resolvePlanillaRowPayType,
 } from '../../../lib/payroll/resolve-effective-pay-type'
 import { resolvePlanillaDaysWorked } from '../../../lib/payroll/planilla-from-run'
 import { resolveDisplayNet } from '../../../lib/payroll/resolve-display-net'
@@ -1289,7 +1289,10 @@ async function generatePayrollPDF(
         customDeductions,
         storedNeto: Number(line.eff_neto) || 0,
       })
-      const payType = coalescePlanillaPayType(line.employees?.pay_type || 'fixed')
+      const payType = resolvePlanillaRowPayType({
+        employeePayType: line.employees?.pay_type,
+        metadataPayType: line.metadata?.pay_type,
+      })
       const totalHours = Number(line.eff_hours) || 0
       const showHourCols = isExactHourlyPlanillaTablePayType(payType)
       const hourlyRate =

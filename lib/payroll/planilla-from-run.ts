@@ -14,7 +14,10 @@ import {
 import type { PlanillaItem } from './report'
 import {
   isExactHourlyPlanillaTablePayType,
+  isMutablePayrollRunStatus,
+  linePayTypeDriftedFromEmployee,
   parseCompanyCalculationMode,
+  PayrollNeedsRegenerateError,
   resolvePlanillaRowPayType,
 } from './resolve-effective-pay-type'
 import { resolveDisplayNet } from './resolve-display-net'
@@ -77,9 +80,12 @@ export type LoadedPlanillaFromRun = {
 /**
  * Load planilla rows for PDF / on-screen planilla preview from a payroll run.
  *
- * Amounts (eff_*) are a run-line snapshot. Identity fields (name, department, etc.)
- * come from a live employee join. Authorized/distributed runs intentionally keep
- * every line — including employees later marked inactive — for historical fidelity.
+ * Amounts (eff_*) are a run-line snapshot. Pay type for table split uses immutable
+ * `metadata.pay_type` when present (same contract as authorized detalle).
+ * Identity fields (name, department, etc.) come from a live employee join.
+ * Authorized/distributed runs keep every line — including later-inactive employees.
+ * Draft/edited: throws {@link PayrollNeedsRegenerateError} if live employee pay_type
+ * drifted from the line stamp (caller must ask user to regenerate preview).
  * Draft sync removes orphans on preview regenerate (see findOrphanPayrollLineIds).
  */
 export async function loadPlanillaFromRun(
@@ -140,6 +146,25 @@ export async function loadPlanillaFromRun(
     (payrollConfig as { calculation_mode?: unknown } | null)?.calculation_mode ??
       payrollMetadata.calculation_mode
   )
+
+  // Draft/edited: refuse planilla/PDF when master pay_type drifted from line stamp.
+  // Authorized runs keep immutable metadata (no block — historical fidelity).
+  if (isMutablePayrollRunStatus(payrollRun.status)) {
+    for (const line of payrollLines) {
+      const employees = (line as { employees?: Record<string, unknown> | null }).employees
+      const metadata = ((line as { metadata?: Record<string, unknown> | null }).metadata ||
+        {}) as Record<string, unknown>
+      if (
+        linePayTypeDriftedFromEmployee({
+          employeePayType: employees?.pay_type,
+          metadataPayType: metadata.pay_type,
+          companyCalculationMode,
+        })
+      ) {
+        throw new PayrollNeedsRegenerateError()
+      }
+    }
+  }
 
   const planilla: PlanillaItem[] = await Promise.all(
     payrollLines.map(async (line: Record<string, unknown>) => {

@@ -35,6 +35,32 @@ describe('preview-preserve-line', () => {
     ).toBe(true)
   })
 
+  it('does not preserve when pay_type drifted even if edited', () => {
+    expect(
+      shouldPreservePayrollLineOnPreview(
+        {
+          id: 'line-1',
+          edited: true,
+          metadata: { pay_type: 'hourly' },
+        },
+        { currentEffectivePayType: 'fixed' }
+      )
+    ).toBe(false)
+  })
+
+  it('still preserves edited line when pay_type matches', () => {
+    expect(
+      shouldPreservePayrollLineOnPreview(
+        {
+          id: 'line-1',
+          edited: true,
+          metadata: { pay_type: 'fixed' },
+        },
+        { currentEffectivePayType: 'fixed' }
+      )
+    ).toBe(true)
+  })
+
   it('does not preserve fresh calculated lines', () => {
     expect(
       shouldPreservePayrollLineOnPreview({

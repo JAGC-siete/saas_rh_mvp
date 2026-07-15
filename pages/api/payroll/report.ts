@@ -9,6 +9,11 @@ import {
 import { resolveReportConfig } from '../../../lib/reports/column-resolver'
 import {
   isExactHourlyPlanillaTablePayType,
+  isMutablePayrollRunStatus,
+  linePayTypeDriftedFromEmployee,
+  parseCompanyCalculationMode,
+  PAYROLL_NEEDS_REGENERATE_CODE,
+  PayrollNeedsRegenerateError,
   resolvePlanillaRowPayType,
 } from '../../../lib/payroll/resolve-effective-pay-type'
 import { resolvePlanillaDaysWorked } from '../../../lib/payroll/planilla-from-run'
@@ -20,17 +25,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    // AUTENTICACIÓN ESTANDARIZADA - Usar requireCompanyAccess
     const { supabase, companyId, role, user } = await requireCompanyAccess(req, res)
-    
-    // Verificar roles específicos para generar reporte
+
     if (!['super_admin', 'company_admin', 'hr_manager'].includes(role)) {
-      return res.status(403).json({ 
+      return res.status(403).json({
         error: 'Permisos insuficientes',
-        message: 'No tiene permisos para generar reporte de nómina'
+        message: 'No tiene permisos para generar reporte de nómina',
       })
     }
-    const { periodo, quincena } = (req.method === 'GET') ? (req.query as any) : (req.body || {})
+    const { periodo, quincena } = req.method === 'GET' ? (req.query as any) : req.body || {}
 
     if (!periodo || !/^[0-9]{4}-[0-9]{2}$/.test(periodo)) {
       return res.status(400).json({ error: 'Periodo inválido (YYYY-MM)' })
@@ -41,11 +44,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const [year, month] = periodo.split('-').map(Number)
 
-    // MIGRADO: Usar payroll_run_lines en lugar de payroll_records
-    // Get payroll run for this period and quincena
     const { data: payrollRun, error: runError } = await supabase
       .from('payroll_runs')
-      .select('id')
+      .select('id, status')
       .eq('company_id', companyId)
       .eq('year', year)
       .eq('month', month)
@@ -56,7 +57,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(404).json({ error: 'No hay corrida de nómina para el período indicado' })
     }
 
-    // Get payroll lines with employee data (including pay_type)
+    const { data: payrollConfigRow } = await supabase
+      .from('company_payroll_configs')
+      .select('custom_fields, metadata, calculation_mode')
+      .eq('company_id', companyId)
+      .eq('is_active', true)
+      .maybeSingle()
+
+    const payrollMeta = (payrollConfigRow?.metadata as Record<string, unknown>) || {}
+    const companyCalculationMode = parseCompanyCalculationMode(
+      (payrollConfigRow as { calculation_mode?: unknown } | null)?.calculation_mode ??
+        payrollMeta.calculation_mode
+    )
+
     const { data: payrollLines, error: linesError } = await supabase
       .from('payroll_run_lines')
       .select(`
@@ -84,13 +97,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(404).json({ error: 'No hay líneas de nómina para el período indicado' })
     }
 
-    // Mapear a estructura de PlanillaItem con campos personalizados
+    if (isMutablePayrollRunStatus(payrollRun.status)) {
+      for (const line of payrollLines) {
+        if (
+          linePayTypeDriftedFromEmployee({
+            employeePayType: line.employees?.pay_type,
+            metadataPayType: line.metadata?.pay_type,
+            companyCalculationMode,
+          })
+        ) {
+          throw new PayrollNeedsRegenerateError()
+        }
+      }
+    }
+
     const planillaAll: PlanillaItem[] = await Promise.all(
       payrollLines.map(async (line: any) => {
-        // Calculate custom deductions from metadata
         let customDeductions = 0
         let deductionsNotes = ''
-        
+
         if (line.metadata && companyId) {
           const effBruto = Number(line.eff_bruto) || 0
           const calcResult = await calculatePayroll(
@@ -112,7 +137,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           }
         }
 
-        const statutoryDeductions = (Number(line.eff_ihss) || 0) + (Number(line.eff_rap) || 0) + (Number(line.eff_isr) || 0)
+        const statutoryDeductions =
+          (Number(line.eff_ihss) || 0) + (Number(line.eff_rap) || 0) + (Number(line.eff_isr) || 0)
         const totalDeductions = statutoryDeductions + customDeductions
         const displayNet = resolveDisplayNet({
           bruto: Number(line.eff_bruto) || 0,
@@ -124,6 +150,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const payType = resolvePlanillaRowPayType({
           employeePayType: line.employees?.pay_type,
           metadataPayType: line.metadata?.pay_type,
+          companyCalculationMode,
         })
         const totalHours = Number(line.eff_hours) || 0
         const showHourCols = isExactHourlyPlanillaTablePayType(payType)
@@ -152,14 +179,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           total: displayNet,
           notes_on_ingress: line.edited ? 'Editado' : '',
           notes_on_deductions: deductionsNotes,
-          metadata: line.metadata || {}, // Include metadata for custom fields display
-          pay_type: payType, // Include pay_type for separation
+          metadata: line.metadata || {},
+          pay_type: payType,
           total_hours_worked: showHourCols ? totalHours : undefined,
           hourly_rate: showHourCols ? hourlyRate : undefined,
-          ...(Number.isFinite(Number(line.metadata?.horas_extras)) && Number(line.metadata?.horas_extras) > 0
+          ...(Number.isFinite(Number(line.metadata?.horas_extras)) &&
+          Number(line.metadata?.horas_extras) > 0
             ? { horas_extras: Math.round(Number(line.metadata.horas_extras) * 100) / 100 }
             : {}),
-          ...(Number.isFinite(Number(line.metadata?.overtime_pay)) && Number(line.metadata?.overtime_pay) > 0
+          ...(Number.isFinite(Number(line.metadata?.overtime_pay)) &&
+          Number(line.metadata?.overtime_pay) > 0
             ? { overtime_pay: Math.round(Number(line.metadata.overtime_pay) * 100) / 100 }
             : {}),
         }
@@ -172,28 +201,29 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .eq('id', companyId)
       .single()
 
-    let pdfCustomFieldsConfig: Record<string, any> | undefined = undefined
-    let pdfPayrollConfig: { legal_deductions: { ihss?: boolean; rap?: boolean; isr?: boolean } } | undefined = undefined
+    let pdfCustomFieldsConfig: Record<string, any> | undefined
+    let pdfPayrollConfig:
+      | { legal_deductions: { ihss?: boolean; rap?: boolean; isr?: boolean } }
+      | undefined
     if (companyId) {
-      const { data: payrollConfigRow } = await supabase
-        .from('company_payroll_configs')
-        .select('custom_fields, metadata')
-        .eq('company_id', companyId)
-        .eq('is_active', true)
-        .maybeSingle()
-
-      const meta = payrollConfigRow?.metadata || {}
       if (payrollConfigRow?.custom_fields) {
         pdfCustomFieldsConfig = payrollConfigRow.custom_fields as Record<string, any>
       }
       pdfPayrollConfig = {
-        legal_deductions: meta.legal_deductions || { ihss: true, rap: true, isr: true }
+        legal_deductions: (payrollMeta.legal_deductions as {
+          ihss?: boolean
+          rap?: boolean
+          isr?: boolean
+        }) || { ihss: true, rap: true, isr: true },
       }
     }
 
-    // Separate fixed and hourly employees (detalle UI: solo exact hourly → por hora)
-    const planillaFixed = planillaAll.filter(p => !isExactHourlyPlanillaTablePayType((p as any).pay_type))
-    const planillaHourly = planillaAll.filter(p => isExactHourlyPlanillaTablePayType((p as any).pay_type))
+    const planillaFixed = planillaAll.filter(
+      (p) => !isExactHourlyPlanillaTablePayType((p as any).pay_type)
+    )
+    const planillaHourly = planillaAll.filter((p) =>
+      isExactHourlyPlanillaTablePayType((p as any).pay_type)
+    )
 
     let reportVisual: { primaryColor?: string; branding?: Record<string, unknown> } | undefined
     let visibleColumnIds: string[] | undefined
@@ -225,9 +255,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const pdf = await generateConsolidatedPayrollPDF(
       planillaFixed,
       planillaHourly,
-      periodo, 
-      Number(quincena), 
-      user.email, 
+      periodo,
+      Number(quincena),
+      user.email,
       company?.name,
       pdfCustomFieldsConfig,
       pdfPayrollConfig,
@@ -245,7 +275,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     res.setHeader('Content-Disposition', `attachment; filename=planilla_${periodo}_q${quincena}.pdf`)
     return res.send(pdf)
   } catch (error) {
+    if (error instanceof PayrollNeedsRegenerateError) {
+      return res.status(409).json({
+        error: error.message,
+        message: error.message,
+        code: PAYROLL_NEEDS_REGENERATE_CODE,
+      })
+    }
     return res.status(500).json({ error: 'Error interno del servidor' })
   }
 }
-

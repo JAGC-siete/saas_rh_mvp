@@ -10,6 +10,7 @@ import {
   resolveEffectivePayType,
   resolvePlanillaRowPayType,
   isExactHourlyPlanillaTablePayType,
+  linePayTypeDriftedFromEmployee,
 } from '../lib/payroll/resolve-effective-pay-type'
 import { resolvePlanillaDaysWorked } from '../lib/payroll/planilla-from-run'
 import {
@@ -41,22 +42,33 @@ describe('resolveEffectivePayType', () => {
 })
 
 describe('resolvePlanillaRowPayType / PDF table split', () => {
-  it('live fixed wins over stale metadata hourly', () => {
+  it('frozen metadata wins over live employee (authorized contract)', () => {
     assert.equal(
       resolvePlanillaRowPayType({
         employeePayType: 'fixed',
         metadataPayType: 'hourly',
         companyCalculationMode: 'daily',
       }),
+      'hourly'
+    )
+  })
+
+  it('falls back to live employee when metadata has no pay_type', () => {
+    assert.equal(
+      resolvePlanillaRowPayType({
+        employeePayType: 'fixed',
+        metadataPayType: null,
+        companyCalculationMode: 'hourly',
+      }),
       'fixed'
     )
   })
 
-  it('company daily + null employee ignores stale hourly metadata', () => {
+  it('company daily when employee and metadata null', () => {
     assert.equal(
       resolvePlanillaRowPayType({
         employeePayType: null,
-        metadataPayType: 'hourly',
+        metadataPayType: null,
         companyCalculationMode: 'daily',
       }),
       'fixed'
@@ -67,6 +79,41 @@ describe('resolvePlanillaRowPayType / PDF table split', () => {
     assert.equal(isExactHourlyPlanillaTablePayType('hourly'), true)
     assert.equal(isExactHourlyPlanillaTablePayType('admin_floor'), false)
     assert.equal(isExactHourlyPlanillaTablePayType('fixed'), false)
+  })
+})
+
+describe('linePayTypeDriftedFromEmployee', () => {
+  it('detects hourly stamp vs live fixed', () => {
+    assert.equal(
+      linePayTypeDriftedFromEmployee({
+        employeePayType: 'fixed',
+        metadataPayType: 'hourly',
+        companyCalculationMode: 'daily',
+      }),
+      true
+    )
+  })
+
+  it('no drift when stamped matches live', () => {
+    assert.equal(
+      linePayTypeDriftedFromEmployee({
+        employeePayType: 'hourly',
+        metadataPayType: 'hourly',
+        companyCalculationMode: 'daily',
+      }),
+      false
+    )
+  })
+
+  it('no drift when metadata has no stamp', () => {
+    assert.equal(
+      linePayTypeDriftedFromEmployee({
+        employeePayType: 'fixed',
+        metadataPayType: null,
+        companyCalculationMode: 'daily',
+      }),
+      false
+    )
   })
 })
 
