@@ -3,7 +3,11 @@ import { normalizeCountryCode } from '../country/supported'
 import { statutoryDeductionLabels } from '../country/payroll-labels'
 import { formatDateForHonduras, formatDateTimeForHonduras } from '../timezone'
 import { formatPeriodRangeForDisplay } from './period-dates'
-import { resolveStatutoryDeductionColumns } from './statutory-deduction-columns'
+import {
+  buildPayrollPdfColumnMeta,
+  reportBiweeklyBaseFromMonthly,
+  type PayrollPdfCustomFieldsConfig,
+} from './payroll-pdf-columns'
 import { formatVoucherCompanyName } from './voucher-pdf-options'
 import type { BrandingConfig } from '../reports/report-config-schema'
 import { resolveCompanyLogoBuffer } from '../reports/resolve-company-logo'
@@ -57,9 +61,9 @@ export interface PlanillaItem {
   total_hours_worked?: number
   hourly_rate?: number
   septimo_dia?: number
-  /** Horas extras AHC / ajuste del período (columna planilla) */
+  /** Horas extras AHC (tracking interno; no se imprime como columna de cantidad en el PDF) */
   horas_extras?: number
-  /** Monto de HE pagado (incluido en total_earnings) */
+  /** Monto de HE pagado (incluido en total_earnings); columna del bloque ingresos */
   overtime_pay?: number
 }
 
@@ -117,9 +121,14 @@ export async function generateConsolidatedPayrollPDF(
      * Omit for legacy callers (all columns, including all custom fields).
      */
     visibleColumnIds?: string[]
-    /** Optional label overrides from report config */
+    /**
+     * Optional label overrides from report config
+     */
     columnLabels?: Record<string, string>
-    /** Print order by column id (lower first). When omitted, builder insertion order is kept. */
+    /**
+     * Order for custom_* columns within their income/deduction blocks.
+     * Standard PDF column order is fixed (ID → ingresos → deducciones → neto).
+     */
     columnOrder?: Record<string, number>
     /**
      * When true with visibleColumnIds, custom payroll fields are filtered by visibility.
@@ -151,21 +160,7 @@ export async function generateConsolidatedPayrollPDF(
         : null
       const columnLabels = layout?.columnLabels ?? {}
       const columnOrder = layout?.columnOrder ?? null
-      const filterCustomFields = Boolean(layout?.includeCustomPayrollFields && visibleColumnIds)
-      const colVisible = (id: string) => visibleColumnIds == null || visibleColumnIds.has(id)
-      const colLabel = (id: string, fallback: string) => columnLabels[id]?.trim() || fallback
-      const sortBuiltColumns = (built: { id: string }[]) => {
-        if (!columnOrder) return
-        built.sort((a, b) => {
-          const ao = columnOrder[a.id]
-          const bo = columnOrder[b.id]
-          const aRank = ao == null ? 10_000 : ao
-          const bRank = bo == null ? 10_000 : bo
-          if (aRank !== bRank) return aRank - bRank
-          return a.id.localeCompare(b.id)
-        })
-      }
-      
+
       // Configuración de payroll con valores por defecto
       const currency = payrollConfig?.currency || 'HNL'
       const paymentFrequency = payrollConfig?.payment_frequency || 'biweekly'
@@ -415,13 +410,7 @@ export async function generateConsolidatedPayrollPDF(
         drawLiquidSectionTitle(doc, title, 30, 24)
 
         const hasSeptimoDia = isHourly && planillaData.some((r) => (r.septimo_dia ?? 0) > 0)
-        const hasHorasExtras = planillaData.some((r) => (r.horas_extras ?? 0) > 0)
         const hasOvertimePay = planillaData.some((r) => (r.overtime_pay ?? 0) > 0)
-        const statutoryCols = resolveStatutoryDeductionColumns(
-          payrollConfig?.legal_deductions,
-          customFieldsConfig as Record<string, CustomFieldDef | string> | undefined,
-          jurisdictionCountry
-        )
 
         type PdfTableCol = {
           id: string
@@ -433,239 +422,181 @@ export async function generateConsolidatedPayrollPDF(
           number: (row: PlanillaItem) => number | null
         }
 
-        const cols: PdfTableCol[] = []
-        const pushCol = (col: PdfTableCol) => {
-          if (!colVisible(col.id)) return
-          cols.push(col)
+        const defaultWidth = (id: string): number => {
+          if (id === 'emp_code') return isHourly ? 55 : 60
+          if (id === 'emp_name') return isHourly ? 100 : 110
+          if (id === 'department' || id === 'position') return 70
+          if (id === 'days_worked') return isHourly ? 35 : 45
+          if (id === 'hours') return 45
+          if (id === 'hourly_rate') return 55
+          if (id === 'base_salary' || id === 'biweekly_salary') return isHourly ? 65 : 70
+          if (id === 'septimo_dia') return 55
+          if (id === 'overtime_pay') return isHourly ? 50 : 55
+          if (id === 'gross_salary' || id === 'total_deductions' || id === 'net_salary') return 58
+          if (id === 'ihss' || id === 'rap' || id === 'isr') return 38
+          if (id.startsWith('custom_')) return 42
+          return 45
         }
 
-        pushCol({
-          id: 'emp_code',
-          header: colLabel('emp_code', 'Código'),
-          width: isHourly ? 55 : 60,
-          isText: true,
-          totalFormat: 'none',
-          value: (row) => row.id || '',
-          number: () => null,
-        })
-        pushCol({
-          id: 'emp_name',
-          header: colLabel('emp_name', 'Nombre'),
-          width: isHourly ? 100 : 110,
-          isText: true,
-          totalFormat: 'none',
-          value: (row) => row.name || '',
-          number: () => null,
-        })
-        pushCol({
-          id: 'department',
-          header: colLabel('department', 'Departamento'),
-          width: 70,
-          isText: true,
-          totalFormat: 'none',
-          value: (row) => row.department || '',
-          number: () => null,
-        })
-        pushCol({
-          id: 'position',
-          header: colLabel('position', 'Puesto'),
-          width: 70,
-          isText: true,
-          totalFormat: 'none',
-          value: (row) => (row.position || row.role || '').trim(),
-          number: () => null,
-        })
-        pushCol({
-          id: 'days_worked',
-          header: colLabel('days_worked', isHourly ? 'Días' : 'Días Trab.'),
-          width: isHourly ? 35 : 45,
-          isText: false,
-          totalFormat: 'days',
-          value: (row) => row.days_worked.toFixed(1),
-          number: (row) => row.days_worked,
-        })
-        if (isHourly) {
-          pushCol({
-            id: 'hours',
-            header: colLabel('hours', 'Horas'),
-            width: 45,
-            isText: false,
-            totalFormat: 'hours',
-            value: (row) => (row.total_hours_worked || 0).toFixed(2),
-            number: (row) => row.total_hours_worked || 0,
-          })
-          pushCol({
-            id: 'hourly_rate',
-            header: colLabel('hourly_rate', 'Tarifa/Hora'),
-            width: 55,
-            isText: false,
-            totalFormat: 'currency',
-            value: (row) => formatCurrency(row.hourly_rate || 0),
-            number: (row) => row.hourly_rate || 0,
-          })
-        }
-        pushCol({
-          id: 'base_salary',
-          header: colLabel('base_salary', isHourly ? 'Salario Base' : 'Salario Base Mensual'),
-          width: isHourly ? 65 : 70,
-          isText: false,
-          totalFormat: 'currency',
-          value: (row) => formatCurrency(row.monthly_salary),
-          number: (row) => row.monthly_salary,
-        })
-        if (isHourly && hasSeptimoDia) {
-          pushCol({
-            id: 'septimo_dia',
-            header: colLabel('septimo_dia', 'Séptimo Día'),
-            width: 55,
-            isText: false,
-            totalFormat: 'currency',
-            value: (row) => formatCurrency(row.septimo_dia ?? 0),
-            number: (row) => row.septimo_dia ?? 0,
-          })
-        }
-        if (hasHorasExtras) {
-          pushCol({
-            id: 'horas_extras',
-            header: colLabel('horas_extras', 'Horas extra'),
-            width: isHourly ? 42 : 45,
-            isText: false,
-            totalFormat: 'hours',
-            value: (row) => ((row.horas_extras ?? 0) > 0 ? (row.horas_extras ?? 0).toFixed(2) : '—'),
-            number: (row) => row.horas_extras ?? 0,
-          })
-        }
-        if (hasOvertimePay) {
-          pushCol({
-            id: 'overtime_pay',
-            header: colLabel('overtime_pay', 'Pago HE'),
-            width: isHourly ? 50 : 55,
-            isText: false,
-            totalFormat: 'currency',
-            value: (row) => formatCurrency(row.overtime_pay ?? 0),
-            number: (row) => row.overtime_pay ?? 0,
-          })
-        }
-
-        if (customFieldsConfig) {
-          for (const [fieldName, fieldDef] of Object.entries(customFieldsConfig)) {
-            const def =
-              typeof fieldDef === 'string'
-                ? {
-                    label: fieldDef,
-                    category: 'earnings' as const,
-                    type: 'number' as const,
-                    required: false,
-                    default: 0,
-                  }
-                : fieldDef
-            if (def.category !== 'earnings') continue
-            const customId = `custom_${fieldName}`
-            // Legacy / toggle off: show all custom earnings. Filtered mode: only visible ones.
-            if (filterCustomFields && !visibleColumnIds!.has(customId)) continue
-            cols.push({
-              id: customId,
-              header: colLabel(customId, def.label || fieldName),
-              width: 42,
-              isText: false,
-              totalFormat: 'currency',
-              value: (row) => getCustomFieldValue(row, fieldName),
-              number: (row) => getCustomFieldNumber(row, fieldName),
-            })
+        const resolveColBinding = (
+          id: string
+        ): Pick<PdfTableCol, 'isText' | 'totalFormat' | 'value' | 'number'> | null => {
+          switch (id) {
+            case 'emp_code':
+              return {
+                isText: true,
+                totalFormat: 'none',
+                value: (row) => row.id || '',
+                number: () => null,
+              }
+            case 'emp_name':
+              return {
+                isText: true,
+                totalFormat: 'none',
+                value: (row) => row.name || '',
+                number: () => null,
+              }
+            case 'department':
+              return {
+                isText: true,
+                totalFormat: 'none',
+                value: (row) => row.department || '',
+                number: () => null,
+              }
+            case 'position':
+              return {
+                isText: true,
+                totalFormat: 'none',
+                value: (row) => (row.position || row.role || '').trim(),
+                number: () => null,
+              }
+            case 'days_worked':
+              return {
+                isText: false,
+                totalFormat: 'days',
+                value: (row) => row.days_worked.toFixed(1),
+                number: (row) => row.days_worked,
+              }
+            case 'hours':
+              return {
+                isText: false,
+                totalFormat: 'hours',
+                value: (row) => (row.total_hours_worked || 0).toFixed(2),
+                number: (row) => row.total_hours_worked || 0,
+              }
+            case 'hourly_rate':
+              return {
+                isText: false,
+                totalFormat: 'currency',
+                value: (row) => formatCurrency(row.hourly_rate || 0),
+                number: (row) => row.hourly_rate || 0,
+              }
+            case 'base_salary':
+              return {
+                isText: false,
+                totalFormat: 'currency',
+                value: (row) => formatCurrency(row.monthly_salary),
+                number: (row) => row.monthly_salary,
+              }
+            case 'biweekly_salary':
+              return {
+                isText: false,
+                totalFormat: 'currency',
+                value: (row) => formatCurrency(reportBiweeklyBaseFromMonthly(row.monthly_salary)),
+                number: (row) => reportBiweeklyBaseFromMonthly(row.monthly_salary),
+              }
+            case 'septimo_dia':
+              return {
+                isText: false,
+                totalFormat: 'currency',
+                value: (row) => formatCurrency(row.septimo_dia ?? 0),
+                number: (row) => row.septimo_dia ?? 0,
+              }
+            case 'overtime_pay':
+              return {
+                isText: false,
+                totalFormat: 'currency',
+                value: (row) => formatCurrency(row.overtime_pay ?? 0),
+                number: (row) => row.overtime_pay ?? 0,
+              }
+            case 'gross_salary':
+              return {
+                isText: false,
+                totalFormat: 'currency',
+                value: (row) => formatCurrency(row.total_earnings),
+                number: (row) => row.total_earnings,
+              }
+            case 'ihss':
+              return {
+                isText: false,
+                totalFormat: 'currency',
+                value: (row) => formatCurrency(row.IHSS),
+                number: (row) => row.IHSS,
+              }
+            case 'rap':
+              return {
+                isText: false,
+                totalFormat: 'currency',
+                value: (row) => formatCurrency(row.RAP),
+                number: (row) => row.RAP,
+              }
+            case 'isr':
+              return {
+                isText: false,
+                totalFormat: 'currency',
+                value: (row) => formatCurrency(row.ISR),
+                number: (row) => row.ISR,
+              }
+            case 'total_deductions':
+              return {
+                isText: false,
+                totalFormat: 'currency',
+                value: (row) => formatCurrency(row.total_deductions),
+                number: (row) => row.total_deductions,
+              }
+            case 'net_salary':
+              return {
+                isText: false,
+                totalFormat: 'currency',
+                value: (row) => formatCurrency(row.total),
+                number: (row) => row.total,
+              }
+            default: {
+              if (!id.startsWith('custom_')) return null
+              const fieldName = id.slice('custom_'.length)
+              return {
+                isText: false,
+                totalFormat: 'currency',
+                value: (row) => getCustomFieldValue(row, fieldName),
+                number: (row) => getCustomFieldNumber(row, fieldName),
+              }
+            }
           }
         }
 
-        pushCol({
-          id: 'gross_salary',
-          header: colLabel('gross_salary', 'Devengado'),
-          width: 58,
-          isText: false,
-          totalFormat: 'currency',
-          value: (row) => formatCurrency(row.total_earnings),
-          number: (row) => row.total_earnings,
+        const cols: PdfTableCol[] = buildPayrollPdfColumnMeta({
+          isHourly,
+          hasSeptimoDia,
+          hasOvertimePay,
+          visibleColumnIds,
+          columnLabels,
+          columnOrder,
+          includeCustomPayrollFields: layout?.includeCustomPayrollFields,
+          customFieldsConfig: customFieldsConfig as PayrollPdfCustomFieldsConfig | undefined,
+          legalDeductions: payrollConfig?.legal_deductions,
+          countryCode: jurisdictionCountry,
         })
-
-        if (statutoryCols.ihss) {
-          pushCol({
-            id: 'ihss',
-            header: colLabel('ihss', dedLabels.primarySocial),
-            width: 38,
-            isText: false,
-            totalFormat: 'currency',
-            value: (row) => formatCurrency(row.IHSS),
-            number: (row) => row.IHSS,
+          .map((meta) => {
+            const binding = resolveColBinding(meta.id)
+            if (!binding) return null
+            return {
+              id: meta.id,
+              header: meta.header,
+              width: defaultWidth(meta.id),
+              ...binding,
+            }
           })
-        }
-        if (statutoryCols.rap && dedLabels.secondarySocial !== '—') {
-          pushCol({
-            id: 'rap',
-            header: colLabel('rap', dedLabels.secondarySocial),
-            width: 38,
-            isText: false,
-            totalFormat: 'currency',
-            value: (row) => formatCurrency(row.RAP),
-            number: (row) => row.RAP,
-          })
-        }
-        if (statutoryCols.isr) {
-          pushCol({
-            id: 'isr',
-            header: colLabel('isr', dedLabels.incomeTax),
-            width: 38,
-            isText: false,
-            totalFormat: 'currency',
-            value: (row) => formatCurrency(row.ISR),
-            number: (row) => row.ISR,
-          })
-        }
-
-        if (customFieldsConfig) {
-          for (const [fieldName, fieldDef] of Object.entries(customFieldsConfig)) {
-            const def =
-              typeof fieldDef === 'string'
-                ? {
-                    label: fieldDef,
-                    category: 'deductions' as const,
-                    type: 'number' as const,
-                    required: false,
-                    default: 0,
-                  }
-                : fieldDef
-            if (def.category !== 'deductions') continue
-            const customId = `custom_${fieldName}`
-            if (filterCustomFields && !visibleColumnIds!.has(customId)) continue
-            cols.push({
-              id: customId,
-              header: colLabel(customId, def.label || fieldName),
-              width: 42,
-              isText: false,
-              totalFormat: 'currency',
-              value: (row) => getCustomFieldValue(row, fieldName),
-              number: (row) => getCustomFieldNumber(row, fieldName),
-            })
-          }
-        }
-
-        pushCol({
-          id: 'total_deductions',
-          header: colLabel('total_deductions', 'Deducciones'),
-          width: 58,
-          isText: false,
-          totalFormat: 'currency',
-          value: (row) => formatCurrency(row.total_deductions),
-          number: (row) => row.total_deductions,
-        })
-        pushCol({
-          id: 'net_salary',
-          header: colLabel('net_salary', 'Neto'),
-          width: 58,
-          isText: false,
-          totalFormat: 'currency',
-          value: (row) => formatCurrency(row.total),
-          number: (row) => row.total,
-        })
-
-        sortBuiltColumns(cols)
+          .filter((c): c is PdfTableCol => c != null)
 
         if (cols.length === 0) {
           cols.push({

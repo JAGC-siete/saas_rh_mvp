@@ -145,8 +145,14 @@ function getPayrollRowValue(
       return record.hourly_rate ?? ''
     case 'base_salary':
       return emp?.base_salary ?? record.base_salary ?? record.monthly_salary ?? ''
+    case 'biweekly_salary': {
+      const monthly = Number(emp?.base_salary ?? record.base_salary ?? record.monthly_salary ?? 0) || 0
+      return monthly / 2
+    }
     case 'septimo_dia':
       return record.septimo_dia ?? record.seventh_day_pay ?? 0
+    case 'overtime_pay':
+      return record.overtime_pay ?? record.metadata?.overtime_pay ?? 0
     case 'IHSS':
       return record.IHSS ?? record.eff_ihss ?? 0
     case 'RAP':

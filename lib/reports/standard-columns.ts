@@ -30,16 +30,17 @@ const PAYROLL_COLUMNS: StandardColumnDef[] = [
   { id: 'days_worked', label: 'Días', order: 5, sourceField: 'days_worked', source: 'standard' },
   { id: 'hours', label: 'Horas', order: 6, sourceField: 'total_hours_worked', source: 'standard' },
   { id: 'hourly_rate', label: 'Tarifa/Hora', order: 7, sourceField: 'hourly_rate', source: 'standard' },
-  { id: 'base_salary', label: 'Salario Base', order: 8, sourceField: 'base_salary', source: 'standard' },
-  { id: 'septimo_dia', label: 'Séptimo Día', order: 9, sourceField: 'septimo_dia', source: 'standard' },
-  { id: 'horas_extras', label: 'Horas extra', order: 10, sourceField: 'horas_extras', source: 'standard' },
+  /** Ingresos: mensual → quincenal (mensual/2) → HE monto → total ingresos */
+  { id: 'base_salary', label: 'Sueldo Mensual', order: 8, sourceField: 'base_salary', source: 'standard' },
+  { id: 'biweekly_salary', label: 'Sueldo Quincenal', order: 9, sourceField: 'biweekly_salary', source: 'standard' },
+  { id: 'septimo_dia', label: 'Séptimo Día', order: 10, sourceField: 'septimo_dia', source: 'standard' },
   { id: 'overtime_pay', label: 'Pago HE', order: 11, sourceField: 'overtime_pay', source: 'standard' },
-  { id: 'gross_salary', label: 'Devengado', order: 12, sourceField: 'gross_salary', source: 'standard' },
+  { id: 'gross_salary', label: 'Total ingresos', order: 12, sourceField: 'gross_salary', source: 'standard' },
   { id: 'ihss', label: 'IHSS', order: 13, sourceField: 'IHSS', source: 'standard' },
   { id: 'rap', label: 'RAP', order: 14, sourceField: 'RAP', source: 'standard' },
   { id: 'isr', label: 'ISR', order: 15, sourceField: 'ISR', source: 'standard' },
-  { id: 'total_deductions', label: 'Deducciones', order: 16, sourceField: 'total_deductions', source: 'standard' },
-  { id: 'net_salary', label: 'Neto', order: 17, sourceField: 'net_salary', source: 'standard' },
+  { id: 'total_deductions', label: 'Total Deducciones', order: 16, sourceField: 'total_deductions', source: 'standard' },
+  { id: 'net_salary', label: 'Neto a Pagar', order: 17, sourceField: 'net_salary', source: 'standard' },
   /** Solo listados / export CSV-XLSX; no forman parte de la tabla del PDF de planilla. */
   { id: 'period', label: 'Período', order: 18, sourceField: 'period', source: 'standard' },
   { id: 'status', label: 'Estado', order: 19, sourceField: 'status', source: 'standard' }

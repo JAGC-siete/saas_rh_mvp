@@ -1,10 +1,15 @@
 /**
- * Planilla PDF: columnas de HE cuando hay datos.
+ * Planilla PDF columns: orden fijo, labels dinámicos, sin cantidad horas_extras.
  * Run: npx tsx --test tests/payroll-pdf-overtime-columns.test.ts
  */
 import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
 import { generateConsolidatedPayrollPDF, type PlanillaItem } from '../lib/payroll/report'
+import {
+  buildPayrollPdfColumnMeta,
+  reportBiweeklyBaseFromMonthly,
+} from '../lib/payroll/payroll-pdf-columns'
+import { getStandardColumns } from '../lib/reports/standard-columns'
 
 function pageCount(pdf: Buffer): number {
   const raw = pdf.toString('latin1')
@@ -12,7 +17,6 @@ function pageCount(pdf: Buffer): number {
   return match ? Number(match[1]) : 0
 }
 
-/** First MediaBox → [width, height] in PDF points (72 pt = 1 in). */
 function firstMediaBox(pdf: Buffer): [number, number] | null {
   const raw = pdf.toString('latin1')
   const match = raw.match(/\/MediaBox\s*\[\s*([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s*\]/)
@@ -40,8 +44,94 @@ const baseFixed = (overrides: Partial<PlanillaItem> = {}): PlanillaItem => ({
   ...overrides,
 })
 
+describe('payroll PDF column catalog', () => {
+  it('orders income then deductions and omits horas_extras quantity', () => {
+    const cols = buildPayrollPdfColumnMeta({
+      isHourly: false,
+      hasSeptimoDia: false,
+      hasOvertimePay: true,
+      legalDeductions: { ihss: true, rap: true, isr: true },
+      countryCode: 'HND',
+      customFieldsConfig: {
+        cooperativa_elga: {
+          label: 'Cooperativa Elga',
+          type: 'number',
+          category: 'deductions',
+          required: false,
+          default: 0,
+        },
+        ingreso_he_manual: {
+          label: 'Ingreso HE manual',
+          type: 'number',
+          category: 'earnings',
+          required: false,
+          default: 0,
+        },
+      },
+    })
+
+    const ids = cols.map((c) => c.id)
+    assert.equal(ids.includes('horas_extras'), false)
+    assert.ok(ids.includes('overtime_pay'))
+    assert.ok(ids.includes('biweekly_salary'))
+
+    const monthly = ids.indexOf('base_salary')
+    const quincenal = ids.indexOf('biweekly_salary')
+    const he = ids.indexOf('overtime_pay')
+    const customEarn = ids.indexOf('custom_ingreso_he_manual')
+    const gross = ids.indexOf('gross_salary')
+    const customDed = ids.indexOf('custom_cooperativa_elga')
+    const totalDed = ids.indexOf('total_deductions')
+    const net = ids.indexOf('net_salary')
+
+    assert.ok(monthly < quincenal && quincenal < he && he < customEarn && customEarn < gross)
+    assert.ok(gross < customDed && customDed < totalDed && totalDed < net)
+
+    assert.equal(cols.find((c) => c.id === 'base_salary')?.header, 'Sueldo Mensual')
+    assert.equal(cols.find((c) => c.id === 'biweekly_salary')?.header, 'Sueldo Quincenal')
+    assert.equal(cols.find((c) => c.id === 'overtime_pay')?.header, 'Pago HE')
+    assert.equal(cols.find((c) => c.id === 'gross_salary')?.header, 'Total ingresos')
+    assert.equal(cols.find((c) => c.id === 'net_salary')?.header, 'Neto a Pagar')
+  })
+
+  it('uses columnLabels overrides', () => {
+    const cols = buildPayrollPdfColumnMeta({
+      isHourly: false,
+      hasSeptimoDia: false,
+      hasOvertimePay: true,
+      columnLabels: {
+        overtime_pay: 'Horas extras pagadas',
+        biweekly_salary: 'Base 1ra quincena',
+        base_salary: 'Base mensual cfg',
+      },
+      legalDeductions: { ihss: true, rap: false, isr: false },
+      countryCode: 'HND',
+    })
+    assert.equal(cols.find((c) => c.id === 'overtime_pay')?.header, 'Horas extras pagadas')
+    assert.equal(cols.find((c) => c.id === 'biweekly_salary')?.header, 'Base 1ra quincena')
+    assert.equal(cols.find((c) => c.id === 'base_salary')?.header, 'Base mensual cfg')
+  })
+
+  it('computes biweekly as monthly/2 without overtime', () => {
+    assert.equal(reportBiweeklyBaseFromMonthly(16000), 8000)
+    assert.equal(reportBiweeklyBaseFromMonthly(16000.5), 8000.25)
+  })
+
+  it('standard payroll catalog has biweekly and no horas_extras', () => {
+    const std = getStandardColumns('payroll')
+    const ids = std.map((c) => c.id)
+    assert.ok(ids.includes('biweekly_salary'))
+    assert.equal(ids.includes('horas_extras'), false)
+    const monthly = std.find((c) => c.id === 'base_salary')!
+    const biweekly = std.find((c) => c.id === 'biweekly_salary')!
+    const he = std.find((c) => c.id === 'overtime_pay')!
+    const gross = std.find((c) => c.id === 'gross_salary')!
+    assert.ok(monthly.order < biweekly.order && biweekly.order < he.order && he.order < gross.order)
+  })
+})
+
 describe('payroll PDF overtime columns', () => {
-  it('renders PDF when fixed employees have horas_extras and overtime_pay', async () => {
+  it('renders PDF when fixed employees have overtime_pay', async () => {
     const pdf = await generateConsolidatedPayrollPDF(
       [
         baseFixed({
