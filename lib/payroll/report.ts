@@ -245,6 +245,10 @@ export async function generateConsolidatedPayrollPDF(
         }
       })
 
+      const addPlanillaPage = () => {
+        doc.addPage({ size: 'LEGAL', layout: 'landscape' })
+      }
+
       registerLiquidPageFooter(doc, { generatedAt, brandLine: footerBrandLine })
 
       const buffers: Buffer[] = []
@@ -404,7 +408,7 @@ export async function generateConsolidatedPayrollPDF(
 
         const segments = groupPlanillaLikeRows(planillaData, pdfGroupBy)
 
-        doc.addPage()
+        addPlanillaPage()
         const tablePageWidth = doc.page.width
         drawLiquidSectionTitle(doc, title, 30, 24)
 
@@ -793,7 +797,7 @@ export async function generateConsolidatedPayrollPDF(
           const bottomLimit = doc.page.height - 60 - PDF_FOOTER_RESERVE
           for (const row of rows) {
             if (y > bottomLimit) {
-              doc.addPage()
+              addPlanillaPage()
               y = 40
               pageCount++
               doc.font('Helvetica').fontSize(8).fillColor(PDF.bodyMuted).text(`${continuationLabel} - Página ${pageCount}`, 40, 20)
@@ -830,7 +834,7 @@ export async function generateConsolidatedPayrollPDF(
         for (const [gkey, grows] of segments) {
           const sectionH = pdfGroupBy !== 'none' ? 24 : 0
           if (y + sectionH + headerRowHeight + 30 > doc.page.height - 60) {
-            doc.addPage()
+            addPlanillaPage()
             y = 40
             doc.fontSize(8).fillColor('#475569').text(`${title} (continuación)`, 40, 20)
             y = 52
@@ -866,7 +870,7 @@ export async function generateConsolidatedPayrollPDF(
       }
 
       // ===== PAGE 3: BANK DETAILS & NOTES =====
-      doc.addPage()
+      addPlanillaPage()
       drawLiquidSectionTitle(doc, 'Información bancaria y notas', 30, 24)
 
       drawLiquidSectionTitle(doc, 'Detalle bancario para transferencias', 30, 52)
@@ -882,7 +886,7 @@ export async function generateConsolidatedPayrollPDF(
       let bankRowIndex = 0
       planillaAll.forEach((row) => {
         if (bankY > doc.page.height - 60 - PDF_FOOTER_RESERVE) {
-          doc.addPage()
+          addPlanillaPage()
           bankY = 40
           bankRowIndex = 0
         }
