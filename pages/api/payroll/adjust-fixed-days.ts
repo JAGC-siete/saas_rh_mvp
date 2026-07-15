@@ -535,7 +535,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (stat) return res.status(stat.status).json(stat.body)
     const err = e as { message?: string }
     if (err.message === 'UNAUTHORIZED') {
-      return res.status(401).json({ error: 'Unauthorized' })
+      if (res.headersSent) return
+      return res.status(401).json({
+        error: 'Unauthorized',
+        message: 'Sesión inválida o expirada. Vuelve a iniciar sesión.',
+      })
     }
     console.error('adjust-fixed-days', e)
     return res.status(500).json({ error: 'Error interno' })

@@ -10,6 +10,7 @@ import DeductionPlansDashboard from './DeductionPlansDashboard'
 import { PayrollAccountingTab } from './accounting/PayrollAccountingTab'
 import VoucherPreviewModal from './payroll/VoucherPreviewModal'
 import PlanillaPreviewModal from './payroll/PlanillaPreviewModal'
+import { getBrowserAuthHeaders } from '../lib/auth/browser-auth-headers'
 
 interface ModalState {
   lineId: string
@@ -166,9 +167,10 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
 
   const handleAdjustFixedDays = useCallback(
     async (payload: { run_line_id: string; days_worked: number; reason?: string }) => {
+      const authHeaders = await getBrowserAuthHeaders()
       const res = await fetch('/api/payroll/adjust-fixed-days', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders },
         credentials: 'include',
         body: JSON.stringify(payload)
       })
@@ -193,9 +195,10 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
       }
       reason?: string
     }) => {
+      const authHeaders = await getBrowserAuthHeaders()
       const res = await fetch('/api/payroll/adjust-fixed-overtime', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders },
         credentials: 'include',
         body: JSON.stringify(payload),
       })
@@ -225,9 +228,10 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
 
   const handleResetLineRecalc = useCallback(
     async (runLineId: string) => {
+      const authHeaders = await getBrowserAuthHeaders()
       const res = await fetch('/api/payroll/reset-line-recalc', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders },
         credentials: 'include',
         body: JSON.stringify({ run_line_id: runLineId }),
       })
