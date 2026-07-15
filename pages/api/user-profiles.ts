@@ -16,10 +16,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         ? authHeader.slice(7).trim()
         : null
 
-    // Prefer Bearer (auth.tsx) when cookies are missing/chunked
-    const { data: { user }, error: authError } = bearer
-      ? await supabase.auth.getUser(bearer)
-      : await supabase.auth.getUser()
+    // Cookies first; Bearer only if cookie session missing (auth.tsx may send both)
+    let { data: { user }, error: authError } = await supabase.auth.getUser()
+    if ((!user || authError) && bearer) {
+      const bearerResult = await supabase.auth.getUser(bearer)
+      if (bearerResult.data.user) {
+        user = bearerResult.data.user
+        authError = bearerResult.error
+      }
+    }
     
     if (authError || !user) {
       return res.status(401).json({ error: 'Unauthorized' })

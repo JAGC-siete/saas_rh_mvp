@@ -43,17 +43,26 @@ export async function authenticateUser(
     // Create Supabase client with cookies from request - USAR createClient de server.ts
     const supabase = createClient(req, res)
 
-    // Prefer Bearer (browser session in localStorage) when cookies are missing/chunked
+    // Cookies first (legacy path). Bearer only as fallback — never prefer a stale
+    // Authorization header over a valid cookie session.
     const authHeader = req.headers.authorization
     const bearer =
       typeof authHeader === 'string' && authHeader.startsWith('Bearer ')
         ? authHeader.slice(7).trim()
         : null
 
-    const {
+    let {
       data: { user },
       error: authError,
-    } = bearer ? await supabase.auth.getUser(bearer) : await supabase.auth.getUser()
+    } = await supabase.auth.getUser()
+
+    if ((!user || authError) && bearer) {
+      const bearerResult = await supabase.auth.getUser(bearer)
+      if (bearerResult.data.user) {
+        user = bearerResult.data.user
+        authError = bearerResult.error
+      }
+    }
     
     if (authError || !user) {
       console.error('Auth error:', authError)

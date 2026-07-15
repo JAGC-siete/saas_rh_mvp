@@ -17,49 +17,73 @@ export function createClient(req: NextApiRequest, res: NextApiResponse) {
     // Return a mock client to prevent server crash - API routes will fail but server stays up
     return createServerClient('https://placeholder.supabase.co', 'placeholder-key', {
       cookies: {
-        getAll: () => [],
-        setAll: () => {},
+        get: () => undefined,
+        set: () => {},
+        remove: () => {}
       }
     })
   }
 
+  // Keep get/set/remove (no getAll/setAll): switching cookie adapters in prod broke
+  // session reads for some users (APIs returned 401 → empty UI) without profile changes.
   return createServerClient(supabaseUrl, supabaseAnonKey, {
     cookies: {
-      // getAll/setAll required so chunked auth cookies (sb-*-auth-token.0/.1) reassemble
-      getAll() {
-        return Object.keys(req.cookies).map((name) => ({
-          name,
-          value: req.cookies[name] ?? '',
-        }))
+      get(name: string) {
+        return req.cookies[name]
       },
-      setAll(cookiesToSet) {
-        const serialized: string[] = []
-        for (const { name, value, options } of cookiesToSet) {
-          try {
-            const isAuthCookie = name.includes('sb-') && name.includes('auth-token')
-            const cookieMaxAge =
-              isAuthCookie && !options?.maxAge ? 24 * 60 * 60 : options?.maxAge
+      set(name: string, value: string, options: CookieOptions) {
+        try {
+          // Set maxAge to 1 day for auth cookies to match JWT expiry
+          const isAuthCookie = name.includes('sb-') && name.includes('auth-token')
+          const cookieMaxAge = isAuthCookie && !options?.maxAge
+            ? 24 * 60 * 60 // 1 day in seconds
+            : options?.maxAge
 
-            serialized.push(
-              serialize(name, value, {
-                path: options?.path ?? '/',
-                httpOnly: options?.httpOnly ?? true,
-                secure: options?.secure ?? process.env.NODE_ENV === 'production',
-                sameSite: (options?.sameSite as any) ?? 'lax',
-                domain: options?.domain,
-                maxAge: cookieMaxAge,
-                expires: options?.expires,
-              })
-            )
-          } catch (error) {
-            console.warn('Failed to set cookie:', name, error)
+          const cookie = serialize(name, value, {
+            path: options?.path ?? '/',
+            httpOnly: options?.httpOnly ?? true,
+            secure: options?.secure ?? process.env.NODE_ENV === 'production',
+            sameSite: (options?.sameSite as any) ?? 'lax',
+            domain: options?.domain,
+            maxAge: cookieMaxAge,
+            expires: options?.expires,
+          })
+
+          const prev = res.getHeader('Set-Cookie')
+          if (!prev) {
+            res.setHeader('Set-Cookie', cookie)
+          } else if (Array.isArray(prev)) {
+            res.setHeader('Set-Cookie', [...prev, cookie])
+          } else {
+            res.setHeader('Set-Cookie', [prev as string, cookie])
           }
+        } catch (error) {
+          console.warn('Failed to set cookie:', name, error)
         }
-        if (serialized.length === 0) return
+      },
+      remove(name: string, options: CookieOptions) {
+        try {
+          const cookie = serialize(name, '', {
+            path: options?.path ?? '/',
+            httpOnly: options?.httpOnly ?? true,
+            secure: options?.secure ?? process.env.NODE_ENV === 'production',
+            sameSite: (options?.sameSite as any) ?? 'lax',
+            domain: options?.domain,
+            maxAge: 0,
+            expires: new Date(0),
+          })
 
-        const prev = res.getHeader('Set-Cookie')
-        const existing = !prev ? [] : Array.isArray(prev) ? prev.map(String) : [String(prev)]
-        res.setHeader('Set-Cookie', [...existing, ...serialized])
+          const prev = res.getHeader('Set-Cookie')
+          if (!prev) {
+            res.setHeader('Set-Cookie', cookie)
+          } else if (Array.isArray(prev)) {
+            res.setHeader('Set-Cookie', [...prev, cookie])
+          } else {
+            res.setHeader('Set-Cookie', [prev as string, cookie])
+          }
+        } catch (error) {
+          console.warn('Failed to remove cookie:', name, error)
+        }
       },
     },
   })
