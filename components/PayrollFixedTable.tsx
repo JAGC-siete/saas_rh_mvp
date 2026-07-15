@@ -683,8 +683,7 @@ export default function PayrollFixedTable({
             <h3 className="text-lg font-semibold">Ajustar horas extras</h3>
             <p className="mt-1 text-sm text-gray-300">{otModal.employeeName}</p>
             <p className="mt-2 text-xs text-amber-200/90">
-              Recargos sobre tarifa (mensual÷240): 25% → ×1.25, 50% → ×1.50, 75% → ×1.75, 100% →
-              ×2.00. El monto se suma al bruto; IHSS/RAP/ISR no cambian de base.
+              El monto se suma al bruto; IHSS/RAP/ISR no cambian de base.
             </p>
             {(() => {
               const overtime: OvertimeHoursBreakdown = {
