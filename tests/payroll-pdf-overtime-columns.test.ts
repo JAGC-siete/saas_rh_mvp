@@ -103,8 +103,8 @@ describe('payroll PDF column catalog', () => {
     assert.equal(cols.find((c) => c.id === 'net_salary')?.header, 'Neto a Pagar')
   })
 
-  it('shows horas_extra_manual only when it has values and Pago HE is absent', () => {
-    const withManual = buildPayrollPdfColumnMeta({
+  it('never prints horas_extra_manual on planilla PDF (Pago HE only)', () => {
+    const cols = buildPayrollPdfColumnMeta({
       isHourly: false,
       hasSeptimoDia: false,
       hasOvertimePay: false,
@@ -120,25 +120,7 @@ describe('payroll PDF column catalog', () => {
       },
       countryCode: 'HND',
     })
-    assert.ok(withManual.map((c) => c.id).includes('custom_horas_extra_manual'))
-
-    const emptyWithPagoHe = buildPayrollPdfColumnMeta({
-      isHourly: false,
-      hasSeptimoDia: false,
-      hasOvertimePay: true,
-      customEarningsWithValues: new Set(),
-      customFieldsConfig: {
-        horas_extra_manual: {
-          label: 'Horas extra',
-          type: 'number',
-          category: 'earnings',
-          required: false,
-          default: 0,
-        },
-      },
-      countryCode: 'HND',
-    })
-    assert.equal(emptyWithPagoHe.map((c) => c.id).includes('custom_horas_extra_manual'), false)
+    assert.equal(cols.map((c) => c.id).includes('custom_horas_extra_manual'), false)
   })
 
   it('uses columnLabels overrides', () => {

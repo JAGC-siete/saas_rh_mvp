@@ -161,11 +161,9 @@ export function buildPayrollPdfColumnMeta(input: BuildPayrollPdfColumnsInput): P
       const def = normalizeCustomField(fieldName, fieldDef, 'earnings')
       const customId = `custom_${fieldName}`
       if (filterCustomFields && !visibleColumnIds!.has(customId)) continue
-      // Avoid Julio-style dual HE columns: "Pago HE" + empty "Horas Extra".
-      if (isOvertimeEarningsAlias(fieldName)) {
-        const hasValue = customEarningsWithValues?.has(fieldName) ?? false
-        if (hasOvertimePay || !hasValue) continue
-      }
+      // Never print OT-alias custom earnings (e.g. horas_extra_manual "Horas Extra"):
+      // official money column is overtime_pay ("Pago HE").
+      if (isOvertimeEarningsAlias(fieldName)) continue
       cols.push({ id: customId, header: colLabel(columnLabels, customId, def.label || fieldName) })
     }
   }
