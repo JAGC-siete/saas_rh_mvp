@@ -178,6 +178,12 @@ export async function loadPlanillaFromRun(
           Number(line.seventh_day_pay) ||
           Number((metadata as Record<string, unknown>)?.septimo_dia) ||
           undefined,
+        ...(Number.isFinite(Number(metadata.horas_extras)) && Number(metadata.horas_extras) > 0
+          ? { horas_extras: Math.round(Number(metadata.horas_extras) * 100) / 100 }
+          : {}),
+        ...(Number.isFinite(Number(metadata.overtime_pay)) && Number(metadata.overtime_pay) > 0
+          ? { overtime_pay: Math.round(Number(metadata.overtime_pay) * 100) / 100 }
+          : {}),
       } satisfies PlanillaItem
     })
   )

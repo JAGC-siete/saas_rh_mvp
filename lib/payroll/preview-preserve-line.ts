@@ -70,6 +70,9 @@ export function buildFixedPlanillaRowFromPersistedLine(ctx: BuildRowBase) {
     prevLine.metadata as Record<string, unknown> | null | undefined,
     horasExtras
   )
+  const metaOtPay = Number(
+    (prevLine.metadata as Record<string, unknown> | null | undefined)?.overtime_pay
+  )
 
   return {
     employee_id: emp.id,
@@ -83,6 +86,9 @@ export function buildFixedPlanillaRowFromPersistedLine(ctx: BuildRowBase) {
     days_worked: effH,
     days_absent: Math.max(0, diasPeriodo - effH),
     horas_extras: heHours,
+    ...(Number.isFinite(metaOtPay) && metaOtPay > 0
+      ? { overtime_pay: Math.round(metaOtPay * 100) / 100 }
+      : {}),
     total_earnings: Math.round(effBruto * 100) / 100,
     IHSS: Math.round(effIhss * 100) / 100,
     RAP: Math.round(effRap * 100) / 100,

@@ -973,6 +973,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           days_extra: days_extra > 0 ? days_extra : undefined,
           notes_extra: days_extra > 0 ? `${days_extra} día(s) Extra/Especial (festivo/descanso)` : undefined,
           horas_extras: otResolved.hoursTotal,
+          overtime_pay: otResolved.pay > 0 ? otResolved.pay : undefined,
           total_earnings: Math.round(total_earnings * 100) / 100,
           IHSS: Math.round(IHSS * 100) / 100,
           RAP: Math.round(RAP * 100) / 100,

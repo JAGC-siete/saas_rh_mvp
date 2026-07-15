@@ -1309,7 +1309,13 @@ async function generatePayrollPDF(
         metadata: line.metadata || {},
         pay_type: payType,
         total_hours_worked: isHourBasedPlanillaPayType(payType) ? totalHours : undefined,
-        hourly_rate: isHourBasedPlanillaPayType(payType) ? hourlyRate : undefined
+        hourly_rate: isHourBasedPlanillaPayType(payType) ? hourlyRate : undefined,
+        ...(Number.isFinite(Number(line.metadata?.horas_extras)) && Number(line.metadata?.horas_extras) > 0
+          ? { horas_extras: Math.round(Number(line.metadata.horas_extras) * 100) / 100 }
+          : {}),
+        ...(Number.isFinite(Number(line.metadata?.overtime_pay)) && Number(line.metadata?.overtime_pay) > 0
+          ? { overtime_pay: Math.round(Number(line.metadata.overtime_pay) * 100) / 100 }
+          : {}),
       }
     })
   )

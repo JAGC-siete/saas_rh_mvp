@@ -98,7 +98,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         notes_on_deductions: row.adj_discount ? `Descuento: L. ${row.adj_discount.toFixed(2)}` : '',
         pay_type: payType,
         total_hours_worked: isHourBasedPlanillaPayType(payType) ? totalHours : undefined,
-        hourly_rate: isHourBasedPlanillaPayType(payType) ? hourlyRate : undefined
+        hourly_rate: isHourBasedPlanillaPayType(payType) ? hourlyRate : undefined,
+        ...(Number.isFinite(Number(row.horas_extras ?? row.metadata?.horas_extras)) &&
+        Number(row.horas_extras ?? row.metadata?.horas_extras) > 0
+          ? {
+              horas_extras:
+                Math.round(Number(row.horas_extras ?? row.metadata?.horas_extras) * 100) / 100,
+            }
+          : {}),
+        ...(Number.isFinite(Number(row.overtime_pay ?? row.metadata?.overtime_pay)) &&
+        Number(row.overtime_pay ?? row.metadata?.overtime_pay) > 0
+          ? {
+              overtime_pay:
+                Math.round(Number(row.overtime_pay ?? row.metadata?.overtime_pay) * 100) / 100,
+            }
+          : {}),
       }
     })
 

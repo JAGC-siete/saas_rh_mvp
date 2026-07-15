@@ -57,6 +57,10 @@ export interface PlanillaItem {
   total_hours_worked?: number
   hourly_rate?: number
   septimo_dia?: number
+  /** Horas extras AHC / ajuste del período (columna planilla) */
+  horas_extras?: number
+  /** Monto de HE pagado (incluido en total_earnings) */
+  overtime_pay?: number
 }
 
 /**
@@ -405,6 +409,8 @@ export async function generateConsolidatedPayrollPDF(
         drawLiquidSectionTitle(doc, title, 30, 24)
 
         const hasSeptimoDia = isHourly && planillaData.some((r) => (r.septimo_dia ?? 0) > 0)
+        const hasHorasExtras = planillaData.some((r) => (r.horas_extras ?? 0) > 0)
+        const hasOvertimePay = planillaData.some((r) => (r.overtime_pay ?? 0) > 0)
         const statutoryCols = resolveStatutoryDeductionColumns(
           payrollConfig?.legal_deductions,
           customFieldsConfig as Record<string, CustomFieldDef | string> | undefined,
@@ -510,6 +516,28 @@ export async function generateConsolidatedPayrollPDF(
             totalFormat: 'currency',
             value: (row) => formatCurrency(row.septimo_dia ?? 0),
             number: (row) => row.septimo_dia ?? 0,
+          })
+        }
+        if (hasHorasExtras) {
+          pushCol({
+            id: 'horas_extras',
+            header: colLabel('horas_extras', 'Horas extra'),
+            width: isHourly ? 42 : 45,
+            isText: false,
+            totalFormat: 'hours',
+            value: (row) => ((row.horas_extras ?? 0) > 0 ? (row.horas_extras ?? 0).toFixed(2) : '—'),
+            number: (row) => row.horas_extras ?? 0,
+          })
+        }
+        if (hasOvertimePay) {
+          pushCol({
+            id: 'overtime_pay',
+            header: colLabel('overtime_pay', 'Pago HE'),
+            width: isHourly ? 50 : 55,
+            isText: false,
+            totalFormat: 'currency',
+            value: (row) => formatCurrency(row.overtime_pay ?? 0),
+            number: (row) => row.overtime_pay ?? 0,
           })
         }
 
