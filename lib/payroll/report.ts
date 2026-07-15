@@ -232,9 +232,11 @@ export async function generateConsolidatedPayrollPDF(
       }
       
       const headerSubtitle = periodRangeDisplay ?? (paymentFrequency === 'monthly' ? periodo : `${periodo} • Quincena ${quincena}`)
+      // Explicit MediaBox 14" × 8.5" (LEGAL landscape). Named size + layout can
+      // silently fall back to A4 (11.69×8.26) in some PDFKit builds — do not use layout here.
+      const PLANILLA_PAGE_SIZE: [number, number] = [14 * 72, 8.5 * 72]
       const doc = new PDFDocument({
-        size: 'LEGAL',
-        layout: 'landscape',
+        size: PLANILLA_PAGE_SIZE,
         margin: 30,
         info: {
           Title: `${payrollTitle} - ${headerSubtitle}`,
@@ -246,7 +248,7 @@ export async function generateConsolidatedPayrollPDF(
       })
 
       const addPlanillaPage = () => {
-        doc.addPage({ size: 'LEGAL', layout: 'landscape' })
+        doc.addPage({ size: PLANILLA_PAGE_SIZE })
       }
 
       registerLiquidPageFooter(doc, { generatedAt, brandLine: footerBrandLine })

@@ -12,6 +12,14 @@ function pageCount(pdf: Buffer): number {
   return match ? Number(match[1]) : 0
 }
 
+/** First MediaBox → [width, height] in PDF points (72 pt = 1 in). */
+function firstMediaBox(pdf: Buffer): [number, number] | null {
+  const raw = pdf.toString('latin1')
+  const match = raw.match(/\/MediaBox\s*\[\s*([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s*\]/)
+  if (!match) return null
+  return [Number(match[3]) - Number(match[1]), Number(match[4]) - Number(match[2])]
+}
+
 const baseFixed = (overrides: Partial<PlanillaItem> = {}): PlanillaItem => ({
   id: 'K02173',
   name: 'Kevin Aguilar',
@@ -59,5 +67,10 @@ describe('payroll PDF overtime columns', () => {
     assert.ok(Buffer.isBuffer(pdf))
     assert.ok(pageCount(pdf) >= 2)
     assert.ok(pdf.length > 2000)
+
+    const media = firstMediaBox(pdf)
+    assert.ok(media, 'PDF must include MediaBox')
+    assert.equal(media![0], 1008, 'page width must be 14 in (1008 pt)')
+    assert.equal(media![1], 612, 'page height must be 8.5 in (612 pt)')
   })
 })
