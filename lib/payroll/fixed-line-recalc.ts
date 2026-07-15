@@ -303,7 +303,11 @@ export function buildFixedLinePlanMetadata(
   empPlans: EmployeeDeductionPlanRow[],
   extra: Record<string, unknown> = {}
 ): Record<string, unknown> {
-  const lineMetadata: Record<string, unknown> = { tax_year: taxYear, ...extra }
+  const lineMetadata: Record<string, unknown> = {
+    tax_year: taxYear,
+    pay_type: 'fixed',
+    ...extra,
+  }
   const planIds: string[] = []
   for (const plan of empPlans) {
     lineMetadata[plan.field_key] = plan.monto_por_plazo

@@ -10,7 +10,7 @@ import { requirePlanAndQuota, incrementUsage } from '../../../lib/billing/enforc
 import { resolveReportConfig } from '../../../lib/reports/column-resolver'
 import {
   coalescePlanillaPayType,
-  isHourBasedPlanillaPayType,
+  isExactHourlyPlanillaTablePayType,
 } from '../../../lib/payroll/resolve-effective-pay-type'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -70,8 +70,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const employee = employees.find((e: any) => e.id === row.employee_id)
       const payType = coalescePlanillaPayType(employee?.pay_type || row.pay_type || 'fixed')
       const totalHours = Number(row.total_hours_worked) || (Number(row.days_worked) || 0) * 8
+      const showHourCols = isExactHourlyPlanillaTablePayType(payType)
       const hourlyRate =
-        isHourBasedPlanillaPayType(payType) && totalHours > 0
+        showHourCols && totalHours > 0
           ? (Number(row.gross_salary) || 0) / totalHours
           : 0
       
@@ -97,8 +98,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         notes_on_ingress: row.adj_bonus ? `Bono: L. ${row.adj_bonus.toFixed(2)}` : '',
         notes_on_deductions: row.adj_discount ? `Descuento: L. ${row.adj_discount.toFixed(2)}` : '',
         pay_type: payType,
-        total_hours_worked: isHourBasedPlanillaPayType(payType) ? totalHours : undefined,
-        hourly_rate: isHourBasedPlanillaPayType(payType) ? hourlyRate : undefined,
+        total_hours_worked: showHourCols ? totalHours : undefined,
+        hourly_rate: showHourCols ? hourlyRate : undefined,
         ...(Number.isFinite(Number(row.horas_extras ?? row.metadata?.horas_extras)) &&
         Number(row.horas_extras ?? row.metadata?.horas_extras) > 0
           ? {
@@ -182,9 +183,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       country_code: company?.country_code || 'HND'
     }
 
-    // Separate fixed and hourly employees
-    const planillaFixed = planilla.filter(p => !isHourBasedPlanillaPayType((p as any).pay_type))
-    const planillaHourly = planilla.filter(p => isHourBasedPlanillaPayType((p as any).pay_type))
+    // Separate fixed and hourly employees (detalle UI: solo exact hourly → por hora)
+    const planillaFixed = planilla.filter(p => !isExactHourlyPlanillaTablePayType((p as any).pay_type))
+    const planillaHourly = planilla.filter(p => isExactHourlyPlanillaTablePayType((p as any).pay_type))
 
     let reportVisual: { primaryColor?: string; branding?: Record<string, unknown> } | undefined
     let visibleColumnIds: string[] | undefined

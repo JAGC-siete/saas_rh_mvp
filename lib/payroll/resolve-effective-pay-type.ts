@@ -53,7 +53,44 @@ export function coalescePlanillaPayType(raw: unknown): EffectivePayType {
   return 'fixed'
 }
 
-/** Alias used by PDF/planilla filters (hour engines share the hourly table). */
+/**
+ * Pay type for planilla PDF / vista previa from live employee + company default.
+ * Live employee wins; metadata snapshot is only a fallback when employee has no
+ * pay_type AND company mode does not resolve the same way (legacy lines).
+ * Stale metadata.pay_type='hourly' must not override admin-por-día (fixed).
+ */
+export function resolvePlanillaRowPayType(input: {
+  employeePayType: unknown
+  metadataPayType?: unknown
+  companyCalculationMode?: CompanyCalculationMode | string | null
+}): EffectivePayType {
+  const fromEmployee = parseEmployeePayType(input.employeePayType)
+  if (fromEmployee) return fromEmployee
+
+  const companyMode = parseCompanyCalculationMode(input.companyCalculationMode ?? 'daily')
+  const inherited = resolveEffectivePayType(null, companyMode)
+  // Prefer company inheritance over stale line metadata (e.g. old hourly stamp).
+  if (inherited === 'fixed') return 'fixed'
+
+  const fromMeta = parseEmployeePayType(input.metadataPayType)
+  if (fromMeta) return fromMeta
+  return inherited
+}
+
+/**
+ * Wage-engine check (hourly rate / clock hours): hourly + admin_floor.
+ * Do NOT use this alone to put rows on the PDF "por hora" table — use
+ * {@link isExactHourlyPlanillaTablePayType} so admin_floor stays with fijos
+ * (same rule as UnifiedPayrollTable detalle).
+ */
 export function isHourBasedPlanillaPayType(raw: unknown): boolean {
   return isHourBasedPayType(coalescePlanillaPayType(raw))
+}
+
+/**
+ * PDF / vista previa table split — matches detalle UI:
+ * only true `hourly` → "Empleados por hora"; fixed + admin_floor → fijos.
+ */
+export function isExactHourlyPlanillaTablePayType(raw: unknown): boolean {
+  return coalescePlanillaPayType(raw) === 'hourly'
 }

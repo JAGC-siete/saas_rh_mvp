@@ -140,10 +140,11 @@ export const payrollApi = {
   },
 
   fetchPlanillaPreview: async (runId: string): Promise<{ preview: PlanillaPreviewData }> => {
-    const params = new URLSearchParams({ run_id: runId })
+    const params = new URLSearchParams({ run_id: runId, _ts: String(Date.now()) })
     const response = await fetch(`/api/payroll/planilla-preview?${params.toString()}`, {
       method: 'GET',
       credentials: 'include',
+      cache: 'no-store',
     })
     const data = await response.json().catch(() => ({}))
     if (!response.ok || !data?.success) {
@@ -156,7 +157,7 @@ export const payrollApi = {
     runId: string,
     options?: { groupBy?: PayrollPdfGroupBy; defaultFilename?: string }
   ): Promise<void> => {
-    const params = new URLSearchParams({ run_id: runId })
+    const params = new URLSearchParams({ run_id: runId, _ts: String(Date.now()) })
     const gb = options?.groupBy
     if (gb && gb !== 'none') {
       params.set('group_by', gb)
@@ -165,6 +166,7 @@ export const payrollApi = {
     const response = await fetch(`/api/payroll/generate-pdf-from-run?${params.toString()}`, {
       method: 'GET',
       credentials: 'include',
+      cache: 'no-store',
     })
 
     if (!response.ok) {

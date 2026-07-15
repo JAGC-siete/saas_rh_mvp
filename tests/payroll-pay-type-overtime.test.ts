@@ -6,7 +6,12 @@
 
 import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
-import { resolveEffectivePayType } from '../lib/payroll/resolve-effective-pay-type'
+import {
+  resolveEffectivePayType,
+  resolvePlanillaRowPayType,
+  isExactHourlyPlanillaTablePayType,
+} from '../lib/payroll/resolve-effective-pay-type'
+import { resolvePlanillaDaysWorked } from '../lib/payroll/planilla-from-run'
 import {
   resolveCompanyPayOvertime,
   shouldPayOvertimeToEmployee,
@@ -32,6 +37,47 @@ describe('resolveEffectivePayType', () => {
   it('explicit pay_type wins over company mode', () => {
     assert.equal(resolveEffectivePayType('fixed', 'hourly'), 'fixed')
     assert.equal(resolveEffectivePayType('hourly', 'daily'), 'hourly')
+  })
+})
+
+describe('resolvePlanillaRowPayType / PDF table split', () => {
+  it('live fixed wins over stale metadata hourly', () => {
+    assert.equal(
+      resolvePlanillaRowPayType({
+        employeePayType: 'fixed',
+        metadataPayType: 'hourly',
+        companyCalculationMode: 'daily',
+      }),
+      'fixed'
+    )
+  })
+
+  it('company daily + null employee ignores stale hourly metadata', () => {
+    assert.equal(
+      resolvePlanillaRowPayType({
+        employeePayType: null,
+        metadataPayType: 'hourly',
+        companyCalculationMode: 'daily',
+      }),
+      'fixed'
+    )
+  })
+
+  it('PDF table: only exact hourly separates; admin_floor stays with fijos', () => {
+    assert.equal(isExactHourlyPlanillaTablePayType('hourly'), true)
+    assert.equal(isExactHourlyPlanillaTablePayType('admin_floor'), false)
+    assert.equal(isExactHourlyPlanillaTablePayType('fixed'), false)
+  })
+})
+
+describe('resolvePlanillaDaysWorked', () => {
+  it('fixed uses eff_hours as days; null metadata is not zero', () => {
+    assert.equal(resolvePlanillaDaysWorked('fixed', 15, null), 15)
+    assert.equal(resolvePlanillaDaysWorked('fixed', 15, undefined), 15)
+  })
+
+  it('exact hourly divides clock hours by 8', () => {
+    assert.equal(resolvePlanillaDaysWorked('hourly', 15, undefined), 15 / 8)
   })
 })
 

@@ -12,7 +12,11 @@ import {
   getWeeklyPeriodDates,
 } from './period-dates'
 import type { PlanillaItem } from './report'
-import { coalescePlanillaPayType, isHourBasedPlanillaPayType } from './resolve-effective-pay-type'
+import {
+  isExactHourlyPlanillaTablePayType,
+  parseCompanyCalculationMode,
+  resolvePlanillaRowPayType,
+} from './resolve-effective-pay-type'
 import { resolveDisplayNet } from './resolve-display-net'
 
 /** eff_hours on payroll_run_lines stores days for fixed employees and clock hours for hour-based types. */
@@ -21,10 +25,15 @@ export function resolvePlanillaDaysWorked(
   effHours: number,
   metadataDaysWorked?: unknown
 ): number {
-  const md = Number(metadataDaysWorked)
-  if (Number.isFinite(md) && md >= 0) return md
-  // Legacy fallback when metadata.days_worked missing: approx days from clock hours.
-  if (payType === 'hourly' || payType === 'admin_floor') return effHours / 8
+  // Number(null) === 0 — must not treat missing metadata as zero days.
+  if (metadataDaysWorked != null && metadataDaysWorked !== '') {
+    const md = Number(metadataDaysWorked)
+    if (Number.isFinite(md) && md >= 0) return md
+  }
+  // Exact hourly: clock hours → approx days. admin_floor shares detalle with fixed
+  // but may still store clock hours in eff_hours when days_worked meta is absent.
+  if (payType === 'hourly') return effHours / 8
+  if (payType === 'admin_floor' && effHours > 31) return effHours / 8
   return effHours
 }
 
@@ -113,6 +122,25 @@ export async function loadPlanillaFromRun(
     throw new Error('No hay líneas de nómina para esta corrida')
   }
 
+  const { data: company } = await supabase
+    .from('companies')
+    .select('name, country_code')
+    .eq('id', companyId)
+    .single()
+
+  const { data: payrollConfig } = await supabase
+    .from('company_payroll_configs')
+    .select('metadata, payment_frequency, quincena_config, custom_fields, calculation_mode')
+    .eq('company_id', companyId)
+    .eq('is_active', true)
+    .single()
+
+  const payrollMetadata = (payrollConfig?.metadata as Record<string, unknown>) || {}
+  const companyCalculationMode = parseCompanyCalculationMode(
+    (payrollConfig as { calculation_mode?: unknown } | null)?.calculation_mode ??
+      payrollMetadata.calculation_mode
+  )
+
   const planilla: PlanillaItem[] = await Promise.all(
     payrollLines.map(async (line: Record<string, unknown>) => {
       const employees = line.employees as Record<string, unknown> | null
@@ -145,16 +173,15 @@ export async function loadPlanillaFromRun(
         customDeductions,
         storedNeto: Number(line.eff_neto) || 0,
       })
-      const payType = coalescePlanillaPayType(
-        (employees?.pay_type as string) ||
-          ((metadata as Record<string, unknown>).pay_type as string) ||
-          'fixed'
-      )
+      const payType = resolvePlanillaRowPayType({
+        employeePayType: employees?.pay_type,
+        metadataPayType: metadata.pay_type,
+        companyCalculationMode,
+      })
       const totalHours = Number(line.eff_hours) || 0
+      const showHourCols = isExactHourlyPlanillaTablePayType(payType)
       const hourlyRate =
-        isHourBasedPlanillaPayType(payType) && totalHours > 0
-          ? (Number(line.eff_bruto) || 0) / totalHours
-          : 0
+        showHourCols && totalHours > 0 ? (Number(line.eff_bruto) || 0) / totalHours : 0
 
       return {
         id: String(employees?.employee_code || ''),
@@ -179,8 +206,8 @@ export async function loadPlanillaFromRun(
         notes_on_deductions: deductionsNotes,
         metadata,
         pay_type: payType,
-        total_hours_worked: isHourBasedPlanillaPayType(payType) ? totalHours : undefined,
-        hourly_rate: isHourBasedPlanillaPayType(payType) ? hourlyRate : undefined,
+        total_hours_worked: showHourCols ? totalHours : undefined,
+        hourly_rate: showHourCols ? hourlyRate : undefined,
         septimo_dia:
           Number(line.seventh_day_pay) ||
           Number((metadata as Record<string, unknown>)?.septimo_dia) ||
@@ -196,21 +223,6 @@ export async function loadPlanillaFromRun(
   )
 
   const periodo = `${payrollRun.year}-${String(payrollRun.month).padStart(2, '0')}`
-
-  const { data: company } = await supabase
-    .from('companies')
-    .select('name, country_code')
-    .eq('id', companyId)
-    .single()
-
-  const { data: payrollConfig } = await supabase
-    .from('company_payroll_configs')
-    .select('metadata, payment_frequency, quincena_config, custom_fields')
-    .eq('company_id', companyId)
-    .eq('is_active', true)
-    .single()
-
-  const payrollMetadata = (payrollConfig?.metadata as Record<string, unknown>) || {}
   const defaultGroupFromConfig = parsePayrollPdfGroupByQuery(
     payrollMetadata.payroll_pdf_group_by
   )
@@ -301,8 +313,9 @@ export async function loadPlanillaFromRun(
     country_code: normalizeCountryCode(company?.country_code),
   }
 
-  const planillaFixed = planilla.filter((p) => !isHourBasedPlanillaPayType(p.pay_type))
-  const planillaHourly = planilla.filter((p) => isHourBasedPlanillaPayType(p.pay_type))
+  // Match detalle UI: only exact hourly on “por hora”; fixed + admin_floor on fijos.
+  const planillaFixed = planilla.filter((p) => !isExactHourlyPlanillaTablePayType(p.pay_type))
+  const planillaHourly = planilla.filter((p) => isExactHourlyPlanillaTablePayType(p.pay_type))
 
   const [year, month] = periodo.split('-').map(Number)
   let periodDates: { period_start: string; period_end: string }

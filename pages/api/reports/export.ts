@@ -19,8 +19,9 @@ import { canExportReports, canExportAttendanceReports, EXPORT_REPORTS_FORBIDDEN 
 import { applyFieldAccessToReportData } from '../../../lib/security/apply-field-access-to-report'
 import {
   coalescePlanillaPayType,
-  isHourBasedPlanillaPayType,
+  isExactHourlyPlanillaTablePayType,
 } from '../../../lib/payroll/resolve-effective-pay-type'
+import { resolvePlanillaDaysWorked } from '../../../lib/payroll/planilla-from-run'
 import { resolveDisplayNet } from '../../../lib/payroll/resolve-display-net'
 
 interface ReportData {
@@ -1290,10 +1291,9 @@ async function generatePayrollPDF(
       })
       const payType = coalescePlanillaPayType(line.employees?.pay_type || 'fixed')
       const totalHours = Number(line.eff_hours) || 0
+      const showHourCols = isExactHourlyPlanillaTablePayType(payType)
       const hourlyRate =
-        isHourBasedPlanillaPayType(payType) && totalHours > 0
-          ? (Number(line.eff_bruto) || 0) / totalHours
-          : 0
+        showHourCols && totalHours > 0 ? (Number(line.eff_bruto) || 0) / totalHours : 0
 
       return {
         id: line.employees?.dni || line.employees?.employee_code || '',
@@ -1302,7 +1302,7 @@ async function generatePayrollPDF(
         bank_account: line.employees?.bank_account || 'No especificado',
         department: line.employees?.departments?.name || 'Sin Departamento',
         monthly_salary: Number(line.employees?.base_salary) || 0,
-        days_worked: totalHours / 8,
+        days_worked: resolvePlanillaDaysWorked(payType, totalHours, line.metadata?.days_worked),
         days_absent: 0,
         late_days: 0,
         total_earnings: Number(line.eff_bruto) || 0,
@@ -1315,8 +1315,8 @@ async function generatePayrollPDF(
         notes_on_deductions: deductionsNotes,
         metadata: line.metadata || {},
         pay_type: payType,
-        total_hours_worked: isHourBasedPlanillaPayType(payType) ? totalHours : undefined,
-        hourly_rate: isHourBasedPlanillaPayType(payType) ? hourlyRate : undefined,
+        total_hours_worked: showHourCols ? totalHours : undefined,
+        hourly_rate: showHourCols ? hourlyRate : undefined,
         ...(Number.isFinite(Number(line.metadata?.horas_extras)) && Number(line.metadata?.horas_extras) > 0
           ? { horas_extras: Math.round(Number(line.metadata.horas_extras) * 100) / 100 }
           : {}),
@@ -1347,8 +1347,8 @@ async function generatePayrollPDF(
     currency: (pdfMeta.currency as string) || undefined
   }
 
-  const planillaFixed = planillaAll.filter(p => !isHourBasedPlanillaPayType((p as any).pay_type))
-  const planillaHourly = planillaAll.filter(p => isHourBasedPlanillaPayType((p as any).pay_type))
+  const planillaFixed = planillaAll.filter(p => !isExactHourlyPlanillaTablePayType((p as any).pay_type))
+  const planillaHourly = planillaAll.filter(p => isExactHourlyPlanillaTablePayType((p as any).pay_type))
 
   const reportVisual = resolvedConfig?.branding
     ? { branding: resolvedConfig.branding, primaryColor: resolvedConfig.branding.primaryColor }

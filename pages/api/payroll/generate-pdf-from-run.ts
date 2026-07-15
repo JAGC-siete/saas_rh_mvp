@@ -105,6 +105,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     const groupSuffix = payrollPdfGroupByFilenameSuffix(pdfGroupBy)
     const draftSuffix = loaded.isDraftPreview ? '_borrador' : ''
     res.setHeader('Content-Type', 'application/pdf')
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private')
+    res.setHeader('Pragma', 'no-cache')
     res.setHeader(
       'Content-Disposition',
       `attachment; filename=planilla_${loaded.periodo}_q${loaded.payrollRun.quincena}${groupSuffix}${draftSuffix}.pdf`
