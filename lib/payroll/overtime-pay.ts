@@ -49,6 +49,57 @@ export const OVERTIME_BAND_META = [
   },
 ] as const
 
+/** Grupos de UI por porcentaje (unifica evening_25 + morning_25). La lógica interna sigue en 5 franjas. */
+export type OvertimePercentGroupKey = 'pct_25' | 'night_50' | 'late_75' | 'holiday_100'
+
+export const OVERTIME_PERCENT_GROUPS = [
+  {
+    key: 'pct_25' as const,
+    label: 'Al 25% (5:00 pm a 6:59 pm y 5:00 am a 6:59 am)',
+  },
+  {
+    key: 'night_50' as const,
+    label: 'Al 50% (7:00 pm a 9:59 pm)',
+  },
+  {
+    key: 'late_75' as const,
+    label: 'Al 75% (10:00 pm a 4:59 am)',
+  },
+  {
+    key: 'holiday_100' as const,
+    label: 'Al 100% (días feriados)',
+  },
+] as const
+
+/** Suma evening+morning para el campo unificado del 25%. */
+export function breakdownToPercentGroupValues(
+  b: OvertimeHoursBreakdown
+): Record<OvertimePercentGroupKey, number> {
+  return {
+    pct_25: Math.max(0, Number(b.evening_25) || 0) + Math.max(0, Number(b.morning_25) || 0),
+    night_50: Math.max(0, Number(b.night_50) || 0),
+    late_75: Math.max(0, Number(b.late_75) || 0),
+    holiday_100: Math.max(0, Number(b.holiday_100) || 0),
+  }
+}
+
+/**
+ * Expande grupos de UI → breakdown de pago.
+ * El 25% unificado se guarda en evening_25 (mismo ×1.25); morning_25 = 0.
+ * AHC sigue clasificando las dos franjas al recalcular.
+ */
+export function percentGroupValuesToBreakdown(
+  g: Partial<Record<OvertimePercentGroupKey, number>>
+): OvertimeHoursBreakdown {
+  return {
+    evening_25: Math.max(0, Number(g.pct_25) || 0),
+    night_50: Math.max(0, Number(g.night_50) || 0),
+    late_75: Math.max(0, Number(g.late_75) || 0),
+    morning_25: 0,
+    holiday_100: Math.max(0, Number(g.holiday_100) || 0),
+  }
+}
+
 export function emptyOvertimeBreakdown(): OvertimeHoursBreakdown {
   return {
     evening_25: 0,

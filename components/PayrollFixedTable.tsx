@@ -10,15 +10,25 @@ import { Textarea } from './ui/textarea'
 import { Icon } from './Icon'
 import {
   calculateOvertimePayFromAhc,
-  OVERTIME_BAND_META,
+  OVERTIME_PERCENT_GROUPS,
+  breakdownToPercentGroupValues,
+  percentGroupValuesToBreakdown,
   readOvertimeOverrideFromMetadata,
   emptyOvertimeBreakdown,
   type OvertimeHoursBreakdown,
+  type OvertimePercentGroupKey,
 } from '../lib/payroll/overtime-pay'
 import { HONDURAS_LABOR_FACTOR } from '../lib/payroll/constants'
 
 const HORAS_EXTRA_AHC_INFO =
-  'Administrativo por día: HE por franja de reloj en AHC (5–7pm 25%, 7–10pm 50%, 10pm–5am 75%, 5–8am 25%, feriados 100%). Si empresa y empleado pagan HE, el monto entra al bruto (IHSS/RAP/ISR sobre salario base). Sin salida no hay HE. Editable en la corrida.'
+  'Administrativo por día: HE por recargo (25% 5–7pm y 5–7am, 50% 7–10pm, 75% 10pm–5am, 100% feriados). Si empresa y empleado pagan HE, el monto entra al bruto (IHSS/RAP/ISR sobre salario base). Sin salida no hay HE. Editable en la corrida.'
+
+const emptyOtPercentInputs = (): Record<OvertimePercentGroupKey, string> => ({
+  pct_25: '0',
+  night_50: '0',
+  late_75: '0',
+  holiday_100: '0',
+})
 
 type OtAdjustPayload = {
   run_line_id: string
@@ -90,13 +100,7 @@ export default function PayrollFixedTable({
     employeeName: string
     baseSalary: number
   } | null>(null)
-  const [otBands, setOtBands] = useState<Record<keyof OvertimeHoursBreakdown, string>>({
-    evening_25: '0',
-    night_50: '0',
-    late_75: '0',
-    morning_25: '0',
-    holiday_100: '0',
-  })
+  const [otBands, setOtBands] = useState<Record<OvertimePercentGroupKey, string>>(emptyOtPercentInputs)
   const [otReason, setOtReason] = useState('')
   const [otSaving, setOtSaving] = useState(false)
   const [statutoryModal, setStatutoryModal] = useState<{
@@ -248,44 +252,37 @@ export default function PayrollFixedTable({
           holiday_100: Number.isFinite(holiday) ? holiday : fromMeta.holiday_100,
         }
       : fromMeta
+    const g = breakdownToPercentGroupValues(b)
     setOtModal({
       runLineId,
       employeeName: row.name || 'Empleado',
       baseSalary: row.base_salary || 0,
     })
     setOtBands({
-      evening_25: String(b.evening_25 || 0),
-      night_50: String(b.night_50 || 0),
-      late_75: String(b.late_75 || 0),
-      morning_25: String(b.morning_25 || 0),
-      holiday_100: String(b.holiday_100 || 0),
+      pct_25: String(g.pct_25 || 0),
+      night_50: String(g.night_50 || 0),
+      late_75: String(g.late_75 || 0),
+      holiday_100: String(g.holiday_100 || 0),
     })
     setOtReason('')
   }
 
   const closeOtModal = () => {
     setOtModal(null)
-    setOtBands({
-      evening_25: '0',
-      night_50: '0',
-      late_75: '0',
-      morning_25: '0',
-      holiday_100: '0',
-    })
+    setOtBands(emptyOtPercentInputs())
     setOtReason('')
   }
 
   const submitOtAdjust = async () => {
     if (!otModal || !onAdjustFixedOvertime) return
-    const overtime: OvertimeHoursBreakdown = {
-      evening_25: Number(otBands.evening_25),
+    const overtime = percentGroupValuesToBreakdown({
+      pct_25: Number(otBands.pct_25),
       night_50: Number(otBands.night_50),
       late_75: Number(otBands.late_75),
-      morning_25: Number(otBands.morning_25),
       holiday_100: Number(otBands.holiday_100),
-    }
+    })
     if (!Object.values(overtime).every((n) => Number.isFinite(n) && n >= 0)) {
-      alert('Ingrese horas ≥ 0 para cada franja')
+      alert('Ingrese horas ≥ 0 para cada recargo')
       return
     }
     setOtSaving(true)
@@ -686,13 +683,12 @@ export default function PayrollFixedTable({
               El monto se suma al bruto; IHSS/RAP/ISR no cambian de base.
             </p>
             {(() => {
-              const overtime: OvertimeHoursBreakdown = {
-                evening_25: Number(otBands.evening_25) || 0,
+              const overtime = percentGroupValuesToBreakdown({
+                pct_25: Number(otBands.pct_25) || 0,
                 night_50: Number(otBands.night_50) || 0,
                 late_75: Number(otBands.late_75) || 0,
-                morning_25: Number(otBands.morning_25) || 0,
                 holiday_100: Number(otBands.holiday_100) || 0,
-              }
+              })
               const rate = (otModal.baseSalary || 0) / HONDURAS_LABOR_FACTOR
               const pay = calculateOvertimePayFromAhc(overtime, rate)
               return (
@@ -702,22 +698,22 @@ export default function PayrollFixedTable({
               )
             })()}
             <div className="mt-4 space-y-3">
-              {OVERTIME_BAND_META.map((band) => (
-                <div key={band.key}>
+              {OVERTIME_PERCENT_GROUPS.map((group) => (
+                <div key={group.key}>
                   <label
-                    htmlFor={`ot-${band.key}`}
+                    htmlFor={`ot-${group.key}`}
                     className="block text-sm font-medium text-gray-200"
                   >
-                    {band.label}
+                    {group.label}
                   </label>
                   <Input
-                    id={`ot-${band.key}`}
+                    id={`ot-${group.key}`}
                     type="number"
                     min={0}
                     step={0.25}
-                    value={otBands[band.key]}
+                    value={otBands[group.key]}
                     onChange={(e) =>
-                      setOtBands((prev) => ({ ...prev, [band.key]: e.target.value }))
+                      setOtBands((prev) => ({ ...prev, [group.key]: e.target.value }))
                     }
                     className="mt-1 border-white/20 bg-white/10 text-white"
                   />

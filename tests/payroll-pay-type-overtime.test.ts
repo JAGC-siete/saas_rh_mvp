@@ -15,6 +15,8 @@ import {
   resolveFixedOvertimePay,
   readOvertimeOverrideFromMetadata,
   mapLegacyAhcBucketsToBreakdown,
+  breakdownToPercentGroupValues,
+  percentGroupValuesToBreakdown,
 } from '../lib/payroll/overtime-pay'
 
 describe('resolveEffectivePayType', () => {
@@ -262,6 +264,38 @@ describe('AHC overtime tracking (fixed employee)', () => {
     }
     assert.equal(total, 2.5)
     assert.equal(shouldPayOvertimeToEmployee(true, 'fixed'), true)
+  })
+})
+
+describe('percent group UI collapse (25% unified)', () => {
+  it('sums evening_25 + morning_25 for display', () => {
+    assert.deepEqual(
+      breakdownToPercentGroupValues({
+        evening_25: 1.5,
+        night_50: 2,
+        late_75: 0.5,
+        morning_25: 0.5,
+        holiday_100: 1,
+      }),
+      { pct_25: 2, night_50: 2, late_75: 0.5, holiday_100: 1 }
+    )
+  })
+
+  it('stores unified 25% in evening_25 (same ×1.25 pay)', () => {
+    const b = percentGroupValuesToBreakdown({
+      pct_25: 3,
+      night_50: 1,
+      late_75: 0,
+      holiday_100: 0,
+    })
+    assert.deepEqual(b, {
+      evening_25: 3,
+      night_50: 1,
+      late_75: 0,
+      morning_25: 0,
+      holiday_100: 0,
+    })
+    assert.equal(calculateOvertimePayFromAhc(b, 100), 3 * 100 * 1.25 + 100 * 1.5)
   })
 })
 
