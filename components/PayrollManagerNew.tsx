@@ -29,6 +29,7 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
   const [payrollApiConfig, setPayrollApiConfig] = useState<{
     legal_deductions?: { ihss?: boolean; rap?: boolean; isr?: boolean }
     custom_fields?: Record<string, unknown>
+    pay_overtime?: boolean
   } | null>(null)
 
   // Tab: Planilla | Partida Contable
@@ -52,7 +53,8 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
           cfg
             ? {
                 legal_deductions: cfg.legal_deductions,
-                custom_fields: cfg.custom_fields
+                custom_fields: cfg.custom_fields,
+                pay_overtime: cfg.pay_overtime !== false,
               }
             : null
         )
@@ -173,6 +175,27 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
       const data = await res.json().catch(() => ({}))
       if (!res.ok) {
         throw new Error(data.message || data.error || 'Error al ajustar días')
+      }
+      await payroll.loadUnifiedData()
+    },
+    [payroll]
+  )
+
+  const handleAdjustFixedOvertime = useCallback(
+    async (payload: {
+      run_line_id: string
+      overtime: { diurno: number; nocturno: number; feriado: number }
+      reason?: string
+    }) => {
+      const res = await fetch('/api/payroll/adjust-fixed-overtime', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(payload),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        throw new Error(data.message || data.error || 'Error al ajustar horas extras')
       }
       await payroll.loadUnifiedData()
     },
@@ -609,6 +632,8 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
             !!payroll.runId && (payroll.status === 'draft' || payroll.status === 'edited')
           }
           onAdjustFixedDays={handleAdjustFixedDays}
+          onAdjustFixedOvertime={handleAdjustFixedOvertime}
+          companyPayOvertime={payrollApiConfig?.pay_overtime !== false}
           onResetLineRecalc={handleResetLineRecalc}
           canResetLineRecalc={payroll.status === 'draft' || payroll.status === 'edited'}
           canZeroStatutory={

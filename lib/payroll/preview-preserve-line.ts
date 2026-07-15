@@ -22,8 +22,21 @@ export function shouldPreservePayrollLineOnPreview(
   if (line.edited === true) return true
   const meta = line.metadata
   if (meta != null && meta.days_adjusted_at != null) return true
+  if (meta != null && meta.ot_adjusted_at != null) return true
   if (meta != null && meta.statutory_zeroed_at != null) return true
   return false
+}
+
+/** Prefer embedded HE hours from preserved metadata over live AHC when present. */
+export function resolvePreservedHorasExtras(
+  metadata: Record<string, unknown> | null | undefined,
+  liveAhcHours: number
+): number {
+  const fromMeta = Number(metadata?.horas_extras)
+  if (Number.isFinite(fromMeta) && fromMeta >= 0) {
+    return Math.round(fromMeta * 100) / 100
+  }
+  return Math.round((Number(liveAhcHours) || 0) * 100) / 100
 }
 
 type EmployeePreviewContext = {
@@ -53,6 +66,10 @@ export function buildFixedPlanillaRowFromPersistedLine(ctx: BuildRowBase) {
   const effIsr = Number(prevLine.eff_isr) || 0
   const effNeto = Number(prevLine.eff_neto) || 0
   const totalDed = effBruto - effNeto
+  const heHours = resolvePreservedHorasExtras(
+    prevLine.metadata as Record<string, unknown> | null | undefined,
+    horasExtras
+  )
 
   return {
     employee_id: emp.id,
@@ -65,7 +82,7 @@ export function buildFixedPlanillaRowFromPersistedLine(ctx: BuildRowBase) {
     monthly_salary: ctx.emp.base_salary,
     days_worked: effH,
     days_absent: Math.max(0, diasPeriodo - effH),
-    horas_extras: Math.round(horasExtras * 100) / 100,
+    horas_extras: heHours,
     total_earnings: Math.round(effBruto * 100) / 100,
     IHSS: Math.round(effIhss * 100) / 100,
     RAP: Math.round(effRap * 100) / 100,
@@ -138,6 +155,13 @@ export const PAYROLL_LINE_MANUAL_METADATA_KEYS = [
   'days_adjusted_by',
   'days_adjusted_reason',
   'days_adjust_reason',
+  'ot_adjusted_at',
+  'ot_adjusted_by',
+  'ot_adjusted_reason',
+  'ot_adjust_reason',
+  'ot_diurno',
+  'ot_nocturno',
+  'ot_feriado',
   'statutory_zeroed_at',
   'statutory_zeroed_by',
   'statutory_zeroed_reason',

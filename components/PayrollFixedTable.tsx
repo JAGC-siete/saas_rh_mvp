@@ -8,9 +8,11 @@ import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Textarea } from './ui/textarea'
 import { Icon } from './Icon'
+import { calculateOvertimePayFromAhc } from '../lib/payroll/overtime-pay'
+import { HONDURAS_LABOR_FACTOR } from '../lib/payroll/constants'
 
 const HORAS_EXTRA_AHC_INFO =
-  'Admin por día: suma informativa de horas extra AHC del período (el bruto sigue por días). Admin con piso horario: excedente sobre el tope de horas ordinarias/día de la empresa; entra al bruto cuando aplica pago de HE.'
+  'Administrativo por día: horas AHC (diurno/nocturno/feriado) con recargos. Si la empresa y el empleado tienen pago de HE activo, el monto entra al bruto (IHSS/RAP/ISR siguen sobre salario base). Sin salida no hay HE. Puede editarse en la corrida.'
 
 interface PayrollFixedTableProps {
   rows: UnifiedRow[]
@@ -30,6 +32,14 @@ interface PayrollFixedTableProps {
     days_worked: number
     reason?: string
   }) => Promise<void>
+  // eslint-disable-next-line no-unused-vars
+  onAdjustFixedOvertime?: (_payload: {
+    run_line_id: string
+    overtime: { diurno: number; nocturno: number; feriado: number }
+    reason?: string
+  }) => Promise<void>
+  /** Company pays OT — used to enable Editar HE */
+  companyPayOvertime?: boolean
   onResetLineRecalc?: (_runLineId: string) => Promise<void>
   canResetLineRecalc?: boolean
   /** Omitir IHSS/RAP/ISR en esta línea (draft/edited) */
@@ -49,6 +59,8 @@ export default function PayrollFixedTable({
   canAdjustFixedDays = false,
   payrollRunStatus,
   onAdjustFixedDays,
+  onAdjustFixedOvertime,
+  companyPayOvertime = true,
   onResetLineRecalc,
   canResetLineRecalc = false,
   canZeroStatutory = false,
@@ -65,6 +77,16 @@ export default function PayrollFixedTable({
   const [daysInput, setDaysInput] = useState('')
   const [daysReason, setDaysReason] = useState('')
   const [daysSaving, setDaysSaving] = useState(false)
+  const [otModal, setOtModal] = useState<{
+    runLineId: string
+    employeeName: string
+    baseSalary: number
+  } | null>(null)
+  const [otDiurno, setOtDiurno] = useState('')
+  const [otNocturno, setOtNocturno] = useState('')
+  const [otFeriado, setOtFeriado] = useState('')
+  const [otReason, setOtReason] = useState('')
+  const [otSaving, setOtSaving] = useState(false)
   const [statutoryModal, setStatutoryModal] = useState<{
     runLineId: string
     employeeName: string
@@ -183,6 +205,57 @@ export default function PayrollFixedTable({
       alert(e instanceof Error ? e.message : 'Error al ajustar días')
     } finally {
       setDaysSaving(false)
+    }
+  }
+
+  const openOtModal = (row: UnifiedRow) => {
+    const runLineId = row.line_id
+    if (!runLineId) {
+      alert('No hay línea de corrida para este empleado. Genere vista previa primero.')
+      return
+    }
+    const meta = (row as { metadata?: Record<string, unknown> }).metadata
+    setOtModal({
+      runLineId,
+      employeeName: row.name || 'Empleado',
+      baseSalary: row.base_salary || 0,
+    })
+    setOtDiurno(String(Number(meta?.ot_diurno) || 0))
+    setOtNocturno(String(Number(meta?.ot_nocturno) || 0))
+    setOtFeriado(String(Number(meta?.ot_feriado) || 0))
+    setOtReason('')
+  }
+
+  const closeOtModal = () => {
+    setOtModal(null)
+    setOtDiurno('')
+    setOtNocturno('')
+    setOtFeriado('')
+    setOtReason('')
+  }
+
+  const submitOtAdjust = async () => {
+    if (!otModal || !onAdjustFixedOvertime) return
+    const diurno = Number(otDiurno)
+    const nocturno = Number(otNocturno)
+    const feriado = Number(otFeriado)
+    if (![diurno, nocturno, feriado].every((n) => Number.isFinite(n) && n >= 0)) {
+      alert('Ingrese horas ≥ 0 para cada tipo')
+      return
+    }
+    setOtSaving(true)
+    try {
+      await onAdjustFixedOvertime({
+        run_line_id: otModal.runLineId,
+        overtime: { diurno, nocturno, feriado },
+        reason: otReason.trim() || undefined,
+      })
+      closeOtModal()
+    } catch (e) {
+      console.error(e)
+      alert(e instanceof Error ? e.message : 'Error al ajustar horas extras')
+    } finally {
+      setOtSaving(false)
     }
   }
 
@@ -341,10 +414,34 @@ export default function PayrollFixedTable({
                     </div>
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm align-top">
-                    <div className="tabular-nums font-medium text-amber-200/95">
-                      {(row.extras?.horas ?? 0) > 0
-                        ? `${(row.extras?.horas ?? 0).toFixed(2)} h`
-                        : '—'}
+                    <div className="flex flex-wrap items-center gap-2">
+                      <div className="tabular-nums font-medium text-amber-200/95">
+                        {(row.extras?.horas ?? 0) > 0
+                          ? `${(row.extras?.horas ?? 0).toFixed(2)} h`
+                          : '—'}
+                      </div>
+                      {onAdjustFixedOvertime &&
+                      row.line_id &&
+                      row.pay_type !== 'admin_floor' ? (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openOtModal(row)}
+                          disabled={loading || !canAdjustFixedDays || !companyPayOvertime}
+                          className="h-8 gap-1.5 border-white/30 bg-white/10 px-2.5 text-xs text-white hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-50"
+                          title={
+                            !companyPayOvertime
+                              ? 'La empresa tiene desactivado el pago de horas extras'
+                              : canAdjustFixedDays
+                                ? 'Ajustar desglose AHC (diurno/nocturno/feriado) y sumar al bruto'
+                                : `No se pueden editar HE con la corrida en estado "${payrollRunStatus || 'actual'}". Debe estar en borrador o consolidada (sin autorizar).`
+                          }
+                        >
+                          <Icon name="edit" className="h-3.5 w-3.5 shrink-0" />
+                          Editar HE
+                        </Button>
+                      ) : null}
                     </div>
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-green-300">
@@ -421,6 +518,7 @@ export default function PayrollFixedTable({
                         Boolean(
                           (row as { edited?: boolean }).edited ||
                             meta?.days_adjusted_at ||
+                            meta?.ot_adjusted_at ||
                             meta?.statutory_zeroed_at
                         ) && (
                         <Button
@@ -490,7 +588,8 @@ export default function PayrollFixedTable({
             <h3 className="text-lg font-semibold">Ajustar días trabajados</h3>
             <p className="mt-1 text-sm text-gray-300">{daysModal.employeeName}</p>
             <p className="mt-2 text-xs text-amber-200/90">
-              Se recalculan salario proporcional, deducciones de ley y planes como en la vista previa.
+              Se recalculan salario proporcional, horas extras (override o AHC), deducciones de ley
+              (sobre salario base) y planes.
             </p>
             <div className="mt-4 space-y-3">
               <div>
@@ -527,6 +626,99 @@ export default function PayrollFixedTable({
               </Button>
               <Button type="button" onClick={submitDaysAdjust} disabled={daysSaving}>
                 {daysSaving ? 'Guardando…' : 'Recalcular y guardar'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {otModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-lg border border-white/20 bg-gray-900 p-6 text-white shadow-xl">
+            <h3 className="text-lg font-semibold">Ajustar horas extras</h3>
+            <p className="mt-1 text-sm text-gray-300">{otModal.employeeName}</p>
+            <p className="mt-2 text-xs text-amber-200/90">
+              Recargos: diurno ×1.25, nocturno ×1.5, feriado ×1.75 sobre tarifa (mensual÷240). El
+              monto se suma al bruto; IHSS/RAP/ISR no cambian de base.
+            </p>
+            {(() => {
+              const d = Number(otDiurno) || 0
+              const n = Number(otNocturno) || 0
+              const f = Number(otFeriado) || 0
+              const rate = (otModal.baseSalary || 0) / HONDURAS_LABOR_FACTOR
+              const pay = calculateOvertimePayFromAhc(
+                { diurno: d, nocturno: n, feriado: f },
+                rate
+              )
+              return (
+                <p className="mt-2 text-sm text-emerald-300">
+                  Vista previa HE: {formatCurrency(pay)}
+                </p>
+              )
+            })()}
+            <div className="mt-4 space-y-3">
+              <div>
+                <label htmlFor="ot-diurno" className="block text-sm font-medium text-gray-200">
+                  Diurno (h)
+                </label>
+                <Input
+                  id="ot-diurno"
+                  type="number"
+                  min={0}
+                  step={0.25}
+                  value={otDiurno}
+                  onChange={(e) => setOtDiurno(e.target.value)}
+                  className="mt-1 border-white/20 bg-white/10 text-white"
+                />
+              </div>
+              <div>
+                <label htmlFor="ot-nocturno" className="block text-sm font-medium text-gray-200">
+                  Nocturno (h)
+                </label>
+                <Input
+                  id="ot-nocturno"
+                  type="number"
+                  min={0}
+                  step={0.25}
+                  value={otNocturno}
+                  onChange={(e) => setOtNocturno(e.target.value)}
+                  className="mt-1 border-white/20 bg-white/10 text-white"
+                />
+              </div>
+              <div>
+                <label htmlFor="ot-feriado" className="block text-sm font-medium text-gray-200">
+                  Feriado / mixto (h)
+                </label>
+                <Input
+                  id="ot-feriado"
+                  type="number"
+                  min={0}
+                  step={0.25}
+                  value={otFeriado}
+                  onChange={(e) => setOtFeriado(e.target.value)}
+                  className="mt-1 border-white/20 bg-white/10 text-white"
+                />
+              </div>
+              <div>
+                <label htmlFor="ot-reason" className="block text-sm font-medium text-gray-200">
+                  Motivo (opcional)
+                </label>
+                <Textarea
+                  id="ot-reason"
+                  value={otReason}
+                  onChange={(e) => setOtReason(e.target.value)}
+                  rows={2}
+                  className="mt-1 border-white/20 bg-white/10 text-white"
+                  placeholder="Ej. corrección AHC"
+                />
+              </div>
+            </div>
+            <div className="mt-6 flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={closeOtModal} disabled={otSaving}>
+                Cancelar
+              </Button>
+              <Button type="button" onClick={submitOtAdjust} disabled={otSaving}>
+                {otSaving ? 'Guardando…' : 'Recalcular y guardar'}
               </Button>
             </div>
           </div>

@@ -15,7 +15,7 @@ import {
 import { sumAdminFloorPeriodHours } from '../lib/payroll/admin-floor-hours'
 
 describe('mapPlanillaItemToUnifiedRow', () => {
-  it('maps horas_extras into extras.horas (fixed informational HE)', () => {
+  it('maps horas_extras into extras.horas (fixed AHC HE display)', () => {
     const row = mapPlanillaItemToUnifiedRow({
       employee_id: 'e1',
       name: 'Test',

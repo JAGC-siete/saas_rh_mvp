@@ -623,7 +623,7 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
         m === 'hourly'
           ? 'Por hora'
           : m === 'admin_floor'
-            ? 'Admin con piso horario'
+            ? 'Legacy — Admin con piso horario'
             : 'Administrativo (por día de asistencia)'
       const oldMode = labelMode(initialConfig.calculation_mode ?? 'daily')
       const newMode = labelMode(cfg.calculation_mode ?? 'daily')
@@ -983,10 +983,12 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
                       className="w-4 h-4 text-emerald-600"
                     />
                     <div>
-                      <span className="text-white font-medium">Admin con piso horario</span>
+                      <span className="text-white font-medium">
+                        Legacy — Admin con piso horario
+                      </span>
                       <p className="text-xs text-gray-400 mt-0.5">
-                        Tarifa horaria (base÷240). Por día asistido nunca paga menos del tope ordinario;
-                        con entrada+salida y horas &gt; tope, el exceso es HE.
+                        No usar en altas nuevas. Preferir Administrativo (por día) con pago de HE.
+                        Ruta mantenida solo por compatibilidad.
                       </p>
                     </div>
                   </label>
@@ -1756,10 +1758,12 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
                         Pagar horas extras en nómina
                       </span>
                       <span className="text-xs text-gray-400 mt-1 block leading-relaxed">
-                        Activado: las horas extraordinarias impactan el bruto de empleados por hora elegibles.
-                        Desactivado: solo se registran y muestran en asistencia/nómina sin monto adicional.
-                        La elegibilidad por empleado se define en Información Laboral → Horas extras.
-                        Los empleados administrativos (fijos) siguen viendo horas AHC de forma informativa.
+                        Activado: las horas extraordinarias impactan el bruto de empleados elegibles
+                        (administrativos por día, por hora y legado piso). Desactivado: solo se
+                        registran y muestran sin monto adicional. La elegibilidad por empleado se
+                        define en Información Laboral → Horas extras. No configure un campo custom
+                        &quot;horas_extras&quot; como ingreso si el motor ya paga HE (evita doble
+                        conteo).
                       </span>
                     </div>
                     <input

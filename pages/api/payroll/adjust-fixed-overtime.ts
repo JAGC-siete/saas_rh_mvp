@@ -10,20 +10,23 @@ import {
   buildFixedLinePlanMetadata,
   mergeRecalcMetadata,
   type PreviewPaymentFrequency,
-  type PaymentCutDatesInput
+  type PaymentCutDatesInput,
 } from '../../../lib/payroll/fixed-line-recalc'
-import { resolveEffectivePayType, parseCompanyCalculationMode } from '../../../lib/payroll/resolve-effective-pay-type'
+import {
+  resolveEffectivePayType,
+  parseCompanyCalculationMode,
+} from '../../../lib/payroll/resolve-effective-pay-type'
 import {
   resolveCompanyPayOvertime,
   resolveFixedOvertimePay,
-  readOvertimeOverrideFromMetadata,
-  type OvertimeHoursBreakdown,
+  normalizeOvertimeBreakdown,
+  shouldPayOvertimeToEmployee,
 } from '../../../lib/payroll/overtime-pay'
 import { HONDURAS_LABOR_FACTOR } from '../../../lib/payroll/constants'
 import {
   assertNonHndStatutoryConfigParses,
   payrollStatutoryErrorResponse,
-  payrollStatutoryYearUnavailable
+  payrollStatutoryYearUnavailable,
 } from '../../../lib/payroll/statutory-api-guard'
 import { createEmployeeSalaryClient } from '../../../lib/security/employee-data-access'
 
@@ -31,7 +34,6 @@ function round2(n: number): number {
   return Math.round(n * 100) / 100
 }
 
-/** PostgREST cuando la función RPC aún no existe o no está en caché */
 function isPayrollRecalcRpcMissing(err: { message?: string; code?: string } | null): boolean {
   if (!err) return false
   const msg = (err.message || '').toLowerCase()
@@ -41,10 +43,6 @@ function isPayrollRecalcRpcMissing(err: { message?: string; code?: string } | nu
   return false
 }
 
-/**
- * Misma semántica que payroll_recalc_fixed_days_apply sin RPC (no atómico).
- * Usar solo si la migración no está aplicada en Supabase; conviene aplicar la migración.
- */
 async function persistFixedDaysRecalcViaTables(
   supabase: any,
   params: {
@@ -70,9 +68,7 @@ async function persistFixedDaysRecalcViaTables(
     .eq('company_id', p.company_id)
     .in('field', standardFields)
 
-  if (delError) {
-    return { error: delError }
-  }
+  if (delError) return { error: delError }
 
   const { error: updError } = await supabase
     .from('payroll_run_lines')
@@ -91,7 +87,7 @@ async function persistFixedDaysRecalcViaTables(
       eff_neto: p.calc_neto,
       metadata: p.metadata,
       tax_year: p.tax_year,
-      edited: true
+      edited: true,
     })
     .eq('id', p.run_line_id)
     .eq('company_id', p.company_id)
@@ -116,34 +112,40 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (!isPayrollCountryEngineEnabled(countryCode)) {
       return res.status(403).json({
         error: 'Nómina no habilitada para este país',
-        code: 'PAYROLL_COUNTRY_DISABLED'
+        code: 'PAYROLL_COUNTRY_DISABLED',
       })
     }
 
     if (!['super_admin', 'company_admin', 'hr_manager'].includes(role)) {
       return res.status(403).json({
         error: 'Permisos insuficientes',
-        message: 'No tiene permisos para ajustar nómina'
+        message: 'No tiene permisos para ajustar nómina',
       })
     }
 
-    const { run_line_id, days_worked: dwRaw, reason } = req.body || {}
+    const { run_line_id, overtime: otRaw, reason } = req.body || {}
 
-    if (!run_line_id || dwRaw === undefined || dwRaw === null) {
-      return res.status(400).json({ error: 'run_line_id y days_worked son requeridos' })
+    if (!run_line_id || !otRaw || typeof otRaw !== 'object') {
+      return res.status(400).json({
+        error: 'run_line_id y overtime { diurno, nocturno, feriado } son requeridos',
+      })
     }
 
-    const daysWorked = Number(dwRaw)
-    if (!Number.isFinite(daysWorked) || daysWorked < 0) {
-      return res.status(400).json({ error: 'days_worked debe ser un número >= 0' })
-    }
-    if (!Number.isInteger(daysWorked)) {
-      return res.status(400).json({ error: 'days_worked debe ser entero (días del período)' })
+    const overrideBreakdown = normalizeOvertimeBreakdown({
+      diurno: otRaw.diurno,
+      nocturno: otRaw.nocturno,
+      feriado: otRaw.feriado,
+    })
+
+    for (const [k, v] of Object.entries(overrideBreakdown)) {
+      if (!Number.isFinite(v) || v < 0) {
+        return res.status(400).json({ error: `overtime.${k} debe ser un número >= 0` })
+      }
     }
 
     const { data: line, error: lineError } = await supabase
       .from('payroll_run_lines')
-      .select('id, company_id, run_id, employee_id, metadata')
+      .select('id, company_id, run_id, employee_id, metadata, eff_hours')
       .eq('id', run_line_id)
       .eq('company_id', companyId)
       .single()
@@ -151,7 +153,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (lineError || !line) {
       return res.status(404).json({
         error: 'Línea no encontrada',
-        message: 'La línea no existe o no pertenece a su empresa'
+        message: 'La línea no existe o no pertenece a su empresa',
       })
     }
 
@@ -172,7 +174,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (!['draft', 'edited'].includes(run.status)) {
       return res.status(400).json({
         error: 'Corrida no editable',
-        message: `La corrida está en estado '${run.status}'`
+        message: `La corrida está en estado '${run.status}'`,
       })
     }
 
@@ -200,7 +202,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .maybeSingle()
 
     if (configError) {
-      console.error('adjust-fixed-days: config', configError)
+      console.error('adjust-fixed-overtime: config', configError)
     }
 
     const payrollMetadata = payrollConfig?.metadata || {}
@@ -210,9 +212,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (resolveEffectivePayType(employee.pay_type, companyCalculationMode) !== 'fixed') {
       return res.status(400).json({
-        error: 'Solo aplica a empleados con salario fijo (fixed)'
+        error: 'Solo aplica a empleados con salario fijo (fixed)',
       })
     }
+
+    const companyPayOvertime = resolveCompanyPayOvertime(payrollMetadata as Record<string, unknown>)
+    if (
+      !shouldPayOvertimeToEmployee(
+        companyPayOvertime,
+        'fixed',
+        (employee as { pay_overtime?: boolean | null }).pay_overtime
+      )
+    ) {
+      return res.status(400).json({
+        error: 'HE no pagable',
+        message:
+          'La empresa o el empleado tienen desactivado el pago de horas extras. No se puede ajustar HE en bruto.',
+      })
+    }
+
     const qcCol = payrollConfig?.quincena_config as {
       first_start?: number
       first_end?: number
@@ -228,7 +246,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return 'biweekly'
     }
     const paymentFrequency = mapFreq(
-      (payrollConfig?.payment_frequency as string) || (payrollMetadata.payment_frequency as string) || 'quincenal'
+      (payrollConfig?.payment_frequency as string) ||
+        (payrollMetadata.payment_frequency as string) ||
+        'quincenal'
     ) as PreviewPaymentFrequency
 
     const hasCustomQuincena = !!(
@@ -244,11 +264,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             metaCutDates.biweekly_type === 'custom' || hasCustomQuincena ? 'custom' : 'standard',
           biweekly_first_start: qcCol.first_start ?? (metaCutDates.biweekly_first_start as number) ?? 1,
           biweekly_first_end: qcCol.first_end ?? (metaCutDates.biweekly_first_end as number) ?? 15,
-          biweekly_second_start: qcCol.second_start ?? (metaCutDates.biweekly_second_start as number) ?? 16,
+          biweekly_second_start:
+            qcCol.second_start ?? (metaCutDates.biweekly_second_start as number) ?? 16,
           biweekly_second_end: qcCol.second_end ?? (metaCutDates.biweekly_second_end as number) ?? 30,
           monthly_type: metaCutDates.monthly_type === 'custom' ? 'custom' : 'standard',
           monthly_start: (metaCutDates.monthly_start as number) ?? 1,
-          monthly_end: (metaCutDates.monthly_end as number) ?? 30
+          monthly_end: (metaCutDates.monthly_end as number) ?? 30,
         }
       : {
           biweekly_type: metaCutDates.biweekly_type === 'custom' ? 'custom' : 'standard',
@@ -258,20 +279,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           biweekly_second_end: (metaCutDates.biweekly_second_end as number) ?? 30,
           monthly_type: metaCutDates.monthly_type === 'custom' ? 'custom' : 'standard',
           monthly_start: (metaCutDates.monthly_start as number) ?? 1,
-          monthly_end: (metaCutDates.monthly_end as number) ?? 30
+          monthly_end: (metaCutDates.monthly_end as number) ?? 30,
         }
 
     const legalDeductions = (payrollMetadata.legal_deductions || {
       ihss: true,
       rap: true,
       isr: true,
-      infop: false
+      infop: false,
     }) as { ihss: boolean; rap: boolean; isr: boolean; infop?: boolean }
 
-    const semanalProration = (payrollMetadata.semanal_proration || 'proportional') as 'proportional' | 'fixed'
+    const semanalProration = (payrollMetadata.semanal_proration || 'proportional') as
+      | 'proportional'
+      | 'fixed'
 
-    const { data: companyRow } = await supabase.from('companies').select('settings').eq('id', companyId).single()
-    const useIsrProjection = (companyRow?.settings as Record<string, unknown>)?.use_isr_projection === true
+    const { data: companyRow } = await supabase
+      .from('companies')
+      .select('settings')
+      .eq('id', companyId)
+      .single()
+    const useIsrProjection =
+      (companyRow?.settings as Record<string, unknown>)?.use_isr_projection === true
 
     const yearNum = run.year
     const monthNum = run.month
@@ -280,12 +308,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (paymentFrequency === 'weekly') {
       if (![1, 2, 3, 4].includes(quincenaNum)) {
         return res.status(400).json({
-          error: 'Semana inválida en la corrida (se espera 1–4 para nómina semanal)'
+          error: 'Semana inválida en la corrida (se espera 1–4 para nómina semanal)',
         })
       }
     } else if (![1, 2].includes(quincenaNum)) {
       return res.status(400).json({
-        error: 'Quincena inválida en la corrida (se espera 1 o 2)'
+        error: 'Quincena inválida en la corrida (se espera 1 o 2)',
       })
     }
 
@@ -298,13 +326,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     )
     const { diasPeriodo } = periodCtx
 
-    if (daysWorked > diasPeriodo) {
-      return res.status(400).json({
-        error: 'days_worked fuera de rango',
-        message: `Máximo ${diasPeriodo} días en este período`,
-        diasPeriodo
-      })
-    }
+    const lineMeta = (line.metadata || {}) as Record<string, unknown>
+    const metaDays = Number(lineMeta.days_worked)
+    const effDays = Number(line.eff_hours)
+    let daysWorked =
+      Number.isFinite(metaDays) && metaDays >= 0
+        ? Math.floor(metaDays)
+        : Number.isFinite(effDays) && effDays >= 0
+          ? Math.floor(effDays)
+          : 0
+    if (daysWorked > diasPeriodo) daysWorked = diasPeriodo
 
     const baseSalary = Number(employee.base_salary) || 0
     const yearCtx = await getTaxEngine(countryCode).loadYearContext(yearNum)
@@ -320,56 +351,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       diasPeriodo,
       ultimoDiaCalendario: periodCtx.ultimoDiaCalendario,
       isMonthlyCalendarStandard: periodCtx.isMonthlyCalendarStandard,
-      semanalProration
+      semanalProration,
     })
+    if (!isFinite(dayGross) || isNaN(dayGross)) dayGross = 0
 
-    if (!isFinite(dayGross) || isNaN(dayGross)) {
-      dayGross = 0
-    }
-
-    const lineMeta = (line.metadata || null) as Record<string, unknown> | null
-    const otOverride = readOvertimeOverrideFromMetadata(lineMeta)
-    let ahcBreakdown: OvertimeHoursBreakdown = { diurno: 0, nocturno: 0, feriado: 0 }
-
-    if (!otOverride) {
-      const { fechaInicio, fechaFin } = periodCtx
-      const { data: ahcRows } = await supabase
-        .from('attendance_hours_calculation')
-        .select(
-          'attendance_record_id, overtime_diurno_hours, overtime_nocturno_hours, overtime_feriado_hours'
-        )
-        .eq('employee_id', line.employee_id)
-      if (ahcRows && ahcRows.length > 0) {
-        const arIds = [...new Set(ahcRows.map((r: { attendance_record_id: string }) => r.attendance_record_id))]
-        const { data: arDates } = await supabase
-          .from('attendance_records')
-          .select('id, date')
-          .in('id', arIds)
-          .gte('date', fechaInicio)
-          .lte('date', fechaFin)
-        const valid = new Set((arDates || []).map((r: { id: string }) => r.id))
-        for (const row of ahcRows) {
-          if (!valid.has(row.attendance_record_id)) continue
-          ahcBreakdown.diurno += Number(row.overtime_diurno_hours || 0)
-          ahcBreakdown.nocturno += Number(row.overtime_nocturno_hours || 0)
-          ahcBreakdown.feriado += Number(row.overtime_feriado_hours || 0)
-        }
-      }
-    }
-
-    const companyPayOvertime = resolveCompanyPayOvertime(payrollMetadata as Record<string, unknown>)
     const otResolved = resolveFixedOvertimePay({
       companyPayOvertime,
       employeePayOvertime: (employee as { pay_overtime?: boolean | null }).pay_overtime,
       hourlyRate: baseSalary / HONDURAS_LABOR_FACTOR,
-      ahcBreakdown,
-      overrideBreakdown: otOverride,
+      ahcBreakdown: { diurno: 0, nocturno: 0, feriado: 0 },
+      overrideBreakdown,
     })
 
     let totalEarnings = dayGross + otResolved.pay
-    if (!isFinite(totalEarnings) || isNaN(totalEarnings)) {
-      totalEarnings = 0
-    }
+    if (!isFinite(totalEarnings) || isNaN(totalEarnings)) totalEarnings = 0
 
     const { data: plansData } = await supabase
       .from('employee_deduction_plans')
@@ -379,7 +374,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .eq('activo', true)
 
     const empPlans = (plansData || []).filter(
-      (p: { plazos_aplicados: number; plazos_totales: number }) => p.plazos_aplicados < p.plazos_totales
+      (p: { plazos_aplicados: number; plazos_totales: number }) =>
+        p.plazos_aplicados < p.plazos_totales
     )
 
     const ded = await computeFixedLineDeductionsAndNet({
@@ -397,7 +393,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       countryCode,
       totalEarnings,
       baseSalary,
-      empPlans
+      empPlans,
     })
 
     const IHSS = round2(ded.IHSS)
@@ -412,30 +408,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (p.field_key) planFieldKeys.add(p.field_key)
     }
     const reasonStr =
-      typeof reason === 'string' && reason.trim() ? reason.trim().slice(0, 500) : 'Ajuste de días trabajados'
+      typeof reason === 'string' && reason.trim()
+        ? reason.trim().slice(0, 500)
+        : 'Ajuste de horas extras'
 
-    const recalcMetaExtra: Record<string, unknown> = {
-      days_adjusted_at: new Date().toISOString(),
-      days_adjust_reason: reasonStr,
-      days_adjusted_by: user.id,
+    const recalcMeta = buildFixedLinePlanMetadata(yearNum, empPlans, {
+      ot_adjusted_at: new Date().toISOString(),
+      ot_adjust_reason: reasonStr,
+      ot_adjusted_by: user.id,
+      ot_diurno: overrideBreakdown.diurno,
+      ot_nocturno: overrideBreakdown.nocturno,
+      ot_feriado: overrideBreakdown.feriado,
       horas_extras: otResolved.hoursTotal,
       overtime_pay: otResolved.pay,
-      ot_diurno: otResolved.breakdown.diurno,
-      ot_nocturno: otResolved.breakdown.nocturno,
-      ot_feriado: otResolved.breakdown.feriado,
-    }
-    if (lineMeta?.ot_adjusted_at != null) {
-      recalcMetaExtra.ot_adjusted_at = lineMeta.ot_adjusted_at
-      if (lineMeta.ot_adjusted_by != null) recalcMetaExtra.ot_adjusted_by = lineMeta.ot_adjusted_by
-      if (lineMeta.ot_adjusted_reason != null) {
-        recalcMetaExtra.ot_adjusted_reason = lineMeta.ot_adjusted_reason
-      }
-      if (lineMeta.ot_adjust_reason != null) {
-        recalcMetaExtra.ot_adjust_reason = lineMeta.ot_adjust_reason
-      }
-    }
-
-    const recalcMeta = buildFixedLinePlanMetadata(yearNum, empPlans, recalcMetaExtra)
+    })
 
     const mergedMetadata = mergeRecalcMetadata(
       line.metadata as Record<string, unknown> | null,
@@ -454,14 +440,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       p_calc_neto: netTotal,
       p_metadata: mergedMetadata,
       p_tax_year: yearNum,
-      p_user_id: user.id
+      p_user_id: user.id,
     })
 
     let rpcPayload = rpcData as { success?: boolean; error?: string } | null
 
     if (rpcError && isPayrollRecalcRpcMissing(rpcError)) {
       console.warn(
-        'adjust-fixed-days: RPC payroll_recalc_fixed_days_apply no disponible; usando DELETE+UPDATE vía tablas. Aplique supabase/migrations/20260403000002_payroll_recalc_fixed_days_apply.sql y recargue el schema de PostgREST si hace falta.'
+        'adjust-fixed-overtime: RPC missing; using table fallback. Apply payroll_recalc_fixed_days_apply migration if needed.'
       )
       const { error: fbErr } = await persistFixedDaysRecalcViaTables(supabase, {
         run_line_id,
@@ -473,15 +459,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         calc_isr: ISR,
         calc_neto: netTotal,
         metadata: mergedMetadata,
-        tax_year: yearNum
+        tax_year: yearNum,
       })
       if (fbErr) {
-        console.error('adjust-fixed-days fallback', fbErr)
+        console.error('adjust-fixed-overtime fallback', fbErr)
         return res.status(500).json({
           error: 'Error persistiendo recálculo',
-          message:
-            fbErr.message ||
-            'Aplique la migración payroll_recalc_fixed_days_apply en Supabase (SQL Editor o supabase db push).'
+          message: fbErr.message,
         })
       }
       rpcPayload = { success: true }
@@ -489,7 +473,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       console.error('payroll_recalc_fixed_days_apply', rpcError)
       return res.status(500).json({
         error: 'Error persistiendo recálculo',
-        message: rpcError.message
+        message: rpcError.message,
       })
     }
 
@@ -504,7 +488,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .single()
 
     if (fetchErr) {
-      console.error('adjust-fixed-days fetch line', fetchErr)
+      console.error('adjust-fixed-overtime fetch line', fetchErr)
     }
 
     return res.status(200).json({
@@ -518,10 +502,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         eff_isr: ISR,
         eff_neto: netTotal,
         edited: true,
-        metadata: mergedMetadata
+        metadata: mergedMetadata,
       },
-      diasPeriodo,
-      total_deductions: totalDeductions
+      overtime_pay: otResolved.pay,
+      horas_extras: otResolved.hoursTotal,
+      total_deductions: totalDeductions,
     })
   } catch (e: unknown) {
     const stat = payrollStatutoryErrorResponse(e)
@@ -530,7 +515,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (err.message === 'UNAUTHORIZED') {
       return res.status(401).json({ error: 'Unauthorized' })
     }
-    console.error('adjust-fixed-days', e)
+    console.error('adjust-fixed-overtime', e)
     return res.status(500).json({ error: 'Error interno' })
   }
 }

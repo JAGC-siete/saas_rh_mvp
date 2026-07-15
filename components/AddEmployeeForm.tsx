@@ -68,8 +68,8 @@ function AddEmployeeForm({
   const defaultPayTypeLabel =
     companyCalculationMode === 'hourly'
       ? 'Default de la empresa (Por hora)'
-      : companyCalculationMode === 'admin_floor'
-        ? 'Default de la empresa (Admin con piso horario)'
+        : companyCalculationMode === 'admin_floor'
+        ? 'Default de la empresa (Legacy — Admin con piso horario)'
         : 'Default de la empresa (Administrativo)'
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -308,7 +308,7 @@ function AddEmployeeForm({
                     Administrativo (por día de asistencia)
                   </option>
                   <option value="admin_floor" className="bg-brand-900 text-white">
-                    Admin con piso horario
+                    Legacy — Admin con piso horario
                   </option>
                   <option value="hourly" className="bg-brand-900 text-white">
                     Por hora
@@ -317,9 +317,11 @@ function AddEmployeeForm({
                 <p className="text-xs text-gray-400 mt-1">
                   <strong>Default de la empresa:</strong> hereda el método por defecto de Nómina.
                   <br />
-                  <strong>Administrativo:</strong> Salario mensual por día de asistencia. Usa horario fijo para inferir entrada/salida.
+                  <strong>Administrativo:</strong> Salario mensual por día de asistencia. HE AHC
+                  (con recargos) entra al bruto si empresa y empleado pagan HE.
                   <br />
-                  <strong>Admin con piso horario:</strong> Tarifa horaria (base ÷ 240). Por día asistido nunca paga menos del tope ordinario; con ambas marcas y horas &gt; tope, el exceso es HE.
+                  <strong>Legacy — Admin con piso horario:</strong> No usar en altas nuevas; preferir
+                  administrativo por día.
                   <br />
                   <strong>Por hora:</strong> Ingresa el salario mensual equivalente. La tarifa por hora se calcula automáticamente (base ÷ 240).
                 </p>
@@ -441,11 +443,9 @@ function AddEmployeeForm({
                   </option>
                 </select>
                 <p className="text-xs text-gray-400 mt-1">
-                  <strong>Sí:</strong> elegible — si el parámetro de empresa &quot;Pagar horas extras&quot; está activo, las HE impactan el bruto (empleados por hora).
+                  <strong>Sí:</strong> elegible — si el parámetro de empresa &quot;Pagar horas extras&quot; está activo, las HE impactan el bruto (administrativos y por hora).
                   <br />
                   <strong>No:</strong> las HE pueden registrarse en asistencia, pero no impactan el bruto de este empleado.
-                  <br />
-                  Administrativos (fijos): las horas AHC siguen siendo informativas. Requiere el switch de empresa activo para pago.
                 </p>
               </div>
 

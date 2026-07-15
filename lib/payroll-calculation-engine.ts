@@ -446,9 +446,17 @@ function applyCustomFields(
   const context: CalculationContext = { baseSalary, metadata, calculatedFields }
 
   // Iterar sobre todos los campos personalizados definidos
+  const enginePaysOvertime =
+    metadata?.overtime_pay != null && Number.isFinite(Number(metadata.overtime_pay))
+
   for (const [fieldName, fieldDef] of Object.entries(customFieldsDefinitions)) {
     // Solo procesar campos con categoría earnings o deductions
     if (fieldDef.category !== 'earnings' && fieldDef.category !== 'deductions') {
+      continue
+    }
+
+    // Motor fixed ya suma HE en bruto: no doble-contar custom horas_extras
+    if (enginePaysOvertime && fieldName === 'horas_extras' && fieldDef.category === 'earnings') {
       continue
     }
 

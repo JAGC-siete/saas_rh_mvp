@@ -41,6 +41,13 @@ interface UnifiedPayrollTableProps {
     days_worked: number
     reason?: string
   }) => Promise<void>
+  // eslint-disable-next-line no-unused-vars
+  onAdjustFixedOvertime?: (_payload: {
+    run_line_id: string
+    overtime: { diurno: number; nocturno: number; feriado: number }
+    reason?: string
+  }) => Promise<void>
+  companyPayOvertime?: boolean
   onResetLineRecalc?: (_runLineId: string) => Promise<void>
   canResetLineRecalc?: boolean
   canZeroStatutory?: boolean
@@ -62,6 +69,7 @@ interface UnifiedPayrollTableProps {
   payrollApiConfig?: {
     legal_deductions?: { ihss?: boolean; rap?: boolean; isr?: boolean }
     custom_fields?: Record<string, unknown>
+    pay_overtime?: boolean
   } | null
 }
 
@@ -79,6 +87,8 @@ export default function UnifiedPayrollTable({
   canAdjustFixedDays = false,
   payrollRunStatus,
   onAdjustFixedDays,
+  onAdjustFixedOvertime,
+  companyPayOvertime = true,
   onResetLineRecalc,
   canResetLineRecalc = false,
   canZeroStatutory = false,
@@ -491,6 +501,8 @@ export default function UnifiedPayrollTable({
             canAdjustFixedDays={canAdjustFixedDays}
             payrollRunStatus={status}
             onAdjustFixedDays={onAdjustFixedDays}
+            onAdjustFixedOvertime={onAdjustFixedOvertime}
+            companyPayOvertime={companyPayOvertime}
             onResetLineRecalc={onResetLineRecalc}
             canResetLineRecalc={canResetLineRecalc}
             canZeroStatutory={canZeroStatutory}

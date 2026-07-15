@@ -27,8 +27,7 @@ export function parseEmployeePayOvertimeInput(value: unknown): boolean {
 
 /**
  * Company master (pay_overtime) + employee eligibility (pay_overtime).
- * Fixed: AHC overtime stays informational (never impacts bruto via this gate).
- * Hourly + admin_floor: paid when company ON and employee !== false.
+ * Fixed + hourly + admin_floor: paid when company ON and employee !== false.
  */
 export function shouldPayOvertimeToEmployee(
   companyPayOvertime: boolean,
@@ -37,7 +36,11 @@ export function shouldPayOvertimeToEmployee(
 ): boolean {
   if (!companyPayOvertime) return false
   if (!resolveEmployeePayOvertime(employeePayOvertime)) return false
-  return effectivePayType === 'hourly' || effectivePayType === 'admin_floor'
+  return (
+    effectivePayType === 'fixed' ||
+    effectivePayType === 'hourly' ||
+    effectivePayType === 'admin_floor'
+  )
 }
 
 export function calculateOvertimePayFromAhc(
@@ -56,4 +59,65 @@ export function calculateOvertimePayFromAhc(
 
 export function overtimeHoursTotal(ot: OvertimeHoursBreakdown): number {
   return (Number(ot.diurno) || 0) + (Number(ot.nocturno) || 0) + (Number(ot.feriado) || 0)
+}
+
+export function normalizeOvertimeBreakdown(
+  raw: Partial<OvertimeHoursBreakdown> | null | undefined
+): OvertimeHoursBreakdown {
+  return {
+    diurno: Math.max(0, Number(raw?.diurno) || 0),
+    nocturno: Math.max(0, Number(raw?.nocturno) || 0),
+    feriado: Math.max(0, Number(raw?.feriado) || 0),
+  }
+}
+
+/** Read ot_diurno / ot_nocturno / ot_feriado from payroll line metadata (manual override). */
+export function readOvertimeOverrideFromMetadata(
+  metadata: Record<string, unknown> | null | undefined
+): OvertimeHoursBreakdown | null {
+  if (!metadata || metadata.ot_adjusted_at == null) return null
+  const diurno = Number(metadata.ot_diurno)
+  const nocturno = Number(metadata.ot_nocturno)
+  const feriado = Number(metadata.ot_feriado)
+  if (![diurno, nocturno, feriado].every((n) => Number.isFinite(n) && n >= 0)) {
+    return null
+  }
+  return { diurno, nocturno, feriado }
+}
+
+export type ResolveFixedOvertimePayInput = {
+  companyPayOvertime: boolean
+  employeePayOvertime?: boolean | null
+  hourlyRate: number
+  ahcBreakdown: OvertimeHoursBreakdown
+  overrideBreakdown?: OvertimeHoursBreakdown | null
+}
+
+export type ResolveFixedOvertimePayResult = {
+  pay: number
+  hoursTotal: number
+  breakdown: OvertimeHoursBreakdown
+  paid: boolean
+}
+
+/**
+ * Fixed (and shared) OT money resolution: gate → override wins over AHC → premium pay.
+ */
+export function resolveFixedOvertimePay(
+  input: ResolveFixedOvertimePayInput
+): ResolveFixedOvertimePayResult {
+  const paid = shouldPayOvertimeToEmployee(
+    input.companyPayOvertime,
+    'fixed',
+    input.employeePayOvertime
+  )
+  const breakdown = normalizeOvertimeBreakdown(
+    input.overrideBreakdown ?? input.ahcBreakdown
+  )
+  const hoursTotal = Math.round(overtimeHoursTotal(breakdown) * 100) / 100
+  if (!paid) {
+    return { pay: 0, hoursTotal, breakdown, paid: false }
+  }
+  const pay = calculateOvertimePayFromAhc(breakdown, input.hourlyRate)
+  return { pay, hoursTotal, breakdown, paid: true }
 }

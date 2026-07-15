@@ -11,7 +11,9 @@ import {
   resolveCompanyPayOvertime,
   shouldPayOvertimeToEmployee,
   calculateOvertimePayFromAhc,
-  overtimeHoursTotal
+  overtimeHoursTotal,
+  resolveFixedOvertimePay,
+  readOvertimeOverrideFromMetadata,
 } from '../lib/payroll/overtime-pay'
 
 describe('resolveEffectivePayType', () => {
@@ -64,16 +66,59 @@ describe('shouldPayOvertimeToEmployee (Capa 2)', () => {
     assert.equal(shouldPayOvertimeToEmployee(true, 'hourly', false), false)
   })
 
-  it('company true + fixed → never paid (AHC informational)', () => {
-    assert.equal(shouldPayOvertimeToEmployee(true, 'fixed'), false)
-    assert.equal(shouldPayOvertimeToEmployee(true, 'fixed', null), false)
+  it('company true + fixed + Sí (default) → paid', () => {
+    assert.equal(shouldPayOvertimeToEmployee(true, 'fixed'), true)
+    assert.equal(shouldPayOvertimeToEmployee(true, 'fixed', null), true)
+    assert.equal(shouldPayOvertimeToEmployee(true, 'fixed', true), true)
+  })
+
+  it('company true + fixed + No → not paid', () => {
     assert.equal(shouldPayOvertimeToEmployee(true, 'fixed', false), false)
-    assert.equal(shouldPayOvertimeToEmployee(true, 'fixed', true), false)
   })
 
   it('company true + admin_floor + Sí → paid', () => {
     assert.equal(shouldPayOvertimeToEmployee(true, 'admin_floor', true), true)
     assert.equal(shouldPayOvertimeToEmployee(true, 'admin_floor', false), false)
+  })
+})
+
+describe('resolveFixedOvertimePay', () => {
+  it('employee false → pay 0 but keeps hours for display', () => {
+    const r = resolveFixedOvertimePay({
+      companyPayOvertime: true,
+      employeePayOvertime: false,
+      hourlyRate: 100,
+      ahcBreakdown: { diurno: 2, nocturno: 0, feriado: 0 },
+    })
+    assert.equal(r.paid, false)
+    assert.equal(r.pay, 0)
+    assert.equal(r.hoursTotal, 2)
+  })
+
+  it('override wins over AHC when paid', () => {
+    const r = resolveFixedOvertimePay({
+      companyPayOvertime: true,
+      employeePayOvertime: true,
+      hourlyRate: 100,
+      ahcBreakdown: { diurno: 8, nocturno: 0, feriado: 0 },
+      overrideBreakdown: { diurno: 2, nocturno: 0, feriado: 0 },
+    })
+    assert.equal(r.paid, true)
+    assert.equal(r.pay, 250)
+    assert.equal(r.hoursTotal, 2)
+  })
+
+  it('readOvertimeOverrideFromMetadata requires ot_adjusted_at', () => {
+    assert.equal(readOvertimeOverrideFromMetadata({ ot_diurno: 1 }), null)
+    assert.deepEqual(
+      readOvertimeOverrideFromMetadata({
+        ot_adjusted_at: '2026-01-01',
+        ot_diurno: 1,
+        ot_nocturno: 0.5,
+        ot_feriado: 0,
+      }),
+      { diurno: 1, nocturno: 0.5, feriado: 0 }
+    )
   })
 })
 
@@ -121,7 +166,7 @@ describe('AHC overtime tracking (fixed employee)', () => {
       ahcOvertimeByEmployee[eid] = (ahcOvertimeByEmployee[eid] || 0) + ot
     }
     assert.equal(ahcOvertimeByEmployee['emp-fixed'], 2.5)
-    assert.equal(shouldPayOvertimeToEmployee(true, 'fixed'), false)
+    assert.equal(shouldPayOvertimeToEmployee(true, 'fixed'), true)
   })
 })
 

@@ -514,7 +514,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           : periodBase
       }
       if (
-        effectivePayType === 'hourly' &&
+        (effectivePayType === 'hourly' || effectivePayType === 'fixed') &&
         shouldPayOvertimeToEmployee(companyPayOvertime, effectivePayType, emp.pay_overtime)
       ) {
         total_earnings += overtimePay
