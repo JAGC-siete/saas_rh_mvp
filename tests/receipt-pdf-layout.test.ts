@@ -31,6 +31,7 @@ const allSectionIds = [
   'days_worked',
   'base_salary',
   'septimo_dia',
+  'overtime_pay',
   'ihss',
   'rap',
   'isr',
@@ -75,6 +76,27 @@ describe('employee receipt pdf layout', () => {
       'Empresa de Prueba S. de R.L.',
       'Quincena 2',
       { visibleSections: new Set(withoutCustomSection) }
+    )
+
+    assert.equal(pageCount(pdf), 1)
+    assert.ok(pdf.length > 1200)
+  })
+
+  it('still renders a single page when overtime earnings are present', async () => {
+    const pdf = await generateEmployeeReceiptPDF(
+      {
+        ...baseRecord,
+        base_salary: 8000,
+        overtime_pay: 1385.83,
+        horas_extras: 16.63,
+        net_salary: 8280.83,
+      },
+      '2026-07',
+      1,
+      undefined,
+      'Empresa de Prueba S. de R.L.',
+      'Quincena 1',
+      { visibleSections: new Set(allSectionIds) }
     )
 
     assert.equal(pageCount(pdf), 1)

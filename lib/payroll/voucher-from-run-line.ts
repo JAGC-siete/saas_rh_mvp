@@ -106,9 +106,22 @@ export async function buildVoucherFromRunLine(
 
   const septimoDia =
     Number(lineData.seventh_day_pay) ||
-    Number((lineData.metadata as Record<string, unknown>)?.septimo_dia) ||
+    Number(lineMetadata.septimo_dia) ||
     0
-  const baseSalaryForReceipt = septimoDia > 0 ? brutoTotal - septimoDia : brutoTotal
+  const overtimePayRaw = Number(lineMetadata.overtime_pay)
+  const overtimePay =
+    Number.isFinite(overtimePayRaw) && overtimePayRaw > 0
+      ? Math.round(overtimePayRaw * 100) / 100
+      : 0
+  const horasExtrasRaw = Number(lineMetadata.horas_extras)
+  const horasExtras =
+    Number.isFinite(horasExtrasRaw) && horasExtrasRaw > 0
+      ? Math.round(horasExtrasRaw * 100) / 100
+      : 0
+  const baseSalaryForReceipt = Math.max(
+    0,
+    Math.round((brutoTotal - (septimoDia > 0 ? septimoDia : 0) - overtimePay) * 100) / 100
+  )
 
   const employeeCode = employee.employee_code || 'empleado'
   const periodLabel = `Quincena ${run.quincena}`
@@ -124,6 +137,8 @@ export async function buildVoucherFromRunLine(
       days_worked: Math.floor(lineData.eff_hours || 0),
       base_salary: baseSalaryForReceipt,
       septimo_dia: septimoDia > 0 ? septimoDia : undefined,
+      overtime_pay: overtimePay > 0 ? overtimePay : undefined,
+      horas_extras: horasExtras > 0 ? horasExtras : undefined,
       income_tax: lineData.eff_isr || 0,
       professional_tax: lineData.eff_rap || 0,
       social_security: lineData.eff_ihss || 0,

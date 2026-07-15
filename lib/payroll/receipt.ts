@@ -48,6 +48,10 @@ export interface EmployeeReceiptInput {
   custom_deductions?: Array<{ name: string; amount: number }>
   /** Séptimo Día (Art. 338-340) - solo para hourly */
   septimo_dia?: number
+  /** Pago de horas extras incluido en el bruto de la línea */
+  overtime_pay?: number
+  /** Horas extras del período (AHC / ajuste) para etiqueta del comprobante */
+  horas_extras?: number
 }
 
 function sectionVisible(id: string, options?: VoucherPdfOptions): boolean {
@@ -73,6 +77,19 @@ function fieldLabel(id: string, fallback: string, options?: VoucherPdfOptions): 
   return options?.labels?.[id] ?? fallback
 }
 
+/** Label for overtime earnings line, optionally including hours. */
+export function overtimePayReceiptLabel(
+  record: Pick<EmployeeReceiptInput, 'horas_extras'>,
+  options?: VoucherPdfOptions
+): string {
+  const base = fieldLabel('overtime_pay', 'Horas extras', options)
+  const hours = Number(record.horas_extras)
+  if (Number.isFinite(hours) && hours > 0) {
+    return `${base} (${hours.toFixed(2)} h)`
+  }
+  return base
+}
+
 type ReceiptLayout = {
   headerHeight: number
   pageHeight: number
@@ -81,6 +98,7 @@ type ReceiptLayout = {
   employeeRowCount: number
   showEarnings: boolean
   hasSeptimoDia: boolean
+  hasOvertimePay: boolean
   showBaseSalary: boolean
   showDeductions: boolean
   visibleStatutory: number
@@ -117,8 +135,10 @@ function buildReceiptLayout(
   if (sectionVisible('days_worked', options)) employeeRowCount += 1
 
   const hasSeptimoDia = (record.septimo_dia ?? 0) > 0 && sectionVisible('septimo_dia', options)
+  const hasOvertimePay =
+    (record.overtime_pay ?? 0) > 0 && sectionVisible('overtime_pay', options)
   const showBaseSalary = sectionVisible('base_salary', options)
-  const showEarnings = showBaseSalary || hasSeptimoDia
+  const showEarnings = showBaseSalary || hasSeptimoDia || hasOvertimePay
   const showCustomDeductionLines = shouldShowCustomDeductionLines(record, options)
   const customDeductionsCount = showCustomDeductionLines ? record.custom_deductions?.length || 0 : 0
   const visibleStatutory =
@@ -144,7 +164,8 @@ function buildReceiptLayout(
     y += 16 + boxHeight + 12
   }
   if (showEarnings) {
-    const earningsRows = (showBaseSalary ? 1 : 0) + (hasSeptimoDia ? 1 : 0)
+    const earningsRows =
+      (showBaseSalary ? 1 : 0) + (hasSeptimoDia ? 1 : 0) + (hasOvertimePay ? 1 : 0)
     const earningsHeight = TABLE_HEADER_H + PAD + earningsRows * ROW_H + PAD
     y += 14 + Math.max(earningsHeight, 36) + 12
   }
@@ -184,6 +205,7 @@ function buildReceiptLayout(
     employeeRowCount,
     showEarnings,
     hasSeptimoDia,
+    hasOvertimePay,
     showBaseSalary,
     showDeductions,
     visibleStatutory,
@@ -404,6 +426,12 @@ export async function generateEmployeeReceiptPDF(
           items.push({
             label: `${fieldLabel('septimo_dia', 'Séptimo día', options)}`,
             amount: formatHNL(record.septimo_dia!),
+          })
+        }
+        if (layout.hasOvertimePay) {
+          items.push({
+            label: overtimePayReceiptLabel(record, options),
+            amount: formatHNL(record.overtime_pay!),
           })
         }
 

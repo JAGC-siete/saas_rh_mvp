@@ -1,5 +1,5 @@
 import { formatPeriodRangeForDisplay } from './period-dates'
-import type { EmployeeReceiptInput } from './receipt'
+import { overtimePayReceiptLabel, type EmployeeReceiptInput } from './receipt'
 import { formatVoucherCompanyName, type VoucherPdfOptions } from './voucher-pdf-options'
 import type { VoucherFromRunLineResult } from './voucher-from-run-line'
 
@@ -104,6 +104,12 @@ export function buildVoucherPreviewPayload(
     earnings.push({
       label: fieldLabel('septimo_dia', 'Séptimo día', options),
       amount: record.septimo_dia!,
+    })
+  }
+  if ((record.overtime_pay ?? 0) > 0 && sectionVisible('overtime_pay', options)) {
+    earnings.push({
+      label: overtimePayReceiptLabel(record, options),
+      amount: record.overtime_pay!,
     })
   }
 

@@ -54,4 +54,38 @@ describe('buildVoucherPreviewPayload', () => {
     assert.equal(preview.deductions.length, 0)
     assert.equal(preview.bank.length, 0)
   })
+
+  it('includes overtime pay as a separate earnings line with hours in the label', () => {
+    const withOt: VoucherFromRunLineResult = {
+      ...sampleVoucher,
+      record: {
+        ...sampleVoucher.record,
+        base_salary: 8000,
+        overtime_pay: 1385.83,
+        horas_extras: 16.63,
+        net_salary: 8957.52,
+      },
+    }
+    const preview = buildVoucherPreviewPayload('line-ot', withOt)
+    assert.equal(preview.earnings.length, 2)
+    assert.equal(preview.earnings[0]?.amount, 8000)
+    assert.equal(preview.earnings[1]?.amount, 1385.83)
+    assert.match(preview.earnings[1]?.label || '', /16\.63 h/)
+  })
+
+  it('hides overtime pay when voucher config omits overtime_pay section', () => {
+    const withOt: VoucherFromRunLineResult = {
+      ...sampleVoucher,
+      record: {
+        ...sampleVoucher.record,
+        overtime_pay: 500,
+        horas_extras: 4,
+      },
+    }
+    const preview = buildVoucherPreviewPayload('line-ot-hidden', withOt, {
+      visibleSections: new Set(['base_salary', 'net_salary']),
+    })
+    assert.equal(preview.earnings.length, 1)
+    assert.equal(preview.earnings[0]?.amount, sampleVoucher.record.base_salary)
+  })
 })
