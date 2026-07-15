@@ -36,8 +36,12 @@ import {
   shouldPayOvertimeToEmployee,
   resolveFixedOvertimePay,
   readOvertimeOverrideFromMetadata,
+  emptyOvertimeBreakdown,
+  overtimeBreakdownToMetadata,
+  overtimeHoursTotal,
   type OvertimeHoursBreakdown,
 } from '../../../lib/payroll/overtime-pay'
+import { ahcRowToOvertimeBreakdown } from '../../../lib/attendance/overtime-bands'
 import {
   resolveOrdinaryHoursCap,
   sumAdminFloorPeriodHours,
@@ -461,7 +465,12 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           normal_hours,
           overtime_diurno_hours,
           overtime_nocturno_hours,
-          overtime_feriado_hours
+          overtime_feriado_hours,
+          overtime_evening_25_hours,
+          overtime_night_50_hours,
+          overtime_late_75_hours,
+          overtime_morning_25_hours,
+          overtime_holiday_100_hours
         `)
         .in('employee_id', employeeIds)
       if (ahcData && ahcData.length > 0) {
@@ -475,18 +484,18 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         const validArIds = new Set((arDates || []).map((r: any) => r.id))
         for (const row of ahcData) {
           if (!validArIds.has(row.attendance_record_id)) continue
-          const diurno = Number(row.overtime_diurno_hours || 0)
-          const nocturno = Number(row.overtime_nocturno_hours || 0)
-          const feriado = Number(row.overtime_feriado_hours || 0)
-          const ot = diurno + nocturno + feriado
+          const mapped = ahcRowToOvertimeBreakdown(row)
+          const ot = overtimeHoursTotal(mapped)
           const eid = row.employee_id as string
           ahcOvertimeByEmployee[eid] = (ahcOvertimeByEmployee[eid] || 0) + ot
           if (!ahcOvertimeBreakdownByEmployee[eid]) {
-            ahcOvertimeBreakdownByEmployee[eid] = { diurno: 0, nocturno: 0, feriado: 0 }
+            ahcOvertimeBreakdownByEmployee[eid] = emptyOvertimeBreakdown()
           }
-          ahcOvertimeBreakdownByEmployee[eid].diurno += diurno
-          ahcOvertimeBreakdownByEmployee[eid].nocturno += nocturno
-          ahcOvertimeBreakdownByEmployee[eid].feriado += feriado
+          ahcOvertimeBreakdownByEmployee[eid].evening_25 += mapped.evening_25
+          ahcOvertimeBreakdownByEmployee[eid].night_50 += mapped.night_50
+          ahcOvertimeBreakdownByEmployee[eid].late_75 += mapped.late_75
+          ahcOvertimeBreakdownByEmployee[eid].morning_25 += mapped.morning_25
+          ahcOvertimeBreakdownByEmployee[eid].holiday_100 += mapped.holiday_100
           if (!isHourBasedPayType(effectivePayTypeByEmployee[eid])) continue
           if (!ahcByEmployee[eid]) {
             ahcByEmployee[eid] = { total_hours: 0, normal_hours: 0, by_record: {} }
@@ -795,11 +804,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           companyPayOvertime,
           employeePayOvertime: emp.pay_overtime,
           hourlyRate: base_salary / HONDURAS_LABOR_FACTOR,
-          ahcBreakdown: ahcOvertimeBreakdownByEmployee[emp.id] || {
-            diurno: 0,
-            nocturno: 0,
-            feriado: 0,
-          },
+          ahcBreakdown: ahcOvertimeBreakdownByEmployee[emp.id] || emptyOvertimeBreakdown(),
           overrideBreakdown: readOvertimeOverrideFromMetadata(prevMeta),
         })
         let total_earnings = dayGross + otResolved.pay
@@ -863,9 +868,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           position_snapshot: String((emp as any).position || (emp as any).role || ''),
           horas_extras: otResolved.hoursTotal,
           overtime_pay: otResolved.pay,
-          ot_diurno: otResolved.breakdown.diurno,
-          ot_nocturno: otResolved.breakdown.nocturno,
-          ot_feriado: otResolved.breakdown.feriado,
+          ...overtimeBreakdownToMetadata(otResolved.breakdown),
           ihss_patronal:
             countryCode === 'HND' && taxConstants
               ? calculateEmployerContributions({

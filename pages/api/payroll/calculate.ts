@@ -31,8 +31,12 @@ import {
 import {
   resolveCompanyPayOvertime,
   shouldPayOvertimeToEmployee,
-  calculateOvertimePayFromAhc
+  calculateOvertimePayFromAhc,
+  emptyOvertimeBreakdown,
+  overtimeHoursTotal,
+  type OvertimeHoursBreakdown,
 } from '../../../lib/payroll/overtime-pay'
+import { ahcRowToOvertimeBreakdown } from '../../../lib/attendance/overtime-bands'
 import {
   resolveOrdinaryHoursCap,
   sumAdminFloorPeriodHours,
@@ -328,12 +332,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Obtener cálculos de horas (total_hours, normal_hours, overtime por tipo)
     const recordIds = (attendanceRecords || []).map((r: any) => r.id).filter(Boolean)
-    let hoursCalculations: Record<string, { total_hours: number; normal_hours: number; overtime_diurno: number; overtime_nocturno: number; overtime_feriado: number }> = {}
+    let hoursCalculations: Record<
+      string,
+      { total_hours: number; normal_hours: number; overtime: OvertimeHoursBreakdown }
+    > = {}
     const ahcHoursByRecordId: Record<string, number> = {}
     if (recordIds.length > 0) {
       const { data: ahcResults } = await supabase
         .from('attendance_hours_calculation')
-        .select('attendance_record_id, total_hours, normal_hours, overtime_diurno_hours, overtime_nocturno_hours, overtime_feriado_hours')
+        .select(
+          `attendance_record_id, total_hours, normal_hours,
+          overtime_diurno_hours, overtime_nocturno_hours, overtime_feriado_hours,
+          overtime_evening_25_hours, overtime_night_50_hours, overtime_late_75_hours,
+          overtime_morning_25_hours, overtime_holiday_100_hours`
+        )
         .in('attendance_record_id', recordIds)
       if (ahcResults) {
         const recordToEmp = Object.fromEntries((attendanceRecords || []).map((r: any) => [r.id, r.employee_id]))
@@ -342,14 +354,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           const h = Number(ahc.total_hours || 0)
           ahcHoursByRecordId[ahc.attendance_record_id] = h
           if (empId) {
-            if (!hoursCalculations[empId]) hoursCalculations[empId] = { total_hours: 0, normal_hours: 0, overtime_diurno: 0, overtime_nocturno: 0, overtime_feriado: 0 }
+            if (!hoursCalculations[empId]) {
+              hoursCalculations[empId] = {
+                total_hours: 0,
+                normal_hours: 0,
+                overtime: emptyOvertimeBreakdown(),
+              }
+            }
             hoursCalculations[empId].total_hours += h
-            const total = h
-            const ot = Number(ahc.overtime_diurno_hours || 0) + Number(ahc.overtime_nocturno_hours || 0) + Number(ahc.overtime_feriado_hours || 0)
-            hoursCalculations[empId].normal_hours += Number(ahc.normal_hours ?? Math.max(0, total - ot))
-            hoursCalculations[empId].overtime_diurno += Number(ahc.overtime_diurno_hours || 0)
-            hoursCalculations[empId].overtime_nocturno += Number(ahc.overtime_nocturno_hours || 0)
-            hoursCalculations[empId].overtime_feriado += Number(ahc.overtime_feriado_hours || 0)
+            const mapped = ahcRowToOvertimeBreakdown(ahc)
+            const ot = overtimeHoursTotal(mapped)
+            hoursCalculations[empId].normal_hours += Number(ahc.normal_hours ?? Math.max(0, h - ot))
+            hoursCalculations[empId].overtime.evening_25 += mapped.evening_25
+            hoursCalculations[empId].overtime.night_50 += mapped.night_50
+            hoursCalculations[empId].overtime.late_75 += mapped.late_75
+            hoursCalculations[empId].overtime.morning_25 += mapped.morning_25
+            hoursCalculations[empId].overtime.holiday_100 += mapped.holiday_100
           }
         }
       }
@@ -439,15 +459,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const hourlyRate = base_salary / HONDURAS_LABOR_FACTOR
 
       // Horas extras desde attendance_hours_calculation (Capa 3) si existen
-      const overtime = hoursCalculations[emp.id] || { total_hours: 0, normal_hours: 0, overtime_diurno: 0, overtime_nocturno: 0, overtime_feriado: 0 }
-      const overtimePay = calculateOvertimePayFromAhc(
-        {
-          diurno: Number(overtime.overtime_diurno) || 0,
-          nocturno: Number(overtime.overtime_nocturno) || 0,
-          feriado: Number(overtime.overtime_feriado) || 0
-        },
-        hourlyRate
-      )
+      const overtimeBag = hoursCalculations[emp.id] || {
+        total_hours: 0,
+        normal_hours: 0,
+        overtime: emptyOvertimeBreakdown(),
+      }
+      const overtime = overtimeBag.overtime
+      const overtimePay = calculateOvertimePayFromAhc(overtime, hourlyRate)
 
       // CALCULAR SALARIO SEGÚN payment_frequency y pay_type (helper unificado)
       // Hourly: salario_bruto = base_salary (tarifa/hora) * hours_worked
@@ -456,29 +474,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       let total_earnings = 0
       let septimoDia = 0
       if (effectivePayType === 'hourly') {
-        const otSum =
-          (overtime.overtime_diurno || 0) +
-          (overtime.overtime_nocturno || 0) +
-          (overtime.overtime_feriado || 0)
+        const otSum = overtimeHoursTotal(overtime)
         const hoursWorked = shouldPayOvertimeToEmployee(
           companyPayOvertime,
           effectivePayType,
           emp.pay_overtime
         )
-          ? overtime.total_hours || 0
-          : overtime.normal_hours ?? Math.max(0, (overtime.total_hours || 0) - otSum)
+          ? overtimeBag.total_hours || 0
+          : overtimeBag.normal_hours ?? Math.max(0, (overtimeBag.total_hours || 0) - otSum)
         total_earnings = calculatePeriodBaseSalary(
           { base_salary, pay_type: 'hourly' },
           frequencyForCalc,
           { hoursWorked }
         )
         // Séptimo Día (Art. 338-340): 1 día descanso por cada 6 trabajados. Solo horas ordinarias.
-        const ordinaryHours = overtime.normal_hours ?? Math.max(0, (overtime.total_hours || 0) - otSum)
+        const ordinaryHours = overtimeBag.normal_hours ?? Math.max(0, (overtimeBag.total_hours || 0) - otSum)
         septimoDia = calculateSeptimoDia({
           hourlyRate: base_salary / HONDURAS_LABOR_FACTOR,
           ordinaryHours,
           daysWorked: days_worked,
-          totalHours: overtime.total_hours || 0,
+          totalHours: overtimeBag.total_hours || 0,
           semanalProration: semanalProration
         })
         total_earnings += septimoDia
@@ -625,7 +640,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         total: Math.round(total * 100) / 100,
         notes_on_ingress,
         notes_on_deductions,
-        total_hours_worked: isHourBasedPayType(effectivePayType) ? overtime.total_hours : undefined,
+        total_hours_worked: isHourBasedPayType(effectivePayType) ? overtimeBag.total_hours : undefined,
         pay_type: effectivePayType,
         septimo_dia: septimoDia > 0 ? septimoDia : undefined
       }

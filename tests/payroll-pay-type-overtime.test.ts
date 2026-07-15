@@ -14,6 +14,7 @@ import {
   overtimeHoursTotal,
   resolveFixedOvertimePay,
   readOvertimeOverrideFromMetadata,
+  mapLegacyAhcBucketsToBreakdown,
 } from '../lib/payroll/overtime-pay'
 
 describe('resolveEffectivePayType', () => {
@@ -88,7 +89,13 @@ describe('resolveFixedOvertimePay', () => {
       companyPayOvertime: true,
       employeePayOvertime: false,
       hourlyRate: 100,
-      ahcBreakdown: { diurno: 2, nocturno: 0, feriado: 0 },
+      ahcBreakdown: {
+        evening_25: 2,
+        night_50: 0,
+        late_75: 0,
+        morning_25: 0,
+        holiday_100: 0,
+      },
     })
     assert.equal(r.paid, false)
     assert.equal(r.pay, 0)
@@ -100,8 +107,20 @@ describe('resolveFixedOvertimePay', () => {
       companyPayOvertime: true,
       employeePayOvertime: true,
       hourlyRate: 100,
-      ahcBreakdown: { diurno: 8, nocturno: 0, feriado: 0 },
-      overrideBreakdown: { diurno: 2, nocturno: 0, feriado: 0 },
+      ahcBreakdown: {
+        evening_25: 8,
+        night_50: 0,
+        late_75: 0,
+        morning_25: 0,
+        holiday_100: 0,
+      },
+      overrideBreakdown: {
+        evening_25: 2,
+        night_50: 0,
+        late_75: 0,
+        morning_25: 0,
+        holiday_100: 0,
+      },
     })
     assert.equal(r.paid, true)
     assert.equal(r.pay, 250)
@@ -109,31 +128,108 @@ describe('resolveFixedOvertimePay', () => {
   })
 
   it('readOvertimeOverrideFromMetadata requires ot_adjusted_at', () => {
-    assert.equal(readOvertimeOverrideFromMetadata({ ot_diurno: 1 }), null)
+    assert.equal(readOvertimeOverrideFromMetadata({ ot_evening_25: 1 }), null)
+    assert.deepEqual(
+      readOvertimeOverrideFromMetadata({
+        ot_adjusted_at: '2026-01-01',
+        ot_evening_25: 1,
+        ot_night_50: 0.5,
+        ot_late_75: 0,
+        ot_morning_25: 0,
+        ot_holiday_100: 2,
+      }),
+      {
+        evening_25: 1,
+        night_50: 0.5,
+        late_75: 0,
+        morning_25: 0,
+        holiday_100: 2,
+      }
+    )
+  })
+
+  it('maps legacy ot_diurno metadata', () => {
     assert.deepEqual(
       readOvertimeOverrideFromMetadata({
         ot_adjusted_at: '2026-01-01',
         ot_diurno: 1,
         ot_nocturno: 0.5,
-        ot_feriado: 0,
+        ot_feriado: 2,
       }),
-      { diurno: 1, nocturno: 0.5, feriado: 0 }
+      mapLegacyAhcBucketsToBreakdown({ diurno: 1, nocturno: 0.5, feriado: 2 })
     )
   })
 })
 
-describe('calculateOvertimePayFromAhc', () => {
-  it('computes premium from breakdown', () => {
+describe('calculateOvertimePayFromAhc (band premiums)', () => {
+  it('25% evening → ×1.25', () => {
     const pay = calculateOvertimePayFromAhc(
-      { diurno: 2, nocturno: 0, feriado: 0 },
+      {
+        evening_25: 2,
+        night_50: 0,
+        late_75: 0,
+        morning_25: 0,
+        holiday_100: 0,
+      },
       100
     )
-    assert.equal(pay, 250) // 2 * 100 * 1.25
+    assert.equal(pay, 250)
+  })
+
+  it('50% / 75% / 100% multipliers', () => {
+    assert.equal(
+      calculateOvertimePayFromAhc(
+        {
+          evening_25: 0,
+          night_50: 1,
+          late_75: 0,
+          morning_25: 0,
+          holiday_100: 0,
+        },
+        100
+      ),
+      150
+    )
+    assert.equal(
+      calculateOvertimePayFromAhc(
+        {
+          evening_25: 0,
+          night_50: 0,
+          late_75: 1,
+          morning_25: 0,
+          holiday_100: 0,
+        },
+        100
+      ),
+      175
+    )
+    assert.equal(
+      calculateOvertimePayFromAhc(
+        {
+          evening_25: 0,
+          night_50: 0,
+          late_75: 0,
+          morning_25: 0,
+          holiday_100: 1,
+        },
+        100
+      ),
+      200
+    )
   })
 
   it('returns 0 for zero rate', () => {
     assert.equal(
-      calculateOvertimePayFromAhc({ diurno: 5, nocturno: 0, feriado: 0 }, 0),
+      calculateOvertimePayFromAhc(
+        {
+          evening_25: 5,
+          night_50: 0,
+          late_75: 0,
+          morning_25: 0,
+          holiday_100: 0,
+        },
+        0
+      ),
       0
     )
   })
@@ -146,33 +242,31 @@ describe('AHC overtime tracking (fixed employee)', () => {
         employee_id: 'emp-fixed',
         overtime_diurno_hours: 1,
         overtime_nocturno_hours: 0.5,
-        overtime_feriado_hours: 0
+        overtime_feriado_hours: 0,
       },
       {
         employee_id: 'emp-fixed',
         overtime_diurno_hours: 0,
         overtime_nocturno_hours: 0,
-        overtime_feriado_hours: 1
-      }
+        overtime_feriado_hours: 1,
+      },
     ]
-    const ahcOvertimeByEmployee: Record<string, number> = {}
+    let total = 0
     for (const row of rows) {
-      const ot = overtimeHoursTotal({
+      const b = mapLegacyAhcBucketsToBreakdown({
         diurno: Number(row.overtime_diurno_hours || 0),
         nocturno: Number(row.overtime_nocturno_hours || 0),
-        feriado: Number(row.overtime_feriado_hours || 0)
+        feriado: Number(row.overtime_feriado_hours || 0),
       })
-      const eid = row.employee_id
-      ahcOvertimeByEmployee[eid] = (ahcOvertimeByEmployee[eid] || 0) + ot
+      total += overtimeHoursTotal(b)
     }
-    assert.equal(ahcOvertimeByEmployee['emp-fixed'], 2.5)
+    assert.equal(total, 2.5)
     assert.equal(shouldPayOvertimeToEmployee(true, 'fixed'), true)
   })
 })
 
 describe('QA: preview persistence semantics', () => {
   it('authorized runs use frozen eff_* (documented contract)', () => {
-    // buildAuthorizedPayrollPreviewPayload reads payroll_run_lines only — no recalc on GET preview.
     const authorizedStatuses = new Set(['authorized', 'distributed', 'paid'])
     assert.ok(authorizedStatuses.has('authorized'))
     assert.ok(!authorizedStatuses.has('draft'))

@@ -184,7 +184,13 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
   const handleAdjustFixedOvertime = useCallback(
     async (payload: {
       run_line_id: string
-      overtime: { diurno: number; nocturno: number; feriado: number }
+      overtime: {
+        evening_25: number
+        night_50: number
+        late_75: number
+        morning_25: number
+        holiday_100: number
+      }
       reason?: string
     }) => {
       const res = await fetch('/api/payroll/adjust-fixed-overtime', {

@@ -1,9 +1,80 @@
 import type { EffectivePayType } from './resolve-effective-pay-type'
 
+/**
+ * Franjas de HE (recargo sobre tarifa horaria = mensual÷240):
+ * - evening_25: 5:00pm–6:59pm → ×1.25 (25%)
+ * - night_50:   7:00pm–9:59pm → ×1.50 (50%)
+ * - late_75:    10:00pm–4:59am → ×1.75 (75%)
+ * - morning_25: 5:00am–7:59am → ×1.25 (25%)
+ * - holiday_100: días feriados → ×2.00 (100%)
+ */
 export type OvertimeHoursBreakdown = {
-  diurno: number
-  nocturno: number
-  feriado: number
+  evening_25: number
+  night_50: number
+  late_75: number
+  morning_25: number
+  holiday_100: number
+}
+
+export const OVERTIME_BAND_META = [
+  {
+    key: 'evening_25' as const,
+    label: '5:00 pm a 6:59 pm al 25%',
+    multiplier: 1.25,
+    metaKey: 'ot_evening_25',
+  },
+  {
+    key: 'night_50' as const,
+    label: '7:00 pm a 9:59 pm al 50%',
+    multiplier: 1.5,
+    metaKey: 'ot_night_50',
+  },
+  {
+    key: 'late_75' as const,
+    label: '10:00 pm a 4:59 am al 75%',
+    multiplier: 1.75,
+    metaKey: 'ot_late_75',
+  },
+  {
+    key: 'morning_25' as const,
+    label: '5:00 am a 7:59 am al 25%',
+    multiplier: 1.25,
+    metaKey: 'ot_morning_25',
+  },
+  {
+    key: 'holiday_100' as const,
+    label: 'Días feriados al 100%',
+    multiplier: 2,
+    metaKey: 'ot_holiday_100',
+  },
+] as const
+
+export function emptyOvertimeBreakdown(): OvertimeHoursBreakdown {
+  return {
+    evening_25: 0,
+    night_50: 0,
+    late_75: 0,
+    morning_25: 0,
+    holiday_100: 0,
+  }
+}
+
+/**
+ * Mapeo AHC legacy (diurno/nocturno/feriado) → franjas de pago.
+ * AHC no distingue 7–10pm vs 10pm–5am ni mañana; noche → night_50, feriado → holiday_100.
+ */
+export function mapLegacyAhcBucketsToBreakdown(input: {
+  diurno?: number
+  nocturno?: number
+  feriado?: number
+}): OvertimeHoursBreakdown {
+  return {
+    evening_25: Math.max(0, Number(input.diurno) || 0),
+    night_50: Math.max(0, Number(input.nocturno) || 0),
+    late_75: 0,
+    morning_25: 0,
+    holiday_100: Math.max(0, Number(input.feriado) || 0),
+  }
 }
 
 /** true if absent or explicitly true; only false when metadata.pay_overtime === false */
@@ -49,40 +120,84 @@ export function calculateOvertimePayFromAhc(
 ): number {
   const rate = Number(hourlyRate) || 0
   if (rate <= 0) return 0
-  const diurno = Number(ot.diurno) || 0
-  const nocturno = Number(ot.nocturno) || 0
-  const feriado = Number(ot.feriado) || 0
+  const b = normalizeOvertimeBreakdown(ot)
   const pay =
-    diurno * rate * 1.25 + nocturno * rate * 1.5 + feriado * rate * 1.75
+    b.evening_25 * rate * 1.25 +
+    b.night_50 * rate * 1.5 +
+    b.late_75 * rate * 1.75 +
+    b.morning_25 * rate * 1.25 +
+    b.holiday_100 * rate * 2
   return Math.round(pay * 100) / 100
 }
 
 export function overtimeHoursTotal(ot: OvertimeHoursBreakdown): number {
-  return (Number(ot.diurno) || 0) + (Number(ot.nocturno) || 0) + (Number(ot.feriado) || 0)
+  const b = normalizeOvertimeBreakdown(ot)
+  return b.evening_25 + b.night_50 + b.late_75 + b.morning_25 + b.holiday_100
 }
 
 export function normalizeOvertimeBreakdown(
   raw: Partial<OvertimeHoursBreakdown> | null | undefined
 ): OvertimeHoursBreakdown {
   return {
-    diurno: Math.max(0, Number(raw?.diurno) || 0),
-    nocturno: Math.max(0, Number(raw?.nocturno) || 0),
-    feriado: Math.max(0, Number(raw?.feriado) || 0),
+    evening_25: Math.max(0, Number(raw?.evening_25) || 0),
+    night_50: Math.max(0, Number(raw?.night_50) || 0),
+    late_75: Math.max(0, Number(raw?.late_75) || 0),
+    morning_25: Math.max(0, Number(raw?.morning_25) || 0),
+    holiday_100: Math.max(0, Number(raw?.holiday_100) || 0),
   }
 }
 
-/** Read ot_diurno / ot_nocturno / ot_feriado from payroll line metadata (manual override). */
+export function overtimeBreakdownToMetadata(
+  breakdown: OvertimeHoursBreakdown
+): Record<string, number> {
+  const b = normalizeOvertimeBreakdown(breakdown)
+  return {
+    ot_evening_25: b.evening_25,
+    ot_night_50: b.night_50,
+    ot_late_75: b.late_75,
+    ot_morning_25: b.morning_25,
+    ot_holiday_100: b.holiday_100,
+  }
+}
+
+/** Read band overrides from payroll line metadata (manual override). */
 export function readOvertimeOverrideFromMetadata(
   metadata: Record<string, unknown> | null | undefined
 ): OvertimeHoursBreakdown | null {
   if (!metadata || metadata.ot_adjusted_at == null) return null
-  const diurno = Number(metadata.ot_diurno)
-  const nocturno = Number(metadata.ot_nocturno)
-  const feriado = Number(metadata.ot_feriado)
-  if (![diurno, nocturno, feriado].every((n) => Number.isFinite(n) && n >= 0)) {
-    return null
+
+  const hasNew =
+    metadata.ot_evening_25 != null ||
+    metadata.ot_night_50 != null ||
+    metadata.ot_late_75 != null ||
+    metadata.ot_morning_25 != null ||
+    metadata.ot_holiday_100 != null
+
+  if (hasNew) {
+    const evening_25 = Number(metadata.ot_evening_25) || 0
+    const night_50 = Number(metadata.ot_night_50) || 0
+    const late_75 = Number(metadata.ot_late_75) || 0
+    const morning_25 = Number(metadata.ot_morning_25) || 0
+    const holiday_100 = Number(metadata.ot_holiday_100) || 0
+    const vals = [evening_25, night_50, late_75, morning_25, holiday_100]
+    if (!vals.every((n) => Number.isFinite(n) && n >= 0)) return null
+    return { evening_25, night_50, late_75, morning_25, holiday_100 }
   }
-  return { diurno, nocturno, feriado }
+
+  // Compat: overrides guardados con diurno/nocturno/feriado
+  if (
+    metadata.ot_diurno != null ||
+    metadata.ot_nocturno != null ||
+    metadata.ot_feriado != null
+  ) {
+    return mapLegacyAhcBucketsToBreakdown({
+      diurno: Number(metadata.ot_diurno) || 0,
+      nocturno: Number(metadata.ot_nocturno) || 0,
+      feriado: Number(metadata.ot_feriado) || 0,
+    })
+  }
+
+  return null
 }
 
 export type ResolveFixedOvertimePayInput = {

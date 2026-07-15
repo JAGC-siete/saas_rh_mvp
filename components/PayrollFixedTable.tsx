@@ -8,11 +8,23 @@ import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Textarea } from './ui/textarea'
 import { Icon } from './Icon'
-import { calculateOvertimePayFromAhc } from '../lib/payroll/overtime-pay'
+import {
+  calculateOvertimePayFromAhc,
+  OVERTIME_BAND_META,
+  readOvertimeOverrideFromMetadata,
+  emptyOvertimeBreakdown,
+  type OvertimeHoursBreakdown,
+} from '../lib/payroll/overtime-pay'
 import { HONDURAS_LABOR_FACTOR } from '../lib/payroll/constants'
 
 const HORAS_EXTRA_AHC_INFO =
-  'Administrativo por día: horas AHC (diurno/nocturno/feriado) con recargos. Si la empresa y el empleado tienen pago de HE activo, el monto entra al bruto (IHSS/RAP/ISR siguen sobre salario base). Sin salida no hay HE. Puede editarse en la corrida.'
+  'Administrativo por día: HE por franja de reloj en AHC (5–7pm 25%, 7–10pm 50%, 10pm–5am 75%, 5–8am 25%, feriados 100%). Si empresa y empleado pagan HE, el monto entra al bruto (IHSS/RAP/ISR sobre salario base). Sin salida no hay HE. Editable en la corrida.'
+
+type OtAdjustPayload = {
+  run_line_id: string
+  overtime: OvertimeHoursBreakdown
+  reason?: string
+}
 
 interface PayrollFixedTableProps {
   rows: UnifiedRow[]
@@ -33,11 +45,7 @@ interface PayrollFixedTableProps {
     reason?: string
   }) => Promise<void>
   // eslint-disable-next-line no-unused-vars
-  onAdjustFixedOvertime?: (_payload: {
-    run_line_id: string
-    overtime: { diurno: number; nocturno: number; feriado: number }
-    reason?: string
-  }) => Promise<void>
+  onAdjustFixedOvertime?: (_payload: OtAdjustPayload) => Promise<void>
   /** Company pays OT — used to enable Editar HE */
   companyPayOvertime?: boolean
   onResetLineRecalc?: (_runLineId: string) => Promise<void>
@@ -82,9 +90,13 @@ export default function PayrollFixedTable({
     employeeName: string
     baseSalary: number
   } | null>(null)
-  const [otDiurno, setOtDiurno] = useState('')
-  const [otNocturno, setOtNocturno] = useState('')
-  const [otFeriado, setOtFeriado] = useState('')
+  const [otBands, setOtBands] = useState<Record<keyof OvertimeHoursBreakdown, string>>({
+    evening_25: '0',
+    night_50: '0',
+    late_75: '0',
+    morning_25: '0',
+    holiday_100: '0',
+  })
   const [otReason, setOtReason] = useState('')
   const [otSaving, setOtSaving] = useState(false)
   const [statutoryModal, setStatutoryModal] = useState<{
@@ -215,39 +227,72 @@ export default function PayrollFixedTable({
       return
     }
     const meta = (row as { metadata?: Record<string, unknown> }).metadata
+    const fromMeta =
+      readOvertimeOverrideFromMetadata(meta) ||
+      emptyOvertimeBreakdown()
+    // Prefer stored band hours even without ot_adjusted_at (from last preview)
+    const evening = Number(meta?.ot_evening_25)
+    const night = Number(meta?.ot_night_50)
+    const late = Number(meta?.ot_late_75)
+    const morning = Number(meta?.ot_morning_25)
+    const holiday = Number(meta?.ot_holiday_100)
+    const hasStored =
+      [evening, night, late, morning, holiday].some((n) => Number.isFinite(n) && n > 0) ||
+      meta?.ot_adjusted_at != null
+    const b = hasStored
+      ? {
+          evening_25: Number.isFinite(evening) ? evening : fromMeta.evening_25,
+          night_50: Number.isFinite(night) ? night : fromMeta.night_50,
+          late_75: Number.isFinite(late) ? late : fromMeta.late_75,
+          morning_25: Number.isFinite(morning) ? morning : fromMeta.morning_25,
+          holiday_100: Number.isFinite(holiday) ? holiday : fromMeta.holiday_100,
+        }
+      : fromMeta
     setOtModal({
       runLineId,
       employeeName: row.name || 'Empleado',
       baseSalary: row.base_salary || 0,
     })
-    setOtDiurno(String(Number(meta?.ot_diurno) || 0))
-    setOtNocturno(String(Number(meta?.ot_nocturno) || 0))
-    setOtFeriado(String(Number(meta?.ot_feriado) || 0))
+    setOtBands({
+      evening_25: String(b.evening_25 || 0),
+      night_50: String(b.night_50 || 0),
+      late_75: String(b.late_75 || 0),
+      morning_25: String(b.morning_25 || 0),
+      holiday_100: String(b.holiday_100 || 0),
+    })
     setOtReason('')
   }
 
   const closeOtModal = () => {
     setOtModal(null)
-    setOtDiurno('')
-    setOtNocturno('')
-    setOtFeriado('')
+    setOtBands({
+      evening_25: '0',
+      night_50: '0',
+      late_75: '0',
+      morning_25: '0',
+      holiday_100: '0',
+    })
     setOtReason('')
   }
 
   const submitOtAdjust = async () => {
     if (!otModal || !onAdjustFixedOvertime) return
-    const diurno = Number(otDiurno)
-    const nocturno = Number(otNocturno)
-    const feriado = Number(otFeriado)
-    if (![diurno, nocturno, feriado].every((n) => Number.isFinite(n) && n >= 0)) {
-      alert('Ingrese horas ≥ 0 para cada tipo')
+    const overtime: OvertimeHoursBreakdown = {
+      evening_25: Number(otBands.evening_25),
+      night_50: Number(otBands.night_50),
+      late_75: Number(otBands.late_75),
+      morning_25: Number(otBands.morning_25),
+      holiday_100: Number(otBands.holiday_100),
+    }
+    if (!Object.values(overtime).every((n) => Number.isFinite(n) && n >= 0)) {
+      alert('Ingrese horas ≥ 0 para cada franja')
       return
     }
     setOtSaving(true)
     try {
       await onAdjustFixedOvertime({
         run_line_id: otModal.runLineId,
-        overtime: { diurno, nocturno, feriado },
+        overtime,
         reason: otReason.trim() || undefined,
       })
       closeOtModal()
@@ -434,7 +479,7 @@ export default function PayrollFixedTable({
                             !companyPayOvertime
                               ? 'La empresa tiene desactivado el pago de horas extras'
                               : canAdjustFixedDays
-                                ? 'Ajustar desglose AHC (diurno/nocturno/feriado) y sumar al bruto'
+                                ? 'Ajustar franjas de HE y sumar al bruto'
                                 : `No se pueden editar HE con la corrida en estado "${payrollRunStatus || 'actual'}". Debe estar en borrador o consolidada (sin autorizar).`
                           }
                         >
@@ -634,22 +679,23 @@ export default function PayrollFixedTable({
 
       {otModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-md rounded-lg border border-white/20 bg-gray-900 p-6 text-white shadow-xl">
+          <div className="w-full max-w-md rounded-lg border border-white/20 bg-gray-900 p-6 text-white shadow-xl max-h-[90vh] overflow-y-auto">
             <h3 className="text-lg font-semibold">Ajustar horas extras</h3>
             <p className="mt-1 text-sm text-gray-300">{otModal.employeeName}</p>
             <p className="mt-2 text-xs text-amber-200/90">
-              Recargos: diurno ×1.25, nocturno ×1.5, feriado ×1.75 sobre tarifa (mensual÷240). El
-              monto se suma al bruto; IHSS/RAP/ISR no cambian de base.
+              Recargos sobre tarifa (mensual÷240): 25% → ×1.25, 50% → ×1.50, 75% → ×1.75, 100% →
+              ×2.00. El monto se suma al bruto; IHSS/RAP/ISR no cambian de base.
             </p>
             {(() => {
-              const d = Number(otDiurno) || 0
-              const n = Number(otNocturno) || 0
-              const f = Number(otFeriado) || 0
+              const overtime: OvertimeHoursBreakdown = {
+                evening_25: Number(otBands.evening_25) || 0,
+                night_50: Number(otBands.night_50) || 0,
+                late_75: Number(otBands.late_75) || 0,
+                morning_25: Number(otBands.morning_25) || 0,
+                holiday_100: Number(otBands.holiday_100) || 0,
+              }
               const rate = (otModal.baseSalary || 0) / HONDURAS_LABOR_FACTOR
-              const pay = calculateOvertimePayFromAhc(
-                { diurno: d, nocturno: n, feriado: f },
-                rate
-              )
+              const pay = calculateOvertimePayFromAhc(overtime, rate)
               return (
                 <p className="mt-2 text-sm text-emerald-300">
                   Vista previa HE: {formatCurrency(pay)}
@@ -657,48 +703,27 @@ export default function PayrollFixedTable({
               )
             })()}
             <div className="mt-4 space-y-3">
-              <div>
-                <label htmlFor="ot-diurno" className="block text-sm font-medium text-gray-200">
-                  Diurno (h)
-                </label>
-                <Input
-                  id="ot-diurno"
-                  type="number"
-                  min={0}
-                  step={0.25}
-                  value={otDiurno}
-                  onChange={(e) => setOtDiurno(e.target.value)}
-                  className="mt-1 border-white/20 bg-white/10 text-white"
-                />
-              </div>
-              <div>
-                <label htmlFor="ot-nocturno" className="block text-sm font-medium text-gray-200">
-                  Nocturno (h)
-                </label>
-                <Input
-                  id="ot-nocturno"
-                  type="number"
-                  min={0}
-                  step={0.25}
-                  value={otNocturno}
-                  onChange={(e) => setOtNocturno(e.target.value)}
-                  className="mt-1 border-white/20 bg-white/10 text-white"
-                />
-              </div>
-              <div>
-                <label htmlFor="ot-feriado" className="block text-sm font-medium text-gray-200">
-                  Feriado / mixto (h)
-                </label>
-                <Input
-                  id="ot-feriado"
-                  type="number"
-                  min={0}
-                  step={0.25}
-                  value={otFeriado}
-                  onChange={(e) => setOtFeriado(e.target.value)}
-                  className="mt-1 border-white/20 bg-white/10 text-white"
-                />
-              </div>
+              {OVERTIME_BAND_META.map((band) => (
+                <div key={band.key}>
+                  <label
+                    htmlFor={`ot-${band.key}`}
+                    className="block text-sm font-medium text-gray-200"
+                  >
+                    {band.label}
+                  </label>
+                  <Input
+                    id={`ot-${band.key}`}
+                    type="number"
+                    min={0}
+                    step={0.25}
+                    value={otBands[band.key]}
+                    onChange={(e) =>
+                      setOtBands((prev) => ({ ...prev, [band.key]: e.target.value }))
+                    }
+                    className="mt-1 border-white/20 bg-white/10 text-white"
+                  />
+                </div>
+              ))}
               <div>
                 <label htmlFor="ot-reason" className="block text-sm font-medium text-gray-200">
                   Motivo (opcional)

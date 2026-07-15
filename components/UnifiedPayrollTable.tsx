@@ -44,7 +44,13 @@ interface UnifiedPayrollTableProps {
   // eslint-disable-next-line no-unused-vars
   onAdjustFixedOvertime?: (_payload: {
     run_line_id: string
-    overtime: { diurno: number; nocturno: number; feriado: number }
+    overtime: {
+      evening_25: number
+      night_50: number
+      late_75: number
+      morning_25: number
+      holiday_100: number
+    }
     reason?: string
   }) => Promise<void>
   companyPayOvertime?: boolean

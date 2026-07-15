@@ -21,6 +21,8 @@ import {
   resolveFixedOvertimePay,
   normalizeOvertimeBreakdown,
   shouldPayOvertimeToEmployee,
+  emptyOvertimeBreakdown,
+  overtimeBreakdownToMetadata,
 } from '../../../lib/payroll/overtime-pay'
 import { HONDURAS_LABOR_FACTOR } from '../../../lib/payroll/constants'
 import {
@@ -127,14 +129,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (!run_line_id || !otRaw || typeof otRaw !== 'object') {
       return res.status(400).json({
-        error: 'run_line_id y overtime { diurno, nocturno, feriado } son requeridos',
+        error:
+          'run_line_id y overtime { evening_25, night_50, late_75, morning_25, holiday_100 } son requeridos',
       })
     }
 
     const overrideBreakdown = normalizeOvertimeBreakdown({
-      diurno: otRaw.diurno,
-      nocturno: otRaw.nocturno,
-      feriado: otRaw.feriado,
+      evening_25: otRaw.evening_25,
+      night_50: otRaw.night_50,
+      late_75: otRaw.late_75,
+      morning_25: otRaw.morning_25,
+      holiday_100: otRaw.holiday_100,
     })
 
     for (const [k, v] of Object.entries(overrideBreakdown)) {
@@ -359,7 +364,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       companyPayOvertime,
       employeePayOvertime: (employee as { pay_overtime?: boolean | null }).pay_overtime,
       hourlyRate: baseSalary / HONDURAS_LABOR_FACTOR,
-      ahcBreakdown: { diurno: 0, nocturno: 0, feriado: 0 },
+      ahcBreakdown: emptyOvertimeBreakdown(),
       overrideBreakdown,
     })
 
@@ -416,9 +421,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       ot_adjusted_at: new Date().toISOString(),
       ot_adjust_reason: reasonStr,
       ot_adjusted_by: user.id,
-      ot_diurno: overrideBreakdown.diurno,
-      ot_nocturno: overrideBreakdown.nocturno,
-      ot_feriado: overrideBreakdown.feriado,
+      ...overtimeBreakdownToMetadata(overrideBreakdown),
       horas_extras: otResolved.hoursTotal,
       overtime_pay: otResolved.pay,
     })

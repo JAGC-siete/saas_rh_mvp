@@ -17,8 +17,11 @@ import {
   resolveCompanyPayOvertime,
   resolveFixedOvertimePay,
   readOvertimeOverrideFromMetadata,
+  emptyOvertimeBreakdown,
+  overtimeBreakdownToMetadata,
   type OvertimeHoursBreakdown,
 } from '../../../lib/payroll/overtime-pay'
+import { ahcRowToOvertimeBreakdown } from '../../../lib/attendance/overtime-bands'
 import { HONDURAS_LABOR_FACTOR } from '../../../lib/payroll/constants'
 import {
   assertNonHndStatutoryConfigParses,
@@ -329,14 +332,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const lineMeta = (line.metadata || null) as Record<string, unknown> | null
     const otOverride = readOvertimeOverrideFromMetadata(lineMeta)
-    let ahcBreakdown: OvertimeHoursBreakdown = { diurno: 0, nocturno: 0, feriado: 0 }
+    let ahcBreakdown: OvertimeHoursBreakdown = emptyOvertimeBreakdown()
 
     if (!otOverride) {
       const { fechaInicio, fechaFin } = periodCtx
       const { data: ahcRows } = await supabase
         .from('attendance_hours_calculation')
         .select(
-          'attendance_record_id, overtime_diurno_hours, overtime_nocturno_hours, overtime_feriado_hours'
+          `attendance_record_id,
+          overtime_diurno_hours, overtime_nocturno_hours, overtime_feriado_hours,
+          overtime_evening_25_hours, overtime_night_50_hours, overtime_late_75_hours,
+          overtime_morning_25_hours, overtime_holiday_100_hours`
         )
         .eq('employee_id', line.employee_id)
       if (ahcRows && ahcRows.length > 0) {
@@ -350,9 +356,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const valid = new Set((arDates || []).map((r: { id: string }) => r.id))
         for (const row of ahcRows) {
           if (!valid.has(row.attendance_record_id)) continue
-          ahcBreakdown.diurno += Number(row.overtime_diurno_hours || 0)
-          ahcBreakdown.nocturno += Number(row.overtime_nocturno_hours || 0)
-          ahcBreakdown.feriado += Number(row.overtime_feriado_hours || 0)
+          const mapped = ahcRowToOvertimeBreakdown(row)
+          ahcBreakdown.evening_25 += mapped.evening_25
+          ahcBreakdown.night_50 += mapped.night_50
+          ahcBreakdown.late_75 += mapped.late_75
+          ahcBreakdown.morning_25 += mapped.morning_25
+          ahcBreakdown.holiday_100 += mapped.holiday_100
         }
       }
     }
@@ -420,9 +429,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       days_adjusted_by: user.id,
       horas_extras: otResolved.hoursTotal,
       overtime_pay: otResolved.pay,
-      ot_diurno: otResolved.breakdown.diurno,
-      ot_nocturno: otResolved.breakdown.nocturno,
-      ot_feriado: otResolved.breakdown.feriado,
+      ...overtimeBreakdownToMetadata(otResolved.breakdown),
     }
     if (lineMeta?.ot_adjusted_at != null) {
       recalcMetaExtra.ot_adjusted_at = lineMeta.ot_adjusted_at

@@ -31,6 +31,11 @@ export interface AttendanceHoursResult {
   overtime_diurno_hours: number
   overtime_nocturno_hours: number
   overtime_feriado_hours: number
+  overtime_evening_25_hours?: number
+  overtime_night_50_hours?: number
+  overtime_late_75_hours?: number
+  overtime_morning_25_hours?: number
+  overtime_holiday_100_hours?: number
 }
 
 /**
