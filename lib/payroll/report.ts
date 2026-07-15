@@ -229,7 +229,7 @@ export async function generateConsolidatedPayrollPDF(
       
       const headerSubtitle = periodRangeDisplay ?? (paymentFrequency === 'monthly' ? periodo : `${periodo} • Quincena ${quincena}`)
       const doc = new PDFDocument({
-        size: 'A4',
+        size: 'LEGAL',
         layout: 'landscape',
         margin: 30,
         info: {
