@@ -43,7 +43,7 @@ export default function MagneticHero() {
 
             <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-5xl font-bold leading-tight">
               <span className="bg-gradient-to-r from-white via-brand-200 to-brand-400 bg-clip-text text-transparent">
-                SISU — Control de Asistencia y Software de Recursos Humanos
+                SISU — El método más eficiente para digitalizar y automatizar RRHH para MiPyMes en Centroamérica
               </span>
               <span className="block text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-4xl mt-2 bg-gradient-to-r from-brand-200 to-brand-500 bg-clip-text text-transparent font-semibold">
                 Exclusivo para Honduras, El Salvador y Guatemala.
