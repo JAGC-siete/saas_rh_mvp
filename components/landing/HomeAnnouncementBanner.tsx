@@ -43,13 +43,13 @@ export default function HomeAnnouncementBanner({ onVisibilityChange }: Props) {
     >
       <div className="relative mx-auto flex min-h-9 items-center justify-center px-10 py-2 sm:min-h-10 sm:px-12">
         <p className="text-center text-xs sm:text-sm text-violet-200/90 leading-snug">
-          ¿Vienes por la calculadora de deducciones?{' '}
+          ¿Problemas de Recursos Humanos 😰?{' '}
           <Link
             prefetch={false}
-            href="/calculadora"
+            href="/domingos-sin-planilla"
             className="underline underline-offset-2 decoration-violet-300/70 hover:text-white transition-colors"
           >
-            Haz click aquí.
+            Dale click aquí
           </Link>
         </p>
         <button
