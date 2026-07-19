@@ -2,6 +2,7 @@ import { calculatePayroll } from '../payroll-client-specific'
 import type { EmployeeReceiptInput } from './receipt'
 import { buildCustomDeductionsList } from './custom-deductions-list'
 import { resolveDisplayNet } from './resolve-display-net'
+import { loadOvertimeDailyBreakdownSheet } from './overtime-daily-breakdown'
 
 export interface VoucherFromRunLineResult {
   record: EmployeeReceiptInput
@@ -35,6 +36,7 @@ export async function buildVoucherFromRunLine(
       employees:employee_id (
         name,
         employee_code,
+        base_salary,
         bank_name,
         bank_account,
         department_id,
@@ -130,6 +132,24 @@ export async function buildVoucherFromRunLine(
     Math.round((brutoTotal - (septimoDia > 0 ? septimoDia : 0) - overtimePay) * 100) / 100
   )
 
+  const monthlyFromMeta = Number(lineMetadata.base_salary_used)
+  const monthlySalary =
+    Number.isFinite(monthlyFromMeta) && monthlyFromMeta > 0
+      ? monthlyFromMeta
+      : Number(employee.base_salary) || 0
+
+  let overtimeDaily = null
+  if (overtimePay > 0 || horasExtras > 0) {
+    overtimeDaily = await loadOvertimeDailyBreakdownSheet(supabase, {
+      employeeId: lineData.employee_id,
+      periodStart: fechaInicio,
+      periodEnd: fechaFin,
+      monthlySalary,
+      paidOvertimePay: overtimePay > 0 ? overtimePay : undefined,
+      lineMetadata,
+    })
+  }
+
   const employeeCode = employee.employee_code || 'empleado'
   const periodLabel = `Quincena ${run.quincena}`
 
@@ -146,6 +166,7 @@ export async function buildVoucherFromRunLine(
       septimo_dia: septimoDia > 0 ? septimoDia : undefined,
       overtime_pay: overtimePay > 0 ? overtimePay : undefined,
       horas_extras: horasExtras > 0 ? horasExtras : undefined,
+      overtime_daily: overtimeDaily,
       income_tax: lineData.eff_isr || 0,
       professional_tax: lineData.eff_rap || 0,
       social_security: lineData.eff_ihss || 0,

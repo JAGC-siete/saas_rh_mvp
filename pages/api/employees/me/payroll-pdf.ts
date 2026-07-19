@@ -4,6 +4,7 @@ import { generateEmployeeReceiptPDF } from '../../../../lib/payroll/receipt'
 import { buildVoucherPdfOptions } from '../../../../lib/payroll/voucher-pdf-options'
 import { resolveReportConfig } from '../../../../lib/reports/column-resolver'
 import { calculatePeriodBaseSalary, normalizeFrequency } from '../../../../lib/payroll/calculate-period-base-salary'
+import { loadOvertimeDailyBreakdownSheet } from '../../../../lib/payroll/overtime-daily-breakdown'
 import { assertEmployeePortalEnabled } from '../../../../lib/employee-portal/company-settings'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -100,6 +101,31 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const grossTotal = Number(record.gross_salary) || 0
     const baseForReceipt = septimoDia > 0 ? grossTotal - septimoDia : (periodBaseSalary || grossTotal)
 
+    const meta = (record.metadata as Record<string, unknown>) || {}
+    const overtimePayRaw = Number(meta.overtime_pay)
+    const overtimePay =
+      Number.isFinite(overtimePayRaw) && overtimePayRaw > 0
+        ? Math.round(overtimePayRaw * 100) / 100
+        : 0
+    const horasExtrasRaw = Number(meta.horas_extras)
+    const horasExtras =
+      Number.isFinite(horasExtrasRaw) && horasExtrasRaw > 0
+        ? Math.round(horasExtrasRaw * 100) / 100
+        : 0
+    const monthlySalary = Number(record.base_salary) || 0
+
+    let overtimeDaily = null
+    if ((overtimePay > 0 || horasExtras > 0) && employeeId) {
+      overtimeDaily = await loadOvertimeDailyBreakdownSheet(supabase, {
+        employeeId,
+        periodStart: fechaInicio,
+        periodEnd: fechaFin,
+        monthlySalary,
+        paidOvertimePay: overtimePay > 0 ? overtimePay : undefined,
+        lineMetadata: meta,
+      })
+    }
+
     const resolvedConfig = await resolveReportConfig(userProfile.company_id, 'voucher', supabase)
     const pdfOptions = buildVoucherPdfOptions(resolvedConfig)
     const { data: company } = await supabase
@@ -118,6 +144,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       days_worked: Number(record.days_worked) || 0,
       base_salary: baseForReceipt,
       septimo_dia: septimoDia > 0 ? septimoDia : undefined,
+      overtime_pay: overtimePay > 0 ? overtimePay : undefined,
+      horas_extras: horasExtras > 0 ? horasExtras : undefined,
+      overtime_daily: overtimeDaily,
       income_tax: Number(record.income_tax) || 0,
       professional_tax: Number(record.professional_tax) || 0,
       social_security: Number(record.social_security) || 0,

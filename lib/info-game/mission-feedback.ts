@@ -432,7 +432,7 @@ function getVentasMissionFeedback(
       'not-yet': {
         title: 'Nota #4 · registrada',
         headline: 'Revíselo con calma.',
-        body: `${name}, busque jorgearturo@humanosisu.net si no encuentra el adjunto.`,
+        body: `${name}, busque humanosisu@humanosisu.net si no encuentra el adjunto.`,
       },
     }
     return map[choice] ?? map['not-yet']

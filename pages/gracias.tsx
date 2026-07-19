@@ -95,7 +95,7 @@ export default function GraciasPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm text-brand-200">
-            <p>Email: jorgearturo@humanosisu.net</p>
+            <p>Email: humanosisu@humanosisu.net</p>
             <p>WhatsApp: (+504)32226773</p>
             <p>Llamadas: +504 3214-8010</p>
             <p>⏰ Horario: Lunes a Viernes, 8:00 AM - 6:00 PM</p>

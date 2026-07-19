@@ -16,6 +16,7 @@ import {
   drawLiquidTableHeader,
   PDF,
 } from '../pdf/liquid-theme'
+import type { OvertimeDailyBreakdownSheet } from './overtime-daily-breakdown'
 
 export type { VoucherPdfOptions }
 
@@ -52,6 +53,11 @@ export interface EmployeeReceiptInput {
   overtime_pay?: number
   /** Horas extras del período (AHC / ajuste) para etiqueta del comprobante */
   horas_extras?: number
+  /**
+   * Desglose diario HE (AHC) — hoja 2 del recibo cuando hay filas.
+   * No afecta la planilla consolidada.
+   */
+  overtime_daily?: OvertimeDailyBreakdownSheet | null
 }
 
 function sectionVisible(id: string, options?: VoucherPdfOptions): boolean {
@@ -235,6 +241,196 @@ function writeAmount(
     lineBreak: false,
   })
   if (options?.bold) doc.font('Helvetica')
+}
+
+const formatHnlAmount = (n: number) =>
+  `L. ${Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+
+function formatHrsCell(hrs: number): string {
+  if (!(hrs > 0)) return '—'
+  return hrs.toFixed(2)
+}
+
+/**
+ * Página 2 del recibo: tabla diaria de HE (estilo Enlace).
+ * Landscape A4 para caber franjas + totales.
+ */
+function drawOvertimeDailyBreakdownPage(
+  doc: any,
+  record: EmployeeReceiptInput,
+  sheet: OvertimeDailyBreakdownSheet,
+  primaryColor: string,
+  companyName: string,
+  periodDisplay: string,
+  logoBuffer?: Buffer | null
+) {
+  const LAND_W = 841.89
+  const LAND_H = 595.28
+  doc.addPage({ size: [LAND_W, LAND_H], margin: MARGIN })
+
+  let yPos = drawBrandedReceiptHeader(doc, {
+    primaryColor,
+    companyName,
+    subtitle: `Detalle de horas extras · ${periodDisplay}`,
+    logoBuffer: logoBuffer ?? undefined,
+  })
+
+  doc.font('Helvetica').fontSize(8).fillColor(PDF.bodyMuted)
+  doc.text(
+    `${record.employee_code || ''} · ${record.employee_name || ''} · Tarifa: ${formatHnlAmount(sheet.hourlyRate)}/h (base mensual ${formatHnlAmount(sheet.baseSalaryMonthly)} ÷ 240)`,
+    MARGIN,
+    yPos,
+    { width: LAND_W - MARGIN * 2, lineBreak: false }
+  )
+  yPos += 16
+
+  const showHol = sheet.showHolidayColumn
+  const headers = showHol
+    ? [
+        'Fecha',
+        'Día',
+        'Base',
+        'V/Hora',
+        'Hrs 25%',
+        'Monto 25%',
+        'Hrs 50%',
+        'Monto 50%',
+        'Hrs 75%',
+        'Monto 75%',
+        'Hrs 100%',
+        'Monto 100%',
+        'Total',
+      ]
+    : [
+        'Fecha',
+        'Día',
+        'Base',
+        'V/Hora',
+        'Hrs 25%',
+        'Monto 25%',
+        'Hrs 50%',
+        'Monto 50%',
+        'Hrs 75%',
+        'Monto 75%',
+        'Total',
+      ]
+
+  const tableW = LAND_W - MARGIN * 2
+  const widths: number[] = showHol
+    ? [62, 58, 58, 48, 42, 58, 42, 58, 42, 58, 42, 58, 62]
+    : [70, 62, 62, 52, 48, 64, 48, 64, 48, 64, 70]
+  const widthSum = widths.reduce((a, b) => a + b, 0)
+  const scale = tableW / widthSum
+  const colW = widths.map((w) => w * scale)
+
+  const rowH = 13
+  const headerH = 18
+  drawLiquidTableHeader(doc, MARGIN, yPos, colW, headers, headerH)
+  yPos += headerH
+
+  const drawCell = (text: string, x: number, y: number, w: number, align: 'left' | 'right' = 'right') => {
+    doc.font('Helvetica').fontSize(7).fillColor(PDF.bodyText).text(text, x + 2, y + 3, {
+      width: w - 4,
+      align,
+      lineBreak: false,
+      ellipsis: true,
+    })
+  }
+
+  for (let i = 0; i < sheet.rows.length; i++) {
+    const row = sheet.rows[i]
+    if (yPos + rowH > LAND_H - 70) {
+      drawLiquidFooter(doc, 'Humano SISU · Detalle de horas extras (continuación)', {
+        y: LAND_H - MARGIN - 28,
+        fontSize: 7,
+      })
+      doc.addPage({ size: [LAND_W, LAND_H], margin: MARGIN })
+      yPos = drawBrandedReceiptHeader(doc, {
+        primaryColor,
+        companyName,
+        subtitle: `Detalle de horas extras · ${periodDisplay} (continuación)`,
+        logoBuffer: logoBuffer ?? undefined,
+      })
+      drawLiquidTableHeader(doc, MARGIN, yPos, colW, headers, headerH)
+      yPos += headerH
+    }
+
+    const stripe = i % 2 === 1 ? PDF.tableStripe : PDF.white
+    doc.rect(MARGIN, yPos, tableW, rowH).fill(stripe)
+
+    const cells = showHol
+      ? [
+          row.date,
+          row.dayName,
+          formatHnlAmount(row.baseSalary),
+          formatHnlAmount(row.hourlyRate),
+          formatHrsCell(row.hrs25),
+          row.hrs25 > 0 ? formatHnlAmount(row.pay25) : '—',
+          formatHrsCell(row.hrs50),
+          row.hrs50 > 0 ? formatHnlAmount(row.pay50) : '—',
+          formatHrsCell(row.hrs75),
+          row.hrs75 > 0 ? formatHnlAmount(row.pay75) : '—',
+          formatHrsCell(row.hrs100),
+          row.hrs100 > 0 ? formatHnlAmount(row.pay100) : '—',
+          formatHnlAmount(row.totalPay),
+        ]
+      : [
+          row.date,
+          row.dayName,
+          formatHnlAmount(row.baseSalary),
+          formatHnlAmount(row.hourlyRate),
+          formatHrsCell(row.hrs25),
+          row.hrs25 > 0 ? formatHnlAmount(row.pay25) : '—',
+          formatHrsCell(row.hrs50),
+          row.hrs50 > 0 ? formatHnlAmount(row.pay50) : '—',
+          formatHrsCell(row.hrs75),
+          row.hrs75 > 0 ? formatHnlAmount(row.pay75) : '—',
+          formatHnlAmount(row.totalPay),
+        ]
+
+    let x = MARGIN
+    cells.forEach((text, ci) => {
+      const align = ci <= 1 ? 'left' : 'right'
+      drawCell(text, x, yPos, colW[ci], align)
+      x += colW[ci]
+    })
+    yPos += rowH
+  }
+
+  yPos += 8
+  doc.font('Helvetica-Bold').fontSize(9).fillColor(PDF.accentDark)
+  doc.text(
+    `Total desglose (asistencia): ${formatHnlAmount(sheet.breakdownTotalPay)}  ·  ${sheet.breakdownTotalHours.toFixed(2)} h`,
+    MARGIN,
+    yPos,
+    { width: tableW, lineBreak: false }
+  )
+  yPos += 14
+
+  if (sheet.paidDiffersFromBreakdown || sheet.hasManualOverride) {
+    doc.font('Helvetica').fontSize(8).fillColor(PDF.bodyMuted)
+    doc.text(
+      `Monto pagado en nómina: ${formatHnlAmount(sheet.paidOvertimePay)}. El desglose refleja asistencia; si hubo ajuste manual en la corrida, el monto del recibo (página 1) prevalece.`,
+      MARGIN,
+      yPos,
+      { width: tableW }
+    )
+    yPos += 22
+  }
+
+  doc.font('Helvetica').fontSize(7).fillColor(PDF.bodyMuted)
+  doc.text(
+    'Franjas: 25% (5–7 pm y 5–8 am) ×1.25 · 50% (7–10 pm) ×1.50 · 75% (10 pm–5 am) ×1.75' +
+      (showHol ? ' · 100% feriado ×2.00' : ''),
+    MARGIN,
+    Math.min(yPos, LAND_H - MARGIN - 40),
+    { width: tableW }
+  )
+
+  drawLiquidFooter(doc, 'Humano SISU · Sistema Hondureño de Recursos Humanos', {
+    y: LAND_H - MARGIN - 28,
+    fontSize: 7,
+  })
 }
 
 function drawKeyValuePanel(
@@ -568,6 +764,19 @@ export async function generateEmployeeReceiptPDF(
         y: footerY,
         fontSize: 7,
       })
+
+      const otSheet = record.overtime_daily
+      if (otSheet && otSheet.rows.length > 0) {
+        drawOvertimeDailyBreakdownPage(
+          doc,
+          record,
+          otSheet,
+          primaryColor,
+          displayName,
+          periodDisplay,
+          logoBuffer
+        )
+      }
 
       doc.end()
     } catch (error) {

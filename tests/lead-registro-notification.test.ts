@@ -32,7 +32,7 @@ describe('lead registro notification', () => {
     assert.ok(suscripcion.includes('menos de 1 minuto'))
 
     for (const msg of [activar, ventas, info, suscripcion]) {
-      assert.ok(msg.includes('jorgearturo@humanosisu.net'))
+      assert.ok(msg.includes('humanosisu@humanosisu.net'))
     }
   })
 

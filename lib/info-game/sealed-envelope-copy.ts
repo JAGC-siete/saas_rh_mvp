@@ -80,7 +80,7 @@ export const SEALED_ENVELOPE_COPY = {
   /** Estado 3 — Cierre (conversación humana, sin gamificación) */
   nextStep: {
     title: '¿Qué sigue?',
-    emailHint: 'Buscá un correo de jorgearturo@humanosisu.net — revisá spam si no lo ves.',
+    emailHint: 'Buscá un correo de humanosisu@humanosisu.net — revisá spam si no lo ves.',
     ctaActivar: 'Ver cómo se ve en 30 segundos',
     ctaCalculadora: 'Probar calculadora gratis',
   },

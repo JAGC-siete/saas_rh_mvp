@@ -45,7 +45,7 @@ export default function TerminosDeServicio() {
                 <p className="text-slate-300">
                   <strong>Humano SISU</strong> es un software de gestión de recursos humanos y nómina orientado a empresas en{' '}
                   <strong>El Salvador, Guatemala y Honduras</strong>. Contacto:{' '}
-                  <strong>jorgearturo@humanosisu.net</strong> | <strong>504 32226773</strong> (WhatsApp).
+                  <strong>humanosisu@humanosisu.net</strong> | <strong>504 32226773</strong> (WhatsApp).
                 </p>
               </section>
 

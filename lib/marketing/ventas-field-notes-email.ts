@@ -25,7 +25,7 @@ export function buildVentasWelcomeText(): string {
   return [
     'Hola,',
     '',
-    'Ayer le enviamos la propuesta en PDF. Si no la ve, busque jorgearturo@humanosisu.net (revise spam).',
+    'Ayer le enviamos la propuesta en PDF. Si no la ve, busque humanosisu@humanosisu.net (revise spam).',
     '',
     'Hoy solo tres cosas para revisar en el documento:',
     '1. Rango tarifario según su número de empleados.',

@@ -42,7 +42,7 @@ const SOURCE_LABELS: Record<LeadRegistroSource, { title: string; subtitle: strin
   },
 }
 
-const CONTACT_SENDER_HINT = 'jorgearturo@humanosisu.net'
+const CONTACT_SENDER_HINT = 'humanosisu@humanosisu.net'
 
 export function buildLeadFollowUpWhatsAppMessage(source: LeadRegistroSource): string {
   if (source === 'info') {

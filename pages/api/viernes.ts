@@ -55,7 +55,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(200).json(
         createSuccessResponse({
           message:
-            'Las claves ya fueron enviadas a este correo. Revisa tu bandeja buscando a jorgearturo@humanosisu.net',
+            'Las claves ya fueron enviadas a este correo. Revisa tu bandeja buscando a humanosisu@humanosisu.net',
           leadId,
         })
       )

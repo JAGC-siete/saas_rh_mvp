@@ -61,7 +61,7 @@ export const RECIBO_ALERTAS_COPY = {
   nextStep: {
     title: '¿Qué sigue?',
     body: 'La primera nota llega mañana. Hoy no tenés que hacer nada más.',
-    emailHint: 'Buscá un correo de jorgearturo@humanosisu.net — revisá spam si no lo ves.',
+    emailHint: 'Buscá un correo de humanosisu@humanosisu.net — revisá spam si no lo ves.',
     ctaCalculadora: 'Calcular otra cosa',
     ctaShare: 'Compartir calculadora con RRHH',
   },

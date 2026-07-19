@@ -31,7 +31,7 @@ export function buildActivarWelcomeText(): string {
     '',
     'Hoy solo una cosa: entrá con las credenciales que te mandé y mirá una nómina de prueba calcularse sola. Sin configurar nada raro. Alcanzá la paz en 4 minutos.',
     '',
-    'Si no ves el correo, buscá jorgearturo@humanosisu.net (revisá spam).',
+    'Si no ves el correo, buscá humanosisu@humanosisu.net (revisá spam).',
     '',
     'Mañana te mando qué mirar primero para saber si esto te devuelve horas de verdad.',
     '',

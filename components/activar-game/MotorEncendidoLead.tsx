@@ -223,7 +223,7 @@ export default function MotorEncendidoLead({ utmContext = {}, initialCountryCode
           <CardContent className="p-6 sm:p-8">
             <p className="text-white font-medium mb-2">{copy.success.biometricHint}</p>
             <p className="text-sm text-brand-400 mt-4">
-              {formData.contactoEmail} · jorgearturo@humanosisu.net
+              {formData.contactoEmail} · humanosisu@humanosisu.net
             </p>
           </CardContent>
         </Card>
