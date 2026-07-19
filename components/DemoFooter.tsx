@@ -164,7 +164,7 @@ const DemoFooter: React.FC<DemoFooterProps> = ({ variant = 'default' }) => {
               El método más eficiente para digitalizar y automatizar RRHH para MiPyMes en Centroamérica
             </p>
             <div className="text-sm text-gray-500">
-              <p>© 2026 Humano SISU. Nómina y RRHH para El Salvador, Guatemala y Honduras.</p>
+              <p>© 2026 SISU RRHH exclusivo El Salvador | Guatemala | Honduras.</p>
             </div>
           </div>
         </div>

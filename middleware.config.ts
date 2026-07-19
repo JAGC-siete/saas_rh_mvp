@@ -92,6 +92,7 @@ export const MIDDLEWARE_CONFIG = {
       '/paz',
       '/viernes',
       '/planilla-sin-domingos',
+      '/domingos-sin-planilla',
       '/suscripcion',
       '/recursos',
       '/sitemap.xml'

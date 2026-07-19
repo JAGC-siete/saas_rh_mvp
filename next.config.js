@@ -87,7 +87,7 @@ const nextConfig = {
         destination: '/info/m/:id',
       },
       {
-        source: '/planilla-sin-domingos',
+        source: '/domingos-sin-planilla',
         destination: '/viernes',
       },
     ]
@@ -171,15 +171,20 @@ const nextConfig = {
         destination: '/cerrar-planilla-en-paz/m/:id',
         permanent: true,
       },
-      // Campaign: canonical /planilla-sin-domingos (legacy /viernes, /domingo → 301)
+      // Campaign: canonical /domingos-sin-planilla (legacy /viernes, /domingo, /planilla-sin-domingos → 301)
       {
         source: '/viernes',
-        destination: '/planilla-sin-domingos',
+        destination: '/domingos-sin-planilla',
         permanent: true,
       },
       {
         source: '/domingo',
-        destination: '/planilla-sin-domingos',
+        destination: '/domingos-sin-planilla',
+        permanent: true,
+      },
+      {
+        source: '/planilla-sin-domingos',
+        destination: '/domingos-sin-planilla',
         permanent: true,
       },
       // Legal: hyphenated privacy path

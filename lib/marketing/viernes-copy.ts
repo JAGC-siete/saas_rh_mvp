@@ -1,11 +1,11 @@
-/** Copy for /planilla-sin-domingos — warm B2B: recuperar el viernes via digitalizar/automatizar (info sequence). */
+/** Copy for /domingos-sin-planilla — warm B2B: recuperar el viernes via digitalizar/automatizar (info sequence). */
 
 /** Canonical public URL (pages/viernes.tsx served via rewrite). */
-export const VIERNES_PUBLIC_PATH = '/planilla-sin-domingos'
+export const VIERNES_PUBLIC_PATH = '/domingos-sin-planilla'
 
 /** Internal Pages route / legacy slug. */
 export const VIERNES_INTERNAL_PATH = '/viernes'
-export const VIERNES_LEGACY_PATHS = ['/viernes', '/domingo'] as const
+export const VIERNES_LEGACY_PATHS = ['/viernes', '/domingo', '/planilla-sin-domingos'] as const
 
 export const VIERNES_COPY = {
   seo: {
@@ -16,8 +16,8 @@ export const VIERNES_COPY = {
 
   hero: {
     badge: 'Claves gratis · 2 min',
-    headlineLead: '¿Otro fin de semana perdido?',
-    headlineAccent: 'Recuperá el viernes',
+    headlineLead: 'Problemas de RRHH ?',
+    headlineAccent: 'Ayuda ➡️ 1️⃣ solo click🖱️',
     subheadline:
       'La forma de recuperarlo: digitalizar de verdad y automatizar el dato — no más USB, Excel ni detective work el domingo.',
     mantra: 'No sos una máquina de Excel. Hacer las paces con RR.HH. empieza por destruir el puente de papel.',

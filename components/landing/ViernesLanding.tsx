@@ -27,7 +27,7 @@ export default function ViernesLanding() {
   const faqSchema = generateFAQPageSchema(copy.faq.map((f) => ({ question: f.question, answer: f.answer })))
   const breadcrumbSchema = generateBreadcrumbListSchema([
     { name: 'Inicio', url: '/' },
-    { name: 'Planilla sin domingos', url: VIERNES_PUBLIC_PATH },
+    { name: 'Domingos sin planilla', url: VIERNES_PUBLIC_PATH },
   ])
 
   const openPeaceWizard = () => {

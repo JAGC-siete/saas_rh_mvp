@@ -45,6 +45,7 @@ function formatSegmentName(segment: string): string {
   const known: Record<string, string> = {
     'cerrar-planilla-en-paz': 'Cerrar planilla en paz',
     'planilla-sin-domingos': 'Planilla sin domingos',
+    'domingos-sin-planilla': 'Domingos sin planilla',
     'politica-de-privacidad': 'Política de privacidad',
     'terminos-de-servicio': 'Términos de servicio',
     'alternativa-odoo-honduras': 'Software RH regional',

@@ -38,10 +38,10 @@ export interface MarketingLandingEntry {
 /** Orden: campañas experimentales primero, luego core. */
 export const MARKETING_LANDINGS: MarketingLandingEntry[] = [
   {
-    path: '/planilla-sin-domingos',
+    path: '/domingos-sin-planilla',
     pageFile: 'pages/viernes.tsx',
-    aliases: ['/viernes', '/domingo'],
-    name: 'Planilla sin domingos (conversión domingo/Excel)',
+    aliases: ['/viernes', '/domingo', '/planilla-sin-domingos'],
+    name: 'Domingos sin planilla (conversión domingo/Excel)',
     kind: 'conversion',
     status: 'experimental',
     purpose:
@@ -62,7 +62,7 @@ export const MARKETING_LANDINGS: MarketingLandingEntry[] = [
     primaryCta: 'Formulario → secuencia email info',
     launched: '2026-07',
     notes:
-      'Comparte secuencia info con /planilla-sin-domingos (opener distinto). Canonical slug descriptivo.',
+      'Comparte secuencia info con /domingos-sin-planilla (opener distinto). Canonical slug descriptivo.',
   },
   {
     path: '/paz',

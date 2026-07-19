@@ -1,7 +1,7 @@
 /** Official Humano SISU social profiles — single source of truth. */
 export const SOCIAL_LINKS = {
   facebook: 'https://facebook.com/humanosisu',
-  instagram: 'https://instagram.com/humanosisu',
+  instagram: 'https://www.instagram.com/humanosisu666/',
   linkedin: 'https://www.linkedin.com/in/g%C3%B3mez-jorge-arturo/',
   youtube: 'https://www.youtube.com/@giorgio_armani_the_first',
   tiktok: 'https://www.tiktok.com/@humanosisu',
