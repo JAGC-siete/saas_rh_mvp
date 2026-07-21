@@ -63,7 +63,7 @@ export const pageDescriptions = {
   info: '¿Perdés la paz cada vez que cerrás planilla? Descubrí cómo recuperarla automatizando asistencia biométrica, nómina y deducciones de ley (IHSS, RAP, ISR) en Honduras, El Salvador y Guatemala. Sin compromiso.',
   paz: '¿Perdiste un domingo haciendo Excel? No sos una máquina de errores de deducción. Encontrá tu paz con Humano SISU.',
   viernes:
-    '¿Otra vez vas a perder el domingo en Excel? Alcanzá la paz contable con biométrico + motor legal IHSS, RAP, ISR. Trial gratis en Honduras, El Salvador y Guatemala.',
+    '¿El drama de la planilla te quitó la paz? Descargá las claves para digitalizar y automatizar la gestión de RR.HH. en tu MiPyMe sin apagar la operación.',
 }
 
 /**
