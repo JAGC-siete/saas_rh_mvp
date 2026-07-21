@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest'
+import { describe, it } from 'node:test'
+import assert from 'node:assert/strict'
 import {
   shouldPreservePayrollLineOnPreview,
   stripManualPayrollLineMetadata,
@@ -6,37 +7,40 @@ import {
 
 describe('preview-preserve-line', () => {
   it('preserves when edited is true', () => {
-    expect(
+    assert.equal(
       shouldPreservePayrollLineOnPreview({
         id: 'line-1',
         edited: true,
         metadata: {},
-      })
-    ).toBe(true)
+      }),
+      true
+    )
   })
 
   it('preserves when days were manually adjusted', () => {
-    expect(
+    assert.equal(
       shouldPreservePayrollLineOnPreview({
         id: 'line-1',
         edited: false,
         metadata: { days_adjusted_at: '2026-01-01T00:00:00.000Z' },
-      })
-    ).toBe(true)
+      }),
+      true
+    )
   })
 
   it('preserves when OT was manually adjusted', () => {
-    expect(
+    assert.equal(
       shouldPreservePayrollLineOnPreview({
         id: 'line-1',
         edited: false,
         metadata: { ot_adjusted_at: '2026-01-01T00:00:00.000Z' },
-      })
-    ).toBe(true)
+      }),
+      true
+    )
   })
 
   it('does not preserve when pay_type drifted even if edited', () => {
-    expect(
+    assert.equal(
       shouldPreservePayrollLineOnPreview(
         {
           id: 'line-1',
@@ -44,12 +48,13 @@ describe('preview-preserve-line', () => {
           metadata: { pay_type: 'hourly' },
         },
         { currentEffectivePayType: 'fixed' }
-      )
-    ).toBe(false)
+      ),
+      false
+    )
   })
 
   it('still preserves edited line when pay_type matches', () => {
-    expect(
+    assert.equal(
       shouldPreservePayrollLineOnPreview(
         {
           id: 'line-1',
@@ -57,32 +62,35 @@ describe('preview-preserve-line', () => {
           metadata: { pay_type: 'fixed' },
         },
         { currentEffectivePayType: 'fixed' }
-      )
-    ).toBe(true)
+      ),
+      true
+    )
   })
 
   it('does not preserve fresh calculated lines', () => {
-    expect(
+    assert.equal(
       shouldPreservePayrollLineOnPreview({
         id: 'line-1',
         edited: false,
         metadata: { tax_year: 2026 },
-      })
-    ).toBe(false)
+      }),
+      false
+    )
   })
 
   it('preserves when statutory deductions were zeroed', () => {
-    expect(
+    assert.equal(
       shouldPreservePayrollLineOnPreview({
         id: 'line-1',
         edited: false,
         metadata: { statutory_zeroed_at: '2026-07-14T00:00:00.000Z' },
-      })
-    ).toBe(true)
+      }),
+      true
+    )
   })
 
   it('strips manual adjustment metadata keys including OT override', () => {
-    expect(
+    assert.deepEqual(
       stripManualPayrollLineMetadata({
         tax_year: 2026,
         days_adjusted_at: '2026-01-01',
@@ -97,10 +105,11 @@ describe('preview-preserve-line', () => {
         statutory_zeroed_at: '2026-07-14',
         statutory_zeroed_reason: 'finiquito',
         bono: 100,
-      })
-    ).toEqual({
-      tax_year: 2026,
-      bono: 100,
-    })
+      }),
+      {
+        tax_year: 2026,
+        bono: 100,
+      }
+    )
   })
 })

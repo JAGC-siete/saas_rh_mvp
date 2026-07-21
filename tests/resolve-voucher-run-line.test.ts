@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest'
+import { describe, it } from 'node:test'
+import assert from 'node:assert/strict'
 import { resolveCanonicalVoucherRunLineId } from '../lib/payroll/resolve-voucher-run-line'
 
 describe('resolveCanonicalVoucherRunLineId', () => {
@@ -46,7 +47,7 @@ describe('resolveCanonicalVoucherRunLineId', () => {
       'company-1',
       'line-2p'
     )
-    expect(result).toBe('line-2p')
+    assert.equal(result, 'line-2p')
   })
 
   it('returns requested id when line is missing', async () => {
@@ -66,6 +67,6 @@ describe('resolveCanonicalVoucherRunLineId', () => {
       'company-1',
       'missing-line'
     )
-    expect(result).toBe('missing-line')
+    assert.equal(result, 'missing-line')
   })
 })

@@ -64,5 +64,8 @@ export const cesantiasRequestSchema = z.object({
   }
 })
 
-export type CesantiasRequestInput = z.infer<typeof cesantiasRequestSchema>
+/** Input shape (defaults applied at runtime / by Zod parse). */
+export type CesantiasRequestInput = z.input<typeof cesantiasRequestSchema>
+/** Parsed shape after defaults (`montoRapAcumulado`, `preavisoGozado`, …). */
+export type CesantiasRequest = z.infer<typeof cesantiasRequestSchema>
 
