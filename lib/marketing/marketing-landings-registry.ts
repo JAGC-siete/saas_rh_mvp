@@ -40,7 +40,7 @@ export const MARKETING_LANDINGS: MarketingLandingEntry[] = [
   {
     path: '/domingos-sin-planilla',
     pageFile: 'pages/viernes.tsx',
-    aliases: ['/viernes', '/domingo', '/planilla-sin-domingos'],
+    aliases: ['/viernes', '/domingo', '/domingo-sin-planilla', '/planilla-sin-domingos'],
     name: 'Domingos sin planilla (conversión domingo/Excel)',
     kind: 'conversion',
     status: 'experimental',

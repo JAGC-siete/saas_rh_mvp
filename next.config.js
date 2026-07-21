@@ -171,7 +171,7 @@ const nextConfig = {
         destination: '/cerrar-planilla-en-paz/m/:id',
         permanent: true,
       },
-      // Campaign: canonical /domingos-sin-planilla (legacy /viernes, /domingo, /planilla-sin-domingos → 301)
+      // Campaign: canonical /domingos-sin-planilla (legacy + typo → 301)
       {
         source: '/viernes',
         destination: '/domingos-sin-planilla',
@@ -179,6 +179,11 @@ const nextConfig = {
       },
       {
         source: '/domingo',
+        destination: '/domingos-sin-planilla',
+        permanent: true,
+      },
+      {
+        source: '/domingo-sin-planilla',
         destination: '/domingos-sin-planilla',
         permanent: true,
       },

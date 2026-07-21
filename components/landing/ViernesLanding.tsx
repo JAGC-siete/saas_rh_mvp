@@ -55,9 +55,7 @@ export default function ViernesLanding() {
       <div className="viernes-page flex-grow">
         <section className="viernes-section pt-8 sm:pt-12 text-center">
           <span className="viernes-badge">{copy.hero.badge}</span>
-          <h1 className="viernes-serif viernes-hero-title mb-6 text-4xl sm:text-5xl lg:text-6xl font-normal not-italic">
-            {copy.hero.headlineLead}
-          </h1>
+          <h1 className="viernes-serif viernes-hero-title mb-4">{copy.hero.headlineLead}</h1>
           <p className="viernes-lead mb-6 max-w-2xl mx-auto">{copy.hero.subheadline}</p>
           <p className="viernes-mantra mb-8 max-w-xl mx-auto text-left">{copy.hero.mantra}</p>
           <div className="flex flex-col sm:flex-row flex-wrap justify-center gap-3">

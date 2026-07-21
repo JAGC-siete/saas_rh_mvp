@@ -5,7 +5,12 @@ export const VIERNES_PUBLIC_PATH = '/domingos-sin-planilla'
 
 /** Internal Pages route / legacy slug. */
 export const VIERNES_INTERNAL_PATH = '/viernes'
-export const VIERNES_LEGACY_PATHS = ['/viernes', '/domingo', '/planilla-sin-domingos'] as const
+export const VIERNES_LEGACY_PATHS = [
+  '/viernes',
+  '/domingo',
+  '/domingo-sin-planilla',
+  '/planilla-sin-domingos',
+] as const
 
 export const VIERNES_COPY = {
   seo: {
