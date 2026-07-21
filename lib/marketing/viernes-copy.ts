@@ -17,10 +17,8 @@ export const VIERNES_COPY = {
   hero: {
     badge: 'Guía Express para Dueños y Gerentes · 2 min',
     headlineLead: '¿Perdiste la paz con RR.HH.?',
-    headlineAccent:
-      'Haz las paces con nuestro método para digitalizar y automatizar la operación y gestión de recursos humanos para MiPyMes.',
     subheadline:
-      'Elimina el caos operativo, las dudas con el motor legal y el trabajo de detective en Excel. Pon el dato a viajar solo y recupera la tranquilidad (y tus fines de semana).',
+      'Haz las paces con nuestro método para digitalizar y automatizar la operación y gestión de recursos humanos para MiPyMes.',
     mantra:
       'No sos una máquina de calcular planillas. Hacer las paces con RR.HH. empieza por destruir el puente de papel.',
     ctaPrimary: 'Quiero recuperar la paz en RR.HH.',
