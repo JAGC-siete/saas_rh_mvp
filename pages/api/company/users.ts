@@ -9,6 +9,7 @@ import { env } from '../../../lib/env'
 import {
   COMPANY_MANAGED_ROLES,
   buildCompanyUserPermissions,
+  canActorAssignRole,
   isAuthDuplicateUserError,
   isCompanyManagedRole,
   parseModuleGrantsFromBody,
@@ -36,7 +37,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       case 'GET':
         return await listUsers(req, res, auth.companyId, auth.adminClient)
       case 'POST':
-        return await createUser(req, res, auth.user.id, auth.companyId, auth.adminClient)
+        return await createUser(req, res, auth.user.id, auth.role, auth.companyId, auth.adminClient)
       default:
         res.setHeader('Allow', ['GET', 'POST'])
         return res.status(405).json({ error: 'Method not allowed' })
@@ -170,6 +171,7 @@ async function createUser(
   req: NextApiRequest,
   res: NextApiResponse,
   actorUserId: string,
+  actorRole: string | null | undefined,
   companyId: string,
   adminClient: ReturnType<typeof createAdminClient>
 ) {
@@ -183,11 +185,17 @@ async function createUser(
       body.can_view_salary === true ? true : body.can_view_salary === false ? false : null
     const moduleGrants = parseModuleGrantsFromBody(body)
 
-    // Never accept company_id from body
+    // Never accept company_id or raw permissions blob from body
     if (body.company_id !== undefined) {
       return res.status(400).json({
         error: 'Invalid field',
         message: 'company_id no se acepta en el body; se asigna desde la sesión',
+      })
+    }
+    if (body.permissions !== undefined) {
+      return res.status(400).json({
+        error: 'Invalid field',
+        message: 'Use module_grants y can_view_salary; permissions raw no se acepta',
       })
     }
 
@@ -202,6 +210,13 @@ async function createUser(
       return res.status(400).json({
         error: 'Invalid role',
         message: `El rol debe ser uno de: ${COMPANY_MANAGED_ROLES.join(', ')}`,
+      })
+    }
+
+    if (!canActorAssignRole(actorRole, role)) {
+      return res.status(403).json({
+        error: 'Forbidden',
+        message: 'No tiene permiso para asignar ese rol',
       })
     }
 

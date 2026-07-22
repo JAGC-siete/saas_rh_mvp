@@ -1,4 +1,5 @@
 import { createAdminClient } from '../supabase/server'
+import { logger } from '../logger'
 
 export async function loadCompanyEffectiveFeatures(
   companyId: string
@@ -50,4 +51,37 @@ export async function fetchAuthMetadataByUserIds(
     )
   }
   return out
+}
+
+/** Best-effort: revoke all Auth sessions after deactivation. */
+export async function revokeUserSessions(
+  adminClient: ReturnType<typeof createAdminClient>,
+  userId: string
+): Promise<void> {
+  try {
+    const { error } = await adminClient.auth.admin.signOut(userId, 'global')
+    if (error) {
+      logger.warn('revokeUserSessions failed', { userId, message: error.message })
+    }
+  } catch (err: any) {
+    logger.warn('revokeUserSessions threw', {
+      userId,
+      message: err?.message || String(err),
+    })
+  }
+}
+
+export async function countActiveCompanyAdmins(
+  adminClient: ReturnType<typeof createAdminClient>,
+  companyId: string
+): Promise<number> {
+  const { data, error } = await adminClient
+    .from('user_profiles')
+    .select('id')
+    .eq('company_id', companyId)
+    .eq('role', 'company_admin')
+    .eq('is_active', true)
+
+  if (error) throw error
+  return data?.length || 0
 }

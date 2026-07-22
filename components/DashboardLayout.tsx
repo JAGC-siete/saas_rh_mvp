@@ -30,7 +30,7 @@ import HelpButton from './support/HelpButton'
 import { normalizePermissionsToCanonical } from '../lib/security/canonical-permissions'
 import { canAccessPayrollNavigation } from '../lib/auth/role-access'
 import { canAccessReportsModule } from '../lib/security/report-access'
-import { canManageCompanyUsers, companyRoleLabel } from '../lib/company/users'
+import { companyRoleLabel } from '../lib/company/users'
 
 interface DashboardLayoutProps {
   children: React.ReactNode
@@ -50,8 +50,6 @@ interface UserPermissions {
   affiliates?: boolean // Add affiliates permission
   mtp?: boolean
   performance?: boolean
-  /** company_admin | hr_manager: gestionar usuarios de la empresa */
-  company_users?: boolean
 }
 
 /** Ocultarse mientras cargan permisos o si el estado quedara ambiguo (fail-safe). */
@@ -80,7 +78,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     affiliates: true,
     mtp: false,
     performance: false,
-    company_users: false,
   })
   /** true hasta conocer canon+rol aplicado (OK o fallback explícito). */
   const [loadingPermissions, setLoadingPermissions] = useState(true)
@@ -151,7 +148,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             affiliates: true, // Show affiliates link to all users
             mtp: !!showPayrollSidebarGroup && rawPermissions?.mtp !== false,
             performance: !!showPayrollSidebarGroup && rawPermissions?.performance !== false,
-            company_users: canManageCompanyUsers(normalizedRole),
           }
           // #region agent log
           fetch('/api/__debug/log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'25b418',runId:'pre-fix',hypothesisId:'H3',location:'components/DashboardLayout.tsx:userProfileBranch(setUserPermissions)',message:'Setting UI permissions (userProfile branch)',data:{settings:permissions.settings,reports:permissions.reports,admin:permissions.admin},timestamp:Date.now()})}).catch(()=>{});
@@ -183,7 +179,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             affiliates: false,
             mtp: false,
             performance: false,
-            company_users: false,
           })
           setLoadingPermissions(false)
           return
@@ -209,7 +204,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             affiliates: false,
             mtp: false,
             performance: false,
-            company_users: false,
           })
           setLoadingPermissions(false)
           return
@@ -263,7 +257,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           affiliates: true, // Show affiliates link to all users
           mtp: !!showPayrollSidebarGroup && rawPermissions?.mtp !== false,
           performance: !!showPayrollSidebarGroup && rawPermissions?.performance !== false,
-          company_users: canManageCompanyUsers(normalizedRole),
         }
         // #region agent log
         fetch('/api/__debug/log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'25b418',runId:'pre-fix',hypothesisId:'H5',location:'components/DashboardLayout.tsx:apiProfileBranch(setUserPermissions)',message:'Setting UI permissions (API profile branch)',data:{settings:permissions.settings,reports:permissions.reports,admin:permissions.admin},timestamp:Date.now()})}).catch(()=>{});
@@ -296,7 +289,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           affiliates: false,
           mtp: false,
           performance: false,
-          company_users: false,
         })
         console.warn('⚠️ Error loading permissions, applied pessimistic sidebar')
       } finally {
@@ -363,7 +355,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     // { name: 'Gamificación',  href: '/app/gamification',         icon: TrophyIcon,            permission: 'gamification' },
     // { name: 'Programa de Afiliados', href: '/app/affiliates',   icon: CurrencyDollarIcon,    permission: 'affiliates' },
     { name: 'Parametros',       href: '/app/settings',             icon: Cog6ToothIcon,         permission: 'settings' },
-    { name: 'Usuarios',         href: '/app/settings/users',       icon: UsersIcon,             permission: 'company_users' },
     { name: 'Soporte',          href: '/app/support',              icon: LifebuoyIcon,          permission: 'dashboard' },
   ]
 

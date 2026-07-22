@@ -18,8 +18,11 @@ import {
   COMPANY_MANAGED_ROLES,
   COMPANY_MODULE_DEFS,
   COMPANY_ROLE_LABELS,
+  assignableRolesForActor,
+  canActorManageTarget,
   canManageCompanyUsers,
-  isModuleEnabledByFeatures,
+  isModuleToggleEnabled,
+  moduleGrantsFromPermissions,
   roleCanEditSalary,
   type CompanyManagedRole,
   type CompanyModuleKey,
@@ -69,16 +72,11 @@ interface UserRow {
 
 const ROLE_LABELS = COMPANY_ROLE_LABELS
 
-function emptyModuleGrants(features: Record<string, boolean>): Record<CompanyModuleKey, ModuleGrant> {
-  const out = {} as Record<CompanyModuleKey, ModuleGrant>
-  for (const def of COMPANY_MODULE_DEFS) {
-    const enabled = isModuleEnabledByFeatures(def.key, features)
-    out[def.key] = {
-      view: enabled && (def.key === 'employees' || def.key === 'attendance' || def.key === 'leave'),
-      manage: false,
-    }
-  }
-  return out
+function seedModuleGrants(
+  role: CompanyManagedRole,
+  features: Record<string, boolean>
+): Record<CompanyModuleKey, ModuleGrant> {
+  return moduleGrantsFromPermissions(role, {}, features)
 }
 
 export default function CompanyUsersPage() {
@@ -87,6 +85,7 @@ export default function CompanyUsersPage() {
 
   const actorRole = normalizeRole(userProfile?.role)
   const canManage = canManageCompanyUsers(actorRole)
+  const assignableRoles = assignableRolesForActor(actorRole)
 
   const [users, setUsers] = useState<UserRow[]>([])
   const [totalUsers, setTotalUsers] = useState(0)
@@ -112,7 +111,7 @@ export default function CompanyUsersPage() {
   const [createCanViewSalary, setCreateCanViewSalary] = useState(false)
   const [createModuleGrants, setCreateModuleGrants] = useState<
     Record<CompanyModuleKey, ModuleGrant>
-  >(() => emptyModuleGrants({}))
+  >(() => seedModuleGrants('employee', {}))
 
   const [resetModalUser, setResetModalUser] = useState<UserRow | null>(null)
   const [resetPassword, setResetPassword] = useState('')
@@ -128,7 +127,7 @@ export default function CompanyUsersPage() {
   const [editCanViewSalary, setEditCanViewSalary] = useState(false)
   const [editModuleGrants, setEditModuleGrants] = useState<
     Record<CompanyModuleKey, ModuleGrant>
-  >(() => emptyModuleGrants({}))
+  >(() => seedModuleGrants('employee', {}))
 
   useEffect(() => {
     let cancelled = false
@@ -140,7 +139,7 @@ export default function CompanyUsersPage() {
         if (cancelled) return
         const f = (data.features || {}) as Record<string, boolean>
         setFeatures(f)
-        setCreateModuleGrants(emptyModuleGrants(f))
+        setCreateModuleGrants(seedModuleGrants(form.role, f))
       } catch {
         // ignore
       }
@@ -148,6 +147,7 @@ export default function CompanyUsersPage() {
     return () => {
       cancelled = true
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- seed once features load
   }, [])
 
   const buildQuery = useCallback(
@@ -283,7 +283,7 @@ export default function CompanyUsersPage() {
       setUseManualPasswordOnCreate(false)
       setForm({ email: '', password: '', passwordConfirm: '', role: 'employee' })
       setCreateCanViewSalary(false)
-      setCreateModuleGrants(emptyModuleGrants(features))
+      setCreateModuleGrants(seedModuleGrants(form.role, features))
       setPage(1)
       await reloadUsers(1, pageSize)
     } catch (err: any) {
@@ -305,7 +305,7 @@ export default function CompanyUsersPage() {
       const perms = data.user.permissions || {}
       setEditCanViewSalary(perms.can_view_salary === true)
       setEditModuleGrants(
-        data.user.module_grants || emptyModuleGrants(data.features || features)
+        data.user.module_grants || seedModuleGrants(role, data.features || features)
       )
     } catch (err: any) {
       addNotification({ type: 'error', title: 'Error', message: err.message })
@@ -416,10 +416,12 @@ export default function CompanyUsersPage() {
 
   const ModuleToggles = useMemo(() => {
     const ModuleTogglesInner = ({
+      role,
       grants,
       onChange,
       disabled,
     }: {
+      role: CompanyManagedRole
       grants: Record<CompanyModuleKey, ModuleGrant>
       onChange: (next: Record<CompanyModuleKey, ModuleGrant>) => void
       disabled?: boolean
@@ -428,20 +430,23 @@ export default function CompanyUsersPage() {
         <p className="text-sm text-white/80 font-medium">Módulos</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           {COMPANY_MODULE_DEFS.map((def) => {
-            const enabled = isModuleEnabledByFeatures(def.key, features)
+            const enabled = isModuleToggleEnabled(role, def.key, features)
             const g = grants[def.key] || { view: false, manage: false }
+            const roleBlocked = !enabled
             return (
               <div
                 key={def.key}
                 className={`rounded-md border px-3 py-2 text-sm ${
-                  enabled ? 'border-white/15 bg-white/5' : 'border-white/10 bg-white/[0.02] opacity-60'
+                  enabled
+                    ? 'border-white/15 bg-white/5'
+                    : 'border-white/10 bg-white/[0.02] opacity-60'
                 }`}
               >
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-white/90">{def.label}</span>
-                  {!enabled && (
+                  {roleBlocked && (
                     <span className="text-[10px] uppercase tracking-wide text-amber-200/80">
-                      Plan
+                      N/A rol/plan
                     </span>
                   )}
                 </div>
@@ -450,7 +455,7 @@ export default function CompanyUsersPage() {
                     <input
                       type="checkbox"
                       disabled={disabled || !enabled}
-                      checked={!!g.view}
+                      checked={!!g.view && enabled}
                       onChange={(e) =>
                         onChange({
                           ...grants,
@@ -469,7 +474,7 @@ export default function CompanyUsersPage() {
                       <input
                         type="checkbox"
                         disabled={disabled || !enabled || !g.view}
-                        checked={!!g.manage}
+                        checked={!!g.manage && enabled}
                         onChange={(e) =>
                           onChange({
                             ...grants,
@@ -573,7 +578,7 @@ export default function CompanyUsersPage() {
                 }}
               >
                 <option value="">Todos los roles</option>
-                {COMPANY_MANAGED_ROLES.map((r) => (
+                {assignableRoles.map((r) => (
                   <option key={r} value={r}>
                     {ROLE_LABELS[r]}
                   </option>
@@ -595,7 +600,17 @@ export default function CompanyUsersPage() {
                 type="button"
                 onClick={() => {
                   setShowCreate(true)
-                  setCreateModuleGrants(emptyModuleGrants(features))
+                  const defaultRole = (assignableRoles.includes('employee')
+                    ? 'employee'
+                    : assignableRoles[0] || 'employee') as CompanyManagedRole
+                  setForm({
+                    email: '',
+                    password: '',
+                    passwordConfirm: '',
+                    role: defaultRole,
+                  })
+                  setCreateCanViewSalary(roleCanEditSalary(defaultRole))
+                  setCreateModuleGrants(seedModuleGrants(defaultRole, features))
                 }}
               >
                 Nuevo usuario
@@ -639,10 +654,12 @@ export default function CompanyUsersPage() {
                         onChange={(e) => {
                           const role = e.target.value as CompanyManagedRole
                           setForm({ ...form, role })
+                          setCreateModuleGrants(seedModuleGrants(role, features))
                           if (roleCanEditSalary(role)) setCreateCanViewSalary(true)
+                          else setCreateCanViewSalary(false)
                         }}
                       >
-                        {COMPANY_MANAGED_ROLES.map((r) => (
+                        {assignableRoles.map((r) => (
                           <option key={r} value={r}>
                             {ROLE_LABELS[r]}
                           </option>
@@ -705,6 +722,7 @@ export default function CompanyUsersPage() {
                   )}
 
                   <ModuleToggles
+                    role={form.role}
                     grants={createModuleGrants}
                     onChange={setCreateModuleGrants}
                   />
@@ -807,28 +825,34 @@ export default function CompanyUsersPage() {
                             className="mt-3 flex gap-2"
                             onClick={(e) => e.stopPropagation()}
                           >
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => toggleActive(u)}
-                              disabled={processingUserId === u.id}
-                              className="border-white/30 text-white hover:bg-white/10"
-                            >
-                              {u.is_active ? 'Desactivar' : 'Activar'}
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                setResetModalUser(u)
-                                setResetPassword('')
-                                setResetPasswordConfirm('')
-                                setResetShowManual(false)
-                              }}
-                              className="border-white/30 text-white hover:bg-white/10"
-                            >
-                              Restablecer acceso
-                            </Button>
+                            {canActorManageTarget(actorRole, u.role) ? (
+                              <>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => toggleActive(u)}
+                                  disabled={processingUserId === u.id}
+                                  className="border-white/30 text-white hover:bg-white/10"
+                                >
+                                  {u.is_active ? 'Desactivar' : 'Activar'}
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    setResetModalUser(u)
+                                    setResetPassword('')
+                                    setResetPasswordConfirm('')
+                                    setResetShowManual(false)
+                                  }}
+                                  className="border-white/30 text-white hover:bg-white/10"
+                                >
+                                  Restablecer acceso
+                                </Button>
+                              </>
+                            ) : (
+                              <span className="text-xs text-white/50">Solo lectura</span>
+                            )}
                           </div>
                         </CardContent>
                       </Card>
@@ -916,22 +940,34 @@ export default function CompanyUsersPage() {
                           onChange={(e) => {
                             const role = e.target.value as CompanyManagedRole
                             setEditRole(role)
+                            setEditModuleGrants(seedModuleGrants(role, features))
                             if (roleCanEditSalary(role)) setEditCanViewSalary(true)
+                            else setEditCanViewSalary(false)
                           }}
-                          disabled={selectedUser.id === userProfile?.id}
+                          disabled={
+                            selectedUser.id === userProfile?.id ||
+                            !canActorManageTarget(actorRole, selectedUser.role)
+                          }
                         >
-                          {COMPANY_MANAGED_ROLES.map((r) => (
+                          {(assignableRoles.includes(editRole)
+                            ? assignableRoles
+                            : ([editRole, ...assignableRoles] as CompanyManagedRole[])
+                          ).map((r) => (
                             <option key={r} value={r}>
-                              {ROLE_LABELS[r]}
+                              {ROLE_LABELS[r] || r}
                             </option>
                           ))}
                         </select>
                       </div>
 
                       <ModuleToggles
+                        role={editRole}
                         grants={editModuleGrants}
                         onChange={setEditModuleGrants}
-                        disabled={savingDetails}
+                        disabled={
+                          savingDetails ||
+                          !canActorManageTarget(actorRole, selectedUser.role)
+                        }
                       />
 
                       <div className="rounded-md border border-white/15 bg-white/5 px-3 py-3 space-y-2">
@@ -952,9 +988,21 @@ export default function CompanyUsersPage() {
                         )}
                       </div>
 
-                      <Button type="button" onClick={saveUserDetails} disabled={savingDetails}>
+                      <Button
+                        type="button"
+                        onClick={saveUserDetails}
+                        disabled={
+                          savingDetails ||
+                          !canActorManageTarget(actorRole, selectedUser.role)
+                        }
+                      >
                         {savingDetails ? 'Guardando…' : 'Guardar cambios'}
                       </Button>
+                      {!canActorManageTarget(actorRole, selectedUser.role) && (
+                        <p className="text-xs text-amber-200/80">
+                          No puede editar cuentas de Admin empresa con su rol actual.
+                        </p>
+                      )}
                     </>
                   )}
                 </CardContent>

@@ -6,8 +6,13 @@ import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   applySalaryPermissionRules,
+  assignableRolesForActor,
   buildCompanyUserPermissions,
+  canActorAssignRole,
+  canActorManageTarget,
   isCompanyManagedRole,
+  isModuleAssignableForRole,
+  isModuleToggleEnabled,
   roleCanEditSalary,
   stripPermissionsOutsidePlan,
 } from '../lib/company/users'
@@ -44,6 +49,24 @@ describe('company-users roles', () => {
     assert.equal(isCompanyManagedRole('super_admin'), false)
     assert.equal(isCompanyManagedRole('admin'), false)
   })
+
+  it('hr_manager cannot assign or manage company_admin', () => {
+    assert.equal(canActorAssignRole('hr_manager', 'company_admin'), false)
+    assert.equal(canActorAssignRole('hr_manager', 'manager'), true)
+    assert.equal(canActorManageTarget('hr_manager', 'company_admin'), false)
+    assert.equal(canActorManageTarget('hr_manager', 'employee'), true)
+    assert.deepEqual(assignableRolesForActor('hr_manager'), [
+      'hr_manager',
+      'manager',
+      'employee',
+    ])
+  })
+
+  it('company_admin can assign all managed roles', () => {
+    assert.equal(canActorAssignRole('company_admin', 'company_admin'), true)
+    assert.equal(canActorManageTarget('company_admin', 'company_admin'), true)
+    assert.equal(assignableRolesForActor('company_admin').includes('company_admin'), true)
+  })
 })
 
 describe('company-users plan stripping', () => {
@@ -61,6 +84,18 @@ describe('company-users plan stripping', () => {
     assert.equal(stripped.can_manage_payroll, false)
     assert.equal(stripped.can_authorize_payroll, false)
     assert.equal(stripped.can_view_employees, true)
+  })
+})
+
+describe('company-users module honesty', () => {
+  it('manager cannot toggle payroll/settings/reports', () => {
+    assert.equal(isModuleAssignableForRole('manager', 'payroll'), false)
+    assert.equal(isModuleAssignableForRole('manager', 'settings'), false)
+    assert.equal(isModuleAssignableForRole('manager', 'attendance'), true)
+    assert.equal(
+      isModuleToggleEnabled('manager', 'payroll', { payroll: true }),
+      false
+    )
   })
 })
 
@@ -87,7 +122,6 @@ describe('company-users build permissions', () => {
     })
     assert.equal(perms.can_view_salary, true)
     assert.equal(perms.can_edit_salary, false)
-    // manager hard rules strip payroll from canonical normalizer
     assert.equal(perms.can_view_payroll, false)
     assert.equal(perms.can_manage_payroll, false)
   })

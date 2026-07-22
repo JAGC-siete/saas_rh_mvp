@@ -13,12 +13,18 @@ import { validateAdminPassword } from '../../../../lib/auth/password-policy'
 import {
   COMPANY_MANAGED_ROLES,
   buildCompanyUserPermissions,
+  canActorAssignRole,
+  canActorManageTarget,
   isCompanyManagedRole,
   moduleGrantsFromPermissions,
   parseModuleGrantsFromBody,
   type CompanyManagedRole,
 } from '../../../../lib/company/users'
-import { loadCompanyEffectiveFeatures } from '../../../../lib/company/users-server'
+import {
+  countActiveCompanyAdmins,
+  loadCompanyEffectiveFeatures,
+  revokeUserSessions,
+} from '../../../../lib/company/users-server'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
@@ -42,9 +48,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       case 'GET':
         return await getUser(id, auth.companyId, auth.adminClient, res)
       case 'PATCH':
-        return await updateUser(id, auth.user.id, auth.companyId, auth.adminClient, req, res)
+        return await updateUser(
+          id,
+          auth.user.id,
+          auth.role,
+          auth.companyId,
+          auth.adminClient,
+          req,
+          res
+        )
       case 'POST':
-        return await postActions(id, auth.user.id, auth.companyId, auth.adminClient, req, res)
+        return await postActions(
+          id,
+          auth.user.id,
+          auth.role,
+          auth.companyId,
+          auth.adminClient,
+          req,
+          res
+        )
       default:
         res.setHeader('Allow', ['GET', 'PATCH', 'POST'])
         return res.status(405).json({ error: 'Method not allowed' })
@@ -171,6 +193,7 @@ async function getUser(
 async function updateUser(
   id: string,
   actorUserId: string,
+  actorRole: string | null | undefined,
   companyId: string,
   adminClient: ReturnType<typeof createAdminClient>,
   req: NextApiRequest,
@@ -186,6 +209,13 @@ async function updateUser(
       })
     }
 
+    if (body.permissions !== undefined) {
+      return res.status(400).json({
+        error: 'Invalid field',
+        message: 'Use module_grants y can_view_salary; permissions raw no se acepta',
+      })
+    }
+
     if (body.role === 'super_admin') {
       return res.status(403).json({
         error: 'Forbidden',
@@ -195,7 +225,6 @@ async function updateUser(
 
     const existing = await loadScopedProfile(adminClient, id, companyId)
     if (!existing) {
-      // Distinguish missing vs cross-company: if exists elsewhere → 403
       const { data: other } = await adminClient
         .from('user_profiles')
         .select('id, company_id')
@@ -214,6 +243,13 @@ async function updateUser(
       return res.status(403).json({ error: 'Access denied' })
     }
 
+    if (!canActorManageTarget(actorRole, existing.role)) {
+      return res.status(403).json({
+        error: 'Forbidden',
+        message: 'No puede gestionar este usuario',
+      })
+    }
+
     const updateData: Record<string, unknown> = {}
     const nextRole: CompanyManagedRole | null =
       body.role !== undefined
@@ -227,6 +263,12 @@ async function updateUser(
         return res.status(400).json({
           error: 'Invalid role',
           message: `El rol debe ser uno de: ${COMPANY_MANAGED_ROLES.join(', ')}`,
+        })
+      }
+      if (!canActorAssignRole(actorRole, nextRole)) {
+        return res.status(403).json({
+          error: 'Forbidden',
+          message: 'No tiene permiso para asignar ese rol',
         })
       }
       if (id === actorUserId && nextRole !== existing.role) {
@@ -252,13 +294,26 @@ async function updateUser(
     }
 
     const roleForPerms = (nextRole || existing.role) as CompanyManagedRole
+    const willLeaveCompanyAdminRole =
+      existing.role === 'company_admin' &&
+      ((nextRole && nextRole !== 'company_admin') || body.is_active === false)
+
+    if (willLeaveCompanyAdminRole) {
+      const activeAdmins = await countActiveCompanyAdmins(adminClient, companyId)
+      const existingCountsAsActive = existing.is_active === true
+      const remaining = existingCountsAsActive ? activeAdmins - 1 : activeAdmins
+      if (remaining < 1) {
+        return res.status(409).json({
+          error: 'Cannot remove last company admin',
+          message: 'Debe existir al menos un Admin empresa activo',
+        })
+      }
+    }
+
     const moduleGrants = parseModuleGrantsFromBody(body)
     const hasSalaryToggle =
       body.can_view_salary === true || body.can_view_salary === false
-    const hasPermPayload =
-      moduleGrants !== undefined ||
-      hasSalaryToggle ||
-      (body.permissions !== undefined && typeof body.permissions === 'object')
+    const hasPermPayload = moduleGrants !== undefined || hasSalaryToggle
 
     if (hasPermPayload) {
       const companyFeatures = await loadCompanyEffectiveFeatures(companyId)
@@ -266,21 +321,6 @@ async function updateUser(
         existing.permissions && typeof existing.permissions === 'object'
           ? (existing.permissions as Record<string, unknown>)
           : {}
-
-      // Reject free-form permissions that try to set can_edit_salary for non-admin roles
-      if (body.permissions && typeof body.permissions === 'object') {
-        const incoming = body.permissions as Record<string, unknown>
-        if (
-          incoming.can_edit_salary === true &&
-          roleForPerms !== 'company_admin' &&
-          roleForPerms !== 'hr_manager'
-        ) {
-          return res.status(400).json({
-            error: 'Invalid permissions',
-            message: 'can_edit_salary solo aplica a company_admin y hr_manager',
-          })
-        }
-      }
 
       const canViewSalary = hasSalaryToggle
         ? body.can_view_salary === true
@@ -300,7 +340,6 @@ async function updateUser(
         existingRaw,
       })
     } else if (nextRole && nextRole !== existing.role) {
-      // Role change without explicit perms → rebuild from new role defaults
       const companyFeatures = await loadCompanyEffectiveFeatures(companyId)
       updateData.permissions = buildCompanyUserPermissions({
         role: nextRole,
@@ -326,6 +365,10 @@ async function updateUser(
 
     if (error) throw error
 
+    if (body.is_active === false) {
+      await revokeUserSessions(adminClient, id)
+    }
+
     await logTenantAdminAction(
       actorUserId,
       companyId,
@@ -336,6 +379,7 @@ async function updateUser(
         updated_fields: Object.keys(updateData),
         previous_role: existing.role,
         next_role: updatedUser.role,
+        sessions_revoked: body.is_active === false,
         can_view_salary:
           updatedUser.permissions &&
           typeof updatedUser.permissions === 'object' &&
@@ -361,6 +405,7 @@ async function updateUser(
 async function postActions(
   id: string,
   actorUserId: string,
+  actorRole: string | null | undefined,
   companyId: string,
   adminClient: ReturnType<typeof createAdminClient>,
   req: NextApiRequest,
@@ -381,6 +426,13 @@ async function postActions(
         })
       }
       return res.status(404).json({ error: 'User not found' })
+    }
+
+    if (!canActorManageTarget(actorRole, existing.role)) {
+      return res.status(403).json({
+        error: 'Forbidden',
+        message: 'No puede gestionar este usuario',
+      })
     }
 
     const action = (req.query.action as string) || ''
@@ -475,13 +527,15 @@ async function postActions(
         })
       }
 
+      await revokeUserSessions(adminClient, id)
+
       await logTenantAdminAction(
         actorUserId,
         companyId,
         'company_user_password_reset',
         'user',
         id,
-        {}
+        { sessions_revoked: true }
       )
 
       return res.status(200).json({

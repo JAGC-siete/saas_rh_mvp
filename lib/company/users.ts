@@ -53,6 +53,64 @@ export type CompanyModuleKey =
   | 'mtp'
   | 'performance'
 
+/** Roles an actor may assign when creating/editing users. */
+export function assignableRolesForActor(actorRole: unknown): CompanyManagedRole[] {
+  const r = normalizeRole(actorRole)
+  if (r === 'company_admin') {
+    return ['company_admin', 'hr_manager', 'manager', 'employee']
+  }
+  if (r === 'hr_manager') {
+    return ['hr_manager', 'manager', 'employee']
+  }
+  return []
+}
+
+export function canActorAssignRole(actorRole: unknown, targetRole: unknown): boolean {
+  if (!isCompanyManagedRole(targetRole)) return false
+  return assignableRolesForActor(actorRole).includes(targetRole)
+}
+
+/**
+ * hr_manager cannot manage (edit/reset/deactivate) company_admin accounts.
+ * company_admin can manage all company-managed roles.
+ */
+export function canActorManageTarget(actorRole: unknown, targetRole: unknown): boolean {
+  const actor = normalizeRole(actorRole)
+  const target = normalizeRole(targetRole)
+  if (!actor || !canManageCompanyUsers(actor)) return false
+  if (target === 'super_admin') return false
+  if (actor === 'hr_manager' && target === 'company_admin') return false
+  if (!target) return false
+  return isCompanyManagedRole(target)
+}
+
+/**
+ * Modules the UI may toggle for a role (aligned with canonical hard rules).
+ * Plan/feature gating is separate via isModuleEnabledByFeatures.
+ */
+export function isModuleAssignableForRole(
+  role: unknown,
+  moduleKey: CompanyModuleKey
+): boolean {
+  const r = normalizeRole(role)
+  if (!r) return false
+
+  if (r === 'employee') {
+    return moduleKey === 'leave'
+  }
+
+  if (r === 'manager') {
+    return (
+      moduleKey === 'employees' ||
+      moduleKey === 'departments' ||
+      moduleKey === 'attendance' ||
+      moduleKey === 'leave'
+    )
+  }
+
+  return true
+}
+
 export type ModuleGrant = {
   view?: boolean
   manage?: boolean
@@ -181,6 +239,17 @@ export function isModuleEnabledByFeatures(
   return features[def.featureKey] === true
 }
 
+export function isModuleToggleEnabled(
+  role: unknown,
+  moduleKey: CompanyModuleKey,
+  features: Record<string, boolean>
+): boolean {
+  return (
+    isModuleAssignableForRole(role, moduleKey) &&
+    isModuleEnabledByFeatures(moduleKey, features)
+  )
+}
+
 /**
  * Strip module permissions that the company plan does not include.
  */
@@ -222,7 +291,7 @@ export function buildCompanyUserPermissions(input: {
     const grant = grants[def.key]
     if (!grant) continue
 
-    const enabled = isModuleEnabledByFeatures(def.key, input.companyFeatures)
+    const enabled = isModuleToggleEnabled(input.role, def.key, input.companyFeatures)
     if (!enabled) {
       if (def.viewKey) base[def.viewKey] = false
       if (def.manageKey) base[def.manageKey] = false
@@ -273,7 +342,11 @@ export function moduleGrantsFromPermissions(
 
   const out = {} as Record<CompanyModuleKey, ModuleGrant>
   for (const def of COMPANY_MODULE_DEFS) {
-    const enabled = isModuleEnabledByFeatures(def.key, features)
+    const enabled = isModuleToggleEnabled(role, def.key, features)
+    if (!enabled) {
+      out[def.key] = { view: false, manage: false }
+      continue
+    }
     if (def.legacyKey) {
       const v =
         input[def.legacyKey] === true
@@ -281,12 +354,12 @@ export function moduleGrantsFromPermissions(
           : input[def.legacyKey] === false
             ? false
             : roleCanEditSalary(role)
-      out[def.key] = { view: enabled && v }
+      out[def.key] = { view: v }
       continue
     }
     out[def.key] = {
-      view: enabled && def.viewKey ? !!canonical[def.viewKey] : false,
-      manage: enabled && def.manageKey ? !!canonical[def.manageKey] : false,
+      view: def.viewKey ? !!canonical[def.viewKey] : false,
+      manage: def.manageKey ? !!canonical[def.manageKey] : false,
     }
   }
   return out
