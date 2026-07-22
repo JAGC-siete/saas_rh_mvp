@@ -31,11 +31,11 @@ export const VIERNES_COPY = {
   },
 
   insight: {
-    title: 'Tener software no es tener paz (Digitalizar no es automatizar)',
-    lead: 'El verdadero costo de una planilla manual no son las horas invertidas; es la incertidumbre constante.',
+    title: 'Digitalizar no es automatizar',
+    lead: 'El verdadero costo de los procesos manuales no es el tiempo invertido; si no la incertidumbre en cada ciclo de pago.',
     paragraphs: [
-      'Muchas empresas instalaron un reloj biométrico y creyeron que se digitalizaron. Pero siguen bajando reportes a memorias USB, uniendo tablas en Excel y recalculando deducciones de ley a mano. Eso no es modernizar: es el mismo estrés, pero con pantallas más caras.',
-      'La paz llega cuando el dato viaja solo. Cuando el registro biométrico entra, el motor legal calcula automáticamente (IHSS, RAP, ISR) y la planilla se genera lista para aprobación. RR.HH. deja de apagar incendios y vos recuperás el control absoluto.',
+      'Muchas empresas instalan un reloj biométrico y se digitalizaron. Pero siguen dependiendo reportes a memorias USB, uniendo con tablas en Excel y recalculando deducciones de ley cada vez. La intención es asertada pero la solución incompleta.',
+      'Las paces con RR.HH. se hacen cuando los datos viajan por si solos. Cuando el registro biométrico entra, el motor legal almacena, ordena y calcula automáticamente (IHSS, RAP, ISR) y también la planilla lista para aprobación. RR.HH. deja de apagar incendios para dedicarse a tareas que agreguen valor al personal.',
     ],
     comparison: [
       { before: 'Estrés y dudas todo el domingo', after: 'Paz contable y certeza total el viernes' },
