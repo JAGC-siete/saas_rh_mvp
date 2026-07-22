@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import Head from 'next/head'
 import Link from 'next/link'
-import { useRouter } from 'next/router'
 import ProtectedRoute from '../../../components/ProtectedRoute'
 import DashboardLayout from '../../../components/DashboardLayout'
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card'
@@ -18,7 +17,8 @@ import {
 import {
   COMPANY_MANAGED_ROLES,
   COMPANY_MODULE_DEFS,
-  COMPANY_USER_ACTORS,
+  COMPANY_ROLE_LABELS,
+  canManageCompanyUsers,
   isModuleEnabledByFeatures,
   roleCanEditSalary,
   type CompanyManagedRole,
@@ -67,12 +67,7 @@ interface UserRow {
   created_at?: string
 }
 
-const ROLE_LABELS: Record<string, string> = {
-  company_admin: 'Admin empresa',
-  hr_manager: 'HR Manager',
-  manager: 'Manager',
-  employee: 'Empleado',
-}
+const ROLE_LABELS = COMPANY_ROLE_LABELS
 
 function emptyModuleGrants(features: Record<string, boolean>): Record<CompanyModuleKey, ModuleGrant> {
   const out = {} as Record<CompanyModuleKey, ModuleGrant>
@@ -89,10 +84,9 @@ function emptyModuleGrants(features: Record<string, boolean>): Record<CompanyMod
 export default function CompanyUsersPage() {
   const { addNotification } = useNotificationContext()
   const { userProfile, loading: authLoading } = useAuth()
-  const router = useRouter()
 
   const actorRole = normalizeRole(userProfile?.role)
-  const canManage = !!actorRole && (COMPANY_USER_ACTORS as readonly string[]).includes(actorRole)
+  const canManage = canManageCompanyUsers(actorRole)
 
   const [users, setUsers] = useState<UserRow[]>([])
   const [totalUsers, setTotalUsers] = useState(0)
@@ -135,13 +129,6 @@ export default function CompanyUsersPage() {
   const [editModuleGrants, setEditModuleGrants] = useState<
     Record<CompanyModuleKey, ModuleGrant>
   >(() => emptyModuleGrants({}))
-
-  useEffect(() => {
-    if (authLoading) return
-    if (!canManage) {
-      router.replace('/app/settings')
-    }
-  }, [authLoading, canManage, router])
 
   useEffect(() => {
     let cancelled = false
@@ -507,12 +494,39 @@ export default function CompanyUsersPage() {
     return ModuleTogglesInner
   }, [features])
 
-  if (authLoading || !canManage) {
+  if (authLoading) {
     return (
       <ProtectedRoute>
         <DashboardLayout>
           <div className="p-6 flex justify-center">
             <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-white" />
+          </div>
+        </DashboardLayout>
+      </ProtectedRoute>
+    )
+  }
+
+  if (!canManage) {
+    return (
+      <ProtectedRoute>
+        <Head>
+          <title>Usuarios de la empresa</title>
+        </Head>
+        <DashboardLayout>
+          <div className="p-6 space-y-4">
+            <Card variant="liquid" className="border-white/15">
+              <CardContent className="pt-6 space-y-3">
+                <h1 className="text-xl font-semibold text-white">Usuarios</h1>
+                <p className="text-white/70 text-sm">
+                  Solo <strong className="text-white/90">Admin empresa</strong> y{' '}
+                  <strong className="text-white/90">HR Manager</strong> pueden gestionar usuarios.
+                  Tu rol actual: {ROLE_LABELS[actorRole || ''] || actorRole || 'sin rol'}.
+                </p>
+                <Link href="/app/settings" className="inline-block text-sm text-white/80 hover:text-white underline">
+                  Volver a Parámetros
+                </Link>
+              </CardContent>
+            </Card>
           </div>
         </DashboardLayout>
       </ProtectedRoute>

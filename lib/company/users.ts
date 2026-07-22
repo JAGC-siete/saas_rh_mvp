@@ -22,6 +22,26 @@ export const COMPANY_USER_ACTORS = ['company_admin', 'hr_manager'] as const
 
 export type CompanyUserActorRole = (typeof COMPANY_USER_ACTORS)[number]
 
+export const COMPANY_ROLE_LABELS: Record<string, string> = {
+  super_admin: 'Super admin',
+  admin: 'Admin',
+  company_admin: 'Admin empresa',
+  hr_manager: 'HR Manager',
+  manager: 'Manager',
+  employee: 'Empleado',
+}
+
+export function companyRoleLabel(role: unknown): string {
+  const r = normalizeRole(role)
+  if (!r) return 'Usuario'
+  return COMPANY_ROLE_LABELS[r] || r
+}
+
+export function canManageCompanyUsers(role: unknown): boolean {
+  const r = normalizeRole(role)
+  return !!r && (COMPANY_USER_ACTORS as readonly string[]).includes(r)
+}
+
 export type CompanyModuleKey =
   | 'employees'
   | 'departments'
