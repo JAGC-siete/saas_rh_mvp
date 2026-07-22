@@ -145,8 +145,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             settings: !!(canonical.can_view_settings || canonical.can_create_work_schedules),
             admin: isAdmin,
             affiliates: true, // Show affiliates link to all users
-            mtp: !!showPayrollSidebarGroup,
-            performance: !!showPayrollSidebarGroup,
+            mtp: !!showPayrollSidebarGroup && rawPermissions?.mtp !== false,
+            performance: !!showPayrollSidebarGroup && rawPermissions?.performance !== false,
           }
           // #region agent log
           fetch('/api/__debug/log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'25b418',runId:'pre-fix',hypothesisId:'H3',location:'components/DashboardLayout.tsx:userProfileBranch(setUserPermissions)',message:'Setting UI permissions (userProfile branch)',data:{settings:permissions.settings,reports:permissions.reports,admin:permissions.admin},timestamp:Date.now()})}).catch(()=>{});
@@ -254,8 +254,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           settings: !!(canonical.can_view_settings || canonical.can_create_work_schedules),
           admin: isAdmin,
           affiliates: true, // Show affiliates link to all users
-          mtp: !!showPayrollSidebarGroup,
-          performance: !!showPayrollSidebarGroup,
+          mtp: !!showPayrollSidebarGroup && rawPermissions?.mtp !== false,
+          performance: !!showPayrollSidebarGroup && rawPermissions?.performance !== false,
         }
         // #region agent log
         fetch('/api/__debug/log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'25b418',runId:'pre-fix',hypothesisId:'H5',location:'components/DashboardLayout.tsx:apiProfileBranch(setUserPermissions)',message:'Setting UI permissions (API profile branch)',data:{settings:permissions.settings,reports:permissions.reports,admin:permissions.admin},timestamp:Date.now()})}).catch(()=>{});

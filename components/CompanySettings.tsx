@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react'
+import Link from 'next/link'
 import { createClient } from '../lib/supabase/client'
 import { useCompanyContext } from '../lib/useCompanyContext'
+import { useAuth } from '../lib/auth'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Card, CardContent } from './ui/card'
@@ -9,7 +11,8 @@ import {
   CalculatorIcon,
   DocumentChartBarIcon,
   ClipboardDocumentListIcon,
-  ChartBarIcon
+  ChartBarIcon,
+  UsersIcon
 } from '@heroicons/react/24/outline'
 import LeaveTypesSettings from './LeaveTypesSettings'
 import PayrollConfigEditor from './PayrollConfigEditor'
@@ -24,6 +27,8 @@ import type { ScheduleEditorFormState } from '../lib/attendance/shift-config'
 import { BIOMETRIC_MODES, type BiometricMode } from '../lib/attendance/attendance-metadata'
 import { DEFAULT_PERFORMANCE_SETTINGS, parsePerformanceSettings } from '../lib/performance/settings'
 import { useSettingsAccess } from '../lib/hooks/useSettingsAccess'
+import { COMPANY_USER_ACTORS } from '../lib/company/users'
+import { normalizeRole } from '../lib/auth/role-access'
 
 interface Company {
   id: string
@@ -59,6 +64,10 @@ interface WorkSchedule {
 
 export default function CompanySettings() {
   const settingsAccess = useSettingsAccess()
+  const { userProfile } = useAuth()
+  const actorRole = normalizeRole(userProfile?.role)
+  const canManageCompanyUsers =
+    !!actorRole && (COMPANY_USER_ACTORS as readonly string[]).includes(actorRole)
   const {
     canViewFullSettings,
     canCreateWorkSchedules,
@@ -358,15 +367,29 @@ export default function CompanySettings() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-semibold text-white">
-          {canAccessSchedulesCreateOnly ? 'Horarios de trabajo' : 'Configuración de la Empresa'}
-        </h2>
-        <p className="text-gray-300">
-          {canAccessSchedulesCreateOnly
-            ? 'Crea nuevos horarios para asignar a empleados'
-            : 'Administra la configuración y ajustes de tu empresa'}
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h2 className="text-xl font-semibold text-white">
+            {canAccessSchedulesCreateOnly ? 'Horarios de trabajo' : 'Configuración de la Empresa'}
+          </h2>
+          <p className="text-gray-300">
+            {canAccessSchedulesCreateOnly
+              ? 'Crea nuevos horarios para asignar a empleados'
+              : 'Administra la configuración y ajustes de tu empresa'}
+          </p>
+        </div>
+        {canManageCompanyUsers && (
+          <Link href="/app/settings/users">
+            <Button
+              type="button"
+              variant="outline"
+              className="border-white/30 text-white hover:bg-white/10"
+            >
+              <UsersIcon className="h-4 w-4 mr-2" />
+              Usuarios
+            </Button>
+          </Link>
+        )}
       </div>
 
       {/* Tabs */}
