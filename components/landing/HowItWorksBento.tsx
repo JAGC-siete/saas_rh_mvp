@@ -29,8 +29,8 @@ export default function HowItWorksBento() {
             Cómo funciona Humano SISU
           </div>
           <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white leading-tight mb-6 px-2">
-            <span className="text-white block sm:inline">Control de asistencia + nómina en un solo software de RH:</span>
-            <span className="text-brand-300 block sm:inline mt-1 sm:mt-0">así automatiza Humano SISU el 80% de tus tareas.</span>
+            <span className="text-white block sm:inline">Control de asistencia + nómina en un solo ecosistema de Recursos Humanos:</span>
+            <span className="text-brand-300 block sm:inline mt-1 sm:mt-0">el método SISU automatiza el 80% de las tareas repetitivas de RRHH para MiPyMes.</span>
           </h2>
         </div>
       </ScrollReveal>
