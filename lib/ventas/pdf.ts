@@ -10,6 +10,7 @@ import { buildModalityComparison } from './modality-comparison'
 import { getVentasModalityDefinition } from './modality-includes'
 import { buildTerminalsDisplayLabel, buildVentasRefLabel } from './brand-styles'
 import { quoteIncludesBiometricTerminals, resolveHardwareMode } from './business-rules'
+import { pricesInCurrencyFooter } from './currency'
 import { PDF_TYPE as TYPE, VENTAS_PDF_THEME as T } from './pdf-theme'
 
 const MARGIN = 40
@@ -45,6 +46,7 @@ export async function generateVentasQuotationPDF(params: {
   const modalityComparison = buildModalityComparison({ quote, sentAt })
   const modalityDef = getVentasModalityDefinition(quote.billing_modality, {
     employeesCount: employees,
+    currency: quote.currency,
   })
   const isAnnual = quote.billing_modality === 'annual'
   const refLabel = buildVentasRefLabel(companyName, contactName)
@@ -99,6 +101,7 @@ export async function generateVentasQuotationPDF(params: {
         terminalsCount: quote.terminals_count,
         includesTerminals,
         hardwareMode,
+        currency: quote.currency,
       })
 
       const priceY = featuresY + featuresH + 10
@@ -127,6 +130,7 @@ export async function generateVentasQuotationPDF(params: {
         bankDetails,
         isAnnual,
         includesTerminals,
+        currency: quote.currency,
       })
 
       doc.end()
@@ -239,14 +243,16 @@ function drawFeaturesRow(
     terminalsCount: number
     includesTerminals: boolean
     hardwareMode: 'included' | 'sale' | 'continuity'
+    currency: QuotationQuote['currency']
   }
 ): number {
-  const { y, contentW, isAnnual, terminalsCount, includesTerminals, hardwareMode } = params
+  const { y, contentW, isAnnual, terminalsCount, includesTerminals, hardwareMode, currency } = params
   const labels = getContractIncludesLabels({
     isAnnual,
     terminalsCount,
     includesTerminals,
     hardwareMode,
+    currency,
   })
   const colGap = 16
   const colW = (contentW - colGap) / 2
@@ -344,9 +350,10 @@ function drawFooter(
     bankDetails?: VentasBankDetails | null
     isAnnual: boolean
     includesTerminals: boolean
+    currency: QuotationQuote['currency']
   }
 ) {
-  const { y, contentW, bankDetails, isAnnual, includesTerminals } = params
+  const { y, contentW, bankDetails, isAnnual, includesTerminals, currency } = params
   const boxW = (contentW - 14) / 2
   const boxH = 128
 
@@ -422,7 +429,7 @@ function drawFooter(
   }
 
   doc.fillColor(T.textLight).font('Helvetica').fontSize(TYPE.footnote).text(
-    'Humano SISU · humanosisu.net · Propuesta comercial · Precios en lempiras',
+    `Humano SISU · humanosisu.net · Propuesta comercial · ${pricesInCurrencyFooter(currency)}`,
     MARGIN,
     y + boxH + 28,
     { width: contentW, align: 'center' }

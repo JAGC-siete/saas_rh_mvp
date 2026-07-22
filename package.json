@@ -30,16 +30,18 @@
     "svgo": "svgo -f public -r",
     "staging:setup": "./scripts/setup-railway-staging.sh",
     "staging:check": "./scripts/check-staging-env.sh",
-    "staging:deploy": "railway environment use staging && railway up"
+    "staging:deploy": "railway environment use staging && railway up",
+    "railway:pro-infra": "./scripts/setup-railway-pro-infra.sh"
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",
     "@opentelemetry/api": "^1.9.0",
-    "@opentelemetry/auto-instrumentations-node": "^0.67.2",
-    "@opentelemetry/exporter-trace-otlp-http": "^0.208.0",
-    "@opentelemetry/sdk-node": "^0.208.0",
+    "@opentelemetry/auto-instrumentations-node": "^0.78.0",
+    "@opentelemetry/exporter-trace-otlp-http": "^0.220.0",
+    "@opentelemetry/sdk-node": "^0.220.0",
     "@radix-ui/react-select": "^2.2.5",
     "@sendgrid/mail": "^8.1.5",
+    "@supabase/server": "^1.4.0",
     "@supabase/ssr": "^0.6.1",
     "@supabase/supabase-js": "^2.52.1",
     "@tailwindcss/forms": "^0.5.10",
@@ -65,7 +67,7 @@
     "date-fns": "^4.1.0",
     "decimal.js": "^10.6.0",
     "dotenv": "^17.2.2",
-    "exceljs": "^4.4.0",
+    "exceljs": "^3.4.0",
     "formidable": "^3.5.4",
     "framer-motion": "^12.23.25",
     "gray-matter": "^4.0.3",
@@ -76,9 +78,9 @@
     "marked": "^17.0.1",
     "multiparty": "^4.2.3",
     "next": "^15.5.9",
-    "node-cron": "^3.0.3",
+    "node-cron": "^4.6.0",
     "node-fetch": "^2.7.0",
-    "nodemailer": "^7.0.5",
+    "nodemailer": "^9.0.3",
     "pdfkit": "^0.17.2",
     "postcss": "^8.5.6",
     "raw-body": "^3.0.2",
@@ -109,6 +111,6 @@
     "svgo": "^3.3.2",
     "tailwindcss": "^3.4.17",
     "tsx": "^4.19.3",
-    "yaml": "2.8.2"
+    "yaml": "^2.9.0"
   }
 }

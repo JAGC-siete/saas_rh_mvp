@@ -40,4 +40,4 @@ CREATE TRIGGER on_auth_user_created_safe
 
 -- 4. Comentarios para documentación
 COMMENT ON FUNCTION public.handle_new_user_safe() IS 'Función segura para crear perfil automáticamente';
-COMMENT ON TRIGGER on_auth_user_created_safe ON auth.users IS 'Trigger seguro para crear perfil automáticamente';
+-- Skip COMMENT ON TRIGGER: branches/preview DBs cannot COMMENT on auth.users (not owner).

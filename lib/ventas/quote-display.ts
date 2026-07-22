@@ -1,4 +1,4 @@
-import type { QuotationQuote } from './types'
+import type { CurrencyCode, QuotationQuote } from './types'
 import { formatMoney } from './pricing'
 import { hardwareFeeMonthly } from './modality-includes'
 import {
@@ -7,7 +7,12 @@ import {
   resolveHardwareMode,
   shouldChargeHardwareContinuity,
   shouldChargeHardwareSale,
+  VENTAS_HARDWARE_SALE_UNIT_PRICE,
 } from './business-rules'
+import {
+  convertVentasMoney,
+  VENTAS_PRICE_LIST_CURRENCY,
+} from './currency'
 import {
   computeQuotationUrgencyOffer,
   formatUrgencyOfferExpiryFriendly,
@@ -24,7 +29,8 @@ export function employeesCountFromQuote(quote: QuotationQuote): number {
 function resolveListedHardwareFee(quote: QuotationQuote): number {
   if (quote.monthly_hardware_fee > 0) return quote.monthly_hardware_fee
   const hw = hardwareFeeMonthly(quote.terminals_count || 1)
-  return hw.special ? 0 : hw.fee
+  if (hw.special) return 0
+  return convertVentasMoney(hw.fee, VENTAS_PRICE_LIST_CURRENCY, quote.currency)
 }
 
 /** Continuity HW fee to show for a given modality. */
@@ -47,7 +53,11 @@ export function resolveHardwareSaleForModality(
   if ((quote.hardware_sale_total || 0) > 0 && modality === quote.billing_modality) {
     return quote.hardware_sale_total
   }
-  return hardwareSaleTotal(quote.terminals_count || 1).total
+  return convertVentasMoney(
+    hardwareSaleTotal(quote.terminals_count || 1).total,
+    VENTAS_PRICE_LIST_CURRENCY,
+    quote.currency
+  )
 }
 
 function resolveMonthlyTotal(quote: QuotationQuote): number {
@@ -121,8 +131,16 @@ export function getContractIncludesLabels(params: {
   terminalsCount: number
   includesTerminals: boolean
   hardwareMode?: 'included' | 'sale' | 'continuity'
+  currency?: CurrencyCode
 }): string[] {
   const { isAnnual, terminalsCount, includesTerminals, hardwareMode } = params
+  const currency = params.currency || 'HNL'
+  const unitPrice = convertVentasMoney(
+    VENTAS_HARDWARE_SALE_UNIT_PRICE,
+    VENTAS_PRICE_LIST_CURRENCY,
+    currency
+  )
+  const unitPriceLabel = formatMoney(currency, unitPrice)
 
   if (isAnnual && includesTerminals) {
     const terminalPhrase =
@@ -142,7 +160,7 @@ export function getContractIncludesLabels(params: {
   if (isAnnual) {
     const saleNote =
       hardwareMode === 'sale' || !hardwareMode
-        ? 'Terminal biométrica: venta por separado (L. 6,500 c/u, descuento por volumen)'
+        ? `Terminal biométrica: venta por separado (${unitPriceLabel} c/u, descuento por volumen)`
         : 'Terminal biométrica: Servicio de Continuidad de Hardware (mensual, por separado)'
     return [
       'Subscripción anual de software',

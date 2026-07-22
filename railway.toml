@@ -9,6 +9,16 @@ healthcheckPath = "/api/health"
 healthcheckTimeout = 60
 restartPolicyType = "on_failure"
 numReplicas = 1
+# Production: always-on SaaS (no sleep)
+sleepApplication = false
+
+# Staging: sleep when idle to burn less of the Pro $20 credit while idle
+[environments.staging.deploy]
+sleepApplication = true
+numReplicas = 1
+healthcheckPath = "/api/health"
+healthcheckTimeout = 60
+restartPolicyType = "on_failure"
 
 [variables]
 # Público/operativo (OK en repo)
@@ -28,6 +38,8 @@ SKIP_ENV_VALIDATION = "false"
 # DATABASE_URL
 # SUPABASE_JWT_SECRET
 # SESSION_SECRET
+# REDIS_URL / REDIS_PRIVATE_URL (prefer private reference from Redis service)
+# CRON_SECRET
 
 [railway]
 serviceType = "web"

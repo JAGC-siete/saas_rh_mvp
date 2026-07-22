@@ -49,7 +49,10 @@ export function buildModalityComparison(params: {
     applyUrgencyOffer: false,
   })
 
-  const def = getVentasModalityDefinition(alternateModality, { employeesCount: employees })
+  const def = getVentasModalityDefinition(alternateModality, {
+    employeesCount: employees,
+    currency: quote.currency,
+  })
 
   const listPriceNote =
     primaryModality === 'annual'

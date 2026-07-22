@@ -2,6 +2,8 @@
 // If Redis is not available, this module gracefully degrades to a no-op
 // The employee will still be created/updated in the database, but won't sync to Hikvision devices
 
+import { getRedisUrl } from '../redis/url';
+
 let isQueueAvailable = false;
 let queueInitialized = false;
 
@@ -13,15 +15,16 @@ const checkQueueAvailability = (): boolean => {
   
   queueInitialized = true;
   
-  // Only enable queue if REDIS_URL is explicitly set
-  if (process.env.REDIS_URL) {
+  const redisUrl = getRedisUrl();
+  // Only enable queue if Redis URL is explicitly set (prefer REDIS_PRIVATE_URL)
+  if (redisUrl) {
     try {
-      // Try to require BullMQ and Redis only if REDIS_URL is present
+      // Try to require BullMQ and Redis only if Redis URL is present
       const { Queue } = require('bullmq');
       const Redis = require('ioredis');
       
       // Test if we can create a Redis connection (lazy connect)
-      const testRedis = new Redis(process.env.REDIS_URL, {
+      const testRedis = new Redis(redisUrl, {
         maxRetriesPerRequest: null,
         lazyConnect: true,
         retryStrategy: () => null,
@@ -38,7 +41,7 @@ const checkQueueAvailability = (): boolean => {
     }
   } else {
     // No Redis URL = queue feature disabled (this is fine, it's optional)
-    console.log('[Queue] Employee sync queue disabled (REDIS_URL not set)');
+    console.log('[Queue] Employee sync queue disabled (REDIS_URL / REDIS_PRIVATE_URL not set)');
     isQueueAvailable = false;
     return false;
   }
@@ -57,7 +60,12 @@ const getQueueInstance = () => {
       const { Queue } = require('bullmq');
       const Redis = require('ioredis');
       
-      const redis = new Redis(process.env.REDIS_URL, {
+      const redisUrl = getRedisUrl();
+      if (!redisUrl) {
+        return null;
+      }
+
+      const redis = new Redis(redisUrl, {
         maxRetriesPerRequest: null,
         lazyConnect: true,
         retryStrategy: () => null,

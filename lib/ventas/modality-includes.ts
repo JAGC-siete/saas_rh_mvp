@@ -1,11 +1,15 @@
-import type { QuotationQuote } from './types'
-import { roundMoney } from './pricing'
+import type { QuotationQuote, CurrencyCode } from './types'
+import { formatMoney, roundMoney } from './pricing'
 import {
   quoteIncludesBiometricTerminals,
   shouldChargeHardwareSale,
   VENTAS_HARDWARE_SALE_UNIT_PRICE,
   type VentasBillingModality,
 } from './business-rules'
+import {
+  convertVentasMoney,
+  VENTAS_PRICE_LIST_CURRENCY,
+} from './currency'
 
 export type { VentasBillingModality }
 
@@ -33,9 +37,20 @@ const TERMINALS_CONTINUITY_NOTES = [
   'La terminal biométrica se vende por separado (no está incluida en el total de software); se cotiza como Servicio de Continuidad de Hardware',
 ] as const
 
-const TERMINALS_SALE_NOTES = [
-  'La terminal biométrica se vende por separado a L. 6,500 c/u (descuento por volumen desde 2 unidades)',
-] as const
+function hardwareSaleUnitLabel(currency: CurrencyCode = 'HNL'): string {
+  const unit = convertVentasMoney(
+    VENTAS_HARDWARE_SALE_UNIT_PRICE,
+    VENTAS_PRICE_LIST_CURRENCY,
+    currency
+  )
+  return formatMoney(currency, unit)
+}
+
+function terminalsSaleNotes(currency: CurrencyCode = 'HNL'): string[] {
+  return [
+    `La terminal biométrica se vende por separado a ${hardwareSaleUnitLabel(currency)} c/u (descuento por volumen desde 2 unidades)`,
+  ]
+}
 
 export interface VentasModalityDefinition {
   modality: VentasBillingModality
@@ -48,6 +63,7 @@ export interface VentasModalityDefinition {
 
 export type VentasModalityContext = {
   employeesCount: number
+  currency?: CurrencyCode
 }
 
 function employeesFromContext(ctx?: VentasModalityContext): number {
@@ -55,11 +71,16 @@ function employeesFromContext(ctx?: VentasModalityContext): number {
   return Number.isFinite(n) ? Number(n) : 0
 }
 
+function currencyFromContext(ctx?: VentasModalityContext): CurrencyCode {
+  return ctx?.currency || 'HNL'
+}
+
 export function getVentasModalityDefinition(
   modality: VentasBillingModality,
   ctx?: VentasModalityContext
 ): VentasModalityDefinition {
   const employeesCount = employeesFromContext(ctx)
+  const currency = currencyFromContext(ctx)
 
   if (modality === 'monthly') {
     return {
@@ -91,12 +112,14 @@ export function getVentasModalityDefinition(
     }
   }
 
+  const unitLabel = hardwareSaleUnitLabel(currency)
+
   return {
     modality: 'annual',
     label: 'Plan Anual',
-    formHint: `Incluye licencia anual del software, instalación, migración, capacitación, soporte local e impuestos. La terminal biométrica no está incluida en este rango: se vende por separado a L. ${VENTAS_HARDWARE_SALE_UNIT_PRICE.toLocaleString('es-HN')} c/u (descuento por volumen desde 2 unidades).`,
+    formHint: `Incluye licencia anual del software, instalación, migración, capacitación, soporte local e impuestos. La terminal biométrica no está incluida en este rango: se vende por separado a ${unitLabel} c/u (descuento por volumen desde 2 unidades).`,
     includes: ['Licencia anual de software Humano SISU', ...SHARED_SERVICE_INCLUDES],
-    excludesOrNotes: [...TERMINALS_SALE_NOTES],
+    excludesOrNotes: terminalsSaleNotes(currency),
     successSummaryLine:
       'Incluye licencia anual del software y servicios de implementación. La terminal biométrica se vende por separado según cantidad indicada.',
   }
@@ -128,17 +151,19 @@ export function buildTerminalsPricingNote(params: {
   modality: VentasBillingModality
   terminalsCount: number
   employeesCount: number
+  currency?: CurrencyCode
 }): string {
   const n = params.terminalsCount
   const label = n === 1 ? '1 terminal declarada' : `${n} terminales declaradas`
   const includes = quoteIncludesBiometricTerminals(params.modality, params.employeesCount)
+  const currency = params.currency || 'HNL'
 
   if (includes) {
     return `${label} · terminal biométrica incluida en plan anual (hasta ${VENTAS_MAX_AUTO_QUOTE_TERMINALS} en cotización automática)`
   }
 
   if (shouldChargeHardwareSale(params.modality, params.employeesCount)) {
-    return `${label} · venta por separado (L. ${VENTAS_HARDWARE_SALE_UNIT_PRICE.toLocaleString('es-HN')} c/u, descuento por volumen)`
+    return `${label} · venta por separado (${hardwareSaleUnitLabel(currency)} c/u, descuento por volumen)`
   }
 
   return `${label} · terminal biométrica vendida por separado; continuidad de hardware`
@@ -208,6 +233,7 @@ export function buildMonthlyPricingBreakdownLines(quote: QuotationQuote, fmt: (n
       modality: 'monthly',
       terminalsCount: quote.terminals_count,
       employeesCount,
+      currency: quote.currency,
     })
   )
   return lines
@@ -254,6 +280,7 @@ export function buildAnnualPricingBreakdownLines(quote: QuotationQuote, fmt: (n:
       modality: 'annual',
       terminalsCount: quote.terminals_count,
       employeesCount,
+      currency: quote.currency,
     })
   )
   return lines

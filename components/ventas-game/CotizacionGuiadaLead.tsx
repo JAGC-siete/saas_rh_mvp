@@ -25,7 +25,7 @@ import {
   VENTAS_MONTHLY_MIN_EMPLOYEES,
 } from '../../lib/ventas/business-rules'
 import { employeesCountFromQuote } from '../../lib/ventas/quote-display'
-import { isCountryCode, type CountryCode } from '../../lib/country/supported'
+import { isCountryCode, currencyForCountryCode, type CountryCode } from '../../lib/country/supported'
 import {
   buildMetaApiTrackingFields,
   createMetaEventId,
@@ -246,6 +246,7 @@ export default function CotizacionGuiadaLead({
                     {
                       getVentasModalityDefinition(quote.billing_modality, {
                         employeesCount: employeesCountFromQuote(quote),
+                        currency: quote.currency,
                       }).label
                     }
                   </p>
@@ -445,7 +446,12 @@ export default function CotizacionGuiadaLead({
                       {
                         getVentasModalityDefinition(
                           (formData.billing_modality || 'annual') === 'monthly' ? 'monthly' : 'annual',
-                          { employeesCount }
+                          {
+                            employeesCount,
+                            currency: currencyForCountryCode(
+                              isCountryCode(formData.country_code) ? formData.country_code : 'HND'
+                            ),
+                          }
                         ).formHint
                       }
                     </p>

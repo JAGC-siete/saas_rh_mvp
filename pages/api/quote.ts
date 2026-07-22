@@ -40,6 +40,11 @@ import {
 import { enrollMarketingLead } from '../../lib/marketing/enroll-lead'
 import { sendLeadRegistroNotification } from '../../lib/leads/registro-notification'
 import { buildModalityComparisonSnapshot } from '../../lib/ventas/modality-comparison'
+import {
+  convertVentasMoney,
+  localizeQuotationQuote,
+  VENTAS_PRICE_LIST_CURRENCY,
+} from '../../lib/ventas/currency'
 import { computeFrozenQuoteAmounts } from '../../lib/billing/quote-amounts'
 import { getHondurasTimestamp } from '../../lib/timezone'
 import { addDays } from 'date-fns'
@@ -271,7 +276,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
       }
     }
 
-    const { configId, currency, tiers, promoCodes } = ventasConfig
+    const { currency: configCurrency, tiers, promoCodes } = ventasConfig
+    const listCurrency: CurrencyCode = configCurrency || FALLBACK_CURRENCY
+    const displayCurrency = currencyForCountryCode(countryCode)
     const promo = resolveSubmittedPromo({
       promoCodes,
       submittedRaw: couponSubmitted,
@@ -289,6 +296,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
     }
     pricingTierId = (tier as any).id || null
 
+    // Software tiers viven en la moneda de config; hardware lista en HNL.
     const annualSubtotal = roundMoney(Number(tier.price))
     const annualDiscountAmount = roundMoney(annualSubtotal * discountPctApplied)
     const annualTotal = roundMoney(annualSubtotal - annualDiscountAmount)
@@ -299,17 +307,27 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
     if (hwQuote.special) {
       return res.status(400).json({ error: ventasTooManyTerminalsErrorMessage() })
     }
-    const monthlyHardwareFee = shouldChargeHardwareContinuity(billingModality, employeesCount)
+    const monthlyHardwareFeeList = shouldChargeHardwareContinuity(billingModality, employeesCount)
       ? hwQuote.fee
       : 0
+    const monthlyHardwareFee = convertVentasMoney(
+      monthlyHardwareFeeList,
+      VENTAS_PRICE_LIST_CURRENCY,
+      listCurrency
+    )
     const saleQuote = shouldChargeHardwareSale(billingModality, employeesCount)
       ? hardwareSaleTotal(terminalsForPricing)
       : null
-    const hardwareSaleTotalAmount = saleQuote?.total ?? 0
+    const hardwareSaleTotalAmount = saleQuote
+      ? convertVentasMoney(saleQuote.total, VENTAS_PRICE_LIST_CURRENCY, listCurrency)
+      : 0
+    const hardwareSaleUnitPrice = saleQuote
+      ? convertVentasMoney(saleQuote.unitPrice, VENTAS_PRICE_LIST_CURRENCY, listCurrency)
+      : undefined
     const monthlyTotal = roundMoney(monthlySoftwareTotal + monthlyHardwareFee)
 
-    const quote = {
-      currency,
+    const quoteList = {
+      currency: listCurrency,
       annual_subtotal: annualSubtotal,
       annual_discount_amount: annualDiscountAmount,
       annual_total: annualTotal,
@@ -317,7 +335,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
       monthly_hardware_fee: monthlyHardwareFee,
       monthly_total: monthlyTotal,
       hardware_sale_total: hardwareSaleTotalAmount,
-      hardware_sale_unit_price: saleQuote?.unitPrice,
+      hardware_sale_unit_price: hardwareSaleUnitPrice,
       hardware_sale_discount_pct: saleQuote?.discountPct,
       coupon_applied: isCouponValid,
       discount_pct_applied: discountPctApplied,
@@ -328,6 +346,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
       employees_count: employeesCount,
     }
 
+    // Montos al cliente: dólares (SV), quetzales (GT), lempiras (HN).
+    const quote = localizeQuotationQuote(quoteList, listCurrency, displayCurrency)
+
     // Persist lead
     const meta = {
       source: 'ventas',
@@ -337,11 +358,12 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
       sector_rubro: sectorRubro || undefined,
       billing_modality: billingModality,
       terminals_count: terminalsForPricing,
-      monthly_hardware_fee: monthlyHardwareFee || undefined,
-      hardware_sale_total: hardwareSaleTotalAmount || undefined,
-      hardware_sale_unit_price: saleQuote?.unitPrice,
+      list_currency: listCurrency,
+      monthly_hardware_fee: quote.monthly_hardware_fee || undefined,
+      hardware_sale_total: quote.hardware_sale_total || undefined,
+      hardware_sale_unit_price: quote.hardware_sale_unit_price,
       hardware_sale_discount_pct: saleQuote?.discountPct,
-      monthly_total: monthlyTotal || undefined,
+      monthly_total: quote.monthly_total || undefined,
       comparison_snapshot: buildModalityComparisonSnapshot(quote),
     }
 
@@ -357,15 +379,16 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
         coupon_code_submitted: couponSubmittedNorm || null,
         coupon_applied: isCouponValid,
         discount_pct_applied: discountPctApplied,
-        currency,
-        subtotal: annualSubtotal,
-        discount_amount: annualDiscountAmount,
-        total: annualTotal,
+        currency: quote.currency,
+        subtotal: quote.annual_subtotal,
+        discount_amount: quote.annual_discount_amount,
+        total: quote.annual_total,
         pricing_tier_id: pricingTierId,
         pricing_tier_snapshot: {
           min_employees: tier.min_employees,
           max_employees: tier.max_employees,
           price: Number(tier.price),
+          list_currency: listCurrency,
         },
         status: 'created',
         meta,
@@ -517,10 +540,10 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
 
       const frozenAmounts = computeFrozenQuoteAmounts({
         billingModality,
-        monthlySoftwareTotal: quote.monthly_software_total,
-        monthlyHardwareFee: quote.monthly_hardware_fee,
-        annualTotal: quote.annual_total,
-        hardwareSaleTotal: quote.hardware_sale_total,
+        monthlySoftwareTotal: quoteList.monthly_software_total,
+        monthlyHardwareFee: quoteList.monthly_hardware_fee,
+        annualTotal: quoteList.annual_total,
+        hardwareSaleTotal: quoteList.hardware_sale_total,
       })
 
       await (supabase as any)
