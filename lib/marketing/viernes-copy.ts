@@ -45,11 +45,11 @@ export const VIERNES_COPY = {
   },
 
   proof: {
-    title: 'Lo que pasa cuando le devolvés el orden y la paz a RR.HH.',
+    title: 'Esto es lo que sucede cuando haces las paces con RR.HH.',
     items: [
-      'Pasamos del caos total de cerrar un domingo por la noche a revisar y aprobar en 4 minutos. La tranquilidad no tiene precio. — PyME manufactura, SPS',
-      'El cálculo del IHSS y RAP dejó de ser un dolor de cabeza. Todo cuadra exacto a la primera. — Restaurante, 18 empleados, TGU',
-      'Mismo motor legal auditado que alimenta nuestras calculadoras gratuitas. Transparencia total antes de mover un solo dedo.',
+      'Pasamos del revisar hasta altas horas de la noche o estar cuadrando un domingo por la noche a generar en un par de clicks y aprobar en minutos. La interfaz es moderna y maneja tiene incorporada la ley tal cuál la vivimos los empresarios locales. — PyME manufactura, SPS',
+      'Siempre me regresaban la planilla por que algo no cuadraba, si no era el cálculo del seguro social era el impuesto,  todo dejó de ser un dolor de cabeza. Todo cuadra exacto a la primera. — ONG, 45 empleados, TGU',
+      'Mismos parámetros  legales  utilizados en las herramientas gratuitas.',
     ],
   },
 
