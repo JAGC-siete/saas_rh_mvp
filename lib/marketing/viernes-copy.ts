@@ -34,7 +34,7 @@ export const VIERNES_COPY = {
     title: 'Digitalizar no es automatizar',
     lead: 'El verdadero costo de los procesos manuales no es el tiempo invertido; si no la incertidumbre en cada ciclo de pago.',
     paragraphs: [
-      'Muchas empresas instalan un reloj biométrico y se digitalizaron. Pero siguen dependiendo reportes a memorias USB, uniendo con tablas en Excel y recalculando deducciones de ley cada vez. La intención es asertada pero la solución incompleta.',
+      'Muchas empresas instalan un reloj biométrico y se digitalizaron. Pero siguen dependiendo reportes a memorias USB, uniendo con tablas en Excel y recalculando deducciones de ley cada vez. La intención es acertada pero la solución incompleta.',
       'Las paces con RR.HH. se hacen cuando los datos viajan por si solos. Cuando el registro biométrico entra, el motor legal almacena, ordena y calcula automáticamente (IHSS, RAP, ISR) y también la planilla lista para aprobación. RR.HH. deja de apagar incendios para dedicarse a tareas que agreguen valor al personal.',
     ],
     comparison: [
