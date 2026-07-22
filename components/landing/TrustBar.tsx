@@ -7,6 +7,9 @@ const CLIENTS = [
   'Enlace',
   'Grupo Gastronómico Cueva',
   'Tuchi.hn',
+  'Serve Hope Café',
+  'Agrocomercial Ferretero Eben-Ezer',
+  'Rooster Café',
 ]
 
 export default function TrustBar() {
