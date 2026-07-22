@@ -1,6 +1,6 @@
 name: 🚀 CI/CD Pipeline - HR SaaS
 
-on:
+"on":
   push:
     branches: [ main, develop ]
   pull_request:
