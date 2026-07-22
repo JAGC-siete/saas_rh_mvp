@@ -25,7 +25,7 @@ export const VIERNES_COPY = {
     subheadline:
       'Haz las paces con nuestro método para digitalizar y automatizar la operación y gestión de recursos humanos para MiPyMes.',
     mantra:
-      'No sos una máquina de calcular planillas. Hacer las paces con RR.HH. empieza por destruir el puente de papel.',
+      'No eres una máquina de calcular planillas. Hacer las paces con RR.HH. empieza por destruir el contrato con el papel para digitalizar y automatizar.',
     ctaPrimary: 'Quiero recuperar la paz en RR.HH.',
     ctaSecondary: 'Probar motor de cálculo gratis',
   },
