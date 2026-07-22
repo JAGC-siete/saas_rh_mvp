@@ -1,42 +1,42 @@
-/** Copy for /ventas — Cotización guiada (lead caliente, tono formal). */
+/** Copy for /ventas — Cotización guiada (lead caliente; tono tú). */
 
 export const COTIZACION_GUIADA_COPY = {
-  badge: 'Propuesta formal · PDF al instante',
+  badge: 'Propuesta a medida · PDF + acceso gratis',
 
   intro: {
-    headline: 'Cotización exacta para nómina y asistencia en su país',
+    headline: '¿Qué deseas delegar en este servicio?',
     subheadline:
-      'Arme su propuesta en 3 pasos. Recibirá PDF listo para gerencia y acceso de evaluación incluido.',
-    cta: 'Armar propuesta',
+      'Propuesta ajustada a la medida en 3 pasos. Reciba PDF listo para gerencia y credenciales de acceso gratuito en un solo paso.',
+    cta: 'Empezar mi propuesta',
   },
 
   scope: {
-    title: 'Alcance de la cotización',
-    subtitle: 'País, tamaño del equipo y modalidad de contratación.',
+    title: 'Qué vas a delegar',
+    subtitle: 'País, tamaño del equipo y modalidad: así ajustamos la propuesta.',
     tierHint: (employees: number, country: string) =>
-      `Calcularemos el rango tarifario para ${employees} empleado${employees === 1 ? '' : 's'} en ${country}, con leyes locales aplicadas.`,
+      `Con ${employees} empleado${employees === 1 ? '' : 's'} en ${country}, armamos el alcance con leyes locales aplicadas.`,
   },
 
   company: {
-    title: 'Datos de la empresa',
-    subtitle: 'Para personalizar la propuesta y el PDF.',
-    couponToggle: '¿Tiene código promocional?',
+    title: 'Para quién es la propuesta',
+    subtitle: 'Personalizamos el PDF y las credenciales a nombre de tu empresa.',
+    couponToggle: '¿Tienes código promocional?',
   },
 
   delivery: {
-    title: 'Entrega de la propuesta',
-    subtitle: 'Correo corporativo donde enviaremos el PDF y las credenciales de evaluación.',
-    submit: 'Generar propuesta en PDF',
-    submitting: 'Calculando cotización y generando PDF…',
+    title: 'Dónde enviamos todo',
+    subtitle: 'Correo donde llegan el PDF para gerencia y las credenciales de acceso gratuito.',
+    submit: 'Recibir PDF y acceso gratis',
+    submitting: 'Generando tu propuesta y credenciales…',
     finePrint:
-      'Al enviar, autoriza recibir la propuesta automatizada en su correo. Los montos se calculan según el país seleccionado.',
+      'Al enviar, recibes la propuesta automatizada en tu correo. Los montos se calculan según el país seleccionado.',
   },
 
   success: {
-    title: 'Propuesta en camino',
+    title: 'Listo: PDF y acceso en camino',
     emailHint: (email: string) =>
-      `Revise la bandeja de ${email} (incluyendo spam). Hemos enviado el PDF y las credenciales de evaluación.`,
-    contractCta: 'Continuar contratación por WhatsApp',
-    contractHint: 'También puede responder directamente al correo donde llegó la propuesta.',
+      `Revisa la bandeja de ${email} (incluido spam). Ahí van el PDF para gerencia y las credenciales de acceso gratuito.`,
+    contractCta: 'Continuar por WhatsApp',
+    contractHint: 'También puedes responder al correo donde llegó la propuesta.',
   },
 } as const
