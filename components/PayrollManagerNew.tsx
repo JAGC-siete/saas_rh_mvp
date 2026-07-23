@@ -507,6 +507,8 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
         year={payroll.currentPeriod.year}
         month={payroll.currentPeriod.month}
         quincena={payroll.currentPeriod.quincena}
+        paymentFrequency={payroll.paymentFrequency}
+        paymentCutDates={payroll.paymentCutDates}
         deductionModeLabel={payroll.deductionModeLabel}
         onYearChange={(year) => handleFilterChange('year', year)}
         onMonthChange={(month) => handleFilterChange('month', month)}
@@ -658,6 +660,7 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
           runId={payroll.runId}
           status={payroll.status}
           period={payroll.currentPeriod}
+          paymentFrequency={payroll.paymentFrequency}
           companyId={payroll.companyId}
           payrollApiConfig={payrollApiConfig}
         />

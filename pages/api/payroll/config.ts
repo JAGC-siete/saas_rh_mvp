@@ -284,7 +284,9 @@ async function upsertPayrollConfig(
       monthly_end: 30
     }
     const mapFreqToDb = (v: string) =>
-      v === 'monthly' ? 'mensual' : v === 'biweekly' ? 'quincenal' : v === 'weekly' ? 'semanal' : (v || 'quincenal')
+      v === 'monthly' || v === 'mensual' ? 'mensual' : v === 'weekly' || v === 'semanal' ? 'semanal' : v === 'biweekly' || v === 'quincenal' ? 'quincenal' : (v || 'quincenal')
+    const mapFreqToMeta = (v: string) =>
+      v === 'monthly' || v === 'mensual' ? 'monthly' : v === 'weekly' || v === 'semanal' ? 'weekly' : v === 'biweekly' || v === 'quincenal' ? 'biweekly' : (v || 'biweekly')
     const quincenaConfig = {
       first_start: cutDates.biweekly_first_start ?? 1,
       first_end: cutDates.biweekly_first_end ?? 15,
@@ -308,10 +310,11 @@ async function upsertPayrollConfig(
 
     const resolvedPaymentFrequency =
       payment_frequency || (mergedMetaFromBody.payment_frequency as string) || 'biweekly'
+    const metaPaymentFrequency = mapFreqToMeta(resolvedPaymentFrequency)
 
     const payrollMetadata: Record<string, unknown> = {
       ...mergedMetaFromBody,
-      payment_frequency: payment_frequency || 'biweekly',
+      payment_frequency: metaPaymentFrequency,
       currency: currency || 'HNL',
       legal_deductions: legal_deductions || {
         ihss: true,
@@ -379,7 +382,7 @@ async function upsertPayrollConfig(
         calculation_config: calculation_config || {},
         calculation_script: calculation_script || null,
         metadata: payrollMetadata,
-        payment_frequency: mapFreqToDb(payment_frequency || 'biweekly'),
+        payment_frequency: mapFreqToDb(resolvedPaymentFrequency),
         quincena_config: quincenaConfig,
         calculation_mode: calculation_mode || 'daily',
         incomplete_record_default_hours: incomplete_record_default_hours ?? null,

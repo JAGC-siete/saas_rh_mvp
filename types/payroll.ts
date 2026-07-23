@@ -1,8 +1,21 @@
 // Payroll Types and Contracts for Frontend Integration
 // These types define the minimal contracts between frontend and backend
 
-export type Quincena = 1 | 2;
+export type Quincena = 1 | 2 | 3 | 4;
 export type TipoCalculo = 'CON' | 'SIN' | '2PAGOS';
+
+/** Frontend payment frequency values (API /api/payroll/config). */
+export type PayrollUiFrequency = 'monthly' | 'biweekly' | 'weekly'
+
+export type PayrollUiCutDates = {
+  biweekly_first_start?: number
+  biweekly_first_end?: number
+  biweekly_second_start?: number
+  biweekly_second_end?: number
+  monthly_type?: 'standard' | 'custom'
+  monthly_start?: number
+  monthly_end?: number
+}
 
 /**
  * Tipo extendido para payroll_runs.

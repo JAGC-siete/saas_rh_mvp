@@ -10,13 +10,29 @@ import { usePayrollMetrics } from './usePayrollMetrics'
 import { payrollApi, mapPayrollError } from '../payroll-api'
 import { BULK_VOUCHER_EMAIL_TRIAL_MESSAGE } from '../billing/messages'
 import type { PayrollPdfGroupBy } from '../payroll/pdf-layout'
-import { PayrollFilters, UIRunStatus, TipoCalculo } from '../../types/payroll'
+import { PayrollFilters, UIRunStatus, TipoCalculo, Quincena, PayrollUiCutDates, PayrollUiFrequency } from '../../types/payroll'
 import {
   PAYROLL_DEDUCTION_MODE_DEFAULT,
   getPayrollDeductionModeLabel,
 } from '../payroll/deduction-mode'
 import type { VoucherPreviewData } from '../payroll/voucher-preview'
 import type { PlanillaPreviewData } from '../payroll/planilla-preview'
+
+function normalizeUiPaymentFrequency(raw: unknown): PayrollUiFrequency {
+  const v = String(raw || '').toLowerCase()
+  if (v === 'monthly' || v === 'mensual') return 'monthly'
+  if (v === 'weekly' || v === 'semanal') return 'weekly'
+  return 'biweekly'
+}
+
+function clampPeriodSlot(freq: PayrollUiFrequency, slot: number): Quincena {
+  if (freq === 'monthly') return 1
+  if (freq === 'weekly') {
+    if (slot >= 1 && slot <= 4) return slot as Quincena
+    return 1
+  }
+  return slot === 2 ? 2 : 1
+}
 
 type VoucherPreviewState = {
   open: boolean
@@ -56,7 +72,7 @@ const EMPTY_PLANILLA_PREVIEW: PlanillaPreviewState = {
 export interface PayrollManagerState {
   // Data
   unifiedData: { rows: UnifiedRow[]; resumen: UnifiedResumen; runId?: string; status?: string; incompleteRecordsAlert?: { employee_id: string; employee_name: string; dates: string[] }[] } | null
-  currentPeriod: { year: number; month: number; quincena: 1 | 2 }
+  currentPeriod: { year: number; month: number; quincena: 1 | 2 | 3 | 4 }
   
   // UI State
   status: UIRunStatus
@@ -90,7 +106,7 @@ export type PayrollManagerAction =
   | { type: 'SET_ERROR'; payload: string | null }
   | { type: 'SET_STATUS'; payload: UIRunStatus }
   | { type: 'SET_FILTERS'; payload: Partial<PayrollFilters> }
-  | { type: 'SET_PERIOD'; payload: { year: number; month: number; quincena: 1 | 2 } }
+  | { type: 'SET_PERIOD'; payload: { year: number; month: number; quincena: 1 | 2 | 3 | 4 } }
   | { type: 'SET_RUN_ID'; payload: string | undefined }
   | { type: 'SET_LOADED_INITIAL'; payload: boolean }
   | { type: 'SET_AHC_PREFLIGHT'; payload: PayrollManagerState['ahcPreflight'] }
@@ -106,7 +122,7 @@ const getInitialState = (): PayrollManagerState => {
     unifiedData: null,
     currentPeriod: {
       ...currentPeriod,
-      quincena: currentPeriod.quincena as 1 | 2
+      quincena: clampPeriodSlot('biweekly', currentPeriod.quincena)
     },
     status: 'idle',
     loading: false,
@@ -114,7 +130,7 @@ const getInitialState = (): PayrollManagerState => {
     filters: {
       year: currentPeriod.year,
       month: currentPeriod.month,
-      quincena: currentPeriod.quincena as 1 | 2,
+      quincena: clampPeriodSlot('biweekly', currentPeriod.quincena) as Quincena,
       tipo: 'CON'
     },
     runId: undefined,
@@ -208,6 +224,11 @@ export const usePayrollManager = () => {
   const [deductionModeLabel, setDeductionModeLabel] = useState(
     getPayrollDeductionModeLabel(PAYROLL_DEDUCTION_MODE_DEFAULT)
   )
+  const [paymentFrequency, setPaymentFrequency] = useState<PayrollUiFrequency>('biweekly')
+  const [paymentCutDates, setPaymentCutDates] = useState<PayrollUiCutDates | null>(null)
+  const paymentFrequencyRef = useRef<PayrollUiFrequency>('biweekly')
+  const currentPeriodRef = useRef(state.currentPeriod)
+  currentPeriodRef.current = state.currentPeriod
   const [voucherPreview, setVoucherPreview] = useState<VoucherPreviewState>(EMPTY_VOUCHER_PREVIEW)
   const [planillaPreview, setPlanillaPreview] = useState<PlanillaPreviewState>(EMPTY_PLANILLA_PREVIEW)
 
@@ -221,18 +242,51 @@ export const usePayrollManager = () => {
     }
   }, [])
 
+  const applyCompanyPaymentFrequency = useCallback((
+    freq: PayrollUiFrequency,
+    cutDates: PayrollUiCutDates | null | undefined
+  ) => {
+    const prev = paymentFrequencyRef.current
+    paymentFrequencyRef.current = freq
+    setPaymentFrequency(freq)
+    setPaymentCutDates(cutDates ?? null)
+
+    const period = currentPeriodRef.current
+    const nextSlot = clampPeriodSlot(freq, period.quincena)
+    if (nextSlot !== period.quincena) {
+      dispatch({
+        type: 'SET_PERIOD',
+        payload: {
+          year: period.year,
+          month: period.month,
+          quincena: nextSlot,
+        },
+      })
+      dispatch({ type: 'SET_FILTERS', payload: { quincena: nextSlot as Quincena } })
+    }
+
+    if (prev !== freq) {
+      dispatch({ type: 'SET_LOADED_INITIAL', payload: false })
+    }
+  }, [])
+
   const loadCompanyPayrollConfig = useCallback(async () => {
     if (!companyId) return
     try {
       const res = await fetch('/api/payroll/config')
       if (!res.ok) return
       const data = await res.json()
-      const mode = (data?.config?.payroll_deduction_mode ?? PAYROLL_DEDUCTION_MODE_DEFAULT) as TipoCalculo
+      const cfg = data?.config
+      const mode = (cfg?.payroll_deduction_mode ?? PAYROLL_DEDUCTION_MODE_DEFAULT) as TipoCalculo
       applyCompanyDeductionMode(mode)
+      applyCompanyPaymentFrequency(
+        normalizeUiPaymentFrequency(cfg?.payment_frequency),
+        (cfg?.payment_cut_dates as PayrollUiCutDates | undefined) ?? null
+      )
     } catch {
       // Mantener default
     }
-  }, [companyId, applyCompanyDeductionMode])
+  }, [companyId, applyCompanyDeductionMode, applyCompanyPaymentFrequency])
 
   useEffect(() => {
     loadCompanyPayrollConfig()
@@ -278,7 +332,11 @@ export const usePayrollManager = () => {
 
   // Filter Management
   const updateFilter = useCallback(async (key: keyof PayrollFilters, value: any) => {
-    dispatch({ type: 'SET_FILTERS', payload: { [key]: value } })
+    let nextValue = value
+    if (key === 'quincena') {
+      nextValue = clampPeriodSlot(paymentFrequencyRef.current, Number(value))
+    }
+    dispatch({ type: 'SET_FILTERS', payload: { [key]: nextValue } })
     
     // Update period if it's a period-related filter
     if (['year', 'month', 'quincena'].includes(key)) {
@@ -286,7 +344,7 @@ export const usePayrollManager = () => {
         type: 'SET_PERIOD', 
         payload: { 
           ...state.currentPeriod, 
-          [key]: value 
+          [key]: nextValue 
         } 
       })
     }
@@ -294,11 +352,13 @@ export const usePayrollManager = () => {
 
   const resetFilters = useCallback(() => {
     const newPeriod = getCurrentPeriod()
+    const quincena = clampPeriodSlot(paymentFrequencyRef.current, newPeriod.quincena)
     dispatch({ 
       type: 'SET_PERIOD', 
       payload: {
-        ...newPeriod,
-        quincena: newPeriod.quincena as 1 | 2
+        year: newPeriod.year,
+        month: newPeriod.month,
+        quincena,
       }
     })
     dispatch({ 
@@ -306,7 +366,7 @@ export const usePayrollManager = () => {
       payload: {
         year: newPeriod.year,
         month: newPeriod.month,
-        quincena: newPeriod.quincena as 1 | 2,
+        quincena,
         tipo: companyDeductionModeRef.current,
       }
     })
@@ -1033,6 +1093,8 @@ export const usePayrollManager = () => {
     updateFilter,
     resetFilters,
     deductionModeLabel,
+    paymentFrequency,
+    paymentCutDates,
     
     // State Management
     setStatus,

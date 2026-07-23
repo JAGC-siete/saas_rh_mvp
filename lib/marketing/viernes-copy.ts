@@ -82,9 +82,9 @@ export const VIERNES_COPY = {
   ],
 
   finalCta: {
-    headlineLead: 'Cierra la quincena sin estrés.',
+    headlineLead: 'Cierra esta quincena sin estrés.',
     headlineAccent: 'Haz las paces con RR.HH. hoy mismo.',
-    sub: 'Descargá las claves gratis. Cuando estés listo: trial de 30 días o cotización a la medida en 24h.',
+    sub: 'Descargá las claves gratis. Opcional: trial de 30 días  con cotización a la medida lista en minutos.',
     primary: 'Recibir las claves para mi empresa',
     secondary: '¿Más de 30 empleados o varias sucursales? Solicitar propuesta personalizada',
   },

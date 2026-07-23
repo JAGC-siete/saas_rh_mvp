@@ -1,16 +1,21 @@
 // Payroll Configuration Component with readable glass effect
 // Fixes white text visibility issues in dark theme
 
-import React from 'react'
+import React, { useMemo } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
 import { Button } from './ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select'
 import { Icon } from './Icon'
+import type { PayrollUiCutDates, PayrollUiFrequency } from '../types/payroll'
+
+export type { PayrollUiCutDates, PayrollUiFrequency }
 
 interface ConfigNominaProps {
   year: number
   month: number
   quincena: number
+  paymentFrequency?: PayrollUiFrequency
+  paymentCutDates?: PayrollUiCutDates | null
   deductionModeLabel?: string
   onYearChange: (year: number) => void
   onMonthChange: (month: number) => void
@@ -21,10 +26,18 @@ interface ConfigNominaProps {
   canPreview?: boolean
 }
 
+function frequencyLabel(freq: PayrollUiFrequency): string {
+  if (freq === 'monthly') return 'mensual'
+  if (freq === 'weekly') return 'semanal'
+  return 'quincenal'
+}
+
 export default function ConfigNomina({
   year,
   month,
   quincena,
+  paymentFrequency = 'biweekly',
+  paymentCutDates = null,
   deductionModeLabel,
   onYearChange,
   onMonthChange,
@@ -35,17 +48,55 @@ export default function ConfigNomina({
   canPreview = false,
 }: ConfigNominaProps) {
   const monthName = new Date(year, month - 1).toLocaleDateString('es-HN', { month: 'long' })
+  const isMonthly = paymentFrequency === 'monthly'
+  const isWeekly = paymentFrequency === 'weekly'
+
+  const biweeklyLabels = useMemo(() => {
+    const fs = paymentCutDates?.biweekly_first_start ?? 1
+    const fe = paymentCutDates?.biweekly_first_end ?? 15
+    const ss = paymentCutDates?.biweekly_second_start ?? 16
+    const se = paymentCutDates?.biweekly_second_end ?? 30
+    return {
+      q1: `1.ª quincena (${fs}–${fe})`,
+      q2: `2.ª quincena (${ss}–${se})`,
+    }
+  }, [paymentCutDates])
+
+  const monthlyRangeLabel = useMemo(() => {
+    if (paymentCutDates?.monthly_type === 'custom') {
+      const ms = paymentCutDates.monthly_start ?? 1
+      const me = paymentCutDates.monthly_end ?? 30
+      return `Corte ${ms}–${me}`
+    }
+    return 'Mes completo'
+  }, [paymentCutDates])
+
+  const periodSummary = useMemo(() => {
+    if (isMonthly) return `${monthName} ${year} · Mensual (${monthlyRangeLabel})`
+    if (isWeekly) return `${monthName} ${year} · Semana ${quincena}`
+    return `${monthName} ${year} · ${quincena === 2 ? biweeklyLabels.q2 : biweeklyLabels.q1}`
+  }, [isMonthly, isWeekly, monthName, year, monthlyRangeLabel, quincena, biweeklyLabels])
+
+  const description = isMonthly
+    ? 'Define el período para generar la nómina (año y mes)'
+    : isWeekly
+      ? 'Define el período para generar la nómina (año, mes y semana)'
+      : 'Define el período para generar la nómina (año, mes y quincena)'
 
   return (
     <Card variant="liquid" className="backdrop-blur-md bg-white/10 border border-white/20">
       <CardHeader>
         <CardTitle className="text-white text-xl font-semibold">Configuración de Nómina</CardTitle>
         <CardDescription className="text-gray-200 text-base">
-          Define el período para generar la nómina (año, mes y quincena)
+          {description}
+          <span className="block mt-1 text-sm text-gray-300">
+            Modalidad: <span className="font-semibold text-white">{frequencyLabel(paymentFrequency)}</span>
+            <span className="text-gray-400"> (Parámetros)</span>
+          </span>
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className={`grid grid-cols-1 gap-4 ${isMonthly ? 'md:grid-cols-2' : 'md:grid-cols-3'}`}>
           {/* Año */}
           <div>
             <label htmlFor="year" className="block text-sm font-semibold text-white/90 mb-2">
@@ -104,37 +155,44 @@ export default function ConfigNomina({
             </Select>
           </div>
 
-          {/* Quincena */}
-          <div>
-            <label htmlFor="quincena" className="block text-sm font-semibold text-white/90 mb-2">
-              Quincena
-            </label>
-            <Select
-              value={quincena.toString()}
-              onValueChange={(value) => onQuincenaChange(parseInt(value))}
-            >
-              <SelectTrigger className="w-full rounded-xl border border-white/20 bg-white/10
-                                        text-white data-[placeholder]:text-white/70
-                                        focus:outline-none focus:ring-2 focus:ring-indigo-400/60
-                                        hover:bg-white/15 transition-colors">
-                <SelectValue placeholder="Seleccionar quincena" />
-              </SelectTrigger>
-              <SelectContent className="backdrop-blur-md bg-white/10 text-white border border-white/20">
-                <SelectItem 
-                  value="1" 
-                  className="text-white hover:bg-white/20 focus:bg-white/20"
-                >
-                  1 (1-15)
-                </SelectItem>
-                <SelectItem 
-                  value="2" 
-                  className="text-white hover:bg-white/20 focus:bg-white/20"
-                >
-                  2 (16-31)
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          {/* Quincena / Semana — oculto en mensual */}
+          {!isMonthly && (
+            <div>
+              <label htmlFor="period-slot" className="block text-sm font-semibold text-white/90 mb-2">
+                {isWeekly ? 'Semana' : 'Quincena'}
+              </label>
+              <Select
+                value={quincena.toString()}
+                onValueChange={(value) => onQuincenaChange(parseInt(value))}
+              >
+                <SelectTrigger className="w-full rounded-xl border border-white/20 bg-white/10
+                                          text-white data-[placeholder]:text-white/70
+                                          focus:outline-none focus:ring-2 focus:ring-indigo-400/60
+                                          hover:bg-white/15 transition-colors">
+                  <SelectValue placeholder={isWeekly ? 'Seleccionar semana' : 'Seleccionar quincena'} />
+                </SelectTrigger>
+                <SelectContent className="backdrop-blur-md bg-white/10 text-white border border-white/20">
+                  {isWeekly ? (
+                    <>
+                      <SelectItem value="1" className="text-white hover:bg-white/20 focus:bg-white/20">1 (1–7)</SelectItem>
+                      <SelectItem value="2" className="text-white hover:bg-white/20 focus:bg-white/20">2 (8–14)</SelectItem>
+                      <SelectItem value="3" className="text-white hover:bg-white/20 focus:bg-white/20">3 (15–21)</SelectItem>
+                      <SelectItem value="4" className="text-white hover:bg-white/20 focus:bg-white/20">4 (22–fin)</SelectItem>
+                    </>
+                  ) : (
+                    <>
+                      <SelectItem value="1" className="text-white hover:bg-white/20 focus:bg-white/20">
+                        {biweeklyLabels.q1}
+                      </SelectItem>
+                      <SelectItem value="2" className="text-white hover:bg-white/20 focus:bg-white/20">
+                        {biweeklyLabels.q2}
+                      </SelectItem>
+                    </>
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
         </div>
 
         {/* Action Buttons */}
@@ -161,7 +219,7 @@ export default function ConfigNomina({
         {/* Current Selection Display */}
         <div className="mt-4 p-3 bg-white/5 rounded-lg border border-white/10">
           <div className="text-sm text-gray-200">
-            <span className="font-semibold">Período seleccionado:</span> {monthName} {year} - Quincena {quincena}
+            <span className="font-semibold">Período seleccionado:</span> {periodSummary}
             {deductionModeLabel && (
               <>
                 {' '}

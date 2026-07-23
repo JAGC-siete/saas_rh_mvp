@@ -71,6 +71,7 @@ interface UnifiedPayrollTableProps {
     month: number
     quincena: number
   }
+  paymentFrequency?: 'monthly' | 'biweekly' | 'weekly'
   companyId?: string
   payrollApiConfig?: {
     legal_deductions?: { ihss?: boolean; rap?: boolean; isr?: boolean }
@@ -108,6 +109,7 @@ export default function UnifiedPayrollTable({
   runId,
   status,
   period,
+  paymentFrequency = 'biweekly',
   companyId,
   payrollApiConfig = null
 }: UnifiedPayrollTableProps) {
@@ -375,6 +377,12 @@ export default function UnifiedPayrollTable({
   const buttonState = getAuthorizationButtonState()
 
   const monthName = new Date(period.year, period.month - 1).toLocaleDateString('es-HN', { month: 'long' })
+  const periodLabel =
+    paymentFrequency === 'monthly'
+      ? `${monthName} ${period.year} · Mensual`
+      : paymentFrequency === 'weekly'
+        ? `${monthName} ${period.year} · Semana ${period.quincena}`
+        : `${monthName} ${period.year} Q${period.quincena}`
 
   return (
     <Card className="backdrop-blur-md bg-white/10 border border-white/20">
@@ -386,7 +394,7 @@ export default function UnifiedPayrollTable({
           {fixedRows.length} empleados fijos • {hourlyRows.length} empleados por hora • 
           Total Bruto: {formatCurrency(resumen.total_bruto)} • 
           Total Neto: {formatCurrency(resumen.total_neto)} • 
-          Período: {monthName} {period.year} Q{period.quincena}
+          Período: {periodLabel}
         </CardDescription>
       </CardHeader>
       <CardContent>
