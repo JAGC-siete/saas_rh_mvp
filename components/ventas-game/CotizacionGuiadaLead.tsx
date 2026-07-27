@@ -11,6 +11,8 @@ import {
 import { Card, CardContent } from '../ui/card'
 import BorderBeam from '../landing/BorderBeam'
 import WizardStepProgress from '../funnel/WizardStepProgress'
+import TrackedWhatsAppLink from '../TrackedWhatsAppLink'
+import { reportGoogleAdsContactConversion } from '../../lib/analytics/googleAds'
 import type { QuotationQuote, QuotationRequest, QuotationResponse } from '../../lib/ventas/types'
 import { buildQuotationPlanSummary } from '../../lib/ventas/quote-display'
 import { VENTAS_MAX_AUTO_QUOTE_TERMINALS } from '../../lib/ventas/modality-includes'
@@ -286,14 +288,18 @@ export default function CotizacionGuiadaLead({
               <CardContent className="p-6 sm:p-8">
                 <h2 className="text-xl font-bold text-white mb-2">¿Listo para formalizar?</h2>
                 <p className="text-sm text-cyan-100/80 mb-6">{copy.success.contractHint}</p>
-                <a
+                <TrackedWhatsAppLink
                   href={whatsappUrl}
+                  trackingContext="ventas_success_contract"
                   target="_blank"
                   rel="noreferrer"
+                  onClick={() => {
+                    reportGoogleAdsContactConversion()
+                  }}
                   className="w-full inline-flex items-center justify-center rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-4 font-semibold transition-colors"
                 >
                   {copy.success.contractCta}
-                </a>
+                </TrackedWhatsAppLink>
               </CardContent>
             </Card>
           )}

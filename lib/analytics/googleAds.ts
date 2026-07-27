@@ -18,13 +18,21 @@ const SEND_TO_LEAD = process.env.NEXT_PUBLIC_GADS_SEND_TO_LEAD
 const SEND_TO_CTA = process.env.NEXT_PUBLIC_GADS_SEND_TO_CTA
 const SEND_TO_WHATSAPP = process.env.NEXT_PUBLIC_GADS_SEND_TO_WHATSAPP
 const SEND_TO_COMPARISON = process.env.NEXT_PUBLIC_GADS_SEND_TO_COMPARISON
+/** Click Contact en /ventas (Google Ads “Contact conversion page”). */
+const SEND_TO_CONTACT =
+  process.env.NEXT_PUBLIC_GADS_SEND_TO_CONTACT?.trim() ||
+  'AW-17840996991/-3XtCO6xydccEP-EoLtC'
 
 interface ConversionPayload {
   send_to: string
   value?: number
   currency?: string
   transaction_id?: string
+  event_callback?: () => void
 }
+
+/** gtag carga diferido en marketing; encolar hasta que MarketingAnalytics lo monte. */
+const pendingConversions: ConversionPayload[] = []
 
 function fireGoogleAdsConversion(
   sendTo: string | undefined,
@@ -33,10 +41,6 @@ function fireGoogleAdsConversion(
   if (typeof window === 'undefined') return
   const trimmed = sendTo?.trim()
   if (!trimmed) return
-  if (typeof window.gtag === 'undefined') {
-    console.warn('Google Ads: gtag not available')
-    return
-  }
   const conversionEvent: ConversionPayload = { send_to: trimmed }
   if (extra?.value !== undefined) {
     conversionEvent.value = extra.value
@@ -45,7 +49,21 @@ function fireGoogleAdsConversion(
   if (extra?.transaction_id) {
     conversionEvent.transaction_id = extra.transaction_id
   }
+  if (typeof window.gtag !== 'function') {
+    pendingConversions.push(conversionEvent)
+    return
+  }
   window.gtag('event', 'conversion', conversionEvent)
+}
+
+/** Disparar conversiones encoladas cuando el stub gtag ya está disponible. */
+export function flushPendingGoogleAdsConversions(): void {
+  if (typeof window === 'undefined' || typeof window.gtag !== 'function') return
+  while (pendingConversions.length > 0) {
+    const event = pendingConversions.shift()
+    if (!event) break
+    window.gtag('event', 'conversion', event)
+  }
 }
 
 function comparisonSessionKey(page: string): string {
@@ -151,6 +169,40 @@ export function trackComparisonView(page: string): void {
       event_label: page,
     })
   }
+}
+
+/**
+ * Click Contact — equivalente a gtag_report_conversion de Google Ads.
+ * Con `url`: llamá preventDefault y dejá que event_callback navegue.
+ * Sin `url` (p. ej. target=_blank): solo dispara la conversión.
+ * @returns false (mismo contrato que el snippet oficial)
+ */
+export function reportGoogleAdsContactConversion(url?: string): boolean {
+  if (typeof window === 'undefined') return false
+
+  const navigate = () => {
+    if (typeof url !== 'undefined') {
+      window.location.href = url
+    }
+  }
+
+  const trimmed = SEND_TO_CONTACT.trim()
+  if (!trimmed) {
+    navigate()
+    return false
+  }
+
+  if (typeof window.gtag !== 'function') {
+    pendingConversions.push({ send_to: trimmed })
+    navigate()
+    return false
+  }
+
+  window.gtag('event', 'conversion', {
+    send_to: trimmed,
+    event_callback: navigate,
+  })
+  return false
 }
 
 export function getUTMParameters(): {

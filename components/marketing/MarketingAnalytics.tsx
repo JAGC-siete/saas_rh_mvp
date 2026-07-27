@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { flushPendingGoogleAdsConversions } from '../../lib/analytics/googleAds'
 import { resolveMetaPixelId } from '../../lib/analytics/meta-pixel-id'
 
 const GADS_CONVERSION_ID = 'AW-17840996991'
@@ -48,6 +49,7 @@ export default function MarketingAnalytics() {
       gtag('js', new Date())
       gtag('config', GA4_MEASUREMENT_ID)
       gtag('config', GADS_CONVERSION_ID)
+      flushPendingGoogleAdsConversions()
 
       const gs = document.createElement('script')
       gs.async = true

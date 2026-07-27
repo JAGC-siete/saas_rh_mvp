@@ -29,7 +29,7 @@ import {
   createMetaEventId,
   trackActivationTrialSubmit,
 } from '../../lib/analytics/metaPixel'
-import { trackActivationFormSubmit } from '../../lib/analytics/googleAds'
+import { trackActivationFormSubmit, reportGoogleAdsContactConversion } from '../../lib/analytics/googleAds'
 
 const WHATSAPP_CALLING_CODES: { code: string; country: string }[] = [
   { code: '+1', country: 'Estados Unidos / Canadá' },
@@ -148,6 +148,7 @@ export default function MotorEncendidoLead({ utmContext = {}, initialCountryCode
       return
     }
 
+    reportGoogleAdsContactConversion()
     setIsLoading(true)
     setErrors({})
 
