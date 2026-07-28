@@ -143,7 +143,6 @@ export default function MotorEncendidoLead({ utmContext = {}, initialCountryCode
       return
     }
 
-    reportGoogleAdsContactConversion()
     setIsLoading(true)
     setErrors({})
 
