@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { useRouter } from 'next/router'
 import { flushPendingGoogleAdsConversions } from '../../lib/analytics/googleAds'
 import { resolveMetaPixelId } from '../../lib/analytics/meta-pixel-id'
 
@@ -10,6 +11,9 @@ const META_PIXEL_ID = resolveMetaPixelId()
 /** Delay past typical Lighthouse LCP window; interaction still loads sooner. */
 const IDLE_FALLBACK_MS = 15_000
 
+/** Confirmation URLs need gtag immediately for Google Ads page-load conversions. */
+const IMMEDIATE_ANALYTICS_PATHS = new Set(['/activar/gracias', '/gracias'])
+
 type AnalyticsWindow = Window & {
   dataLayer?: unknown[]
   __hsAnalyticsLoaded?: boolean
@@ -20,13 +24,14 @@ type AnalyticsWindow = Window & {
 /**
  * Third-party analytics only on marketing surfaces.
  * Loads after first intentional interaction, or after a long idle fallback —
- * keeps gtag/pixel out of the critical main-thread window
- * (Minimize main thread work / Remove unused JavaScript / cache lifetimes).
+ * except thank-you pages, where gtag loads immediately for conversion verification.
  *
  * Scroll is intentionally omitted: Lighthouse often synthesizes scroll and
  * would pull ~250KiB+ of unused third-party JS into the lab score.
  */
 export default function MarketingAnalytics() {
+  const router = useRouter()
+
   useEffect(() => {
     if (typeof window === 'undefined') return
     const w = window as AnalyticsWindow
@@ -92,6 +97,15 @@ export default function MarketingAnalytics() {
       if (idleTimer) clearTimeout(idleTimer)
     }
 
+    const path = router.pathname
+    if (IMMEDIATE_ANALYTICS_PATHS.has(path)) {
+      load()
+      return () => {
+        cancelled = true
+        cleanup()
+      }
+    }
+
     window.addEventListener('pointerdown', onInteract, { once: true, passive: true })
     window.addEventListener('keydown', onInteract, { once: true })
     // Real users who never interact still get attribution; Lighthouse usually finishes earlier.
@@ -101,7 +115,7 @@ export default function MarketingAnalytics() {
       cancelled = true
       cleanup()
     }
-  }, [])
+  }, [router.pathname])
 
   return (
     <noscript>

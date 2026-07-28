@@ -15,6 +15,7 @@ import {
 const PUBLIC_SSR_EXACT = new Set([
   '/',
   '/activar',
+  '/activar/gracias',
   '/ventas',
   '/gracias',
   INFO_FUNNEL_PUBLIC_PATH,

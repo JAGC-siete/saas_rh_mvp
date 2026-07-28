@@ -11,14 +11,14 @@
 
 import { trackGA4Event } from './ga4'
 
-const SEND_TO_ACTIVATION = process.env.NEXT_PUBLIC_GADS_SEND_TO_ACTIVATION
+const SEND_TO_ACTIVATION = process.env.NEXT_PUBLIC_GADS_SEND_TO_ACTIVATION?.trim()
 /** PDF calculadoras, /info y otros leads TOFU/MOFU. */
 const SEND_TO_LEAD = process.env.NEXT_PUBLIC_GADS_SEND_TO_LEAD
 /** Opcional: conversión secundaria en clic de CTA (por defecto desactivada). */
 const SEND_TO_CTA = process.env.NEXT_PUBLIC_GADS_SEND_TO_CTA
 const SEND_TO_WHATSAPP = process.env.NEXT_PUBLIC_GADS_SEND_TO_WHATSAPP
 const SEND_TO_COMPARISON = process.env.NEXT_PUBLIC_GADS_SEND_TO_COMPARISON
-/** Click Contact en /ventas (Google Ads “Contact conversion page”). */
+/** Click Contact en /ventas; también fallback page-load en /activar/gracias si no hay ACTIVATION. */
 const SEND_TO_CONTACT =
   process.env.NEXT_PUBLIC_GADS_SEND_TO_CONTACT?.trim() ||
   'AW-17840996991/-3XtCO6xydccEP-EoLtC'
@@ -78,19 +78,16 @@ export function fireGoogleAdsLeadConversion(transactionId?: string): void {
 }
 
 /**
- * Track activation form submission (conversión principal de lead si SEND_TO_ACTIVATION está definido).
+ * Engagement post-submit del trial (GA4 / gtag). La conversión Ads de page-load
+ * vive en `trackTrialThankYouPageView` (/activar/gracias).
  */
 export function trackActivationFormSubmit(
   email: string,
   empresa: string,
   empleados: number,
-  transactionId?: string
+  _transactionId?: string
 ): void {
-  fireGoogleAdsConversion(SEND_TO_ACTIVATION, {
-    transaction_id: transactionId || `activation_${Date.now()}_${email}`,
-  })
-
-  if (typeof window !== 'undefined' && typeof window.gtag !== 'undefined') {
+  if (typeof window !== 'undefined' && typeof window.gtag === 'function') {
     window.gtag('event', 'form_submit', {
       event_category: 'Activation',
       event_label: 'Activation Form',
@@ -106,6 +103,29 @@ export function trackActivationFormSubmit(
     event_category: 'Activation',
     event_label: 'Activation Form',
     value: empleados,
+  })
+}
+
+const TRIAL_THANK_YOU_DEDUPE_KEY = 'gads_dedupe_trial_thank_you'
+
+/**
+ * Page-load en /activar/gracias tras trial OK (checklist Google Ads “thank you page”).
+ * Usa SEND_TO_ACTIVATION si está definido; si no, Contact (label ya configurado).
+ */
+export function trackTrialThankYouPageView(transactionId?: string): void {
+  if (typeof window !== 'undefined') {
+    if (sessionStorage.getItem(TRIAL_THANK_YOU_DEDUPE_KEY)) return
+    sessionStorage.setItem(TRIAL_THANK_YOU_DEDUPE_KEY, '1')
+  }
+
+  const sendTo = SEND_TO_ACTIVATION || SEND_TO_CONTACT
+  fireGoogleAdsConversion(sendTo, {
+    transaction_id: transactionId || `trial_ty_${Date.now()}`,
+  })
+
+  trackGA4Event('trial_thank_you', {
+    event_category: 'Activation',
+    event_label: 'Trial Thank You',
   })
 }
 

@@ -48,6 +48,7 @@ export function generateTitle(options: TitleOptions = {}): string {
 export const pageTitles = {
   home: 'Sistema de nómina y asistencia | HN, SV y GT | Biométrico + planilla | Humano SISU',
   activate: 'Activa SISU | Toca el cielo | Humano SISU',
+  activarGracias: 'Trial activado | Llaves enviadas | Humano SISU',
   affiliates: 'Programa de Afiliados | Humano SISU',
   calculator: 'Calculadora ISR Honduras y Calculadora RAP | IHSS · Humano SISU',
   calculatorSlv: 'Calculadora ISR El Salvador | ISSS, AFP y sueldo neto | Humano SISU',

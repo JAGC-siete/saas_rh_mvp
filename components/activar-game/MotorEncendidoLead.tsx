@@ -1,11 +1,7 @@
-import Link from 'next/link'
+import { useRouter } from 'next/router'
 import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import {
-  ArrowLeftIcon,
-  CheckCircleIcon,
-  CloudIcon,
-} from '@heroicons/react/24/outline'
+import { CloudIcon } from '@heroicons/react/24/outline'
 import { Card, CardContent } from '../ui/card'
 import BorderBeam from '../landing/BorderBeam'
 import WizardStepProgress from '../funnel/WizardStepProgress'
@@ -13,7 +9,6 @@ import { TRIAL_CONFIG } from '../../lib/config/trial'
 import {
   activarStep1Errors,
   activarStep2Errors,
-  COUNTRY_LABEL,
   computeActivarErrors,
   defaultCallingCodeForPayrollCountry,
   type ActivarFormData,
@@ -29,7 +24,7 @@ import {
   createMetaEventId,
   trackActivationTrialSubmit,
 } from '../../lib/analytics/metaPixel'
-import { trackActivationFormSubmit, reportGoogleAdsContactConversion } from '../../lib/analytics/googleAds'
+import { trackActivationFormSubmit } from '../../lib/analytics/googleAds'
 
 const WHATSAPP_CALLING_CODES: { code: string; country: string }[] = [
   { code: '+1', country: 'Estados Unidos / Canadá' },
@@ -48,7 +43,7 @@ const WHATSAPP_CALLING_CODES: { code: string; country: string }[] = [
   { code: '+34', country: 'España' },
 ]
 
-type WizardStep = 'intrigue' | 'config' | 'account' | 'confirm' | 'success'
+type WizardStep = 'intrigue' | 'config' | 'account' | 'confirm'
 
 type Props = {
   utmContext?: ActivarUtmContext
@@ -73,6 +68,7 @@ function motorLightsOn(step: WizardStep): number {
 }
 
 export default function MotorEncendidoLead({ utmContext = {}, initialCountryCode = 'HND' }: Props) {
+  const router = useRouter()
   const copy = MOTOR_ENCENDIDO_COPY
   const [step, setStep] = useState<WizardStep>('intrigue')
   const [isLoading, setIsLoading] = useState(false)
@@ -103,7 +99,6 @@ export default function MotorEncendidoLead({ utmContext = {}, initialCountryCode
   const subheadline = utmContext.subheadline ?? copy.intrigue.subheadline
   const wizardStep = wizardStepIndex(step)
   const lights = motorLightsOn(step)
-  const countryLabel = isCountryCode(formData.countryCode) ? COUNTRY_LABEL[formData.countryCode] : ''
 
   const patchForm = (patch: Partial<ActivarFormData>) => {
     const next = { ...formData, ...patch }
@@ -189,7 +184,13 @@ export default function MotorEncendidoLead({ utmContext = {}, initialCountryCode
           firstName: submitData.nombre || undefined,
           countryCode: submitData.countryCode,
         })
-        setStep('success')
+        const q = new URLSearchParams()
+        if (submitData.nombre) q.set('nombre', submitData.nombre)
+        if (submitData.empresa) q.set('empresa', submitData.empresa)
+        q.set('empleados', String(submitData.empleados))
+        if (submitData.countryCode) q.set('country', submitData.countryCode)
+        await router.push(`/activar/gracias?${q.toString()}`)
+        return
       } else {
         setErrors({ submit: data.error || 'Error al procesar tu solicitud. Por favor, intenta de nuevo.' })
       }
@@ -202,40 +203,6 @@ export default function MotorEncendidoLead({ utmContext = {}, initialCountryCode
 
   const inputClass =
     'w-full p-3.5 rounded-xl bg-white/5 backdrop-blur-sm border border-white/20 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/50 focus:border-cyan-400/50 transition-all hover:border-cyan-400/30 hover:bg-white/10'
-
-  if (step === 'success') {
-    const displayName = formData.nombre.trim() || 'Equipo'
-    return (
-      <div className="max-w-2xl mx-auto text-center px-4 py-8">
-        <div className="mb-8">
-          <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
-            <CheckCircleIcon className="h-12 w-12 text-green-400" />
-          </div>
-          <h1 className="text-3xl sm:text-4xl font-bold text-white mb-4">
-            {copy.success.title(displayName)}
-          </h1>
-          <p className="text-lg text-brand-300 mb-6">
-            {copy.success.body(countryLabel || 'tu país', formData.empresa, formData.empleados)}
-          </p>
-          <p className="text-brand-300">{copy.success.emailHint}</p>
-        </div>
-
-        <Card variant="liquid" className="mb-8 text-left">
-          <CardContent className="p-6 sm:p-8">
-            <p className="text-white font-medium mb-2">{copy.success.biometricHint}</p>
-            <p className="text-sm text-brand-400 mt-4">
-              {formData.contactoEmail} · humanosisu@humanosisu.net
-            </p>
-          </CardContent>
-        </Card>
-
-        <Link href="/" className="inline-flex items-center text-brand-300 hover:text-white transition-colors">
-          <ArrowLeftIcon className="h-4 w-4 mr-2" />
-          Volver a inicio
-        </Link>
-      </div>
-    )
-  }
 
   return (
     <div className="flex-grow flex items-center justify-center p-4 sm:p-6 lg:p-8">
