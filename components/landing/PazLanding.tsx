@@ -1,11 +1,9 @@
-import { useState } from 'react'
 import Link from 'next/link'
 import PublicPageShell from './PublicPageShell'
 import PublicPageHead from '../SEO/PublicPageHead'
 import SchemaMarkup from '../SEO/SchemaMarkup'
 import CampaignStyles from '../marketing/CampaignStyles'
 import { generateFAQPageSchema, generateWebPageSchema, generateBreadcrumbListSchema } from '../../lib/seo/schema'
-import { PAZ_SOCIAL_LINKS } from '../../lib/marketing/social-links'
 
 const PAZ_VIDEO_EMBED_SRC = 'https://www.youtube.com/embed/TTrBvcpDM3k?si=AdRkiKk1PpJ3WiJ6'
 
@@ -13,6 +11,7 @@ const PAGE_TITLE = 'La forma pacífica de cerrar planilla | Humano SISU'
 const PAGE_DESCRIPTION =
   '¿Perdiste un domingo haciendo Excel? No sos una máquina de errores de deducción. Encontrá tu paz con Humano SISU.'
 
+/* Profiles + testimonials (ocultos por ahora)
 const PROFILES = [
   { name: 'Felix', role: 'Dueño de restaurante', initials: 'F', color: 'rgba(37, 99, 235, 0.12)' },
   { name: 'Nancy', role: 'Gerente de RRHH', initials: 'N', color: 'rgba(22, 163, 74, 0.12)' },
@@ -57,31 +56,32 @@ const TESTIMONIALS = [
     quote: 'Sentimos diferente.',
   },
 ]
+*/
 
 const FAQS = [
   {
-    question: '¿Qué debo llevar al retiro?',
+    question: '¿Cómo me preparo para el retiro?',
     answer:
-      'Tu laptop con el Excel roto. Nosotros traemos el biométrico y el motor legal.',
+      'Tu laptop con el file de Excel. Nosotros te presentamos el biométrico preconfigurado con acceso a nuestros servidores inteligentes.',
   },
   {
-    question: '¿Cuánto tardo en sentir algo?',
+    question: '¿Cuánto tardo en sentir la diferencia?',
     answer:
-      'La mayoría siente alivio en la primera quincena automatizada. Algunos en 4 minutos (antes eran 4 horas).',
+      'La mayoría siente alivio en la primera quincena automatizada. Algunos en 4 minutos (por que antes le tomaba 6 horas).',
   },
   {
-    question: '¿Puedo venir solo?',
-    answer: 'Sí. Pero si traés a tu contador, mejor. La paz compartida escala.',
+    question: '¿Puedo traer a mi contador?',
+    answer: 'Sí. Y traés a tu jefe de personal, mejor. Todos son bienvenidos.',
   },
   {
     question: '¿Cuánto cuesta el retiro?',
     answer:
-      'Cotización sin costo. Trial gratis según política vigente. El pasto es gratis; el Excel ya te costó suficientes domingos.',
+      'Trial y comparación gratis. Cotización sin letras pequeñas. La paz es real y la demostración es gratis; el biométrico roto ya te costó suficientes males.',
   },
   {
     question: '¿Este retiro es real?',
     answer:
-      'El retiro es metáfora. La nómina automatizada, el biométrico y el cumplimiento IHSS/RAP/ISR son reales. (El pasto también es real.)',
+      'El retiro es metáfora. La nómina automatizada, el biométrico y el cumplimiento IHSS/RAP/ISR son reales. (El paz también es real.)',
   },
 ]
 
@@ -90,8 +90,6 @@ function scrollToVideo() {
 }
 
 export default function PazLanding() {
-  const [desplanillero, setDesplanillero] = useState(false)
-
   const webPageSchema = generateWebPageSchema({
     url: '/paz',
     title: PAGE_TITLE,
@@ -135,21 +133,8 @@ export default function PazLanding() {
           <div className="flex flex-col sm:flex-row flex-wrap items-center justify-center gap-3">
             <button type="button" onClick={scrollToVideo} className="paz-btn paz-btn-primary">
               Ver el video
-              <span className="text-sm opacity-75">(45 seg de serenidad)</span>
+              <span className="text-sm opacity-75">(Método revelado)</span>
             </button>
-            <div className="flex flex-wrap items-center justify-center gap-2">
-              {PAZ_SOCIAL_LINKS.map((link) => (
-                <a
-                  key={link.label}
-                  href={link.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="paz-btn paz-btn-ghost text-sm"
-                >
-                  {link.label}
-                </a>
-              ))}
-            </div>
           </div>
         </section>
 
@@ -157,19 +142,17 @@ export default function PazLanding() {
 
         <section id="paz-video" className="paz-section">
           <div className="text-center mb-8">
-            <h2 className="paz-serif paz-section-title mb-4">
-              Cuarenta y cinco segundos de serenidad
-            </h2>
+            <h2 className="paz-serif paz-section-title mb-4">Método revelado</h2>
             <p className="paz-lead max-w-xl mx-auto">
-              Una meditación sobre cerrar planilla, dirigida por el viento y el motor legal de Humano
-              SISU. Dale play. Respirá.
+              Unos minutos de meditación sobre cómo cerrar planilla de manera pacífica, dirigida por
+              el viento y los servidores de SISU. Dale play. Tu herramienta nueva está aquí.
             </p>
           </div>
           <div className="paz-video-frame">
             <iframe
               className="paz-video-embed"
               src={PAZ_VIDEO_EMBED_SRC}
-              title="Cuarenta y cinco segundos de serenidad — Humano SISU"
+              title="Método revelado — Humano SISU"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
               referrerPolicy="strict-origin-when-cross-origin"
               allowFullScreen
@@ -179,6 +162,7 @@ export default function PazLanding() {
 
         <hr className="paz-divider" />
 
+        {/* Sección perfiles + testimonios (ocultos por ahora)
         <section className="paz-section text-center">
           <h2 className="paz-serif paz-section-title mb-4 max-w-2xl mx-auto">
             Tu camino hacia el cierre interior de planilla te espera.
@@ -243,6 +227,7 @@ export default function PazLanding() {
         </section>
 
         <hr className="paz-divider" />
+        */}
 
         <section className="paz-section">
           <h2 className="paz-serif paz-section-title text-center mb-4">
@@ -271,11 +256,11 @@ export default function PazLanding() {
 
         <section className="paz-section py-16 sm:py-20 text-center">
           <h2 className="paz-dual-cta paz-serif mb-6">
-            Cerrar planilla <span>/</span> Tocar pasto
+            Cerrar planilla <span>/</span> Hacer las paces
           </h2>
           <p className="paz-lead max-w-lg mx-auto mb-10">
-            La ayuda está a un paso. Activá tu trial o pedí cotización. La recuperación es real, y
-            también lo es el software. (El pasto también.)
+            La ayuda está a un click. Activá tu trial o pedí de una vez tu cotización. El tiempo
+            perdido es real, pero también lo es esta solución. (La paz también.)
           </p>
           <div className="flex flex-col sm:flex-row flex-wrap items-center justify-center gap-3">
             <Link
