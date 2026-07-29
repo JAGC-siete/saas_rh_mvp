@@ -1,9 +1,7 @@
-import Link from 'next/link'
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
+import { useRouter } from 'next/router'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
-  ArrowLeftIcon,
-  CheckCircleIcon,
   DocumentTextIcon,
   PaperAirplaneIcon,
   ShieldCheckIcon,
@@ -11,28 +9,24 @@ import {
 import { Card, CardContent } from '../ui/card'
 import BorderBeam from '../landing/BorderBeam'
 import WizardStepProgress from '../funnel/WizardStepProgress'
-import TrackedWhatsAppLink from '../TrackedWhatsAppLink'
-import { reportGoogleAdsContactConversion } from '../../lib/analytics/googleAds'
-import type { QuotationQuote, QuotationRequest, QuotationResponse } from '../../lib/ventas/types'
-import { buildQuotationPlanSummary } from '../../lib/ventas/quote-display'
+import type { QuotationRequest, QuotationResponse } from '../../lib/ventas/types'
 import { VENTAS_MAX_AUTO_QUOTE_TERMINALS } from '../../lib/ventas/modality-includes'
 import {
   buildQuotationAcquisitionWhatsAppText,
   buildVentasSupportWhatsAppUrl,
 } from '../../lib/ventas/bank-details'
 import { getVentasModalityDefinition } from '../../lib/ventas/modality-includes'
-import { buildModalityComparison } from '../../lib/ventas/modality-comparison'
 import {
   isMonthlyModalityAvailable,
   VENTAS_MONTHLY_MIN_EMPLOYEES,
 } from '../../lib/ventas/business-rules'
-import { employeesCountFromQuote } from '../../lib/ventas/quote-display'
 import { isCountryCode, currencyForCountryCode, type CountryCode } from '../../lib/country/supported'
 import {
   buildMetaApiTrackingFields,
   createMetaEventId,
   trackQuotationSubmit,
 } from '../../lib/analytics/metaPixel'
+import { maskEmailForHint, writeThankYouContext } from '../../lib/analytics/thank-you-context'
 import type { VentasUtmContext } from '../../lib/ventas-game/ventas-utm-context'
 import { COTIZACION_GUIADA_COPY } from '../../lib/ventas-game/cotizacion-guiada-copy'
 import {
@@ -46,7 +40,7 @@ import {
 } from '../../lib/ventas-game/ventas-form'
 import { hasValidationErrors, omitValidationField } from '../../lib/forms/validation-errors'
 
-type WizardStep = 'intro' | 'scope' | 'company' | 'delivery' | 'success'
+type WizardStep = 'intro' | 'scope' | 'company' | 'delivery'
 
 type Props = {
   utmContext?: VentasUtmContext
@@ -81,13 +75,13 @@ export default function CotizacionGuiadaLead({
   utmContext = {},
   initialCountryCode = 'HND',
 }: Props) {
+  const router = useRouter()
   const copy = COTIZACION_GUIADA_COPY
   const [step, setStep] = useState<WizardStep>('intro')
   const [showCoupon, setShowCoupon] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [errors, setErrors] = useState<VentasValidationErrors>({})
   const [formData, setFormData] = useState<QuotationRequest>(() => defaultForm(initialCountryCode))
-  const [quote, setQuote] = useState<QuotationQuote | null>(null)
 
   const headline = utmContext.headline ?? copy.intro.headline
   const subheadline = utmContext.subheadline ?? copy.intro.subheadline
@@ -97,20 +91,8 @@ export default function CotizacionGuiadaLead({
       ? VENTAS_COUNTRY_LABEL[formData.country_code]
       : ''
 
-  const planSummary = useMemo(() => (quote ? buildQuotationPlanSummary({ quote }) : null), [quote])
-  const modalityComparison = useMemo(() => (quote ? buildModalityComparison({ quote }) : null), [quote])
   const employeesCount = Number(formData.employees_count) || 1
   const monthlyAvailable = isMonthlyModalityAvailable(employeesCount)
-
-  const whatsappUrl = useMemo(() => {
-    if (step !== 'success') return ''
-    const msg = buildQuotationAcquisitionWhatsAppText({
-      contactName: formData.contact_name,
-      companyName: formData.company_name,
-      includeBankPrompt: true,
-    })
-    return buildVentasSupportWhatsAppUrl(msg)
-  }, [step, formData.contact_name, formData.company_name])
 
   const patchForm = (patch: Partial<QuotationRequest>) => {
     setFormData((prev) => {
@@ -195,7 +177,6 @@ export default function CotizacionGuiadaLead({
       }
 
       const responseQuote = (data as QuotationResponse).quote || null
-      setQuote(responseQuote)
       trackQuotationSubmit({
         eventId: metaEventId,
         email: quotationPayload.contact_email,
@@ -210,7 +191,22 @@ export default function CotizacionGuiadaLead({
             : responseQuote?.annual_total,
         currency: responseQuote?.currency,
       })
-      setStep('success')
+
+      const waMsg = buildQuotationAcquisitionWhatsAppText({
+        contactName: quotationPayload.contact_name,
+        companyName: quotationPayload.company_name,
+        includeBankPrompt: true,
+      })
+      writeThankYouContext('ventas', {
+        displayName: quotationPayload.contact_name || undefined,
+        empresa: quotationPayload.company_name || undefined,
+        empleados: quotationPayload.employees_count,
+        countryCode: quotationPayload.country_code,
+        emailHintMasked: maskEmailForHint(quotationPayload.contact_email),
+        whatsappUrl: buildVentasSupportWhatsAppUrl(waMsg),
+      })
+      await router.push('/ventas/gracias')
+      return
     } catch {
       setErrors({ submit: 'No se pudo enviar. Revise su conexión e intente de nuevo.' })
     } finally {
@@ -220,98 +216,6 @@ export default function CotizacionGuiadaLead({
 
   const inputClass =
     'w-full p-3.5 rounded-xl bg-white/5 backdrop-blur-sm border border-white/20 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-400/50 transition-all hover:bg-white/10'
-
-  if (step === 'success') {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="max-w-2xl mx-auto text-center">
-          <div className="mb-8">
-            <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
-              <CheckCircleIcon className="h-12 w-12 text-green-400" />
-            </div>
-            <h1 className="text-3xl sm:text-4xl font-bold text-white mb-4">{copy.success.title}</h1>
-            <p className="text-lg text-brand-300 mb-6">{copy.success.emailHint(formData.contact_email)}</p>
-            {countryLabel && (
-              <p className="text-sm text-brand-400">
-                Legislación aplicada: <strong className="text-cyan-100/90">{countryLabel}</strong>
-              </p>
-            )}
-          </div>
-
-          {quote && (
-            <Card variant="liquid" className="mb-8 text-left">
-              <CardContent className="p-6 sm:p-8">
-                <h2 className="text-xl font-bold text-white mb-4">Resumen de inversión</h2>
-                <div className="space-y-2 text-brand-200 text-sm">
-                  <p>
-                    <strong>Modalidad:</strong>{' '}
-                    {
-                      getVentasModalityDefinition(quote.billing_modality, {
-                        employeesCount: employeesCountFromQuote(quote),
-                        currency: quote.currency,
-                      }).label
-                    }
-                  </p>
-                  <p>
-                    <strong>Rango tarifario:</strong> {quote.tier.min_employees}–{quote.tier.max_employees}{' '}
-                    empleados
-                  </p>
-                  {planSummary && (
-                    <div className="mt-4 rounded-xl border border-white/10 bg-black/20 p-4 space-y-2">
-                      {planSummary.lines.map((line) => (
-                        <p key={line.label}>
-                          <strong>{line.label}:</strong> {line.value}
-                        </p>
-                      ))}
-                      <p className="text-base font-semibold text-emerald-300 pt-1">
-                        {planSummary.totalLabel}: {planSummary.totalValue}
-                      </p>
-                    </div>
-                  )}
-                  {modalityComparison && (
-                    <div className="mt-4 rounded-xl border border-slate-400/25 bg-slate-500/10 p-4 space-y-2">
-                      <p className="font-semibold text-slate-100">{modalityComparison.title}</p>
-                      {modalityComparison.lines.map((line) => (
-                        <p key={`alt-${line.label}`}>
-                          <strong>{line.label}:</strong> {line.value}
-                        </p>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {whatsappUrl && (
-            <Card variant="liquid" className="mb-8 border-emerald-400/20 text-left">
-              <CardContent className="p-6 sm:p-8">
-                <h2 className="text-xl font-bold text-white mb-2">¿Listo para formalizar?</h2>
-                <p className="text-sm text-cyan-100/80 mb-6">{copy.success.contractHint}</p>
-                <TrackedWhatsAppLink
-                  href={whatsappUrl}
-                  trackingContext="ventas_success_contract"
-                  target="_blank"
-                  rel="noreferrer"
-                  onClick={() => {
-                    reportGoogleAdsContactConversion()
-                  }}
-                  className="w-full inline-flex items-center justify-center rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-4 font-semibold transition-colors"
-                >
-                  {copy.success.contractCta}
-                </TrackedWhatsAppLink>
-              </CardContent>
-            </Card>
-          )}
-
-          <Link href="/" className="inline-flex items-center text-brand-300 hover:text-white transition-colors">
-            <ArrowLeftIcon className="h-4 w-4 mr-2" />
-            Volver al inicio
-          </Link>
-        </div>
-      </div>
-    )
-  }
 
   return (
     <div className="flex-grow flex items-center justify-center p-4 sm:p-6 lg:p-8">

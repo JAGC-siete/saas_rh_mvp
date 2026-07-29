@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { useRouter } from 'next/router'
-import { flushPendingGoogleAdsConversions } from '../../lib/analytics/googleAds'
+import { flushPendingGoogleAdsConversions, THANK_YOU_PATHS } from '../../lib/analytics/googleAds'
 import { resolveMetaPixelId } from '../../lib/analytics/meta-pixel-id'
 
 const GADS_CONVERSION_ID = 'AW-17840996991'
@@ -11,8 +11,7 @@ const META_PIXEL_ID = resolveMetaPixelId()
 /** Delay past typical Lighthouse LCP window; interaction still loads sooner. */
 const IDLE_FALLBACK_MS = 15_000
 
-/** Confirmation URLs need gtag immediately for Google Ads page-load conversions. */
-const IMMEDIATE_ANALYTICS_PATHS = new Set(['/activar/gracias', '/gracias'])
+const IMMEDIATE_ANALYTICS_PATHS = new Set<string>(THANK_YOU_PATHS)
 
 type AnalyticsWindow = Window & {
   dataLayer?: unknown[]

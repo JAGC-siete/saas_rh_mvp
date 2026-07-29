@@ -1,5 +1,5 @@
 import Head from 'next/head'
-import Link from 'next/link'
+import TrackedInternalCta from '../components/TrackedInternalCta'
 import PublicPageShell from '../components/landing/PublicPageShell'
 import TrackedWhatsAppLink from '../components/TrackedWhatsAppLink'
 import { getPageTitle } from '../lib/seo/title'
@@ -303,12 +303,14 @@ export default function Implementacion48HorasPage() {
             Activación inmediata, biométrico en 72 h o menos y garantía de 30 días con dinero de regreso. Sin límite de usuarios.
           </p>
           <div className="flex flex-wrap justify-center gap-3 sm:gap-4">
-            <Link
+            <TrackedInternalCta
               href="/activar"
+              ctaType="activar_trial"
+              location="implementacion_48h_footer"
               className="px-6 sm:px-8 py-3 sm:py-4 bg-sky-600 text-white rounded-xl font-semibold text-base sm:text-lg hover:bg-sky-700 transition-colors shadow-sm"
             >
               Solicitar Implementación
-            </Link>
+            </TrackedInternalCta>
             <TrackedWhatsAppLink
               href="https://wa.me/50432226773?text=Hola,%20quiero%20saber%20más%20sobre%20la%20implementación%20express%20de%20Humano%20SISU"
               target="_blank"

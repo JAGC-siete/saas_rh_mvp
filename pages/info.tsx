@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import TrackedInternalCta from '../components/TrackedInternalCta'
 import { useEffect } from 'react'
 import PublicPageShell from '../components/landing/PublicPageShell'
 import PublicPageHead from '../components/SEO/PublicPageHead'
@@ -73,24 +74,28 @@ export default function InfoPage() {
             Prueba gratis el motor legal antes de automatizar toda la planilla.
           </p>
           <div className="flex flex-col sm:flex-row flex-wrap gap-3">
-            <Link
+            <TrackedInternalCta
               href="/activar?utm_source=info&utm_medium=cta&utm_campaign=trial"
+              ctaType="activar_trial"
+              location="info_footer_trial"
               className="viernes-btn viernes-btn-primary"
             >
               Probar software gratis
-            </Link>
+            </TrackedInternalCta>
             <Link
               href="/calculadora?utm_source=info&utm_medium=cta&utm_campaign=calculators"
               className="viernes-btn viernes-btn-ghost"
             >
               Ver calculadoras laborales
             </Link>
-            <Link
+            <TrackedInternalCta
               href="/ventas?utm_source=info&utm_medium=cta&utm_campaign=pricing"
+              ctaType="solicitar_cotizacion"
+              location="info_footer_pricing"
               className="viernes-btn viernes-btn-ghost"
             >
               Cotización y precios
-            </Link>
+            </TrackedInternalCta>
           </div>
         </section>
 

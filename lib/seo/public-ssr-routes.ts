@@ -17,6 +17,7 @@ const PUBLIC_SSR_EXACT = new Set([
   '/activar',
   '/activar/gracias',
   '/ventas',
+  '/ventas/gracias',
   '/gracias',
   INFO_FUNNEL_PUBLIC_PATH,
   '/info',

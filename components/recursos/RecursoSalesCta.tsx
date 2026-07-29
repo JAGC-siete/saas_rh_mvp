@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import TrackedInternalCta from '../TrackedInternalCta'
 
 export default function RecursoSalesCta() {
   return (
@@ -8,12 +9,14 @@ export default function RecursoSalesCta() {
         Asistencia biométrica y nómina con deducciones de ley, en un solo lugar.
       </p>
       <div className="flex flex-col sm:flex-row gap-3 justify-center">
-        <Link
+        <TrackedInternalCta
           href="/activar"
+          ctaType="activar_trial"
+          location="recurso_sales_cta"
           className="inline-flex justify-center py-3 px-6 bg-sky-600 hover:bg-sky-700 text-white font-semibold rounded-xl transition-colors"
         >
           Probar gratis 30 días
-        </Link>
+        </TrackedInternalCta>
         <Link
           href="/calculadora"
           className="inline-flex justify-center py-3 px-6 bg-white/10 hover:bg-white/20 text-white font-semibold rounded-xl border border-white/15 transition-colors"

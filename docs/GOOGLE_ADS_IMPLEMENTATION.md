@@ -1,204 +1,49 @@
-# Implementación Técnica Google Ads - Humano SISU
+# Google Ads — Humano SISU (taxonomía 1B + 2A)
 
-## ✅ Implementación Completada
+## Principios ([Google Tag Platform](https://developers.google.com/tag-platform/devguides/conversions))
 
-### 1. **Tracking de Conversiones**
+1. **Google tag** (`gtag config AW-17840996991`) en rutas de marketing vía `MarketingAnalytics`.
+2. **Event snippet** solo en el momento de conversión (nunca en el head global).
+3. **Primary** = page-load en thank-you URL **limpia** (sin PII en query).
+4. **Secondary** = click (WhatsApp) o lead in-page con `transaction_id`.
+5. **CTAs** a `/activar` / `/ventas` = solo engagement GA4 (`TrackedInternalCta` / `trackCTAClick`).
 
-**Archivo:** `lib/analytics/googleAds.ts`
+## Taxonomía
 
-Funcionalidades implementadas:
-- ✅ `trackGoogleAdsConversion()` - Función base para tracking
-- ✅ `trackActivationFormSubmit()` - Tracking de formulario de activación
-- ✅ `trackCTAClick()` - Tracking de clicks en CTAs
-- ✅ `trackWhatsAppClick()` - Tracking de clicks en WhatsApp
-- ✅ `trackComparisonView()` - Tracking de vistas de comparación
-- ✅ `getUTMParameters()` - Captura de parámetros UTM
-- ✅ `storeUTMParameters()` - Almacenamiento de UTM en sessionStorage
-- ✅ `initGoogleAdsTracking()` - Inicialización automática
+| Acción | Rol Ads | `send_to` env | Momento | URL |
+|--------|---------|---------------|---------|-----|
+| Trial signup | **Primary** | `NEXT_PUBLIC_GADS_SEND_TO_ACTIVATION` | page-load | `/activar/gracias` |
+| Cotización | **Primary** | `NEXT_PUBLIC_GADS_SEND_TO_QUOTE` (fallback Contact label) | page-load | `/ventas/gracias` |
+| Lead (info/viernes/PDF/newsletter) | Secondary | `NEXT_PUBLIC_GADS_SEND_TO_LEAD` | submit | in-page |
+| WhatsApp | Secondary | `NEXT_PUBLIC_GADS_SEND_TO_WHATSAPP` | click | n/a |
+| Comparación SEO | Secondary | `NEXT_PUBLIC_GADS_SEND_TO_COMPARISON` | page view | n/a |
+| CTA interno | — | (vacío) | click | engagement only |
 
-### 2. **Integración en Páginas**
+## Thank-you sin PII
 
-**Páginas actualizadas:**
-- ✅ `pages/index.tsx` - Inicialización de tracking en home
-- ✅ `pages/activar.tsx` - Tracking de conversión al enviar formulario
-- ✅ `components/LandingHero.tsx` - Tracking de clicks en CTA principal
+- Contexto UI en `sessionStorage` (`lib/analytics/thank-you-context.ts`).
+- Redirect: `router.push('/activar/gracias')` / `'/ventas/gracias'` — **cero** email/nombre en query.
+- Email en copy: solo mascara (`j***@dominio.com`) desde sessionStorage.
 
-### 3. **Configuración Google Ads**
+## Código clave
 
-**Google Ads Conversion ID:** `AW-17840996991` (ya configurado en `_document.tsx`)
+- `lib/analytics/googleAds.ts` — helpers + `THANK_YOU_PATHS`
+- `components/marketing/MarketingAnalytics.tsx` — gtag diferido; **inmediato** en thank-you
+- `components/TrackedInternalCta.tsx` — CTAs internos
+- `components/TrackedWhatsAppLink.tsx` — WhatsApp Secondary
+- `pages/activar/gracias.tsx`, `pages/ventas/gracias.tsx`
 
-**Conversion Labels a configurar en Google Ads:**
-- `activation_form_submit` - Formulario de activación (PRINCIPAL)
-- `cta_click` - Click en CTA
-- `whatsapp_click` - Click en WhatsApp
-- `comparison_view` - Vista de página de comparación
-- `demo_request` - Solicitud de demo
+## Checklist Google Ads UI
 
----
+1. Crear/ajustar 2 conversiones Primary: Trial TY, Quote TY (page load, count once, `transaction_id`).
+2. Marcar Lead / WhatsApp / Comparison como **Secondary** (no Optimize).
+3. URL rules: `…/activar/gracias` y `…/ventas/gracias`.
+4. Tag Assistant: completar form → TY → ver `conversion` + `send_to`.
+5. No poner event snippet en todas las páginas.
 
-## 📋 PASOS PARA CONFIGURAR EN GOOGLE ADS
+## Verificación rápida
 
-### Paso 1: Crear Conversiones en Google Ads
-
-1. Ve a Google Ads → Herramientas → Conversiones
-2. Clic en "+" para crear nueva conversión
-3. Selecciona "Sitio web"
-4. Configura cada conversión:
-
-**Conversión 1: Activation Form Submit (PRINCIPAL)**
-- Nombre: "Formulario Activación"
-- Categoría: Lead
-- Valor: $0 (o valor estimado de lead)
-- Contar: Una vez
-- Ventana de atribución: 30 días
-- Etiqueta de conversión: `activation_form_submit`
-
-**Conversión 2: CTA Click**
-- Nombre: "Click CTA Principal"
-- Categoría: Engagement
-- Valor: $0
-- Contar: Cada vez
-- Ventana: 7 días
-- Etiqueta: `cta_click`
-
-**Conversión 3: WhatsApp Click**
-- Nombre: "Click WhatsApp"
-- Categoría: Engagement
-- Valor: $0
-- Contar: Cada vez
-- Ventana: 7 días
-- Etiqueta: `whatsapp_click`
-
-### Paso 2: Obtener Conversion Labels
-
-Después de crear cada conversión, Google Ads te dará:
-- Conversion ID: `AW-17840996991` (ya lo tienes)
-- Conversion Label: `activation_form_submit`, `cta_click`, etc.
-
-### Paso 3: Verificar Tracking
-
-1. Abre tu sitio en modo incógnito
-2. Abre DevTools → Network
-3. Envía el formulario de activación
-4. Busca requests a `google-analytics.com` o `googleadservices.com`
-5. Verifica que se envíe el evento de conversión
-
-### Paso 4: Configurar Variable de Entorno (Opcional)
-
-Si quieres usar un Conversion ID diferente por ambiente:
-
-```env
-NEXT_PUBLIC_GOOGLE_ADS_CONVERSION_ID=AW-17840996991
+```bash
+npm run build
+# Rutas esperadas: /activar/gracias, /ventas/gracias
 ```
-
----
-
-## 🧪 TESTING
-
-### Test Manual:
-
-1. **Test de Formulario:**
-   - Ve a `/activar`
-   - Completa y envía el formulario
-   - Verifica en consola: "Google Ads conversion tracked: activation_form_submit"
-
-2. **Test de CTA:**
-   - Ve a `/`
-   - Haz clic en "Probalo HOY"
-   - Verifica en consola: "Google Ads conversion tracked: cta_click"
-
-3. **Test de UTM:**
-   - Visita: `/?utm_source=google&utm_medium=cpc&utm_campaign=test`
-   - Verifica en sessionStorage: `utm_params` con los valores
-
-### Test en Google Ads:
-
-1. Ve a Google Ads → Herramientas → Conversiones
-2. Clic en "Ver detalles" de una conversión
-3. Deberías ver eventos registrados (puede tardar 24-48 horas)
-
----
-
-## 📊 MONITOREO
-
-### Métricas a revisar semanalmente:
-
-1. **Conversiones registradas:**
-   - Google Ads → Conversiones → Ver detalles
-   - Comparar con leads reales recibidos
-
-2. **Costo por conversión:**
-   - Google Ads → Campañas → Ver métricas
-   - Meta: <$25 USD por lead
-
-3. **Tasa de conversión:**
-   - Conversiones / Clics
-   - Meta: >3%
-
-4. **Quality Score:**
-   - Google Ads → Palabras clave
-   - Meta: >7/10
-
----
-
-## 🔧 TROUBLESHOOTING
-
-### Problema: Conversiones no se registran
-
-**Solución:**
-1. Verifica que `gtag` esté cargado (revisa `_document.tsx`)
-2. Verifica que el Conversion ID sea correcto
-3. Verifica que el Conversion Label coincida exactamente
-4. Revisa la consola del navegador por errores
-5. Espera 24-48 horas (Google puede tardar en mostrar datos)
-
-### Problema: UTM parameters no se capturan
-
-**Solución:**
-1. Verifica que `initGoogleAdsTracking()` se llame en el componente
-2. Revisa sessionStorage en DevTools
-3. Verifica que los parámetros estén en la URL
-
-### Problema: Múltiples conversiones del mismo usuario
-
-**Solución:**
-- Esto es normal si el usuario hace múltiples acciones
-- Google Ads usa `transaction_id` para deduplicar
-- Ajusta "Contar" en configuración de conversión
-
----
-
-## 📝 NOTAS IMPORTANTES
-
-1. **Privacidad:**
-   - El tracking cumple con GDPR/CCPA
-   - No se envían datos personales a Google Ads
-   - Solo se envían eventos de conversión
-
-2. **Performance:**
-   - El tracking es asíncrono (no bloquea la página)
-   - Los eventos se envían en background
-
-3. **Datos:**
-   - Los datos pueden tardar 24-48 horas en aparecer en Google Ads
-   - Los datos en tiempo real están en Google Analytics
-
----
-
-## 🚀 PRÓXIMOS PASOS
-
-1. **Configurar conversiones en Google Ads** (ver Paso 1)
-2. **Crear campañas** (ver `GOOGLE_ADS_STRATEGY.md`)
-3. **Lanzar con presupuesto bajo** ($20/día inicial)
-4. **Monitorear y optimizar** semanalmente
-5. **Escalar keywords ganadoras**
-
----
-
-**Última actualización:** Enero 2025
-**Versión:** 1.0
-
-
-
-
-

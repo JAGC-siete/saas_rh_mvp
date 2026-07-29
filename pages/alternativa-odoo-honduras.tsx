@@ -1,5 +1,5 @@
 import Head from 'next/head'
-import Link from 'next/link'
+import TrackedInternalCta from '../components/TrackedInternalCta'
 import { useEffect } from 'react'
 import PublicPageShell from '../components/landing/PublicPageShell'
 import TrackedWhatsAppLink from '../components/TrackedWhatsAppLink'
@@ -149,12 +149,14 @@ export default function AlternativaOdooPage() {
 
           {/* CTA Buttons */}
           <div className="flex flex-wrap justify-center gap-3 sm:gap-4 mb-6">
-            <Link
+            <TrackedInternalCta
               href="/activar"
+              ctaType="activar_trial"
+              location="alternativa_odoo_hero"
               className="px-5 sm:px-6 py-2.5 sm:py-3 bg-sky-600 text-white rounded-xl font-semibold text-sm sm:text-base hover:bg-sky-700 transition-colors shadow-sm"
             >
               Prueba gratis ahora
-            </Link>
+            </TrackedInternalCta>
             <TrackedWhatsAppLink
               href="https://wa.me/50432226773?text=Hola,%20quiero%20comparar%20Humano%20SISU%20con%20Odoo"
               target="_blank"
@@ -270,12 +272,14 @@ export default function AlternativaOdooPage() {
             Prueba Humano SISU gratis por 30 días. Sin tarjeta de crédito. Sin compromiso.
           </p>
           <div className="flex flex-wrap justify-center gap-3 sm:gap-4">
-            <Link
+            <TrackedInternalCta
               href="/activar"
+              ctaType="activar_trial"
+              location="alternativa_odoo_footer"
               className="px-6 sm:px-8 py-3 sm:py-4 bg-sky-600 text-white rounded-xl font-semibold text-base sm:text-lg hover:bg-sky-700 transition-colors shadow-sm"
             >
               Comenzar Prueba Gratis
-            </Link>
+            </TrackedInternalCta>
             <TrackedWhatsAppLink
               href="https://wa.me/50432226773?text=Hola,%20quiero%20saber%20más%20sobre%20Humano%20SISU%20vs%20Odoo"
               target="_blank"

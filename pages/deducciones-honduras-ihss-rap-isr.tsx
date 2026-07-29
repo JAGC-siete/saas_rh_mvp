@@ -1,5 +1,6 @@
 import Head from 'next/head'
 import Link from 'next/link'
+import TrackedInternalCta from '../components/TrackedInternalCta'
 import PublicPageShell from '../components/landing/PublicPageShell'
 import { getPageTitle } from '../lib/seo/title'
 import { getPageDescription } from '../lib/seo/description'
@@ -131,12 +132,14 @@ export default function DeduccionesHondurasPage() {
 
           {/* CTA Buttons */}
           <div className="flex flex-wrap justify-center gap-3 sm:gap-4 mb-6">
-            <Link
+            <TrackedInternalCta
               href="/activar"
+              ctaType="activar_trial"
+              location="deducciones_honduras_hero"
               className="px-5 sm:px-6 py-2.5 sm:py-3 bg-sky-600 text-white rounded-xl font-semibold text-sm sm:text-base hover:bg-sky-700 transition-colors shadow-sm"
             >
               Activar gratis hoy - Sin tarjeta de crédito
-            </Link>
+            </TrackedInternalCta>
             <Link
               href={deductionCalculatorPublicPath('HND')}
               className="px-5 sm:px-6 py-2.5 sm:py-3 bg-green-600 text-white rounded-xl font-semibold text-sm sm:text-base hover:bg-green-700 transition-colors shadow-sm"
@@ -303,12 +306,14 @@ export default function DeduccionesHondurasPage() {
             Prueba Humano SISU gratis por 30 días. Cálculo automático de IHSS, RAP e ISR incluido.
           </p>
           <div className="flex flex-wrap justify-center gap-3 sm:gap-4">
-            <Link
+            <TrackedInternalCta
               href="/activar"
+              ctaType="activar_trial"
+              location="deducciones_honduras_footer"
               className="px-6 sm:px-8 py-3 sm:py-4 bg-sky-600 text-white rounded-xl font-semibold text-base sm:text-lg hover:bg-sky-700 transition-colors shadow-sm"
             >
               Comenzar Prueba Gratis
-            </Link>
+            </TrackedInternalCta>
             <Link
               href={deductionCalculatorPublicPath('HND')}
               className="px-6 sm:px-8 py-3 sm:py-4 bg-green-600 text-white rounded-xl font-semibold text-base sm:text-lg hover:bg-green-700 transition-colors shadow-sm"

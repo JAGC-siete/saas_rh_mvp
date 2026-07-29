@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import TrackedInternalCta from '../TrackedInternalCta'
 import { forwardRef, useImperativeHandle, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
@@ -450,12 +451,14 @@ const PeaceLeadWizard = forwardRef<PeaceLeadWizardHandle, Props>(function PeaceL
             <h3 className="viernes-serif text-2xl font-bold text-white mb-3">{copy.nextStep.title}</h3>
             <p className="viernes-form-disclaimer mb-6">{copy.nextStep.emailHint}</p>
             <div className="flex flex-col sm:flex-row flex-wrap gap-3">
-              <Link
+              <TrackedInternalCta
                 href={`/activar?utm_source=${utmSource}&utm_medium=${utmMedium}&utm_campaign=${utmCampaign}`}
+                ctaType="activar_trial"
+                location={`${channel}_peace_wizard_reveal`}
                 className="viernes-btn viernes-btn-primary"
               >
                 {copy.nextStep.ctaActivar}
-              </Link>
+              </TrackedInternalCta>
               <Link
                 href={`/calculadora?utm_source=${utmSource}&utm_medium=${utmMedium}&utm_campaign=${utmCampaign}`}
                 className="viernes-btn viernes-btn-ghost"

@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import TrackedInternalCta from '../components/TrackedInternalCta'
 import PublicPageShell from '../components/landing/PublicPageShell'
 import PublicPageHead from '../components/SEO/PublicPageHead'
 import SchemaMarkup from '../components/SEO/SchemaMarkup'
@@ -115,12 +116,14 @@ export default function CalculadoraHubPage() {
             ¿Validaste tu sueldo y quieres eliminar Excel en tu empresa?
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center flex-wrap">
-            <Link
+            <TrackedInternalCta
               href="/activar"
+              ctaType="activar_trial"
+              location="calculadora_footer_activar"
               className="inline-flex justify-center py-3 px-6 btn-shiny bg-brand-500 hover:bg-brand-600 text-white font-semibold rounded-xl"
             >
               Probar Humano SISU gratis
-            </Link>
+            </TrackedInternalCta>
             <Link
               href="/suscripcion?utm_source=calculadora-hub&utm_medium=cta&utm_campaign=footer"
               className="inline-flex justify-center py-3 px-6 glass-modern hover:bg-white/10 text-white font-semibold rounded-xl border border-brand-500/40"
@@ -133,12 +136,14 @@ export default function CalculadoraHubPage() {
             >
               Más información
             </Link>
-            <Link
+            <TrackedInternalCta
               href="/ventas?utm_source=calculadora-hub&utm_medium=cta&utm_campaign=pricing"
+              ctaType="solicitar_cotizacion"
+              location="calculadora_footer_ventas"
               className="inline-flex justify-center py-3 px-6 glass-modern hover:bg-white/10 text-white font-semibold rounded-xl border border-white/20"
             >
               Ver planes y cotización
-            </Link>
+            </TrackedInternalCta>
           </div>
         </div>
       </div>

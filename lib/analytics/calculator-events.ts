@@ -12,10 +12,6 @@ export type CalculatorTool =
 
 export type CalculatorAudience = 'empleado' | 'empresa'
 
-function fireLeadConversion(): void {
-  fireGoogleAdsLeadConversion()
-}
-
 /** Cálculo completado con éxito (engagement). */
 export function trackCalcComplete(params: {
   tool: CalculatorTool
@@ -33,7 +29,7 @@ export function trackCalcComplete(params: {
   })
 }
 
-/** Lead capturado vía PDF/email — conversión principal (Google Ads + Meta CompleteRegistration). */
+/** Lead capturado vía PDF/email — conversión Secondary (Google Ads + Meta CompleteRegistration). */
 export function trackCalcLeadSubmit(params: {
   tool: CalculatorTool
   eventId: string
@@ -44,7 +40,7 @@ export function trackCalcLeadSubmit(params: {
   phone?: string
   firstName?: string
 }): void {
-  fireLeadConversion()
+  fireGoogleAdsLeadConversion(params.eventId)
 
   trackCalculatorCompleteRegistration({
     eventId: params.eventId,

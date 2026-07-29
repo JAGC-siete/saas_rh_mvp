@@ -206,6 +206,7 @@ export function trackNewsletterCompleteRegistration(params: {
     params.eventId,
     { em: params.email }
   )
+  fireGoogleAdsLeadConversion(params.eventId)
 }
 
 /** Lead PDF en calculadoras públicas (registro = email + consentimiento). */

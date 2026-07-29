@@ -1,5 +1,5 @@
 import Head from 'next/head'
-import Link from 'next/link'
+import TrackedInternalCta from '../components/TrackedInternalCta'
 import PublicPageShell from '../components/landing/PublicPageShell'
 import { getPageTitle } from '../lib/seo/title'
 import { getPageDescription } from '../lib/seo/description'
@@ -149,12 +149,14 @@ export default function SistemaBiometricoNominaPage() {
 
           {/* CTA Button */}
           <div className="flex justify-center mb-6">
-            <Link
+            <TrackedInternalCta
               href="/activar"
+              ctaType="activar_trial"
+              location="biometrico_nomina_hero"
               className="px-6 sm:px-8 py-3 sm:py-4 bg-sky-600 text-white rounded-xl font-semibold text-base sm:text-lg hover:bg-sky-700 transition-colors shadow-sm"
             >
               Activar gratis hoy - Sin tarjeta de crédito
-            </Link>
+            </TrackedInternalCta>
           </div>
         </div>
       </section>
@@ -287,12 +289,14 @@ export default function SistemaBiometricoNominaPage() {
           <p className="text-lg sm:text-xl text-brand-200/90 mb-6 sm:mb-8">
             Prueba Humano SISU gratis por 30 días. Sin tarjeta de crédito.
           </p>
-          <Link
+          <TrackedInternalCta
             href="/activar"
+            ctaType="activar_trial"
+            location="biometrico_nomina_footer"
             className="inline-block px-6 sm:px-8 py-3 sm:py-4 bg-sky-600 text-white rounded-xl font-semibold text-base sm:text-lg hover:bg-sky-700 transition-colors shadow-sm"
           >
             Comenzar Prueba Gratis
-          </Link>
+          </TrackedInternalCta>
         </section>
 
         <RelatedGuides currentPath="/sistema-biometrico-nomina" />

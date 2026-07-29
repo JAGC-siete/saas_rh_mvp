@@ -25,6 +25,7 @@ import {
   trackActivationTrialSubmit,
 } from '../../lib/analytics/metaPixel'
 import { trackActivationFormSubmit } from '../../lib/analytics/googleAds'
+import { maskEmailForHint, writeThankYouContext } from '../../lib/analytics/thank-you-context'
 
 const WHATSAPP_CALLING_CODES: { code: string; country: string }[] = [
   { code: '+1', country: 'Estados Unidos / Canadá' },
@@ -183,12 +184,14 @@ export default function MotorEncendidoLead({ utmContext = {}, initialCountryCode
           firstName: submitData.nombre || undefined,
           countryCode: submitData.countryCode,
         })
-        const q = new URLSearchParams()
-        if (submitData.nombre) q.set('nombre', submitData.nombre)
-        if (submitData.empresa) q.set('empresa', submitData.empresa)
-        q.set('empleados', String(submitData.empleados))
-        if (submitData.countryCode) q.set('country', submitData.countryCode)
-        await router.push(`/activar/gracias?${q.toString()}`)
+        writeThankYouContext('activar', {
+          displayName: submitData.nombre.trim() || undefined,
+          empresa: submitData.empresa,
+          empleados: submitData.empleados,
+          countryCode: submitData.countryCode,
+          emailHintMasked: maskEmailForHint(submitData.contactoEmail),
+        })
+        await router.push('/activar/gracias')
         return
       } else {
         setErrors({ submit: data.error || 'Error al procesar tu solicitud. Por favor, intenta de nuevo.' })

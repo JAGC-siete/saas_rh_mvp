@@ -1,12 +1,12 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/router'
 import { ArrowLeftIcon, CheckCircleIcon } from '@heroicons/react/24/outline'
 import PublicPageShell from '../../components/landing/PublicPageShell'
 import PublicPageHead from '../../components/SEO/PublicPageHead'
 import CampaignStyles from '../../components/marketing/CampaignStyles'
 import { Card, CardContent } from '../../components/ui/card'
 import { trackTrialThankYouPageView } from '../../lib/analytics/googleAds'
+import { readThankYouContext, type ThankYouContext } from '../../lib/analytics/thank-you-context'
 import { MOTOR_ENCENDIDO_COPY } from '../../lib/activar-game/motor-encendido-copy'
 import { COUNTRY_LABEL } from '../../lib/activar-game/activar-form'
 import { isCountryCode } from '../../lib/country/supported'
@@ -15,29 +15,25 @@ import { getPageDescription } from '../../lib/seo/description'
 
 /**
  * Thank-you page post-trial (/activar → éxito).
- * Google Ads: page-load conversion URL = /activar/gracias
+ * Google Ads Primary page-load URL = /activar/gracias (sin PII en query).
  */
 export default function ActivarGraciasPage() {
-  const router = useRouter()
   const copy = MOTOR_ENCENDIDO_COPY
-
-  const nombre =
-    typeof router.query.nombre === 'string' ? router.query.nombre.trim() : ''
-  const empresa =
-    typeof router.query.empresa === 'string' ? router.query.empresa.trim() : 'tu empresa'
-  const empleadosRaw =
-    typeof router.query.empleados === 'string' ? Number(router.query.empleados) : 1
-  const empleados = Number.isFinite(empleadosRaw) && empleadosRaw > 0 ? empleadosRaw : 1
-  const countryRaw =
-    typeof router.query.country === 'string' ? router.query.country.trim().toUpperCase() : ''
-  const countryLabel = isCountryCode(countryRaw) ? COUNTRY_LABEL[countryRaw] : 'tu país'
-
-  const displayName = useMemo(() => nombre || 'Equipo', [nombre])
+  const [ctx, setCtx] = useState<ThankYouContext | null>(null)
 
   useEffect(() => {
-    if (!router.isReady) return
+    setCtx(readThankYouContext('activar'))
     trackTrialThankYouPageView()
-  }, [router.isReady])
+  }, [])
+
+  const displayName = ctx?.displayName?.trim() || 'Equipo'
+  const empresa = ctx?.empresa?.trim() || 'tu empresa'
+  const empleados =
+    typeof ctx?.empleados === 'number' && ctx.empleados > 0 ? ctx.empleados : 1
+  const countryLabel =
+    ctx?.countryCode && isCountryCode(ctx.countryCode)
+      ? COUNTRY_LABEL[ctx.countryCode]
+      : 'tu país'
 
   return (
     <PublicPageShell showTrustBar loginAlwaysVisible mainClassName="flex flex-col">
@@ -59,7 +55,11 @@ export default function ActivarGraciasPage() {
           <p className="text-lg text-brand-300 mb-6">
             {copy.success.body(countryLabel, empresa, empleados)}
           </p>
-          <p className="text-brand-300">{copy.success.emailHint}</p>
+          <p className="text-brand-300">
+            {ctx?.emailHintMasked
+              ? `Revisá ${ctx.emailHintMasked} (y spam).`
+              : copy.success.emailHint}
+          </p>
         </div>
 
         <Card variant="liquid" className="mb-8 text-left">

@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import TrackedInternalCta from '../TrackedInternalCta'
 import PublicPageShell from './PublicPageShell'
 import PublicPageHead from '../SEO/PublicPageHead'
 import SchemaMarkup from '../SEO/SchemaMarkup'
@@ -263,18 +264,22 @@ export default function PazLanding() {
             perdido es real, pero también lo es esta solución. (La paz también.)
           </p>
           <div className="flex flex-col sm:flex-row flex-wrap items-center justify-center gap-3">
-            <Link
+            <TrackedInternalCta
               href="/activar?utm_source=paz&utm_medium=cta&utm_campaign=cerrar-planilla"
+              ctaType="activar_trial"
+              location="paz_landing_primary"
               className="paz-btn paz-btn-activar"
             >
               Probar gratis
-            </Link>
-            <Link
+            </TrackedInternalCta>
+            <TrackedInternalCta
               href="/ventas?utm_source=paz&utm_medium=cta&utm_campaign=tocar-pasto"
+              ctaType="solicitar_cotizacion"
+              location="paz_landing_secondary"
               className="paz-btn paz-btn-ghost"
             >
               Solicitar cotización
-            </Link>
+            </TrackedInternalCta>
           </div>
         </section>
 

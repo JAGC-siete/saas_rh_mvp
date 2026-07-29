@@ -1,27 +1,33 @@
 /**
  * Google Ads / gtag (conversiones y engagement)
  *
- * Las conversiones importadas en Google Ads usan `send_to` con el valor completo
- * que muestra la interfaz (p. ej. AW-123456789/xxxx). Configurá cada acción con
- * `NEXT_PUBLIC_GADS_SEND_TO_*` en el entorno; si falta, solo se envían eventos
- * de engagement (no se inflan conversiones).
+ * Taxonomía (1B + 2A):
+ * - Primary page-load: ACTIVATION (/activar/gracias), QUOTE (/ventas/gracias)
+ * - Secondary: LEAD, WHATSAPP, COMPARISON
+ * - CTAs internos: solo engagement GA4 (nunca conversión Ads)
  *
  * Variables: ver `.env.example` sección Google Ads.
  */
 
 import { trackGA4Event } from './ga4'
 
+/** Primary — trial thank-you */
 const SEND_TO_ACTIVATION = process.env.NEXT_PUBLIC_GADS_SEND_TO_ACTIVATION?.trim()
-/** PDF calculadoras, /info y otros leads TOFU/MOFU. */
-const SEND_TO_LEAD = process.env.NEXT_PUBLIC_GADS_SEND_TO_LEAD
-/** Opcional: conversión secundaria en clic de CTA (por defecto desactivada). */
-const SEND_TO_CTA = process.env.NEXT_PUBLIC_GADS_SEND_TO_CTA
-const SEND_TO_WHATSAPP = process.env.NEXT_PUBLIC_GADS_SEND_TO_WHATSAPP
-const SEND_TO_COMPARISON = process.env.NEXT_PUBLIC_GADS_SEND_TO_COMPARISON
-/** Click Contact en /ventas; también fallback page-load en /activar/gracias si no hay ACTIVATION. */
-const SEND_TO_CONTACT =
+/**
+ * Primary — quote thank-you.
+ * Fallback temporal al label Contact ya creado en Ads (migrar a QUOTE dedicado).
+ */
+const SEND_TO_QUOTE =
+  process.env.NEXT_PUBLIC_GADS_SEND_TO_QUOTE?.trim() ||
   process.env.NEXT_PUBLIC_GADS_SEND_TO_CONTACT?.trim() ||
   'AW-17840996991/-3XtCO6xydccEP-EoLtC'
+/** Secondary — PDF calculadoras, /info, newsletter */
+const SEND_TO_LEAD = process.env.NEXT_PUBLIC_GADS_SEND_TO_LEAD?.trim()
+const SEND_TO_WHATSAPP = process.env.NEXT_PUBLIC_GADS_SEND_TO_WHATSAPP?.trim()
+const SEND_TO_COMPARISON = process.env.NEXT_PUBLIC_GADS_SEND_TO_COMPARISON?.trim()
+
+/** Paths where gtag must load immediately (page-load conversion). */
+export const THANK_YOU_PATHS = ['/activar/gracias', '/ventas/gracias', '/gracias'] as const
 
 interface ConversionPayload {
   send_to: string
@@ -70,7 +76,7 @@ function comparisonSessionKey(page: string): string {
   return `gads_dedupe_comparison_${page.replace(/[^a-z0-9]+/gi, '_')}`
 }
 
-/** Lead genérico (calculadoras PDF, /info, etc.) si NEXT_PUBLIC_GADS_SEND_TO_LEAD está definido. */
+/** Lead Secondary (calculadoras PDF, /info, newsletter) si SEND_TO_LEAD está definido. */
 export function fireGoogleAdsLeadConversion(transactionId?: string): void {
   fireGoogleAdsConversion(SEND_TO_LEAD, {
     transaction_id: transactionId,
@@ -78,7 +84,7 @@ export function fireGoogleAdsLeadConversion(transactionId?: string): void {
 }
 
 /**
- * Engagement post-submit del trial (GA4 / gtag). La conversión Ads de page-load
+ * Engagement post-submit del trial (GA4 / gtag). La conversión Ads Primary
  * vive en `trackTrialThankYouPageView` (/activar/gracias).
  */
 export function trackActivationFormSubmit(
@@ -107,10 +113,11 @@ export function trackActivationFormSubmit(
 }
 
 const TRIAL_THANK_YOU_DEDUPE_KEY = 'gads_dedupe_trial_thank_you'
+const QUOTE_THANK_YOU_DEDUPE_KEY = 'gads_dedupe_quote_thank_you'
 
 /**
- * Page-load en /activar/gracias tras trial OK (checklist Google Ads “thank you page”).
- * Usa SEND_TO_ACTIVATION si está definido; si no, Contact (label ya configurado).
+ * Primary page-load en /activar/gracias.
+ * Requiere NEXT_PUBLIC_GADS_SEND_TO_ACTIVATION (sin fallback Contact).
  */
 export function trackTrialThankYouPageView(transactionId?: string): void {
   if (typeof window !== 'undefined') {
@@ -118,8 +125,7 @@ export function trackTrialThankYouPageView(transactionId?: string): void {
     sessionStorage.setItem(TRIAL_THANK_YOU_DEDUPE_KEY, '1')
   }
 
-  const sendTo = SEND_TO_ACTIVATION || SEND_TO_CONTACT
-  fireGoogleAdsConversion(sendTo, {
+  fireGoogleAdsConversion(SEND_TO_ACTIVATION, {
     transaction_id: transactionId || `trial_ty_${Date.now()}`,
   })
 
@@ -130,12 +136,29 @@ export function trackTrialThankYouPageView(transactionId?: string): void {
 }
 
 /**
- * CTA: evento de engagement; conversión Ads solo si NEXT_PUBLIC_GADS_SEND_TO_CTA está definido.
+ * Primary page-load en /ventas/gracias.
+ */
+export function trackQuoteThankYouPageView(transactionId?: string): void {
+  if (typeof window !== 'undefined') {
+    if (sessionStorage.getItem(QUOTE_THANK_YOU_DEDUPE_KEY)) return
+    sessionStorage.setItem(QUOTE_THANK_YOU_DEDUPE_KEY, '1')
+  }
+
+  fireGoogleAdsConversion(SEND_TO_QUOTE, {
+    transaction_id: transactionId || `quote_ty_${Date.now()}`,
+  })
+
+  trackGA4Event('quote_thank_you', {
+    event_category: 'Ventas',
+    event_label: 'Quote Thank You',
+  })
+}
+
+/**
+ * CTA interno: solo engagement GA4. Nunca dispara conversión Ads (política 2A).
  */
 export function trackCTAClick(ctaType: string, location: string): void {
-  fireGoogleAdsConversion(SEND_TO_CTA)
-
-  if (typeof window !== 'undefined' && typeof window.gtag !== 'undefined') {
+  if (typeof window !== 'undefined' && typeof window.gtag === 'function') {
     window.gtag('event', 'cta_click', {
       event_category: 'Engagement',
       event_label: ctaType,
@@ -151,12 +174,12 @@ export function trackCTAClick(ctaType: string, location: string): void {
 }
 
 /**
- * Click en enlace WhatsApp; conversión opcional vía NEXT_PUBLIC_GADS_SEND_TO_WHATSAPP.
+ * WhatsApp Secondary; conversión opcional vía NEXT_PUBLIC_GADS_SEND_TO_WHATSAPP.
  */
 export function trackWhatsAppClick(context: string): void {
   fireGoogleAdsConversion(SEND_TO_WHATSAPP)
 
-  if (typeof window !== 'undefined' && typeof window.gtag !== 'undefined') {
+  if (typeof window !== 'undefined' && typeof window.gtag === 'function') {
     window.gtag('event', 'whatsapp_click', {
       event_category: 'Contact',
       event_label: context,
@@ -170,7 +193,7 @@ export function trackWhatsAppClick(context: string): void {
 }
 
 /**
- * Vista de página de comparación; deduplica en la misma pestaña para no duplicar conversión al recargar.
+ * Vista de comparación Secondary; deduplica en la misma pestaña.
  */
 export function trackComparisonView(page: string): void {
   if (typeof window !== 'undefined') {
@@ -183,46 +206,12 @@ export function trackComparisonView(page: string): void {
 
   fireGoogleAdsConversion(SEND_TO_COMPARISON)
 
-  if (typeof window !== 'undefined' && typeof window.gtag !== 'undefined') {
+  if (typeof window !== 'undefined' && typeof window.gtag === 'function') {
     window.gtag('event', 'page_view', {
       event_category: 'Comparison',
       event_label: page,
     })
   }
-}
-
-/**
- * Click Contact — equivalente a gtag_report_conversion de Google Ads.
- * Con `url`: llamá preventDefault y dejá que event_callback navegue.
- * Sin `url` (p. ej. target=_blank): solo dispara la conversión.
- * @returns false (mismo contrato que el snippet oficial)
- */
-export function reportGoogleAdsContactConversion(url?: string): boolean {
-  if (typeof window === 'undefined') return false
-
-  const navigate = () => {
-    if (typeof url !== 'undefined') {
-      window.location.href = url
-    }
-  }
-
-  const trimmed = SEND_TO_CONTACT.trim()
-  if (!trimmed) {
-    navigate()
-    return false
-  }
-
-  if (typeof window.gtag !== 'function') {
-    pendingConversions.push({ send_to: trimmed })
-    navigate()
-    return false
-  }
-
-  window.gtag('event', 'conversion', {
-    send_to: trimmed,
-    event_callback: navigate,
-  })
-  return false
 }
 
 export function getUTMParameters(): {

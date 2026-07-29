@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import Link from 'next/link'
+import TrackedInternalCta from '../TrackedInternalCta'
 import { useRouter } from 'next/router'
 import PublicPageShell from './PublicPageShell'
 import PublicPageHead from '../SEO/PublicPageHead'
@@ -143,12 +144,14 @@ export default function ViernesLanding() {
             </button>
           </div>
           <p className="text-sm text-[var(--v-ink-soft)]">
-            <Link
+            <TrackedInternalCta
               href="/ventas?utm_source=viernes&utm_medium=cta-final&utm_campaign=cotizacion"
+              ctaType="solicitar_cotizacion"
+              location="viernes_landing_final"
               className="viernes-link"
             >
               {copy.finalCta.secondary}
-            </Link>
+            </TrackedInternalCta>
           </p>
         </section>
       </div>

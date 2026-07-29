@@ -1,7 +1,6 @@
-import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import { CheckCircleIcon, BoltIcon, UserGroupIcon } from '@heroicons/react/24/outline'
-import { trackCTAClick } from '../../lib/analytics/googleAds'
+import TrackedInternalCta from '../TrackedInternalCta'
 import { nowInHonduras } from '../../lib/timezone'
 
 const HeroProductWindow = dynamic(() => import('./HeroProductWindow'), {
@@ -55,22 +54,26 @@ export default function MagneticHero() {
             </p>
 
             <div className="flex flex-col sm:flex-row gap-3 mt-6 sm:mt-8">
-              <Link prefetch={false}
+              <TrackedInternalCta
+                prefetch={false}
                 href="/ventas"
-                onClick={() => trackCTAClick('solicitar_cotizacion', 'landing_hero_primary')}
+                ctaType="solicitar_cotizacion"
+                location="landing_hero_primary"
                 className="btn-shiny inline-flex items-center justify-center rounded-xl px-6 py-3 min-h-[48px] text-base font-semibold bg-brand-500 text-white hover:bg-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-400 shadow-[0_8px_30px_rgb(0,0,0,0.12)] transition-colors text-center"
                 data-analytics="cta_hero_ventas"
               >
                 Solicitar cotización
-              </Link>
-              <Link prefetch={false}
+              </TrackedInternalCta>
+              <TrackedInternalCta
+                prefetch={false}
                 href="/activar"
-                onClick={() => trackCTAClick('activar_trial', 'landing_hero_secondary')}
+                ctaType="activar_trial"
+                location="landing_hero_secondary"
                 className="inline-flex items-center justify-center rounded-xl px-6 py-3 min-h-[48px] text-base font-medium border border-white/25 text-white hover:bg-white/10 transition-colors text-center"
                 data-analytics="cta_hero_activar"
               >
                 Probar gratis
-              </Link>
+              </TrackedInternalCta>
             </div>
             <p className="text-xs sm:text-sm text-slate-400 mt-3 font-medium">
               Cotización sin costo. Prueba con límites del trial según política vigente.

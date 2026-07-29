@@ -65,6 +65,7 @@ export const pageTitles = {
   alternativaOdoo: 'Software RH regional | Biométrico, nómina y ley local | Humano SISU',
   biometricoNomina: 'Sistema biométrico + nómina | HN, SV y GT | Humano SISU',
   ventas: 'Cotización nómina y asistencia | PDF al instante | Humano SISU',
+  ventasGracias: 'Propuesta enviada | PDF y acceso | Humano SISU',
   gracias: 'Confirmación de activación | Humano SISU',
   info: 'Recuperá la paz al cerrar planilla | Software nómina y asistencia HN SV GT | Humano SISU',
   implementacion48h: 'Automatiza asistencia y payroll | Ahorra horas | Humano SISU',
