@@ -46,7 +46,7 @@ export default function HomeAnnouncementBanner({ onVisibilityChange }: Props) {
           ¿Problemas de Recursos Humanos 😰?{' '}
           <Link
             prefetch={false}
-            href="/domingos-sin-planilla"
+            href="/paz"
             className="underline underline-offset-2 decoration-violet-300/70 hover:text-white transition-colors"
           >
             Dale click aquí
