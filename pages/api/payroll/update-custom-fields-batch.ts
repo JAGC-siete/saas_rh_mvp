@@ -138,12 +138,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })
     }
 
-    const statusByRunId = new Map(
+    const statusByRunId = new Map<string, string>(
       (runs || []).map((r: { id: string; status: string }) => [r.id, r.status])
     )
 
     const lockedLines = existingLines.filter((l: any) => {
-      const status = statusByRunId.get(l.run_id)
+      const status = statusByRunId.get(l.run_id as string)
       return !isPayrollRunEditableForCustomFields(status)
     })
 
