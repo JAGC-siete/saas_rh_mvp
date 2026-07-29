@@ -8,6 +8,8 @@ import MarketingStyles from '../marketing/MarketingStyles'
 
 const CursorSpotlight = dynamic(() => import('./CursorSpotlight'), { ssr: false })
 
+export type PublicPageTone = 'dark' | 'light'
+
 interface PublicPageShellProps {
   children: ReactNode
   showSpotlight?: boolean
@@ -16,6 +18,8 @@ interface PublicPageShellProps {
   loginAlwaysVisible?: boolean
   mainClassName?: string
   centered?: boolean
+  /** Visual canvas: dark mesh (default) or white light for campaign pages like /paz. */
+  tone?: PublicPageTone
 }
 
 export default function PublicPageShell({
@@ -26,13 +30,20 @@ export default function PublicPageShell({
   loginAlwaysVisible = false,
   mainClassName = '',
   centered = false,
+  tone = 'dark',
 }: PublicPageShellProps) {
+  const isLight = tone === 'light'
+
   return (
-    <div className="min-h-screen bg-mesh relative text-white">
+    <div
+      className={`min-h-screen relative ${
+        isLight ? 'bg-white text-slate-900' : 'bg-mesh text-white'
+      }`}
+    >
       <MarketingStyles sheets={['landing', 'landing-liquid']} />
-      <MeshBackground />
-      {showSpotlight && <CursorSpotlight />}
-      <DockNavbar loginAlwaysVisible={loginAlwaysVisible} />
+      {!isLight && <MeshBackground />}
+      {showSpotlight && !isLight && <CursorSpotlight />}
+      <DockNavbar loginAlwaysVisible={loginAlwaysVisible} tone={tone} />
       <main
         className={`relative z-10 pt-20 sm:pt-24 ${centered ? 'flex min-h-[calc(100vh-5rem)] items-center justify-center' : ''} ${mainClassName}`.trim()}
       >

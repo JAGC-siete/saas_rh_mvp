@@ -1,68 +1,78 @@
-/* Humano SISU — Paz (zen-parodia, inspirado en Railway Peace) */
+/* Humano SISU — /paz (light canvas, satirical peace campaign) */
 
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&display=swap');
 
 .paz-page {
-  --paz-bg: #f4f1ea;
-  --paz-bg-soft: #ebe6dc;
-  --paz-ink: #1c2b1c;
-  --paz-ink-muted: #4a5c4a;
-  --paz-sage: #5c7a5c;
-  --paz-sage-light: #8faa8f;
-  --paz-accent: #2d4a2d;
-  --paz-border: rgba(28, 43, 28, 0.12);
+  --paz-ink: #0f172a;
+  --paz-ink-muted: #2563eb;
+  --paz-ink-soft: #475569;
+  --paz-accent: #2563eb;
+  --paz-accent-hover: #1d4ed8;
+  --paz-border: rgba(15, 23, 42, 0.12);
+  --paz-glass: rgba(15, 23, 42, 0.04);
+  --paz-glass-hover: rgba(15, 23, 42, 0.07);
+  --paz-success: #16a34a;
 
   min-height: 100vh;
-  background: var(--paz-bg);
   color: var(--paz-ink);
-  font-family: 'DM Sans', system-ui, sans-serif;
+  font-family: 'Montserrat', system-ui, sans-serif;
+  background: #ffffff;
 }
 
 .paz-serif {
-  font-family: 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
-}
-
-.paz-grain {
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  opacity: 0.35;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.08'/%3E%3C/svg%3E");
-  z-index: 0;
-}
-
-.paz-nav {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 50;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 1.25rem 1.5rem;
-  background: linear-gradient(to bottom, var(--paz-bg) 60%, transparent);
+  font-family: 'Instrument Serif', Georgia, 'Times New Roman', serif;
 }
 
 .paz-section {
   position: relative;
   z-index: 1;
-  max-width: 56rem;
+  max-width: 52rem;
   margin: 0 auto;
-  padding: 4rem 1.5rem;
+  padding: 3.5rem 1.5rem;
+}
+
+.paz-badge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  margin-bottom: 1.5rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border-radius: 9999px;
+  background: rgba(37, 99, 235, 0.1);
+  color: #1d4ed8;
+  border: 1px solid rgba(37, 99, 235, 0.25);
 }
 
 .paz-hero-title {
-  font-size: clamp(2.25rem, 6vw, 4rem);
-  line-height: 1.1;
+  font-size: clamp(2.25rem, 6.5vw, 3.75rem);
+  line-height: 1.12;
   letter-spacing: -0.02em;
-  font-weight: 500;
+  font-weight: 400;
+  color: var(--paz-ink);
+}
+
+.paz-lead {
+  font-size: clamp(1.0625rem, 2.4vw, 1.25rem);
+  color: var(--paz-ink-soft);
+  line-height: 1.55;
 }
 
 .paz-mantra {
-  font-size: clamp(1.125rem, 2.5vw, 1.375rem);
-  color: var(--paz-ink-muted);
+  font-size: clamp(1.0625rem, 2.4vw, 1.25rem);
+  color: var(--paz-ink-soft);
   line-height: 1.6;
+  padding: 1rem 1.25rem;
+  border-left: 3px solid var(--paz-accent);
+  background: var(--paz-glass);
+  border-radius: 0 0.75rem 0.75rem 0;
+  text-align: left;
+}
+
+.paz-section-title {
+  font-size: clamp(1.75rem, 4vw, 2.5rem);
+  line-height: 1.15;
+  color: var(--paz-ink);
+  font-weight: 400;
 }
 
 .paz-btn {
@@ -71,73 +81,82 @@
   justify-content: center;
   gap: 0.5rem;
   padding: 0.875rem 1.5rem;
-  border-radius: 9999px;
+  border-radius: 0.75rem;
   font-size: 0.9375rem;
-  font-weight: 500;
+  font-weight: 600;
   transition: all 0.2s ease;
   text-decoration: none;
+  border: none;
+  cursor: pointer;
 }
 
 .paz-btn-primary {
   background: var(--paz-accent);
-  color: #f4f1ea;
-  border: 1px solid var(--paz-accent);
+  color: #ffffff;
+  box-shadow: 0 12px 32px rgba(37, 99, 235, 0.22);
 }
 
 .paz-btn-primary:hover {
-  background: #1f3520;
-  border-color: #1f3520;
+  background: var(--paz-accent-hover);
+  color: #ffffff;
+}
+
+.paz-btn-activar {
+  background: #16a34a;
+  color: #ffffff;
+  box-shadow: 0 0 20px rgba(34, 197, 94, 0.2);
+}
+
+.paz-btn-activar:hover {
+  background: #15803d;
+  color: #ffffff;
 }
 
 .paz-btn-ghost {
   background: transparent;
-  color: var(--paz-ink);
+  color: var(--paz-ink-soft);
   border: 1px solid var(--paz-border);
 }
 
 .paz-btn-ghost:hover {
-  background: var(--paz-bg-soft);
-  border-color: rgba(28, 43, 28, 0.2);
+  background: var(--paz-glass-hover);
+  color: var(--paz-ink);
+}
+
+.paz-link {
+  color: var(--paz-ink-muted);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.paz-link:hover {
+  color: var(--paz-accent-hover);
+}
+
+.paz-card {
+  background: #ffffff;
+  border: 1px solid var(--paz-border);
+  border-radius: 1.25rem;
+  padding: 1.75rem;
+  box-shadow: 0 8px 30px rgba(15, 23, 42, 0.06);
 }
 
 .paz-video-frame {
   aspect-ratio: 16 / 9;
-  border-radius: 1rem;
+  border-radius: 1.25rem;
   overflow: hidden;
   border: 1px solid var(--paz-border);
-  background: linear-gradient(145deg, #d8e0d4 0%, #c5d0c0 40%, #b8c9b2 100%);
+  background: #0f172a;
   position: relative;
+  box-shadow: 0 8px 30px rgba(15, 23, 42, 0.1);
 }
 
-.paz-video-placeholder {
+.paz-video-embed {
   position: absolute;
   inset: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 1rem;
-  text-align: center;
-  padding: 2rem;
-}
-
-.paz-play-btn {
-  width: 4.5rem;
-  height: 4.5rem;
-  border-radius: 50%;
-  background: rgba(28, 43, 28, 0.85);
-  color: #f4f1ea;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: none;
-  cursor: pointer;
-  transition: transform 0.2s ease, background 0.2s ease;
-}
-
-.paz-play-btn:hover {
-  transform: scale(1.05);
-  background: var(--paz-accent);
+  width: 100%;
+  height: 100%;
+  border: 0;
 }
 
 .paz-avatar-grid {
@@ -149,6 +168,9 @@
 .paz-avatar-card {
   text-align: center;
   padding: 1.25rem 0.75rem;
+  background: var(--paz-glass);
+  border: 1px solid var(--paz-border);
+  border-radius: 1rem;
 }
 
 .paz-avatar-circle {
@@ -159,9 +181,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-family: 'Instrument Serif', Georgia, serif;
   font-size: 1.5rem;
-  font-weight: 600;
+  font-weight: 400;
   color: var(--paz-ink);
   border: 1px solid var(--paz-border);
 }
@@ -169,10 +191,10 @@
 .paz-toggle {
   display: inline-flex;
   align-items: center;
-  gap: 1rem;
-  padding: 0.5rem;
-  border-radius: 9999px;
-  background: var(--paz-bg-soft);
+  gap: 0.25rem;
+  padding: 0.375rem;
+  border-radius: 0.75rem;
+  background: var(--paz-glass);
   border: 1px solid var(--paz-border);
   cursor: pointer;
   user-select: none;
@@ -180,32 +202,34 @@
 
 .paz-toggle-option {
   padding: 0.625rem 1.25rem;
-  border-radius: 9999px;
+  border-radius: 0.5rem;
   font-size: 0.9375rem;
-  font-weight: 500;
+  font-weight: 600;
   transition: all 0.25s ease;
-  color: var(--paz-ink-muted);
+  color: var(--paz-ink-soft);
 }
 
 .paz-toggle-option.active {
   background: var(--paz-accent);
-  color: #f4f1ea;
+  color: #ffffff;
 }
 
 .paz-testimonial {
-  padding: 2rem 0;
+  padding: 1.5rem 0;
   border-top: 1px solid var(--paz-border);
 }
 
 .paz-testimonial:first-child {
   border-top: none;
+  padding-top: 0;
 }
 
 .paz-testimonial-quote {
-  font-size: clamp(1.25rem, 3vw, 1.75rem);
+  font-size: clamp(1.25rem, 3vw, 1.625rem);
   line-height: 1.45;
-  font-weight: 500;
+  font-weight: 400;
   font-style: italic;
+  color: var(--paz-ink);
 }
 
 .paz-faq-item {
@@ -219,9 +243,10 @@
 .paz-faq-summary {
   list-style: none;
   cursor: pointer;
-  padding: 1.25rem 0;
-  font-size: 1.0625rem;
-  font-weight: 500;
+  padding: 1.125rem 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--paz-ink);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -234,9 +259,9 @@
 
 .paz-faq-summary::after {
   content: '+';
-  font-size: 1.5rem;
-  font-weight: 300;
-  color: var(--paz-sage);
+  font-size: 1.375rem;
+  font-weight: 400;
+  color: var(--paz-accent);
   transition: transform 0.2s ease;
 }
 
@@ -245,35 +270,34 @@
 }
 
 .paz-faq-answer {
-  padding: 0 0 1.25rem;
-  color: var(--paz-ink-muted);
+  padding: 0 0 1.125rem;
+  color: var(--paz-ink-soft);
   line-height: 1.65;
-  font-size: 0.975rem;
+  font-size: 0.9375rem;
 }
 
 .paz-dual-cta {
   font-size: clamp(2rem, 5vw, 3.25rem);
   line-height: 1.15;
-  font-weight: 500;
+  font-weight: 400;
+  color: var(--paz-ink);
 }
 
 .paz-dual-cta span {
-  color: var(--paz-sage);
+  color: var(--paz-ink-muted);
 }
 
 .paz-footer {
   border-top: 1px solid var(--paz-border);
   padding: 2rem 1.5rem 3rem;
   text-align: center;
-  color: var(--paz-ink-muted);
+  color: var(--paz-ink-soft);
   font-size: 0.875rem;
 }
 
-@keyframes paz-breathe {
-  0%, 100% { opacity: 0.4; transform: scale(1); }
-  50% { opacity: 0.7; transform: scale(1.02); }
-}
-
-.paz-breathe {
-  animation: paz-breathe 6s ease-in-out infinite;
+.paz-divider {
+  border: none;
+  border-top: 1px solid var(--paz-border);
+  margin: 0;
+  opacity: 0.8;
 }

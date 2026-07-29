@@ -266,6 +266,7 @@ const nextConfig = {
               "img-src 'self' data: https:; " +
               "font-src 'self' data: https://fonts.gstatic.com; " +
               "connect-src 'self' https://*.supabase.co https://*.supabase.com https://www.googletagmanager.com https://www.google-analytics.com https://analytics.google.com https://www.facebook.com https://connect.facebook.net; " +
+              "frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com; " +
               "frame-ancestors 'none';",
           },
           // Permissions policy (restricts browser features)

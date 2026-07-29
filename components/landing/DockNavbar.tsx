@@ -9,11 +9,13 @@ interface DockNavbarProps {
   loginAlwaysVisible?: boolean
   /** Extra top offset in px when a fixed banner sits above the dock (e.g. home announcement). */
   topOffsetPx?: number
+  tone?: 'dark' | 'light'
 }
 
 export default function DockNavbar({
   loginAlwaysVisible = false,
   topOffsetPx = 0,
+  tone = 'dark',
 }: DockNavbarProps) {
   const isScrolled = useScrollY(50)
   const showLoginOnScroll = useScrollThreshold(0.2)
@@ -22,6 +24,7 @@ export default function DockNavbar({
   const [isCalculatorMenuOpen, setIsCalculatorMenuOpen] = useState(false)
   const [isCalculatorMobileOpen, setIsCalculatorMobileOpen] = useState(false)
   const calculatorMenuRef = useRef<HTMLDivElement | null>(null)
+  const isLight = tone === 'light'
 
   const calculatorMenuId = useMemo(
     () => `calculator-menu-${Math.random().toString(36).slice(2)}`,
@@ -53,6 +56,28 @@ export default function DockNavbar({
 
   const topStyle = { top: `${16 + topOffsetPx}px` }
 
+  const navSurface = isLight
+    ? 'bg-white/85 backdrop-blur-md border border-slate-200/80 shadow-sm'
+    : 'glass-modern border border-white/10'
+  const linkClass = isLight
+    ? 'text-slate-600 hover:text-slate-900 px-2.5 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-colors whitespace-nowrap'
+    : 'text-slate-400 hover:text-white px-2.5 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-colors whitespace-nowrap'
+  const menuSurface = isLight
+    ? 'bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden'
+    : 'glass-modern rounded-2xl shadow-2xl border border-white/10 overflow-hidden'
+  const menuItemClass = isLight
+    ? 'block px-4 py-3 text-sm text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors'
+    : 'block px-4 py-3 text-sm text-slate-300 hover:bg-white/5 hover:text-white transition-colors'
+  const menuTitleClass = isLight ? 'font-medium text-slate-900 text-sm' : 'font-medium text-white text-sm'
+  const menuSubClass = isLight ? 'text-xs text-slate-500 mt-0.5' : 'text-xs text-slate-400 mt-0.5'
+  const dividerClass = isLight ? 'h-px bg-slate-200' : 'h-px bg-white/10'
+  const mobileLinkClass = isLight
+    ? 'block px-3 py-2.5 text-sm text-slate-600 hover:text-slate-900 rounded-xl transition-colors'
+    : 'block px-3 py-2.5 text-sm text-slate-400 hover:text-white rounded-xl transition-colors'
+  const iconBtnClass = isLight
+    ? 'md:hidden ml-auto p-2 rounded-full text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors'
+    : 'md:hidden ml-auto p-2 rounded-full text-slate-400 hover:text-white hover:bg-white/10 transition-colors'
+
   return (
     <header
       className="fixed left-0 right-0 z-50 px-4 pointer-events-none"
@@ -60,8 +85,8 @@ export default function DockNavbar({
     >
       <motion.nav
         layout
-        className={`pointer-events-auto mx-auto glass-modern rounded-full border border-white/10 transition-all duration-300 ${
-          isScrolled ? 'max-w-3xl backdrop-blur-md py-1.5 px-3' : 'max-w-5xl py-2 px-4'
+        className={`pointer-events-auto mx-auto rounded-full transition-all duration-300 ${navSurface} ${
+          isScrolled ? 'max-w-3xl py-1.5 px-3' : 'max-w-5xl py-2 px-4'
         }`}
       >
         <div className="flex items-center gap-2 sm:gap-3 h-11 sm:h-12">
@@ -83,7 +108,7 @@ export default function DockNavbar({
                 prefetch={false}
                 key={link.href}
                 href={link.href}
-                className="text-slate-400 hover:text-white px-2.5 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-colors whitespace-nowrap"
+                className={linkClass}
               >
                 {link.label}
               </Link>
@@ -91,7 +116,7 @@ export default function DockNavbar({
             <div className="relative" ref={calculatorMenuRef}>
               <button
                 type="button"
-                className="text-slate-400 hover:text-white px-2.5 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-colors inline-flex items-center gap-1"
+                className={`${linkClass} inline-flex items-center gap-1`}
                 aria-haspopup="menu"
                 aria-expanded={isCalculatorMenuOpen}
                 aria-controls={calculatorMenuId}
@@ -117,19 +142,19 @@ export default function DockNavbar({
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: -8, scale: 0.96 }}
                     transition={{ duration: 0.15 }}
-                    className="absolute left-1/2 -translate-x-1/2 mt-2 w-[320px] glass-modern rounded-2xl shadow-2xl border border-white/10 overflow-hidden"
+                    className={`absolute left-1/2 -translate-x-1/2 mt-2 w-[320px] ${menuSurface}`}
                   >
                     {CALCULATOR_MENU_ITEMS.map((item, i) => (
                       <div key={item.href}>
-                        {i === 1 && <div className="h-px bg-white/10" />}
+                        {i === 1 && <div className={dividerClass} />}
                         <Link prefetch={false}
                           href={item.href}
                           role="menuitem"
-                          className="block px-4 py-3 text-sm text-slate-300 hover:bg-white/5 hover:text-white transition-colors"
+                          className={menuItemClass}
                           onClick={() => setIsCalculatorMenuOpen(false)}
                         >
-                          <div className="font-medium text-white text-sm">{item.title}</div>
-                          <div className="text-xs text-slate-400 mt-0.5">{item.subtitle}</div>
+                          <div className={menuTitleClass}>{item.title}</div>
+                          <div className={menuSubClass}>{item.subtitle}</div>
                         </Link>
                       </div>
                     ))}
@@ -169,7 +194,7 @@ export default function DockNavbar({
           {/* Mobile toggle */}
           <button
             type="button"
-            className="md:hidden ml-auto p-2 rounded-full text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
+            className={iconBtnClass}
             onClick={() => setIsMobileMenuOpen((v) => !v)}
             aria-label={isMobileMenuOpen ? 'Cerrar menú' : 'Abrir menú'}
           >
@@ -193,13 +218,17 @@ export default function DockNavbar({
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="pointer-events-auto md:hidden mt-2 mx-auto max-w-sm glass-modern rounded-2xl p-3 border border-white/10"
+            className={`pointer-events-auto md:hidden mt-2 mx-auto max-w-sm rounded-2xl p-3 ${
+              isLight
+                ? 'bg-white/95 backdrop-blur-md border border-slate-200 shadow-lg'
+                : 'glass-modern border border-white/10'
+            }`}
           >
             {LANDING_NAV_LINKS.map((link) => (
               <Link prefetch={false}
                 key={link.href}
                 href={link.href}
-                className="block px-3 py-2.5 text-sm text-slate-400 hover:text-white rounded-xl transition-colors"
+                className={mobileLinkClass}
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 {link.label}
@@ -207,14 +236,16 @@ export default function DockNavbar({
             ))}
             <Link prefetch={false}
               href="/calculadora"
-              className="block px-3 py-2.5 text-sm text-slate-400 hover:text-white rounded-xl transition-colors"
+              className={mobileLinkClass}
               onClick={() => setIsMobileMenuOpen(false)}
             >
               Calculadora
             </Link>
             <button
               type="button"
-              className="w-full flex items-center justify-between px-3 py-2.5 text-sm text-slate-400 hover:text-white rounded-xl"
+              className={`w-full flex items-center justify-between px-3 py-2.5 text-sm rounded-xl ${
+                isLight ? 'text-slate-600 hover:text-slate-900' : 'text-slate-400 hover:text-white'
+              }`}
               onClick={() => setIsCalculatorMobileOpen((v) => !v)}
             >
               Elige una calculadora
@@ -228,7 +259,9 @@ export default function DockNavbar({
                   <Link prefetch={false}
                     key={link.href}
                     href={link.href}
-                    className="block px-3 py-2 text-xs text-slate-400 hover:text-white rounded-lg"
+                    className={`block px-3 py-2 text-xs rounded-lg ${
+                      isLight ? 'text-slate-500 hover:text-slate-900' : 'text-slate-400 hover:text-white'
+                    }`}
                     onClick={() => { setIsCalculatorMobileOpen(false); setIsMobileMenuOpen(false) }}
                   >
                     {link.label}
