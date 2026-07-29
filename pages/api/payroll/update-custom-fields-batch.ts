@@ -5,6 +5,10 @@ import {
   validateCustomPayrollData, 
   calculatePayroll
 } from '../../../lib/payroll-client-specific'
+import {
+  computeCustomFieldsEffectiveAmounts,
+  isPayrollRunEditableForCustomFields,
+} from '../../../lib/payroll/custom-fields-eff-amounts'
 
 interface BatchUpdate {
   run_line_id: string
@@ -27,10 +31,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    // Authentication
     const { supabase, companyId, role, user } = await requireCompanyAccess(req, res)
     
-    // Check permissions
     if (!['super_admin', 'company_admin', 'hr_manager'].includes(role)) {
       return res.status(403).json({ 
         error: 'Permisos insuficientes',
@@ -54,7 +56,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'Company ID is required' })
     }
 
-    // Validate all updates first
     const validationErrors: Array<{ run_line_id: string; error: string }> = []
     
     for (const update of updates) {
@@ -74,7 +75,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         continue
       }
 
-      // Validate custom payroll data
       const validation = await validateCustomPayrollData(companyId, update.custom_fields, supabase)
       if (!validation.valid) {
         validationErrors.push({
@@ -84,7 +84,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     }
 
-    // If there are validation errors, return them
     if (validationErrors.length > 0) {
       return res.status(400).json({
         error: 'Errores de validación',
@@ -92,12 +91,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })
     }
 
-    // Get all payroll lines that need to be updated in a single query
     const lineIds = updates.map((u: BatchUpdate) => u.run_line_id)
     
     const { data: existingLines, error: linesError } = await supabase
       .from('payroll_run_lines')
-      .select('id, metadata, eff_bruto, eff_neto, eff_ihss, eff_rap, eff_isr, company_id')
+      .select('id, metadata, calc_bruto, eff_bruto, eff_neto, eff_ihss, eff_rap, eff_isr, company_id, run_id')
       .in('id', lineIds)
       .eq('company_id', companyId)
 
@@ -116,7 +114,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })
     }
 
-    // Verify all requested lines exist
     const existingLineIds = new Set(existingLines.map((l: any) => l.id))
     const missingLines = lineIds.filter(id => !existingLineIds.has(id))
     
@@ -127,7 +124,38 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })
     }
 
-    // Process all updates
+    const runIds = [...new Set(existingLines.map((l: any) => l.run_id).filter(Boolean))]
+    const { data: runs, error: runsError } = await supabase
+      .from('payroll_runs')
+      .select('id, status')
+      .in('id', runIds)
+      .eq('company_id', companyId)
+
+    if (runsError) {
+      return res.status(500).json({
+        error: 'Error obteniendo corridas de nómina',
+        details: runsError.message,
+      })
+    }
+
+    const statusByRunId = new Map(
+      (runs || []).map((r: { id: string; status: string }) => [r.id, r.status])
+    )
+
+    const lockedLines = existingLines.filter((l: any) => {
+      const status = statusByRunId.get(l.run_id)
+      return !isPayrollRunEditableForCustomFields(status)
+    })
+
+    if (lockedLines.length > 0) {
+      const status = statusByRunId.get(lockedLines[0].run_id) || 'unknown'
+      return res.status(400).json({
+        error: 'Corrida no editable',
+        message: `La corrida está en estado '${status}' y no se puede editar`,
+        locked_run_line_ids: lockedLines.map((l: any) => l.id),
+      })
+    }
+
     const results: BatchUpdateResult[] = []
     const updatePromises: Promise<BatchUpdateResult>[] = []
 
@@ -143,17 +171,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         continue
       }
 
-      // Build metadata
       const metadata = await buildPayrollMetadata(companyId, update.custom_fields, supabase)
       
-      // Merge with existing metadata
       const existingMetadata = existingLine.metadata || {}
       const mergedMetadata = { ...existingMetadata, ...metadata }
 
-      // Calculate new totals using new calculation engine (supports DB configs)
+      const calcBruto = Number(existingLine.calc_bruto) || 0
+      const priorCalc = await calculatePayroll(
+        companyId,
+        calcBruto,
+        existingMetadata,
+        supabase
+      )
       const calcResult = await calculatePayroll(
         companyId,
-        Number(existingLine.eff_bruto) || 0,
+        calcBruto,
         mergedMetadata,
         supabase
       )
@@ -161,17 +193,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const ingresosAdicionales = calcResult.totalIngresosAdicionales
       const deduccionesAdicionales = calcResult.totalDeduccionesAdicionales
 
-      // Compute new effective amounts
-      const baseEffBruto = Number(existingLine.eff_bruto) || 0
-      const effIHSS = Number((existingLine as any).eff_ihss) || 0
-      const effRAP = Number((existingLine as any).eff_rap) || 0
-      const effISR = Number((existingLine as any).eff_isr) || 0
-      const statutoryDeductions = effIHSS + effRAP + effISR
+      const { newEffBruto, newEffNeto } = computeCustomFieldsEffectiveAmounts({
+        calcBruto,
+        currentEffBruto: Number(existingLine.eff_bruto) || 0,
+        priorIngresosAdicionales: priorCalc.totalIngresosAdicionales,
+        ingresosAdicionales,
+        deduccionesAdicionales,
+        effIhss: Number(existingLine.eff_ihss) || 0,
+        effRap: Number(existingLine.eff_rap) || 0,
+        effIsr: Number(existingLine.eff_isr) || 0,
+      })
 
-      const newEffBruto = Math.round((baseEffBruto + ingresosAdicionales) * 100) / 100
-      const newEffNeto = Math.round((newEffBruto - statutoryDeductions - deduccionesAdicionales) * 100) / 100
-
-      // Create update promise with explicit typing
       const updatePromise = (async (): Promise<BatchUpdateResult> => {
         try {
           const { error: updateError } = await supabase
@@ -262,16 +294,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       updatePromises.push(updatePromise)
     }
 
-    // Wait for all updates to complete and collect results
     const updateResults = await Promise.all(updatePromises)
     results.push(...updateResults)
 
-    // Check if all updates were successful
     const successfulUpdates = results.filter(r => r.success)
     const failedUpdates = results.filter(r => !r.success)
 
     if (failedUpdates.length > 0) {
-      // Some updates failed - return partial success
       return res.status(207).json({
         success: false,
         message: 'Algunas actualizaciones fallaron',
@@ -284,7 +313,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })
     }
 
-    // All updates successful
     return res.status(200).json({
       success: true,
       message: 'Todos los campos personalizados fueron actualizados exitosamente',
@@ -304,4 +332,3 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     })
   }
 }
-

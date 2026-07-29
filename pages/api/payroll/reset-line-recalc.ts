@@ -3,9 +3,12 @@ import { requireCompanyAccess } from '../../../lib/auth/api-auth-fixed'
 import {
   stripManualPayrollLineMetadata,
 } from '../../../lib/payroll/preview-preserve-line'
+import { STANDARD_PAYROLL_ADJUSTMENT_FIELDS } from '../../../lib/payroll/standard-adjustment-fields'
 
 /**
  * Clears manual-edit flags on a payroll line so the next preview recalculates from attendance.
+ * Also deletes standard payroll_adjustments so apply_adjustment_update_eff cannot resurrect
+ * stale hours/bruto/neto overrides after preview rewrites calc_*.
  */
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -59,6 +62,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })
     }
 
+    // Always clear standard overrides — even if flags already look clean (stale rows).
+    const { error: adjDeleteError } = await supabase
+      .from('payroll_adjustments')
+      .delete()
+      .eq('run_line_id', run_line_id)
+      .eq('company_id', companyId)
+      .in('field', [...STANDARD_PAYROLL_ADJUSTMENT_FIELDS])
+
+    if (adjDeleteError) {
+      console.error('Error borrando payroll_adjustments en reset:', adjDeleteError)
+      return res.status(500).json({
+        error: 'Error al limpiar ajustes previos',
+        details: adjDeleteError.message,
+      })
+    }
+
     if (line.edited !== true) {
       const meta = (line.metadata || {}) as Record<string, unknown>
       if (
@@ -70,6 +89,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           ok: true,
           message: 'La línea ya se recalcula desde asistencia en el preview',
           run_line_id,
+          adjustments_cleared: true,
         })
       }
     }
@@ -100,6 +120,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       ok: true,
       message: 'Línea lista para recalcular desde asistencia. Genere preview para aplicar los cambios.',
       run_line_id,
+      adjustments_cleared: true,
     })
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Error desconocido'

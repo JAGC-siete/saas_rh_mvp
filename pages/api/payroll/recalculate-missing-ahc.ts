@@ -8,6 +8,7 @@ import {
   type PreviewPaymentFrequency,
   type PaymentCutDatesInput,
 } from '../../../lib/payroll/fixed-line-recalc'
+import { ensurePeriodAhcFresh } from '../../../lib/payroll/ensure-period-ahc'
 
 function mapFreq(v: string): PreviewPaymentFrequency {
   const x = (v || '').toLowerCase()
@@ -17,6 +18,9 @@ function mapFreq(v: string): PreviewPaymentFrequency {
   return 'biweekly'
 }
 
+/**
+ * Fills missing AHC and refreshes rows where attendance was edited after AHC.
+ */
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST')
@@ -104,12 +108,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (empErr) return res.status(500).json({ error: empErr.message })
     const employeeIds = (emps || []).map((e: any) => e.id)
     if (employeeIds.length === 0) {
-      return res.status(200).json({ success: true, calculated: 0, missing: 0, message: 'Sin empleados activos' })
+      return res.status(200).json({ success: true, calculated: 0, missing: 0, stale: 0, message: 'Sin empleados activos' })
     }
 
     const { data: completeRecords, error: recErr } = await supabase
       .from('attendance_records')
-      .select('id', { count: 'exact' })
+      .select('id, updated_at')
       .in('employee_id', employeeIds)
       .gte('date', fechaInicio)
       .lte('date', fechaFin)
@@ -117,44 +121,41 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .not('check_out', 'is', null)
 
     if (recErr) return res.status(500).json({ error: recErr.message })
-    const recordRows = (completeRecords || []) as { id: string | null | undefined }[]
-    const completeRecordIds = recordRows
-      .map((r) => r.id)
-      .filter((id): id is string => typeof id === 'string' && id.length > 0)
-    if (completeRecordIds.length === 0) {
-      return res.status(200).json({ success: true, calculated: 0, missing: 0, message: 'Sin registros completos (check_in/check_out)' })
-    }
 
-    const { data: existingAhc, error: ahcErr } = await supabase
-      .from('attendance_hours_calculation')
-      .select('attendance_record_id')
-      .in('attendance_record_id', completeRecordIds)
-
-    if (ahcErr) return res.status(500).json({ error: ahcErr.message })
-    const ahcRows = (existingAhc || []) as { attendance_record_id: string | null | undefined }[]
-    const existing = new Set(
-      ahcRows
-        .map((r) => r.attendance_record_id)
-        .filter((id): id is string => typeof id === 'string' && id.length > 0)
+    const complete = ((completeRecords || []) as { id: string; updated_at: string | null }[]).filter(
+      (r) => typeof r.id === 'string' && r.id.length > 0
     )
-    const missingIds = completeRecordIds.filter((id) => !existing.has(id))
 
-    if (missingIds.length === 0) {
-      return res.status(200).json({ success: true, calculated: 0, missing: 0, message: 'AHC ya está completo' })
+    if (complete.length === 0) {
+      return res.status(200).json({
+        success: true,
+        calculated: 0,
+        missing: 0,
+        stale: 0,
+        message: 'Sin registros completos (check_in/check_out)',
+      })
     }
 
-    const { data: results, error: rpcErr } = await supabase.rpc('calculate_attendance_hours_batch', {
-      p_record_ids: missingIds,
-      p_law_year: year,
+    const result = await ensurePeriodAhcFresh({
+      supabase,
+      completeRecords: complete,
+      lawYear: year,
     })
 
-    if (rpcErr) return res.status(500).json({ error: rpcErr.message })
+    if (result.error) {
+      return res.status(500).json({ error: result.error })
+    }
 
     return res.status(200).json({
       success: true,
-      missing: missingIds.length,
-      calculated: (results || []).length,
+      missing: result.missing,
+      stale: result.stale,
+      calculated: result.refreshed,
       period: { from: fechaInicio, to: fechaFin, year, month, quincena, tipo },
+      message:
+        result.refreshed === 0
+          ? 'AHC ya está completo y fresco'
+          : `AHC actualizado: ${result.missing} missing, ${result.stale} stale`,
     })
   } catch (e) {
     if ((e as Error).message === 'UNAUTHORIZED' || (e as Error).message === 'PROFILE_REQUIRED') return
@@ -165,4 +166,3 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     })
   }
 }
-

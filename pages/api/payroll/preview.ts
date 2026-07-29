@@ -47,6 +47,7 @@ import {
   sumAdminFloorPeriodHours,
 } from '../../../lib/payroll/admin-floor-hours'
 import { parseOrdinaryHoursOverrideInput } from '../../../lib/payroll/ordinary-hours-override'
+import { ensurePeriodAhcFresh } from '../../../lib/payroll/ensure-period-ahc'
 import { createEmployeeSalaryClient } from '../../../lib/security/employee-data-access'
 import {
   loadEmployeeScheduleAssignments,
@@ -388,7 +389,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     if (employeeIds.length > 0) {
       const { data: attData, error: attError } = await supabase
         .from('attendance_records')
-        .select('employee_id, date, check_in, check_out, status, flags')
+        .select('id, employee_id, date, check_in, check_out, status, flags, updated_at')
         .in('employee_id', employeeIds)
         .gte('date', fechaInicio)
         .lte('date', fechaFin)
@@ -452,9 +453,29 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       effectivePayTypeByEmployee[emp.id] = resolveEffectivePayType(emp.pay_type, companyCalculationMode)
     }
 
+    const completeAttendanceForAhc = (attendanceRecords || []).filter(
+      (r: any) => r?.id && r.check_in && r.check_out
+    )
+    const ahcRefresh = await ensurePeriodAhcFresh({
+      supabase,
+      completeRecords: completeAttendanceForAhc.map((r: any) => ({
+        id: r.id as string,
+        updated_at: r.updated_at ?? null,
+      })),
+      lawYear: yearNum,
+    })
+    if (ahcRefresh.error) {
+      console.warn('Preview AHC refresh warning:', ahcRefresh.error)
+    } else if (ahcRefresh.refreshed > 0) {
+      console.log(
+        `Preview AHC refresh: missing=${ahcRefresh.missing} stale=${ahcRefresh.stale} refreshed=${ahcRefresh.refreshed}`
+      )
+    }
+
     let ahcByEmployee: Record<string, { total_hours: number; normal_hours: number; by_record: Record<string, number> }> = {}
     const ahcOvertimeByEmployee: Record<string, number> = {}
     const ahcOvertimeBreakdownByEmployee: Record<string, OvertimeHoursBreakdown> = {}
+    const rawClockFallbackEmployeeIds: string[] = []
     if (employeeIds.length > 0) {
       const { data: ahcData } = await supabase
         .from('attendance_hours_calculation')
@@ -1062,6 +1083,10 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
             total_hours_worked += incompleteRecordDefaultHours * incompleteRegistros.length
           }
         } else {
+          // Last resort after ensurePeriodAhcFresh — no lunch/band logic.
+          if (completeRegistros.length > 0) {
+            rawClockFallbackEmployeeIds.push(emp.id)
+          }
           total_hours_worked = calculateHoursWorked(completeRegistros)
           if (incompleteRecordDefaultHours != null && incompleteRecordDefaultHours > 0 && incompleteRegistros.length > 0) {
             total_hours_worked += incompleteRecordDefaultHours * incompleteRegistros.length
@@ -1414,6 +1439,22 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
             }
           : undefined,
       incompleteRecordsAlert: incompleteRecordsAlert.length > 0 ? incompleteRecordsAlert : undefined,
+      ahc_refresh: {
+        complete: ahcRefresh.complete,
+        missing: ahcRefresh.missing,
+        stale: ahcRefresh.stale,
+        refreshed: ahcRefresh.refreshed,
+        error: ahcRefresh.error || null,
+      },
+      ahcRawClockFallbackWarning:
+        rawClockFallbackEmployeeIds.length > 0
+          ? {
+              count: rawClockFallbackEmployeeIds.length,
+              employee_ids: rawClockFallbackEmployeeIds,
+              message:
+                'Algunos empleados por hora usaron delta crudo check_in/out (sin AHC). Verifique asistencia o recalcule horas.',
+            }
+          : undefined,
       preserved_edited_lines: preservedEditedLines,
       orphan_lines_removed: orphanLinesRemoved,
       preservedEditedSummary:

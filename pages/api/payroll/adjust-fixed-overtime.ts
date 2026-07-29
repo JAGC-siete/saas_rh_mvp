@@ -25,6 +25,11 @@ import {
   overtimeBreakdownToMetadata,
 } from '../../../lib/payroll/overtime-pay'
 import { HONDURAS_LABOR_FACTOR } from '../../../lib/payroll/constants'
+import { calculatePayroll } from '../../../lib/payroll-client-specific'
+import {
+  foldCustomsIntoFixedRecalcAmounts,
+  metadataWithoutPlanKeys,
+} from '../../../lib/payroll/apply-customs-after-fixed-recalc'
 import {
   assertNonHndStatutoryConfigParses,
   payrollStatutoryErrorResponse,
@@ -432,15 +437,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       planFieldKeys
     )
 
+    const customsMeta = metadataWithoutPlanKeys(mergedMetadata, planFieldKeys)
+    const customsCalc = await calculatePayroll(companyId, gross, customsMeta, supabase)
+    const folded = foldCustomsIntoFixedRecalcAmounts({
+      dayOtGross: gross,
+      netAfterStatutoryAndPlans: netTotal,
+      ingresosAdicionales: customsCalc.totalIngresosAdicionales,
+      customDeductionsExcludingPlans: customsCalc.totalDeduccionesAdicionales,
+    })
+    const persistBruto = folded.bruto
+    const persistNeto = folded.neto
+
     const { data: rpcData, error: rpcError } = await supabase.rpc('payroll_recalc_fixed_days_apply', {
       p_run_line_id: run_line_id,
       p_company_id: companyId,
       p_calc_hours: daysWorked,
-      p_calc_bruto: gross,
+      p_calc_bruto: persistBruto,
       p_calc_ihss: IHSS,
       p_calc_rap: RAP,
       p_calc_isr: ISR,
-      p_calc_neto: netTotal,
+      p_calc_neto: persistNeto,
       p_metadata: mergedMetadata,
       p_tax_year: yearNum,
       p_user_id: user.id,
@@ -456,11 +472,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         run_line_id,
         company_id: companyId,
         calc_hours: daysWorked,
-        calc_bruto: gross,
+        calc_bruto: persistBruto,
         calc_ihss: IHSS,
         calc_rap: RAP,
         calc_isr: ISR,
-        calc_neto: netTotal,
+        calc_neto: persistNeto,
         metadata: mergedMetadata,
         tax_year: yearNum,
       })
@@ -499,17 +515,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       line: updatedLine || {
         id: run_line_id,
         eff_hours: daysWorked,
-        eff_bruto: gross,
+        eff_bruto: persistBruto,
         eff_ihss: IHSS,
         eff_rap: RAP,
         eff_isr: ISR,
-        eff_neto: netTotal,
+        eff_neto: persistNeto,
         edited: true,
         metadata: mergedMetadata,
       },
       overtime_pay: otResolved.pay,
       horas_extras: otResolved.hoursTotal,
-      total_deductions: totalDeductions,
+      total_deductions: round2(persistBruto - persistNeto),
+      custom_ingresos: customsCalc.totalIngresosAdicionales,
+      custom_deducciones: customsCalc.totalDeduccionesAdicionales,
     })
   } catch (e: unknown) {
     const stat = payrollStatutoryErrorResponse(e)
