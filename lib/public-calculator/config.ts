@@ -1,6 +1,7 @@
 import type { CountryCode } from '../country/supported'
 import type { FAQItem } from '../seo/schema'
 import { deductionCalculatorPublicPath } from '../marketing/calculator-public-paths'
+import { SEO_BASE_URL, SEO_DEFAULT_OG_IMAGE_PATH, SEO_DEFAULT_OG_IMAGE_URL } from '../seo/assets'
 
 export type PublicCalculatorDeductionKey = 'ihss' | 'rap' | 'afp' | 'infop' | 'isr'
 
@@ -140,10 +141,10 @@ export type PublicCalculatorConfig = {
   }
 }
 
-const BASE = 'https://humanosisu.net'
+const BASE = SEO_BASE_URL
 
-export const CALCULATOR_OG_IMAGE_PATH = '/og-image.png'
-export const CALCULATOR_OG_IMAGE_URL = `${BASE}${CALCULATOR_OG_IMAGE_PATH}`
+export const CALCULATOR_OG_IMAGE_PATH = SEO_DEFAULT_OG_IMAGE_PATH
+export const CALCULATOR_OG_IMAGE_URL = SEO_DEFAULT_OG_IMAGE_URL
 
 const CALCULATOR_SOCIAL_SHARE = {
   postCalcScript: 'Acabo de calcular mis deducciones gratis con SISU. Probalo aquí:',

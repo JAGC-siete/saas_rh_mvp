@@ -3,8 +3,9 @@
  */
 
 import { SOCIAL_SAME_AS } from '../marketing/social-links'
+import { SEO_BASE_URL, SEO_LOGO_URL } from './assets'
 
-const BASE_URL = 'https://humanosisu.net'
+const BASE_URL = SEO_BASE_URL
 
 export interface OrganizationSchema {
   '@context': string
@@ -32,7 +33,7 @@ export function generateOrganizationSchema(): OrganizationSchema {
     '@type': 'Organization',
     name: 'Humano SISU',
     url: BASE_URL,
-    logo: `${BASE_URL}/logo-humano-sisu.png`,
+    logo: SEO_LOGO_URL,
     description:
       'Humano SISU es software de recursos humanos y control de asistencia para MIPYMES en Honduras, El Salvador y Guatemala. Nómina automatizada, biometría integrada y deducciones de ley locales.',
     contactPoint: {
@@ -317,7 +318,7 @@ export function generateArticleSchema(options: {
     publisher: {
       '@type': 'Organization',
       name: 'Humano SISU',
-      logo: { '@type': 'ImageObject', url: `${BASE_URL}/logo-humano-sisu.png` }
+      logo: { '@type': 'ImageObject', url: SEO_LOGO_URL }
     },
     url: fullUrl,
     ...(articleSection ? { articleSection } : {}),

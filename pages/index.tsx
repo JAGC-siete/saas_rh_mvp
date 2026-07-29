@@ -11,6 +11,7 @@ import MeshBackground from '../components/landing/MeshBackground'
 import MarketingStyles from '../components/marketing/MarketingStyles'
 import { getPageTitle } from '../lib/seo/title'
 import { getPageDescription } from '../lib/seo/description'
+import { SEO_DEFAULT_OG_IMAGE_PATH, seoAbsoluteUrl } from '../lib/seo/assets'
 import { generateOrganizationSchema, generateWebSiteSchema, generateWebPageSchema, generateReviewSchema } from '../lib/seo/schema'
 import { initGoogleAdsTracking } from '../lib/analytics/googleAds'
 
@@ -54,7 +55,8 @@ export default function LandingPage() {
 
   const pageTitle = getPageTitle('home')
   const pageDescription = getPageDescription('home')
-  const ogImage = '/og-image.png'
+  const ogImage = SEO_DEFAULT_OG_IMAGE_PATH
+  const ogImageUrl = seoAbsoluteUrl(ogImage)
 
   const organizationSchema = generateOrganizationSchema()
   const webSiteSchema = generateWebSiteSchema()
@@ -83,13 +85,13 @@ export default function LandingPage() {
         <meta property="og:description" content={pageDescription} />
         <meta property="og:type" content="website" />
         <meta property="og:url" content="https://humanosisu.net" />
-        <meta property="og:image" content={`https://humanosisu.net${ogImage}`} />
+        <meta property="og:image" content={ogImageUrl} />
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content={pageTitle} />
         <meta name="twitter:description" content={pageDescription} />
-        <meta name="twitter:image" content={`https://humanosisu.net${ogImage}`} />
+        <meta name="twitter:image" content={ogImageUrl} />
         <link rel="canonical" href="https://humanosisu.net" />
       </Head>
 

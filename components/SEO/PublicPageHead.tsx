@@ -1,6 +1,9 @@
 import Head from 'next/head'
-
-const BASE_URL = 'https://humanosisu.net'
+import {
+  SEO_BASE_URL,
+  SEO_DEFAULT_OG_IMAGE_PATH,
+  seoAbsoluteUrl,
+} from '../../lib/seo/assets'
 
 interface PublicPageHeadProps {
   title: string
@@ -9,6 +12,8 @@ interface PublicPageHeadProps {
   canonicalPath: string
   noindex?: boolean
   keywords?: string
+  /** Path or absolute URL; defaults to shared SEO OG image */
+  ogImage?: string
 }
 
 export default function PublicPageHead({
@@ -17,8 +22,10 @@ export default function PublicPageHead({
   canonicalPath,
   noindex = false,
   keywords,
+  ogImage = SEO_DEFAULT_OG_IMAGE_PATH,
 }: PublicPageHeadProps) {
-  const canonical = `${BASE_URL}${canonicalPath}`
+  const canonical = `${SEO_BASE_URL}${canonicalPath}`
+  const ogImageUrl = seoAbsoluteUrl(ogImage)
 
   return (
     <Head>
@@ -31,6 +38,13 @@ export default function PublicPageHead({
       <meta property="og:description" content={description} />
       <meta property="og:url" content={canonical} />
       <meta property="og:type" content="website" />
+      <meta property="og:image" content={ogImageUrl} />
+      <meta property="og:image:width" content="1200" />
+      <meta property="og:image:height" content="630" />
+      <meta name="twitter:card" content="summary_large_image" />
+      <meta name="twitter:title" content={title} />
+      <meta name="twitter:description" content={description} />
+      <meta name="twitter:image" content={ogImageUrl} />
     </Head>
   )
 }

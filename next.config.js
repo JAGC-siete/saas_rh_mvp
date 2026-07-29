@@ -102,11 +102,11 @@ const nextConfig = {
         destination: '/app/attendance/dashboard',
         permanent: false,
       },
-      // Redirigir /landing a la página principal
+      // Redirigir /landing a la página principal (301 permanente)
       {
         source: '/landing',
         destination: '/',
-        permanent: false,
+        permanent: true,
       },
       // Redirigir rutas legacy del dashboard
       {

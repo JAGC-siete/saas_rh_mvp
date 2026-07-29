@@ -28,6 +28,12 @@ const publicPages: SitemapUrl[] = [
     priority: 0.9
   },
   {
+    loc: '/ventas',
+    changefreq: 'weekly',
+    priority: 0.85,
+    lastmod: new Date().toISOString().split('T')[0]
+  },
+  {
     loc: '/alternativa-odoo-honduras',
     changefreq: 'monthly',
     priority: 0.9
