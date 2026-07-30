@@ -3,7 +3,10 @@
  */
 import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
-import { isStatutoryReservedCustomKey } from '../lib/payroll/statutory-reserved-custom-keys'
+import {
+  isStatutoryReservedCustomKey,
+  resolveReservedCustomColumnAmount,
+} from '../lib/payroll/statutory-reserved-custom-keys'
 import { buildCustomDeductionsList } from '../lib/payroll/custom-deductions-list'
 
 function mockSupabase(customFields: Record<string, unknown> | null) {
@@ -58,6 +61,20 @@ describe('isStatutoryReservedCustomKey', () => {
     assert.equal(isStatutoryReservedCustomKey('Rap'), true)
     assert.equal(isStatutoryReservedCustomKey('isr_manual'), false)
     assert.equal(isStatutoryReservedCustomKey('seguro_medico'), false)
+  })
+})
+
+describe('resolveReservedCustomColumnAmount', () => {
+  it('maps custom_isr / isr to row.ISR even when metadata would be 0', () => {
+    assert.equal(resolveReservedCustomColumnAmount('isr', { ISR: 920.16 }), 920.16)
+    assert.equal(resolveReservedCustomColumnAmount('ISR', { ISR: 507.97 }), 507.97)
+    assert.equal(resolveReservedCustomColumnAmount('ihss', { IHSS: 297.58 }), 297.58)
+    assert.equal(resolveReservedCustomColumnAmount('rap', { RAP: 60.73 }), 60.73)
+  })
+
+  it('returns null for non-reserved custom keys', () => {
+    assert.equal(resolveReservedCustomColumnAmount('cooperativa', { ISR: 100 }), null)
+    assert.equal(resolveReservedCustomColumnAmount('isr_manual', { ISR: 100 }), null)
   })
 })
 

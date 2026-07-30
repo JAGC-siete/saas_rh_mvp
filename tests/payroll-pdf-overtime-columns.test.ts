@@ -192,4 +192,89 @@ describe('payroll PDF overtime columns', () => {
     assert.equal(media![0], 1008, 'page width must be 14 in (1008 pt)')
     assert.equal(media![1], 612, 'page height must be 8.5 in (612 pt)')
   })
+
+  it('renders custom_isr from row.ISR when legal isr column is off', async () => {
+    const cols = buildPayrollPdfColumnMeta({
+      isHourly: false,
+      hasSeptimoDia: false,
+      hasOvertimePay: false,
+      visibleColumnIds: new Set([
+        'emp_code',
+        'emp_name',
+        'gross_salary',
+        'ihss',
+        'rap',
+        'custom_isr',
+        'total_deductions',
+        'net_salary',
+      ]),
+      columnLabels: { custom_isr: 'Retención Asalariada' },
+      includeCustomPayrollFields: true,
+      legalDeductions: { ihss: true, rap: true, isr: false },
+      countryCode: 'HND',
+      customFieldsConfig: {
+        isr: {
+          label: 'Retención Asalariada',
+          type: 'number',
+          category: 'deductions',
+          required: false,
+          default: 0,
+        },
+      },
+    })
+    const ids = cols.map((c) => c.id)
+    assert.equal(ids.includes('isr'), false, 'legal isr hidden when legal_deductions.isr=false')
+    assert.ok(ids.includes('custom_isr'))
+    assert.equal(cols.find((c) => c.id === 'custom_isr')?.header, 'Retención Asalariada')
+
+    const pdf = await generateConsolidatedPayrollPDF(
+      [
+        baseFixed({
+          ISR: 920.16,
+          total_deductions: 1248.47,
+          total: 8137.36,
+          metadata: { isr: 0 },
+        }),
+      ],
+      [],
+      '2026-07',
+      2,
+      undefined,
+      'Enlace',
+      {
+        isr: {
+          label: 'Retención Asalariada',
+          type: 'number',
+          category: 'deductions',
+          required: false,
+          default: 0,
+        },
+      },
+      {
+        currency: 'HNL',
+        payment_frequency: 'quincenal',
+        legal_deductions: { ihss: true, rap: true, isr: false },
+        country_code: 'HND',
+      },
+      { period_start: '2026-07-16', period_end: '2026-07-31' },
+      undefined,
+      {
+        visibleColumnIds: [
+          'emp_code',
+          'emp_name',
+          'gross_salary',
+          'ihss',
+          'rap',
+          'custom_isr',
+          'total_deductions',
+          'net_salary',
+        ],
+        columnLabels: { custom_isr: 'Retención Asalariada' },
+        includeCustomPayrollFields: true,
+      }
+    )
+
+    assert.ok(Buffer.isBuffer(pdf))
+    assert.ok(pdf.length > 1500)
+  })
 })

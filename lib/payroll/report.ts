@@ -18,6 +18,7 @@ import {
   groupKeyForRow,
   groupPlanillaLikeRows
 } from './pdf-layout'
+import { resolveReservedCustomColumnAmount } from './statutory-reserved-custom-keys'
 import {
   defaultPdfPrimaryColor,
   drawBrandedReceiptHeader,
@@ -365,6 +366,8 @@ export async function generateConsolidatedPayrollPDF(
 
       // Helper to get custom field value from metadata
       const getCustomFieldNumber = (row: PlanillaItem, fieldName: string): number => {
+        const reserved = resolveReservedCustomColumnAmount(fieldName, row)
+        if (reserved != null) return reserved
         if (!row.metadata || row.metadata[fieldName] == null) return 0
         const value = row.metadata[fieldName]
         if (typeof value === 'number') return Number.isFinite(value) ? value : 0
@@ -374,6 +377,8 @@ export async function generateConsolidatedPayrollPDF(
       }
 
       const getCustomFieldValue = (row: PlanillaItem, fieldName: string): string => {
+        const reserved = resolveReservedCustomColumnAmount(fieldName, row)
+        if (reserved != null) return formatCurrency(reserved)
         if (!row.metadata || row.metadata[fieldName] == null || row.metadata[fieldName] === '') {
           return formatCurrency(0)
         }
