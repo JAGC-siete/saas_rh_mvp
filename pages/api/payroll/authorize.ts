@@ -4,6 +4,10 @@ import { getHondurasTimestamp } from '../../../lib/timezone'
 import { withExportRateLimit } from '../../../lib/security/rate-limiting'
 import { updateEmployeeIsrYtdOnAuthorize } from '../../../lib/payroll/isr-ytd'
 import { parsePayrollPdfGroupByQuery } from '../../../lib/payroll/pdf-layout'
+import {
+  collectDeductionPlanIncrements,
+  shouldIncrementDeductionPlan,
+} from '../../../lib/payroll/deduction-plan-authorize'
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -131,29 +135,18 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
     // Incrementar plazos_aplicados en employee_deduction_plans (solo si NO estaba ya autorizada)
     if (run.status !== 'authorized') {
-      const planIdsToIncrement: { planId: string; employeeId: string }[] = []
-      for (const line of lines || []) {
-        const meta = (line as any).metadata as Record<string, unknown> | null
-        const ids = meta?._deduction_plan_ids as string[] | undefined
-        if (Array.isArray(ids) && ids.length > 0 && line.employee_id) {
-          for (const planId of ids) {
-            if (planId && typeof planId === 'string') {
-              planIdsToIncrement.push({ planId, employeeId: line.employee_id })
-            }
-          }
-        }
-      }
-      for (const { planId, employeeId: empId } of planIdsToIncrement) {
-        const line = lines.find((l: any) => l.employee_id === empId)
-        if (!line) continue
+      const planIdsToIncrement = collectDeductionPlanIncrements(lines || [])
+      for (const { planId, employeeId: empId, runLineId } of planIdsToIncrement) {
         const { data: plan, error: planErr } = await supabase
           .from('employee_deduction_plans')
-          .select('id, employee_id, company_id, plazos_aplicados, plazos_totales, monto_por_plazo')
+          .select('id, employee_id, company_id, plazos_aplicados, plazos_totales, monto_por_plazo, activo')
           .eq('id', planId)
           .eq('company_id', companyId)
           .eq('employee_id', empId)
           .single()
         if (planErr || !plan) continue
+        // Skip cancelled / exhausted plans left in stale draft metadata
+        if (!shouldIncrementDeductionPlan(plan)) continue
         const newApplied = (plan.plazos_aplicados || 0) + 1
         const updatePayload: Record<string, unknown> = {
           plazos_aplicados: newApplied,
@@ -172,7 +165,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         const montoPorPlazo = Number(plan.monto_por_plazo) || 0
         await supabase.from('deduction_plan_applications').insert({
           deduction_plan_id: planId,
-          run_line_id: line.id,
+          run_line_id: runLineId,
           company_id: companyId,
           plazo_numero: newApplied,
           monto_aplicado: montoPorPlazo,
@@ -215,7 +208,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     // Generar vouchers individuales
     const vouchers = lines.map((line: any) => ({
       employee_id: line.employee_id,
-      url: `/api/payroll/generate-voucher?run_line_id=${line.id}`
+      url: `/api/payroll/receipt-voucher?run_line_id=${line.id}`
     }))
 
     const wasAlreadyAuthorized = run.status === 'authorized'
