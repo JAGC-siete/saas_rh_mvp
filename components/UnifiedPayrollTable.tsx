@@ -58,7 +58,13 @@ interface UnifiedPayrollTableProps {
   canResetLineRecalc?: boolean
   canZeroStatutory?: boolean
   // eslint-disable-next-line no-unused-vars
-  onZeroStatutory?: (_payload: { run_line_id: string; reason: string }) => Promise<void>
+  onZeroStatutory?: (_payload: {
+    run_line_id: string
+    reason: string
+    ihss?: number
+    rap?: number
+    isr?: number
+  }) => Promise<void>
   loading?: boolean
   canAuthorize?: boolean
   canSend?: boolean

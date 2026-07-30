@@ -51,6 +51,9 @@ const METADATA_SKIP_KEYS = new Set([
   'statutory_zero_ihss',
   'statutory_zero_rap',
   'statutory_zero_isr',
+  'statutory_override_ihss',
+  'statutory_override_rap',
+  'statutory_override_isr',
   'septimo_dia',
   '_deduction_plan_ids',
 ])

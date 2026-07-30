@@ -60,10 +60,16 @@ interface PayrollFixedTableProps {
   companyPayOvertime?: boolean
   onResetLineRecalc?: (_runLineId: string) => Promise<void>
   canResetLineRecalc?: boolean
-  /** Omitir IHSS/RAP/ISR en esta línea (draft/edited) */
+  /** Editar / omitir IHSS/RAP/ISR en esta línea (draft/edited) */
   canZeroStatutory?: boolean
   // eslint-disable-next-line no-unused-vars
-  onZeroStatutory?: (_payload: { run_line_id: string; reason: string }) => Promise<void>
+  onZeroStatutory?: (_payload: {
+    run_line_id: string
+    reason: string
+    ihss?: number
+    rap?: number
+    isr?: number
+  }) => Promise<void>
   loading?: boolean
   hasCustom?: boolean
   statutoryDeductions?: { ihss: boolean; rap: boolean; isr: boolean }
@@ -107,6 +113,9 @@ export default function PayrollFixedTable({
     runLineId: string
     employeeName: string
   } | null>(null)
+  const [statutoryIhss, setStatutoryIhss] = useState('')
+  const [statutoryRap, setStatutoryRap] = useState('')
+  const [statutoryIsr, setStatutoryIsr] = useState('')
   const [statutoryReason, setStatutoryReason] = useState('')
   const [statutorySaving, setStatutorySaving] = useState(false)
   const [ahcInfoOpen, setAhcInfoOpen] = useState(false)
@@ -310,24 +319,48 @@ export default function PayrollFixedTable({
       runLineId: row.line_id,
       employeeName: row.name || 'Empleado',
     })
-    setStatutoryReason('')
+    setStatutoryIhss(String(Number(row.IHSS) || 0))
+    setStatutoryRap(String(Number(row.RAP) || 0))
+    setStatutoryIsr(String(Number(row.ISR) || 0))
+    const meta = (row as { metadata?: Record<string, unknown> }).metadata
+    setStatutoryReason(
+      typeof meta?.statutory_zeroed_reason === 'string' ? meta.statutory_zeroed_reason : ''
+    )
   }
 
   const closeStatutoryModal = () => {
     setStatutoryModal(null)
+    setStatutoryIhss('')
+    setStatutoryRap('')
+    setStatutoryIsr('')
     setStatutoryReason('')
   }
 
-  const submitStatutoryZero = async () => {
+  const parseStatutoryInput = (raw: string, label: string): number | null => {
+    const n = Number(String(raw).replace(',', '.').trim())
+    if (!Number.isFinite(n) || n < 0) {
+      alert(`${label} debe ser un número ≥ 0`)
+      return null
+    }
+    return Math.round(n * 100) / 100
+  }
+
+  const submitStatutoryOverride = async () => {
     if (!statutoryModal || !onZeroStatutory) return
     const reason = statutoryReason.trim()
     if (reason.length < 3) {
       alert('Indique un motivo (mín. 3 caracteres)')
       return
     }
+    const ihss = parseStatutoryInput(statutoryIhss, 'IHSS')
+    if (ihss === null) return
+    const rap = parseStatutoryInput(statutoryRap, 'RAP')
+    if (rap === null) return
+    const isr = parseStatutoryInput(statutoryIsr, 'ISR')
+    if (isr === null) return
     if (
       !confirm(
-        `¿Poner IHSS, RAP e ISR en cero para ${statutoryModal.employeeName}? El bruto no cambia; el neto se recalcula. Las retenciones deben cobrarse en finiquito u otro proceso.`
+        `¿Guardar retenciones de ley para ${statutoryModal.employeeName}? IHSS ${ihss}, RAP ${rap}, ISR ${isr}. El bruto no cambia; el neto se recalcula.`
       )
     ) {
       return
@@ -337,11 +370,14 @@ export default function PayrollFixedTable({
       await onZeroStatutory({
         run_line_id: statutoryModal.runLineId,
         reason,
+        ihss,
+        rap,
+        isr,
       })
       closeStatutoryModal()
     } catch (e) {
       console.error(e)
-      alert(e instanceof Error ? e.message : 'Error al omitir retenciones de ley')
+      alert(e instanceof Error ? e.message : 'Error al editar retenciones de ley')
     } finally {
       setStatutorySaving(false)
     }
@@ -408,23 +444,30 @@ export default function PayrollFixedTable({
             {rows.length > 0 ? (
               rows.map((row) => {
                 const meta = (row as { metadata?: Record<string, unknown> }).metadata
-                const statutoryZeroed = meta?.statutory_zeroed_at != null
+                const statutoryOverridden = meta?.statutory_zeroed_at != null
+                const statutoryFullyZeroed =
+                  statutoryOverridden &&
+                  (Number(row.IHSS) || 0) === 0 &&
+                  (Number(row.RAP) || 0) === 0 &&
+                  (Number(row.ISR) || 0) === 0
                 return (
                 <tr key={row.employee_id} className="hover:bg-white/10 transition-colors duration-200">
                   <td className="px-4 py-3 align-top min-w-[10rem] max-w-[18rem]">
                     <div>
                       <div className="text-sm font-medium text-white break-words leading-snug">{row.name}</div>
                       <div className="text-xs text-gray-300 break-words mt-0.5">{row.department || 'N/A'}</div>
-                      {statutoryZeroed ? (
+                      {statutoryOverridden ? (
                         <div
                           className="mt-1 inline-block rounded border border-amber-400/40 bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-amber-200"
                           title={
                             typeof meta?.statutory_zeroed_reason === 'string'
                               ? meta.statutory_zeroed_reason
-                              : 'Retenciones de ley omitidas en esta corrida'
+                              : statutoryFullyZeroed
+                                ? 'Retenciones de ley omitidas en esta corrida'
+                                : 'Retenciones de ley editadas en esta corrida'
                           }
                         >
-                          Sin retenciones de ley
+                          {statutoryFullyZeroed ? 'Retenciones omitidas' : 'Retenciones editadas'}
                         </div>
                       ) : null}
                     </div>
@@ -501,7 +544,7 @@ export default function PayrollFixedTable({
                         <div>ISR: {formatCurrency(row.ISR || 0)}</div>
                       )}
                       <div className="font-semibold mt-1">Total: {formatCurrency(row.total_deducciones || 0)}</div>
-                      {canZeroStatutory && onZeroStatutory && row.line_id && !statutoryZeroed ? (
+                      {canZeroStatutory && onZeroStatutory && row.line_id ? (
                         <Button
                           type="button"
                           variant="outline"
@@ -509,10 +552,10 @@ export default function PayrollFixedTable({
                           onClick={() => openStatutoryModal(row)}
                           disabled={loading}
                           className="mt-1.5 h-7 border-amber-400/30 bg-amber-500/10 px-2 text-[10px] text-amber-100 hover:bg-amber-500/20"
-                          title="Omitir IHSS/RAP/ISR en este período (p. ej. se retienen en finiquito)"
+                          title="Editar IHSS/RAP/ISR en este período (valores ≥ 0)"
                         >
-                          <Icon name="minus" className="mr-1 h-3 w-3" />
-                          Omitir retenciones
+                          <Icon name="edit" className="mr-1 h-3 w-3" />
+                          Editar retenciones
                         </Button>
                       ) : null}
                     </div>
@@ -748,13 +791,72 @@ export default function PayrollFixedTable({
       {statutoryModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-md rounded-lg border border-white/20 bg-gray-900 p-6 text-white shadow-xl">
-            <h3 className="text-lg font-semibold">Omitir retenciones de ley</h3>
+            <h3 className="text-lg font-semibold">Editar retenciones de ley</h3>
             <p className="mt-1 text-sm text-gray-300">{statutoryModal.employeeName}</p>
             <p className="mt-2 text-xs text-amber-200/90">
-              IHSS, RAP e ISR quedan en cero en esta corrida. El bruto no cambia. Use cuando esas
-              retenciones se aplicarán en finiquito u otro proceso. No apaga la política de la
-              empresa.
+              Ajuste IHSS, RAP e ISR (≥ 0) en esta corrida. El bruto no cambia; el neto se
+              recalcula. Use 0 cuando esas retenciones se apliquen en finiquito u otro proceso.
             </p>
+            <div className="mt-4 grid grid-cols-3 gap-3">
+              <div>
+                <label htmlFor="statutory-ihss" className="block text-xs font-medium text-gray-200">
+                  IHSS
+                </label>
+                <Input
+                  id="statutory-ihss"
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={statutoryIhss}
+                  onChange={(e) => setStatutoryIhss(e.target.value)}
+                  className="mt-1 border-white/20 bg-white/10 text-white"
+                />
+              </div>
+              <div>
+                <label htmlFor="statutory-rap" className="block text-xs font-medium text-gray-200">
+                  RAP
+                </label>
+                <Input
+                  id="statutory-rap"
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={statutoryRap}
+                  onChange={(e) => setStatutoryRap(e.target.value)}
+                  className="mt-1 border-white/20 bg-white/10 text-white"
+                />
+              </div>
+              <div>
+                <label htmlFor="statutory-isr" className="block text-xs font-medium text-gray-200">
+                  ISR
+                </label>
+                <Input
+                  id="statutory-isr"
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={statutoryIsr}
+                  onChange={(e) => setStatutoryIsr(e.target.value)}
+                  className="mt-1 border-white/20 bg-white/10 text-white"
+                />
+              </div>
+            </div>
+            <div className="mt-3">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={statutorySaving}
+                className="border-amber-400/30 bg-amber-500/10 text-amber-100 hover:bg-amber-500/20"
+                onClick={() => {
+                  setStatutoryIhss('0')
+                  setStatutoryRap('0')
+                  setStatutoryIsr('0')
+                }}
+              >
+                Poner todo en 0
+              </Button>
+            </div>
             <div className="mt-4">
               <label htmlFor="statutory-reason" className="block text-sm font-medium text-gray-200">
                 Motivo (requerido)
@@ -777,8 +879,8 @@ export default function PayrollFixedTable({
               >
                 Cancelar
               </Button>
-              <Button type="button" onClick={submitStatutoryZero} disabled={statutorySaving}>
-                {statutorySaving ? 'Aplicando…' : 'Confirmar y poner en cero'}
+              <Button type="button" onClick={submitStatutoryOverride} disabled={statutorySaving}>
+                {statutorySaving ? 'Guardando…' : 'Guardar retenciones'}
               </Button>
             </div>
           </div>

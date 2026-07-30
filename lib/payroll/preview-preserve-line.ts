@@ -202,6 +202,9 @@ export const PAYROLL_LINE_MANUAL_METADATA_KEYS = [
   'statutory_zero_ihss',
   'statutory_zero_rap',
   'statutory_zero_isr',
+  'statutory_override_ihss',
+  'statutory_override_rap',
+  'statutory_override_isr',
 ] as const
 
 export function stripManualPayrollLineMetadata(

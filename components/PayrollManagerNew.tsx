@@ -245,7 +245,13 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
   )
 
   const handleZeroStatutory = useCallback(
-    async (payload: { run_line_id: string; reason: string }) => {
+    async (payload: {
+      run_line_id: string
+      reason: string
+      ihss?: number
+      rap?: number
+      isr?: number
+    }) => {
       const res = await fetch('/api/payroll/zero-statutory-deductions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -254,7 +260,7 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) {
-        throw new Error(data.message || data.error || 'Error al omitir retenciones de ley')
+        throw new Error(data.message || data.error || 'Error al editar retenciones de ley')
       }
       await payroll.loadUnifiedData()
     },
