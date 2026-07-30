@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { useCompanyContext } from '../lib/useCompanyContext'
 import { useToast } from '../lib/toast'
 import { formatDateOnlyForHonduras } from '../lib/timezone'
-import { Loader2, Download, FileSignature } from 'lucide-react'
+import { Loader2, Download, FileSignature, Ban } from 'lucide-react'
 
 interface DeductionType {
   key: string
@@ -108,10 +108,10 @@ export default function DeduccionesManager() {
     }
   }, [companyId])
 
-  const fetchPlans = useCallback(async () => {
+  const fetchPlans = useCallback(async (opts?: { silent?: boolean }) => {
     if (!companyId) return
     try {
-      setLoadingPlans(true)
+      if (!opts?.silent) setLoadingPlans(true)
       const res = await fetch(
         `/api/payroll/deduction-plans?company_id=${encodeURIComponent(companyId)}&include_inactive=true`,
         { credentials: 'include' }
@@ -123,7 +123,7 @@ export default function DeduccionesManager() {
     } catch {
       setPlans([])
     } finally {
-      setLoadingPlans(false)
+      if (!opts?.silent) setLoadingPlans(false)
     }
   }, [companyId])
 
@@ -135,6 +135,48 @@ export default function DeduccionesManager() {
 
   const handleFormChange = (field: keyof typeof form, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }))
+  }
+
+  const labelForFieldKey = (key: string) =>
+    deductionTypes.find((t) => t.key === key)?.label || formatFieldKey(key)
+
+  const handleExportAuthPDF = async (
+    plan: Pick<DeductionPlan, 'id' | 'field_key'> & Partial<DeductionPlan>,
+    opts?: { quiet?: boolean }
+  ): Promise<boolean> => {
+    if (!companyId || !plan.id) return false
+    setExportingAuthPlanId(plan.id)
+    try {
+      const res = await fetch(
+        `/api/payroll/deduction-plan-auth-pdf?company_id=${encodeURIComponent(companyId)}&plan_id=${encodeURIComponent(plan.id)}`,
+        { credentials: 'include' }
+      )
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        toast.error('Error', data.error || data.message || 'No se pudo generar el PDF para firma')
+        return false
+      }
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      const concept = labelForFieldKey(plan.field_key)
+        .replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ _-]/g, '')
+        .replace(/\s+/g, '_')
+        .slice(0, 40)
+      link.download = `autorizacion_deduccion_${concept || 'plan'}_${plan.id.slice(0, 8)}.pdf`
+      link.click()
+      URL.revokeObjectURL(url)
+      if (!opts?.quiet) {
+        toast.success('PDF listo', 'Autorización para firma descargada')
+      }
+      return true
+    } catch {
+      toast.error('Error', 'Error de conexión')
+      return false
+    } finally {
+      setExportingAuthPlanId(null)
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -173,7 +215,8 @@ export default function DeduccionesManager() {
         return
       }
 
-      toast.success('Éxito', 'Plan de deducción creado correctamente')
+      const created = data as DeductionPlan
+      const emp = employees.find((e) => e.id === form.employee_id)
       setForm({
         field_key: '',
         employee_id: '',
@@ -182,7 +225,27 @@ export default function DeduccionesManager() {
         fecha_inicio: new Date().toISOString().split('T')[0],
         fecha_fin: ''
       })
-      fetchPlans()
+      void fetchPlans({ silent: true })
+
+      if (created?.id) {
+        const ok = await handleExportAuthPDF(
+          {
+            ...created,
+            employee_name: emp?.name || created.employee_name,
+            employee_dni: emp?.dni || created.employee_dni,
+            employee_code: emp?.employee_code || created.employee_code,
+          },
+          { quiet: true }
+        )
+        toast.success(
+          'Plan creado',
+          ok
+            ? 'PDF para firma del empleado descargado'
+            : 'Plan guardado. Use «Para firma» si el PDF no descargó.'
+        )
+      } else {
+        toast.success('Éxito', 'Plan de deducción creado correctamente')
+      }
     } catch {
       toast.error('Error', 'Error de conexión')
     } finally {
@@ -203,7 +266,7 @@ export default function DeduccionesManager() {
       })
       if (res.ok) {
         toast.success('Éxito', 'Plan cancelado')
-        fetchPlans()
+        void fetchPlans({ silent: true })
       } else {
         const data = await res.json().catch(() => ({}))
         toast.error('Error', data.error || 'Error al cancelar')
@@ -233,46 +296,11 @@ export default function DeduccionesManager() {
       link.download = `reporte_deducciones_${new Date().toISOString().split('T')[0]}.pdf`
       link.click()
       URL.revokeObjectURL(url)
-      toast.success('Éxito', 'PDF descargado correctamente')
+      toast.success('Éxito', 'Reporte PDF descargado')
     } catch {
       toast.error('Error', 'Error de conexión')
     } finally {
       setExportingPdf(false)
-    }
-  }
-
-  const labelForFieldKey = (key: string) =>
-    deductionTypes.find((t) => t.key === key)?.label || formatFieldKey(key)
-
-  const handleExportAuthPDF = async (plan: DeductionPlan) => {
-    if (!companyId) return
-    setExportingAuthPlanId(plan.id)
-    try {
-      const res = await fetch(
-        `/api/payroll/deduction-plan-auth-pdf?company_id=${encodeURIComponent(companyId)}&plan_id=${encodeURIComponent(plan.id)}`,
-        { credentials: 'include' }
-      )
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
-        toast.error('Error', data.error || data.message || 'No se pudo generar el PDF para firma')
-        return
-      }
-      const blob = await res.blob()
-      const url = URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = url
-      const concept = labelForFieldKey(plan.field_key)
-        .replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ _-]/g, '')
-        .replace(/\s+/g, '_')
-        .slice(0, 40)
-      link.download = `autorizacion_deduccion_${concept || 'plan'}_${plan.id.slice(0, 8)}.pdf`
-      link.click()
-      URL.revokeObjectURL(url)
-      toast.success('Éxito', 'PDF para firma descargado')
-    } catch {
-      toast.error('Error', 'Error de conexión')
-    } finally {
-      setExportingAuthPlanId(null)
     }
   }
 
@@ -449,7 +477,7 @@ export default function DeduccionesManager() {
                 Planes de deducción
               </CardTitle>
               <CardDescription className="text-gray-200 text-base">
-                Por tipo de deducción, empleado, estado y plazos
+                Por plan: «Para firma» genera la autorización del empleado. «Reporte PDF» es el listado general.
               </CardDescription>
             </div>
             <Button
@@ -458,6 +486,7 @@ export default function DeduccionesManager() {
               onClick={handleExportPDF}
               disabled={exportingPdf || plans.length === 0}
               className="rounded-xl border-white/20 bg-white/10 text-white hover:bg-white/20 shrink-0"
+              title="Listado general de todos los planes (no es el documento para firma)"
             >
               {exportingPdf ? (
                 <>
@@ -467,7 +496,7 @@ export default function DeduccionesManager() {
               ) : (
                 <>
                   <Download className="h-4 w-4 mr-2" />
-                  Exportar PDF
+                  Reporte PDF
                 </>
               )}
             </Button>
@@ -496,7 +525,9 @@ export default function DeduccionesManager() {
                     <th className="pb-3 pt-2 px-4 text-center font-semibold text-white/90">Cuotas restantes</th>
                     <th className="pb-3 pt-2 px-4 font-semibold text-white/90">Inicio</th>
                     <th className="pb-3 pt-2 px-4 font-semibold text-white/90">Fin</th>
-                    <th className="pb-3 pt-2 px-4 font-semibold text-white/90">Acciones</th>
+                    <th className="pb-3 pt-2 px-4 font-semibold text-white/90 whitespace-nowrap">
+                      Acciones
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -537,36 +568,41 @@ export default function DeduccionesManager() {
                       <td className="py-3 px-4 text-gray-400">{formatDate(p.fecha_inicio)}</td>
                       <td className="py-3 px-4 text-gray-400">{formatDate(p.fecha_fin)}</td>
                       <td className="py-3 px-4">
-                        <div className="flex flex-wrap items-center gap-1">
-                          {p.activo && (
+                        <div className="flex items-center gap-2 whitespace-nowrap justify-end">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="rounded-lg border-sky-400/40 bg-sky-500/10 text-sky-200 hover:bg-sky-500/20 hover:text-white"
+                            onClick={() => handleExportAuthPDF(p)}
+                            disabled={exportingAuthPlanId === p.id}
+                            title="Descargar autorización para firma del empleado"
+                            aria-label={`Descargar autorización para firma — ${p.employee_name || 'empleado'}`}
+                          >
+                            {exportingAuthPlanId === p.id ? (
+                              <>
+                                <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+                                Generando…
+                              </>
+                            ) : (
+                              <>
+                                <FileSignature className="h-4 w-4 mr-1.5" />
+                                Para firma
+                              </>
+                            )}
+                          </Button>
+                          {p.activo ? (
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="text-sky-300 hover:text-sky-200 hover:bg-sky-500/10"
-                              onClick={() => handleExportAuthPDF(p)}
-                              disabled={exportingAuthPlanId === p.id}
-                              title="PDF de autorización para firma del empleado"
-                            >
-                              {exportingAuthPlanId === p.id ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                              ) : (
-                                <>
-                                  <FileSignature className="h-4 w-4 mr-1" />
-                                  PDF firma
-                                </>
-                              )}
-                            </Button>
-                          )}
-                          {p.activo && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-amber-400 hover:text-amber-300 hover:bg-amber-500/10"
+                              className="text-amber-400/90 hover:text-amber-300 hover:bg-amber-500/10"
                               onClick={() => handleCancelPlan(p.id)}
+                              title="Cancelar plan activo"
+                              aria-label="Cancelar plan"
                             >
+                              <Ban className="h-4 w-4 mr-1" />
                               Cancelar
                             </Button>
-                          )}
+                          ) : null}
                         </div>
                       </td>
                     </tr>
