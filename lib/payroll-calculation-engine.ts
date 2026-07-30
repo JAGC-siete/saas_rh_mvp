@@ -5,6 +5,8 @@
  * Permite escalar a 100+ empresas sin necesidad de código específico por cliente.
  */
 
+import { isStatutoryReservedCustomKey } from './payroll/statutory-reserved-custom-keys'
+
 interface CalculationConfig {
   earnings_formula?: string
   deductions_formula?: string
@@ -460,6 +462,10 @@ function applyCustomFields(
       continue
     }
 
+    // ihss/rap/isr viven en eff_*; no sumar como deducción adicional (espejo Enlace)
+    const reservedStatutory =
+      fieldDef.category === 'deductions' && isStatutoryReservedCustomKey(fieldName)
+
     let numericValue = 0
 
     if (fieldDef.formula) {
@@ -485,6 +491,10 @@ function applyCustomFields(
     }
 
     calculatedFields[fieldName] = numericValue
+
+    if (reservedStatutory) {
+      continue
+    }
 
     if (fieldDef.category === 'earnings') {
       totalIngresosAdicionales += numericValue

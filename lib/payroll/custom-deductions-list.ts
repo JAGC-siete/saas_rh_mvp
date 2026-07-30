@@ -1,5 +1,6 @@
 import { calculatePayroll } from '../payroll-client-specific'
 import { getCustomFieldsFromDB } from '../payroll-calculation-engine'
+import { isStatutoryReservedCustomKey } from './statutory-reserved-custom-keys'
 
 /** Campos legacy hardcodeados (clientes antiguos sin custom_fields en BD). */
 const LEGACY_DEDUCTION_FIELDS = [
@@ -131,6 +132,7 @@ export async function buildCustomDeductionsList(
   if (customFields && Object.keys(customFields).length > 0) {
     for (const [fieldName, fieldDef] of Object.entries(customFields)) {
       if (fieldDef.category !== 'deductions') continue
+      if (isStatutoryReservedCustomKey(fieldName)) continue
       const calculated = parseAmount(calc.calculatedFields?.[fieldName])
       const fromMeta = parseAmount(meta[fieldName])
       const amount = resolveDeductionAmount(calculated, fromMeta)
@@ -140,6 +142,7 @@ export async function buildCustomDeductionsList(
     // Borradores editados pueden tener claves con monto que ya no están en custom_fields actuales
     for (const [key, value] of Object.entries(meta)) {
       if (!isDeductionMetadataKey(key) || customFields[key]) continue
+      if (isStatutoryReservedCustomKey(key)) continue
       pushDeduction(formatFieldLabel(key), parseAmount(value))
     }
   } else {
@@ -149,6 +152,7 @@ export async function buildCustomDeductionsList(
 
     for (const [key, value] of Object.entries(meta)) {
       if (!isDeductionMetadataKey(key) || LEGACY_DEDUCTION_KEYS.has(key)) continue
+      if (isStatutoryReservedCustomKey(key)) continue
       pushDeduction(formatFieldLabel(key), parseAmount(value))
     }
   }
@@ -163,6 +167,7 @@ export async function buildCustomDeductionsList(
 
     for (const plan of plans || []) {
       const fieldKey = plan.field_key as string
+      if (isStatutoryReservedCustomKey(fieldKey)) continue
       const fieldDef = customFields?.[fieldKey]
       const amount =
         parseAmount(meta[fieldKey]) > 0

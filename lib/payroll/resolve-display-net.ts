@@ -1,7 +1,9 @@
 /**
  * Net shown on voucher / planilla must match the same total_deductions shown
- * (statutory + custom). Stored `eff_neto` is often bruto − IHSS − RAP − ISR only
- * when customs live in metadata (e.g. adjustment trigger recalculation).
+ * (statutory + custom). Always bruto − total so the PDF is self-consistent even when
+ * stored `eff_neto` omits customs or double-counts a metadata.isr mirror of eff_isr.
+ *
+ * `customDeductions` / `storedNeto` remain in the signature for call-site compatibility.
  */
 
 export function resolveDisplayNet(params: {
@@ -12,11 +14,8 @@ export function resolveDisplayNet(params: {
 }): number {
   const bruto = Number(params.bruto) || 0
   const totalDeductions = Number(params.totalDeductions) || 0
-  const custom = Number(params.customDeductions) || 0
-  const stored = Number(params.storedNeto) || 0
+  void params.customDeductions
+  void params.storedNeto
 
-  if (custom > 0) {
-    return Math.max(0, Math.round((bruto - totalDeductions) * 100) / 100)
-  }
-  return Math.round(stored * 100) / 100
+  return Math.max(0, Math.round((bruto - totalDeductions) * 100) / 100)
 }

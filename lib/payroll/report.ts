@@ -313,8 +313,9 @@ export async function generateConsolidatedPayrollPDF(
       const totalHourly = planillaHourly.length
 
       const summaryTop = bodyY + 88
-      // Taller box so ~7 breakdown rows fit (Enlace has 7 depts); overflow uses "+N más".
-      const summaryBoxH = 140
+      // ~210 → maxDeptLines ≈ 14 (pitch 11); covers Enlace's 9 depts without "+N más".
+      // Overflow still uses "+N más" if a company has more groups than fit.
+      const summaryBoxH = 210
       drawLiquidPanel(doc, margin, summaryTop, pageWidth - margin * 2, summaryBoxH)
       drawLiquidSectionTitle(doc, 'Resumen ejecutivo', margin + 8, summaryTop + 8)
       doc.font('Helvetica').fontSize(9).fillColor(PDF.bodyMuted).text('Total Empleados:', margin + 14, summaryTop + 30)

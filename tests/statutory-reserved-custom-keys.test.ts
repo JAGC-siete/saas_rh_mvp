@@ -1,6 +1,9 @@
+/**
+ * Run: npx tsx --test tests/statutory-reserved-custom-keys.test.ts
+ */
 import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
-
+import { isStatutoryReservedCustomKey } from '../lib/payroll/statutory-reserved-custom-keys'
 import { buildCustomDeductionsList } from '../lib/payroll/custom-deductions-list'
 
 function mockSupabase(customFields: Record<string, unknown> | null) {
@@ -48,58 +51,28 @@ function mockSupabase(customFields: Record<string, unknown> | null) {
   }
 }
 
-describe('buildCustomDeductionsList', () => {
-  it('ignores earnings and system keys from legacy metadata', async () => {
-    const supabase = mockSupabase(null)
-    const list = await buildCustomDeductionsList(
-      'company-test',
-      {
-        edited: true,
-        horas_extras: 450,
-        feriado_trabajado: 200,
-        comedor: 75,
-        deduccion_especial: 105,
-        tax_year: 2026,
-      },
-      7500,
-      supabase
-    )
-
-    const names = list.map((item) => item.name.toLowerCase())
-    assert.ok(names.includes('comedor'))
-    assert.ok(names.some((n) => n.includes('deduccion especial')))
-    assert.equal(names.some((n) => n.includes('horas')), false)
-    assert.equal(names.some((n) => n.includes('edited')), false)
+describe('isStatutoryReservedCustomKey', () => {
+  it('reserves exact statutory keys case-insensitively', () => {
+    assert.equal(isStatutoryReservedCustomKey('isr'), true)
+    assert.equal(isStatutoryReservedCustomKey('IHSS'), true)
+    assert.equal(isStatutoryReservedCustomKey('Rap'), true)
+    assert.equal(isStatutoryReservedCustomKey('isr_manual'), false)
+    assert.equal(isStatutoryReservedCustomKey('seguro_medico'), false)
   })
+})
 
-  it('reads deduction amount from metadata when formula calc is zero', async () => {
+describe('buildCustomDeductionsList statutory mirrors', () => {
+  it('omits mirrored isr but keeps real manuals', async () => {
     const supabase = mockSupabase({
-      deduccion_especial: {
-        label: 'Deducción especial',
+      isr: {
+        label: 'Impuestos',
         type: 'number',
         category: 'deductions',
         required: false,
         default: 0,
-        formula: '0',
       },
-    })
-
-    const list = await buildCustomDeductionsList(
-      'company-test',
-      { deduccion_especial: 105 },
-      7500,
-      supabase
-    )
-
-    assert.equal(list.length, 1)
-    assert.equal(list[0].name, 'Deducción especial')
-    assert.equal(list[0].amount, 105)
-  })
-
-  it('skips statutory-reserved key isr even when labeled Impuestos', async () => {
-    const supabase = mockSupabase({
-      isr: {
-        label: 'Impuestos',
+      seguro_medico: {
+        label: 'Seguro Médico y Hospitalario',
         type: 'number',
         category: 'deductions',
         required: false,
@@ -116,13 +89,36 @@ describe('buildCustomDeductionsList', () => {
 
     const list = await buildCustomDeductionsList(
       'company-test',
-      { isr: 507.97, cooperativa: 400 },
-      6750,
+      { isr: 507.97, seguro_medico: 633.7, cooperativa: 0 },
+      15000,
       supabase
     )
 
     assert.equal(list.length, 1)
-    assert.equal(list[0].name, 'Cooperativa Elga')
-    assert.equal(list[0].amount, 400)
+    assert.equal(list[0].name, 'Seguro Médico y Hospitalario')
+    assert.equal(list[0].amount, 633.7)
+  })
+
+  it('still lists isr_manual as a real custom deduction', async () => {
+    const supabase = mockSupabase({
+      isr_manual: {
+        label: 'ISR manual',
+        type: 'number',
+        category: 'deductions',
+        required: false,
+        default: 0,
+      },
+    })
+
+    const list = await buildCustomDeductionsList(
+      'company-test',
+      { isr_manual: 200 },
+      10000,
+      supabase
+    )
+
+    assert.equal(list.length, 1)
+    assert.equal(list[0].name, 'ISR manual')
+    assert.equal(list[0].amount, 200)
   })
 })

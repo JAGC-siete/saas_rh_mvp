@@ -1,5 +1,4 @@
 /**
- * Net display must subtract customs when present.
  * Run: npx tsx --test tests/resolve-display-net.test.ts
  */
 import { describe, it } from 'node:test'
@@ -25,7 +24,7 @@ describe('resolveDisplayNet', () => {
     )
   })
 
-  it('keeps stored neto when there are no customs', () => {
+  it('recomputes bruto − total even when customs are zero (align with PDF total)', () => {
     assert.equal(
       resolveDisplayNet({
         bruto: 10750,
@@ -34,6 +33,20 @@ describe('resolveDisplayNet', () => {
         storedNeto: 10380.44,
       }),
       10380.44
+    )
+  })
+
+  it('ignores stored neto that double-counted mirrored isr', () => {
+    const bruto = 16480.23
+    const statutory = 297.58 + 157.93 + 726.68
+    assert.equal(
+      resolveDisplayNet({
+        bruto,
+        totalDeductions: statutory,
+        customDeductions: 0,
+        storedNeto: 14571.36,
+      }),
+      Math.round((bruto - statutory) * 100) / 100
     )
   })
 })
