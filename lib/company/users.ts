@@ -48,6 +48,7 @@ export type CompanyModuleKey =
   | 'attendance'
   | 'leave'
   | 'payroll'
+  | 'deducciones'
   | 'reports'
   | 'settings'
   | 'mtp'
@@ -104,7 +105,8 @@ export function isModuleAssignableForRole(
       moduleKey === 'employees' ||
       moduleKey === 'departments' ||
       moduleKey === 'attendance' ||
-      moduleKey === 'leave'
+      moduleKey === 'leave' ||
+      moduleKey === 'deducciones'
     )
   }
 
@@ -160,6 +162,12 @@ export const COMPANY_MODULE_DEFS: Array<{
     featureKey: 'payroll',
     viewKey: 'can_view_payroll',
     manageKey: 'can_manage_payroll',
+  },
+  {
+    key: 'deducciones',
+    label: 'Deducciones',
+    featureKey: 'deducciones',
+    manageKey: 'can_manage_deducciones',
   },
   {
     key: 'reports',

@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { requireCompanyAccess } from '../../../lib/auth/api-auth-fixed'
+import { canAccessDeduccionesModule } from '../../../lib/security/deducciones-access'
 
 /**
  * API: CRUD for employee_deduction_plans
@@ -9,7 +10,7 @@ import { requireCompanyAccess } from '../../../lib/auth/api-auth-fixed'
  */
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
-    const { supabase, companyId: authCompanyId, role } = await requireCompanyAccess(req, res)
+    const { supabase, companyId: authCompanyId, role, userProfile } = await requireCompanyAccess(req, res)
 
     // Para super_admin sin company_id, usar company_id del body/query
     const companyId = authCompanyId ?? req.body?.company_id ?? req.query?.company_id
@@ -17,7 +18,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'company_id es requerido (o en body/query para super_admin)' })
     }
 
-    if (!['super_admin', 'company_admin', 'hr_manager'].includes(role)) {
+    if (!canAccessDeduccionesModule(role, userProfile?.permissions)) {
       return res.status(403).json({
         error: 'Permisos insuficientes',
         message: 'No tiene permisos para gestionar planes de deducción'

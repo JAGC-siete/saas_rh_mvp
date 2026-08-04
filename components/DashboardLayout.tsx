@@ -30,6 +30,7 @@ import HelpButton from './support/HelpButton'
 import { normalizePermissionsToCanonical } from '../lib/security/canonical-permissions'
 import { canAccessPayrollNavigation } from '../lib/auth/role-access'
 import { canAccessReportsModule } from '../lib/security/report-access'
+import { canAccessDeduccionesModule } from '../lib/security/deducciones-access'
 import { companyRoleLabel } from '../lib/company/users'
 
 interface DashboardLayoutProps {
@@ -43,6 +44,7 @@ interface UserPermissions {
   attendance?: boolean
   leave?: boolean
   payroll?: boolean
+  deducciones?: boolean
   reports?: boolean
   gamification?: boolean
   settings?: boolean
@@ -55,6 +57,7 @@ interface UserPermissions {
 /** Ocultarse mientras cargan permisos o si el estado quedara ambiguo (fail-safe). */
 const GUARD_WHILE_RESOLVING: (keyof UserPermissions)[] = [
   'payroll',
+  'deducciones',
   'reports',
   'mtp',
   'performance',
@@ -71,6 +74,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     attendance: true,
     leave: true,
     payroll: false,
+    deducciones: false,
     reports: false,
     gamification: true,
     settings: false,
@@ -135,17 +139,18 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           // #endregion agent log
 
           const permissions: UserPermissions = {
-            dashboard: true,
-            employees: !!(canonical.can_view_employees ?? canonical.can_view_own_profile),
+            dashboard: !!canonical.can_access_dashboard,
+            employees: !!canonical.can_view_employees,
             departments: !!canonical.can_view_departments,
             attendance: !!canonical.can_view_attendance,
             leave: !!canonical.can_request_leave,
             payroll: showPayrollSidebarGroup && !!(canonical.can_view_payroll || canonical.can_manage_payroll),
+            deducciones: canAccessDeduccionesModule(normalizedRole, rawPermissions),
             reports: canAccessReportsModule(normalizedRole, rawPermissions),
-            gamification: true,
+            gamification: !!canonical.can_access_dashboard,
             settings: !!(canonical.can_view_settings || canonical.can_create_work_schedules),
-            admin: isAdmin,
-            affiliates: true, // Show affiliates link to all users
+            admin: isAdmin && !!canonical.can_access_dashboard,
+            affiliates: !!canonical.can_access_dashboard,
             mtp: !!showPayrollSidebarGroup && rawPermissions?.mtp !== false,
             performance: !!showPayrollSidebarGroup && rawPermissions?.performance !== false,
           }
@@ -172,6 +177,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             attendance: false,
             leave: false,
             payroll: false,
+            deducciones: false,
             reports: false,
             gamification: false,
             settings: false,
@@ -197,6 +203,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             attendance: false,
             leave: false,
             payroll: false,
+            deducciones: false,
             reports: false,
             gamification: false,
             settings: false,
@@ -244,17 +251,18 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
         // Construir objeto de permisos final - FORZAR settings y admin basado en rol
         const permissions: UserPermissions = {
-          dashboard: true,
-          employees: !!(canonical.can_view_employees ?? canonical.can_view_own_profile),
+          dashboard: !!canonical.can_access_dashboard,
+          employees: !!canonical.can_view_employees,
           departments: !!canonical.can_view_departments,
           attendance: !!canonical.can_view_attendance,
           leave: !!canonical.can_request_leave,
           payroll: showPayrollSidebarGroup && !!(canonical.can_view_payroll || canonical.can_manage_payroll),
+          deducciones: canAccessDeduccionesModule(normalizedRole, rawPermissions),
           reports: canAccessReportsModule(normalizedRole, rawPermissions),
-          gamification: true,
+          gamification: !!canonical.can_access_dashboard,
           settings: !!(canonical.can_view_settings || canonical.can_create_work_schedules),
-          admin: isAdmin,
-          affiliates: true, // Show affiliates link to all users
+          admin: isAdmin && !!canonical.can_access_dashboard,
+          affiliates: !!canonical.can_access_dashboard,
           mtp: !!showPayrollSidebarGroup && rawPermissions?.mtp !== false,
           performance: !!showPayrollSidebarGroup && rawPermissions?.performance !== false,
         }
@@ -282,6 +290,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           attendance: false,
           leave: false,
           payroll: false,
+          deducciones: false,
           reports: false,
           gamification: false,
           settings: false,
@@ -346,7 +355,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     { name: 'Permisos',         href: '/app/leave',                icon: UserIcon,              permission: 'leave' },
     { name: 'Nómina',           href: '/app/payroll',              icon: CurrencyDollarIcon,    permission: 'payroll',     feature_key: 'payroll' },
     { name: 'Cesantías',        href: '/app/cesantias',            icon: ScaleIcon,             permission: 'payroll',     feature_key: 'cesantias' },
-    { name: 'Deducciones',      href: '/app/deducciones',          icon: BanknotesIcon,         permission: 'payroll',     feature_key: 'deducciones' },
+    { name: 'Deducciones',      href: '/app/deducciones',          icon: BanknotesIcon,         permission: 'deducciones', feature_key: 'deducciones' },
     { name: '13 & 14 Salario',  href: '/app/13-14-salario',        icon: GiftIcon,              permission: 'payroll',     feature_key: 'decimo_13_14' },
     { name: 'Reportes',         href: '/app/reports',              icon: DocumentChartBarIcon,  permission: 'reports',     feature_key: 'reports' },
     { name: 'MTP Puestos',      href: '/app/mtp',                  icon: ClipboardList,         permission: 'mtp',         feature_key: 'mtp_job_descriptions' },

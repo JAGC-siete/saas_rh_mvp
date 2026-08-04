@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { requireCompanyAccess } from '../../../lib/auth/api-auth-fixed'
+import { canAccessDeduccionesModule } from '../../../lib/security/deducciones-access'
 
 /**
  * GET /api/payroll/deduction-types
@@ -12,7 +13,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const { supabase, companyId: authCompanyId, role } = await requireCompanyAccess(req, res)
+    const { supabase, companyId: authCompanyId, role, userProfile } = await requireCompanyAccess(req, res)
     const companyId = authCompanyId ?? (req.query.company_id as string)
     if (!companyId) {
       return res.status(400).json({
@@ -21,7 +22,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })
     }
 
-    if (!['super_admin', 'company_admin', 'hr_manager'].includes(role)) {
+    if (!canAccessDeduccionesModule(role, userProfile?.permissions)) {
       return res.status(403).json({
         error: 'Permisos insuficientes',
         message: 'No tiene permisos para ver tipos de deducción'

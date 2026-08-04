@@ -11,6 +11,7 @@ export type CanonicalPermissionKey =
   | 'can_view_payroll'
   | 'can_manage_payroll'
   | 'can_authorize_payroll'
+  | 'can_manage_deducciones'
   | 'can_view_reports'
   | 'can_export_reports'
   | 'can_view_attendance_reports'
@@ -43,6 +44,7 @@ function emptyCanonical(): CanonicalPermissions {
     can_view_payroll: false,
     can_manage_payroll: false,
     can_authorize_payroll: false,
+    can_manage_deducciones: false,
     can_view_reports: false,
     can_export_reports: false,
     can_view_attendance_reports: false,
@@ -117,6 +119,7 @@ export function canonicalPermissionsForRole(role: unknown): Partial<CanonicalPer
       'can_view_payroll',
       'can_manage_payroll',
       'can_authorize_payroll',
+      'can_manage_deducciones',
       'can_view_reports',
       'can_export_reports',
       'can_view_settings',
@@ -146,6 +149,7 @@ export function canonicalPermissionsForRole(role: unknown): Partial<CanonicalPer
       'can_manage_attendance',
       'can_view_payroll',
       'can_manage_payroll',
+      'can_manage_deducciones',
       'can_view_reports',
       'can_export_reports',
       'can_view_settings',
@@ -216,8 +220,16 @@ export function normalizePermissionsToCanonical(
   if (base.can_export_reports) base.can_view_reports = true
   if (base.can_export_attendance_reports) base.can_view_attendance_reports = true
   if (base.can_edit_salary) base.can_view_salary = true
+  // Nómina implica poder gestionar planes de deducción, salvo override explícito false
+  if (
+    (base.can_view_payroll || base.can_manage_payroll) &&
+    input.can_manage_deducciones !== false
+  ) {
+    base.can_manage_deducciones = true
+  }
 
   // 4) Manager: sin nómina ni reportes generales; reportes de asistencia por defecto del rol
+  //    can_manage_deducciones queda si viene true en jsonb (acceso solo a Deducciones).
   if (normalizeRole(role) === 'manager') {
     base.can_view_payroll = false
     base.can_manage_payroll = false
@@ -228,6 +240,10 @@ export function normalizePermissionsToCanonical(
     base.can_edit_salary = false
     base.can_view_reports = false
     base.can_export_reports = false
+
+    if (input.can_manage_deducciones === true) {
+      base.can_manage_deducciones = true
+    }
 
     if (input.can_view_attendance_reports === false) {
       base.can_view_attendance_reports = false

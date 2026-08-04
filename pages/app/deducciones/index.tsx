@@ -4,6 +4,7 @@ import ProtectedRoute from '../../../components/ProtectedRoute'
 import AppRoleGate from '../../../components/AppRoleGate'
 import DashboardLayout from '../../../components/DashboardLayout'
 import { PAYROLL_NAV_ROLES } from '../../../lib/auth/role-access'
+import { canAccessDeduccionesModule } from '../../../lib/security/deducciones-access'
 
 const DeduccionesManager = dynamic(
   () => import('../../../components/DeduccionesManager'),
@@ -20,7 +21,10 @@ const DeduccionesManager = dynamic(
 export default function DeduccionesPage() {
   return (
     <ProtectedRoute>
-      <AppRoleGate allowRoles={PAYROLL_NAV_ROLES}>
+      <AppRoleGate
+        allowRoles={PAYROLL_NAV_ROLES}
+        allowWhen={(profile) => canAccessDeduccionesModule(profile.role, profile.permissions)}
+      >
       <DashboardLayout>
         <Suspense
           fallback={

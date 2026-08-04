@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import { requireCompanyAccess } from '../../../lib/auth/api-auth-fixed'
 import { generateDeductionPlansReportPDF, type DeductionPlanPDFItem } from '../../../lib/payroll/deduction-plans-report'
 import { withExportRateLimit } from '../../../lib/security/rate-limiting'
+import { canAccessDeduccionesModule } from '../../../lib/security/deducciones-access'
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -9,7 +10,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   }
 
   try {
-    const { supabase, companyId: authCompanyId, role, user } = await requireCompanyAccess(req, res)
+    const { supabase, companyId: authCompanyId, role, user, userProfile } = await requireCompanyAccess(req, res)
     const companyId = authCompanyId ?? (req.query.company_id as string)
 
     if (!companyId) {
@@ -19,7 +20,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       })
     }
 
-    if (!['super_admin', 'company_admin', 'hr_manager'].includes(role)) {
+    if (!canAccessDeduccionesModule(role, userProfile?.permissions)) {
       return res.status(403).json({
         error: 'Permisos insuficientes',
         message: 'No tiene permisos para exportar el reporte de deducciones'
