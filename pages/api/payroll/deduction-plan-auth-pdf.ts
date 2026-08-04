@@ -34,6 +34,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       })
     }
 
+    // employees has department_id / position / role — not a `department` column
+    // (selecting `department` makes PostgREST fail → toast "Error obteniendo el plan…")
     const { data: plan, error } = await supabase
       .from('employee_deduction_plans')
       .select(
@@ -52,7 +54,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           name,
           dni,
           employee_code,
-          department,
+          position,
           role
         )
       `
@@ -63,7 +65,10 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
     if (error) {
       console.error('Error obteniendo plan para auth PDF:', error)
-      return res.status(500).json({ error: 'Error obteniendo el plan de deducción' })
+      return res.status(500).json({
+        error: 'Error obteniendo el plan de deducción',
+        message: error.message,
+      })
     }
 
     if (!plan) {
@@ -105,7 +110,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           name?: string | null
           dni?: string | null
           employee_code?: string | null
-          department?: string | null
+          position?: string | null
           role?: string | null
         }
       | null
@@ -125,8 +130,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       employee_name: emp?.name || '',
       employee_code: emp?.employee_code,
       employee_dni: emp?.dni,
-      department: emp?.department,
-      position: emp?.role,
+      department: null,
+      position: emp?.position || emp?.role || null,
       field_key: plan.field_key,
       field_label: fieldLabel,
       monto_total: montoTotal,
