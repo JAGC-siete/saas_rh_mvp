@@ -125,7 +125,7 @@ export default function PazLanding() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,7fr)_minmax(0,3fr)] gap-8 lg:gap-12 items-center">
               <div className="min-w-0 flex flex-col items-center lg:items-start text-center lg:text-left">
-                <span className="paz-badge">La forma pacífica de cerrar planilla</span>
+                <span className="paz-badge">Remedio inmediato</span>
                 <h1 className="paz-serif paz-hero-title mb-6">
                   ¿Conocés a alguien que perdió la paz con Recursos Humanos?
                   <br />
