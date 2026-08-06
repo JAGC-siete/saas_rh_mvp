@@ -132,10 +132,10 @@ export default function PazLanding() {
                   <span className="italic">¿Esa persona?</span>
                 </h1>
                 <p className="paz-mantra mb-8 w-full">
-                  Ayudamos a dueños de negocio y equipos de RRHH como vos a encontrar una forma más
-                  pacífica de pagar nómina.{' '}
+                  Ayudamos a Dueños de Negocio y Jefes de Personal a encontrar una forma más pacífica
+                  de llevar la gestión del personal.{' '}
                   <strong className="font-semibold text-[var(--paz-ink)]">
-                    No sos una máquina de Excel.
+                    No eres una máquina de Excel.
                   </strong>
                 </p>
                 <div className="flex flex-col sm:flex-row flex-wrap items-center lg:items-start justify-center lg:justify-start gap-3">
