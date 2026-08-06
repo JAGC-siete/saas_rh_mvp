@@ -120,51 +120,50 @@ export default function PazLanding() {
       <SchemaMarkup schema={[webPageSchema, breadcrumbSchema, faqSchema]} />
 
       <div className="paz-page flex-grow">
-        <section className="paz-hero pt-8 sm:pt-12">
-          {/*
-            Hero = CSS Grid de 2 tracks con minmax(0, fr).
-            Sin minmax(0), el min-content de next/image (682px) explota la columna
-            y la foto invade el copy (CTA encima de la imagen). Ver css-tricks grid blowout.
-            Imagen en flujo normal (width/height + width:100% / height:auto) — no fill.
-          */}
-          <div className="paz-hero-grid">
-            <div className="paz-hero-copy">
-              <span className="paz-badge">La forma pacífica de cerrar planilla</span>
-              <h1 className="paz-serif paz-hero-title">
-                ¿Conocés a alguien que perdió la paz cerrando planilla?
-                <br />
-                <span className="italic">¿Esa persona sos vos?</span>
-              </h1>
-              <p className="paz-mantra">
-                Ayudamos a dueños de negocio y equipos de RRHH como vos a encontrar una forma más
-                pacífica de pagar nómina.{' '}
-                <strong className="font-semibold text-[var(--paz-ink)]">No sos una máquina de Excel.</strong>
-              </p>
-              <div className="paz-hero-actions">
-                <button type="button" onClick={scrollToVideo} className="paz-btn paz-btn-primary">
-                  Ver el video
-                  <span className="text-sm opacity-75">(Método revelado)</span>
-                </button>
+        {/* Mismo patrón que MagneticHero: Tailwind grid + next/image en flujo (no fill). */}
+        <section className="relative pt-8 sm:pt-12 pb-14 overflow-hidden">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,7fr)_minmax(0,3fr)] gap-8 lg:gap-12 items-center">
+              <div className="min-w-0 flex flex-col items-center lg:items-start text-center lg:text-left">
+                <span className="paz-badge">La forma pacífica de cerrar planilla</span>
+                <h1 className="paz-serif paz-hero-title mb-6">
+                  ¿Conocés a alguien que perdió la paz con Recursos Humanos?
+                  <br />
+                  <span className="italic">¿Esa persona?</span>
+                </h1>
+                <p className="paz-mantra mb-8 w-full">
+                  Ayudamos a dueños de negocio y equipos de RRHH como vos a encontrar una forma más
+                  pacífica de pagar nómina.{' '}
+                  <strong className="font-semibold text-[var(--paz-ink)]">
+                    No sos una máquina de Excel.
+                  </strong>
+                </p>
+                <div className="flex flex-col sm:flex-row flex-wrap items-center lg:items-start justify-center lg:justify-start gap-3">
+                  <button type="button" onClick={scrollToVideo} className="paz-btn paz-btn-primary">
+                    Ver el video
+                    <span className="text-sm opacity-75">(Método revelado)</span>
+                  </button>
+                </div>
+              </div>
+
+              <div className="w-full max-w-sm mx-auto lg:max-w-none lg:mx-0 min-w-0">
+                <div className="rounded-2xl p-2 border border-[var(--paz-border)] bg-white shadow-[0_8px_30px_rgba(15,23,42,0.1)]">
+                  <div className="rounded-xl overflow-hidden bg-[var(--paz-glass)] leading-none">
+                    <Image
+                      src="/images/paz/hero-burnout.jpg"
+                      alt="Profesional agobiada frente a su laptop, con las manos en la cara al cerrar planilla"
+                      width={682}
+                      height={1024}
+                      className="block w-full max-w-full h-auto object-cover object-center"
+                      sizes="(max-width: 1023px) min(100vw - 2rem, 24rem), 28vw"
+                    />
+                  </div>
+                </div>
+                <p className="text-center mt-3 text-xs font-medium text-[var(--paz-ink-soft)]">
+                  Contrata hoy tu nueva asistente de RRHH. Digital y Automatizado.
+                </p>
               </div>
             </div>
-
-            <aside className="paz-hero-media" aria-label="Imagen de campaña">
-              <figure className="paz-hero-figure">
-                <div className="paz-hero-photo">
-                  <Image
-                    src="/images/paz/hero-human.jpg"
-                    alt="Profesional agobiada frente a su laptop, con las manos en la cara al cerrar planilla"
-                    width={682}
-                    height={1024}
-                    className="paz-hero-photo-img"
-                    sizes="(max-width: 767px) min(100vw - 3rem, 22rem), 30vw"
-                  />
-                </div>
-                <figcaption className="paz-hero-caption">
-                  Contrata hoy tu nueva asistente de RRHH. Digital y Automatizado.
-                </figcaption>
-              </figure>
-            </aside>
           </div>
         </section>
 
