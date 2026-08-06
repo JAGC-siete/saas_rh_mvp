@@ -8,6 +8,7 @@ import { cn } from '../lib/utils'
 import { isPublicMarketingRoute } from '../lib/seo/public-ssr-routes'
 import MarketingAnalytics from '../components/marketing/MarketingAnalytics'
 import '../styles/globals.css'
+import '../styles/templates.css'
 
 const AppAuthenticatedProviders = dynamic(
   () => import('../components/AppAuthenticatedProviders'),
