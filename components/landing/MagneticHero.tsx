@@ -92,7 +92,7 @@ export default function MagneticHero() {
               </div>
             </div>
             <p className="text-center mt-3 text-xs text-slate-400 font-medium">
-              RRHH con cara humana: menos Excel, más tiempo para tu equipo
+              Contrata hoy tu nueva asistente de RRHH. Digital y Automatizado.
             </p>
           </div>
         </div>

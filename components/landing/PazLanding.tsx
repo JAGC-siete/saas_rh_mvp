@@ -158,7 +158,7 @@ export default function PazLanding() {
                 </div>
               </div>
               <p className="paz-hero-caption">
-                RRHH con cara humana: menos Excel, más tiempo para tu equipo
+                Contrata hoy tu nueva asistente de RRHH. Digital y Automatizado.
               </p>
             </div>
           </div>
