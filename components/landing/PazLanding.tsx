@@ -283,31 +283,68 @@ export default function PazLanding() {
 
         <hr className="paz-divider" />
 
-        <section className="paz-section py-16 sm:py-20 text-center">
-          <h2 className="paz-dual-cta paz-serif mb-6">
-            Perder la paz <span>/</span> Hacer las paces
-          </h2>
-          <p className="paz-lead max-w-lg mx-auto mb-10">
-            La ayuda está a un click. Activá tu trial o pedí de una vez tu cotización. El tiempo
-            perdido es real, pero también lo es esta solución. (La paz también.)
-          </p>
-          <div className="flex flex-col sm:flex-row flex-wrap items-center justify-center gap-3">
-            <TrackedInternalCta
-              href="/activar?utm_source=paz&utm_medium=cta&utm_campaign=cerrar-planilla"
-              ctaType="activar_trial"
-              location="paz_landing_primary"
-              className="paz-btn paz-btn-activar"
-            >
-              Probar gratis
-            </TrackedInternalCta>
-            <TrackedInternalCta
-              href="/ventas?utm_source=paz&utm_medium=cta&utm_campaign=tocar-pasto"
-              ctaType="solicitar_cotizacion"
-              location="paz_landing_secondary"
-              className="paz-btn paz-btn-ghost"
-            >
-              Solicitar cotización
-            </TrackedInternalCta>
+        {/* Misma mecánica que hero: grid + next/image en flujo, minmax/min-w-0 */}
+        <section className="relative py-16 sm:py-20 overflow-hidden">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,3fr)_minmax(0,4fr)_minmax(0,3fr)] gap-8 lg:gap-10 items-center">
+              <div className="w-full max-w-xs mx-auto lg:max-w-none min-w-0 order-2 lg:order-1">
+                <div className="rounded-2xl p-2 border border-[var(--paz-border)] bg-white shadow-[0_8px_30px_rgba(15,23,42,0.1)]">
+                  <div className="rounded-xl overflow-hidden bg-[var(--paz-glass)] leading-none">
+                    <Image
+                      src="/images/paz/cta-stress.jpg"
+                      alt="Profesional agobiada en oficina, perdiendo la paz con la gestión del personal"
+                      width={682}
+                      height={1024}
+                      className="block w-full max-w-full h-auto object-cover object-center"
+                      sizes="(max-width: 1023px) min(100vw - 2rem, 20rem), 22vw"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="min-w-0 text-center order-1 lg:order-2">
+                <h2 className="paz-dual-cta paz-serif mb-6">
+                  Perder la paz <span>/</span> Hacer las paces
+                </h2>
+                <p className="paz-lead max-w-lg mx-auto mb-10">
+                  La ayuda está a un click. Activá tu trial o pedí de una vez tu cotización. El tiempo
+                  perdido es real, pero también lo es esta solución. (La paz también.)
+                </p>
+                <div className="flex flex-col sm:flex-row flex-wrap items-center justify-center gap-3">
+                  <TrackedInternalCta
+                    href="/activar?utm_source=paz&utm_medium=cta&utm_campaign=cerrar-planilla"
+                    ctaType="activar_trial"
+                    location="paz_landing_primary"
+                    className="paz-btn paz-btn-activar"
+                  >
+                    Probar gratis
+                  </TrackedInternalCta>
+                  <TrackedInternalCta
+                    href="/ventas?utm_source=paz&utm_medium=cta&utm_campaign=tocar-pasto"
+                    ctaType="solicitar_cotizacion"
+                    location="paz_landing_secondary"
+                    className="paz-btn paz-btn-ghost"
+                  >
+                    Solicitar cotización
+                  </TrackedInternalCta>
+                </div>
+              </div>
+
+              <div className="w-full max-w-xs mx-auto lg:max-w-none min-w-0 order-3">
+                <div className="rounded-2xl p-2 border border-[var(--paz-border)] bg-white shadow-[0_8px_30px_rgba(15,23,42,0.1)]">
+                  <div className="rounded-xl overflow-hidden bg-[var(--paz-glass)] leading-none">
+                    <Image
+                      src="/images/paz/cta-peace.jpg"
+                      alt="Profesional sonriendo en oficina, con paz al gestionar personal"
+                      width={682}
+                      height={1024}
+                      className="block w-full max-w-full h-auto object-cover object-center"
+                      sizes="(max-width: 1023px) min(100vw - 2rem, 20rem), 22vw"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </section>
 
