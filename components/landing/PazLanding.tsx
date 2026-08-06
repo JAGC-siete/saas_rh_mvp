@@ -1,3 +1,4 @@
+import Image from 'next/image'
 import Link from 'next/link'
 import TrackedInternalCta from '../TrackedInternalCta'
 import PublicPageShell from './PublicPageShell'
@@ -137,6 +138,17 @@ export default function PazLanding() {
               <span className="text-sm opacity-75">(Método revelado)</span>
             </button>
           </div>
+
+          <figure className="paz-hero-photo">
+            <Image
+              src="/images/paz/hero-human.jpg"
+              alt="Profesional en escritorio con cuaderno y pluma, enfocada en su trabajo de RRHH"
+              fill
+              className="object-cover object-top"
+              loading="lazy"
+              sizes="(max-width: 640px) 90vw, 28rem"
+            />
+          </figure>
         </section>
 
         <hr className="paz-divider" />

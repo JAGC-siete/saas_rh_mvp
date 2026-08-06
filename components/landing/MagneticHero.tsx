@@ -1,14 +1,7 @@
-import dynamic from 'next/dynamic'
+import Image from 'next/image'
 import { CheckCircleIcon, BoltIcon, UserGroupIcon } from '@heroicons/react/24/outline'
 import TrackedInternalCta from '../TrackedInternalCta'
 import { nowInHonduras } from '../../lib/timezone'
-
-const HeroProductWindow = dynamic(() => import('./HeroProductWindow'), {
-  ssr: false,
-  loading: () => (
-    <div className="hidden lg:block min-h-[280px] rounded-2xl bg-white/5 border border-white/10" aria-hidden />
-  ),
-})
 
 export default function MagneticHero() {
   const now = nowInHonduras()
@@ -84,9 +77,22 @@ export default function MagneticHero() {
             </p>
           </div>
 
-          {/* Below critical text — client-only product window */}
-          <div>
-            <HeroProductWindow />
+          <div className="w-full max-w-sm mx-auto lg:max-w-none lg:mx-0">
+            <div className="glass-modern rounded-2xl p-2 shadow-[0_20px_50px_rgba(0,0,0,0.4)]">
+              <div className="relative aspect-[3/4] w-full rounded-xl overflow-hidden bg-slate-900/50 border border-white/5">
+                <Image
+                  src="/images/landing/hero-human.jpg"
+                  alt="Profesional de RRHH en oficina, con café y libretas de trabajo"
+                  fill
+                  className="object-cover object-top"
+                  loading="lazy"
+                  sizes="(max-width: 1024px) 80vw, 28vw"
+                />
+              </div>
+            </div>
+            <p className="text-center mt-3 text-xs text-slate-400 font-medium">
+              RRHH con cara humana: menos Excel, más tiempo para tu equipo
+            </p>
           </div>
         </div>
       </div>

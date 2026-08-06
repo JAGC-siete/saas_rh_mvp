@@ -141,6 +141,18 @@
   box-shadow: 0 8px 30px rgba(15, 23, 42, 0.06);
 }
 
+.paz-hero-photo {
+  position: relative;
+  width: min(100%, 22rem);
+  aspect-ratio: 3 / 4;
+  margin: 2.5rem auto 0;
+  border-radius: 1.25rem;
+  overflow: hidden;
+  border: 1px solid var(--paz-border);
+  background: var(--paz-glass);
+  box-shadow: 0 8px 30px rgba(15, 23, 42, 0.1);
+}
+
 .paz-video-frame {
   aspect-ratio: 16 / 9;
   border-radius: 1.25rem;
