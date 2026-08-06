@@ -307,8 +307,8 @@ export default function PazLanding() {
                   Perder la paz <span>/</span> Hacer las paces
                 </h2>
                 <p className="paz-lead max-w-lg mx-auto mb-10">
-                  La ayuda está a un click. Activá tu trial o pedí de una vez tu cotización. El tiempo
-                  perdido es real, pero también lo es esta solución. (La paz también.)
+                  La ayuda está a un click. Activá tu demo o pedí de una vez tu cotización. El tiempo
+                  perdido es real, pero también lo es la solución. (La paz recuperada también.)
                 </p>
                 <div className="flex flex-col sm:flex-row flex-wrap items-center justify-center gap-3">
                   <TrackedInternalCta
