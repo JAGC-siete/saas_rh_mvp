@@ -5,6 +5,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { createClient } from '../../../../lib/supabase/server'
 import { logger } from '../../../../lib/logger'
+import { extractSessionIdFromSession } from '../../../../lib/auth/session-revoke'
 
 interface Session {
   id: string
@@ -35,19 +36,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(401).json({ error: 'Unauthorized' })
     }
 
-    // Extract current session token
-    const cookies = req.cookies as Record<string, string>
-    const authToken = cookies['sb-auth-token'] || cookies['sb-access-token']
-    let currentSessionToken: string | null = null
-
-    if (authToken) {
-      try {
-        const parsed = JSON.parse(authToken)
-        currentSessionToken = parsed.session?.access_token?.jti || parsed.jti || null
-      } catch {
-        // Invalid token format, continue without current token
-      }
-    }
+    const {
+      data: { session },
+    } = await supabase.auth.getSession()
+    const currentSessionToken = extractSessionIdFromSession(session)
 
     // Get all active sessions for user
     const { data: sessions, error: sessionsError } = await supabase
