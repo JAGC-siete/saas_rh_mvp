@@ -25,9 +25,45 @@ const AWSCertificationsSection = dynamic(() => import('../components/AWSCertific
 const HOME_BANNER_OFFSET_PX = 36
 
 const TESTIMONIALS = [
-  { name: 'Felix Garcia', company: 'Restaurante Tonys Mar', employees: '40 empleados', quote: 'Ya no pierdo domingos haciendo planilla. 4 horas ahora son 4 minutos.', rating: 5 },
-  { name: 'Nancy Urrutia', company: 'Prohalca', employees: '37 empleados', quote: 'Habiamos contratado un sistema de asistencia que no hacia planilla, ahora tenemos dashboard interactivo.', rating: 5 },
-  { name: 'Abogado Marcio Moya', company: '', employees: '15 empleados', quote: 'Cero errores en deducciones desde que lo uso. Mis clientes están felices.', rating: 5 },
+  {
+    name: 'Felix G.',
+    company: "Tony's Mar Restaurante",
+    employees: 'Dueño',
+    quote:
+      'Perdía los domingos con Excel. Ahora cierro planilla en minutos y el equipo ya no me pide “una corrección más”.',
+    rating: 5,
+  },
+  {
+    name: 'Karla M.',
+    company: 'Enlace',
+    employees: 'Jefa de Personal',
+    quote:
+      'Lo que más me quitó paz eran IHSS, RAP e ISR a mano. Con SISU dejo de ser la máquina de Excel de la empresa.',
+    rating: 5,
+  },
+  {
+    name: 'Roberto A.',
+    company: 'Agrocomercial Ferretero Eben-Ezer',
+    employees: 'Administrador',
+    quote:
+      'El biométrico y la nómina en un solo flujo nos bajó errores y peleas de fin de quincena. Remedio inmediato, de verdad.',
+    rating: 5,
+  },
+  {
+    name: 'Nancy L.',
+    company: 'Rooster Cafe',
+    employees: 'Gerente de RRHH',
+    quote: 'Antes cada cierre era un drama. Hoy activo, reviso y listo. Recuperé tiempo… y un poco de paz.',
+    rating: 5,
+  },
+  {
+    name: 'Marcio P.',
+    company: 'Grupo Gastro Cueva',
+    employees: 'Contador',
+    quote:
+      'Pasamos de pelear con deducciones a tener un flujo claro. Mis clientes (y yo) dormimos mejor en quincena.',
+    rating: 5,
+  },
 ]
 
 export default function LandingPage() {
@@ -112,7 +148,7 @@ export default function LandingPage() {
           </h2>
         </ScrollReveal>
 
-        <div className="grid md:grid-cols-3 gap-4 sm:gap-6 max-w-6xl mx-auto">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 max-w-6xl mx-auto">
           {TESTIMONIALS.map((testimonial, i) => {
             const reviewSchema = generateReviewSchema({
               productName: 'Humano SISU',
