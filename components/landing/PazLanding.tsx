@@ -120,35 +120,44 @@ export default function PazLanding() {
       <SchemaMarkup schema={[webPageSchema, breadcrumbSchema, faqSchema]} />
 
       <div className="paz-page flex-grow">
-        <section className="paz-section pt-8 sm:pt-12 text-center">
-          <span className="paz-badge">La forma pacífica de cerrar planilla</span>
-          <h1 className="paz-serif paz-hero-title mb-6">
-            ¿Conocés a alguien que perdió la paz cerrando planilla?
-            <br />
-            <span className="italic">¿Esa persona sos vos?</span>
-          </h1>
-          <p className="paz-mantra max-w-2xl mx-auto mb-10">
-            Ayudamos a dueños de negocio y equipos de RRHH como vos a encontrar una forma más
-            pacífica de pagar nómina.{' '}
-            <strong className="font-semibold text-[var(--paz-ink)]">No sos una máquina de Excel.</strong>
-          </p>
-          <div className="flex flex-col sm:flex-row flex-wrap items-center justify-center gap-3">
-            <button type="button" onClick={scrollToVideo} className="paz-btn paz-btn-primary">
-              Ver el video
-              <span className="text-sm opacity-75">(Método revelado)</span>
-            </button>
-          </div>
+        <section className="paz-hero pt-8 sm:pt-12">
+          <div className="paz-hero-grid">
+            <div className="paz-hero-copy">
+              <span className="paz-badge">La forma pacífica de cerrar planilla</span>
+              <h1 className="paz-serif paz-hero-title mb-6">
+                ¿Conocés a alguien que perdió la paz cerrando planilla?
+                <br />
+                <span className="italic">¿Esa persona sos vos?</span>
+              </h1>
+              <p className="paz-mantra mb-10">
+                Ayudamos a dueños de negocio y equipos de RRHH como vos a encontrar una forma más
+                pacífica de pagar nómina.{' '}
+                <strong className="font-semibold text-[var(--paz-ink)]">No sos una máquina de Excel.</strong>
+              </p>
+              <div className="flex flex-col sm:flex-row flex-wrap items-center sm:items-start justify-center sm:justify-start gap-3">
+                <button type="button" onClick={scrollToVideo} className="paz-btn paz-btn-primary">
+                  Ver el video
+                  <span className="text-sm opacity-75">(Método revelado)</span>
+                </button>
+              </div>
+            </div>
 
-          <figure className="paz-hero-photo">
-            <Image
-              src="/images/paz/hero-human.jpg"
-              alt="Profesional en escritorio con cuaderno y pluma, enfocada en su trabajo de RRHH"
-              fill
-              className="object-cover object-top"
-              loading="lazy"
-              sizes="(max-width: 640px) 90vw, 28rem"
-            />
-          </figure>
+            <div className="paz-hero-media">
+              <figure className="paz-hero-photo">
+                <Image
+                  src="/images/paz/hero-human.jpg"
+                  alt="Profesional en escritorio con cuaderno y pluma, enfocada en su trabajo de RRHH"
+                  fill
+                  className="object-cover object-top"
+                  loading="lazy"
+                  sizes="(max-width: 1024px) 80vw, 28vw"
+                />
+              </figure>
+              <p className="paz-hero-caption">
+                RRHH con cara humana: menos Excel, más tiempo para tu equipo
+              </p>
+            </div>
+          </div>
         </section>
 
         <hr className="paz-divider" />

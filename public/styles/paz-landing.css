@@ -141,16 +141,70 @@
   box-shadow: 0 8px 30px rgba(15, 23, 42, 0.06);
 }
 
+.paz-hero {
+  position: relative;
+  z-index: 1;
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 3.5rem 1.5rem;
+}
+
+.paz-hero-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2rem;
+  align-items: center;
+}
+
+.paz-hero-copy {
+  text-align: center;
+}
+
+.paz-hero-media {
+  width: 100%;
+  max-width: 22rem;
+  margin: 0 auto;
+}
+
 .paz-hero-photo {
   position: relative;
-  width: min(100%, 22rem);
+  width: 100%;
   aspect-ratio: 3 / 4;
-  margin: 2.5rem auto 0;
+  margin: 0;
   border-radius: 1.25rem;
   overflow: hidden;
   border: 1px solid var(--paz-border);
   background: var(--paz-glass);
   box-shadow: 0 8px 30px rgba(15, 23, 42, 0.1);
+}
+
+.paz-hero-caption {
+  margin-top: 0.75rem;
+  text-align: center;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--paz-ink-soft);
+}
+
+@media (min-width: 1024px) {
+  .paz-hero-grid {
+    grid-template-columns: 7fr 3fr;
+    gap: 3rem;
+  }
+
+  .paz-hero-copy {
+    text-align: left;
+  }
+
+  .paz-hero-media {
+    max-width: none;
+    margin: 0;
+  }
+
+  .paz-hero-copy .paz-mantra {
+    margin-left: 0;
+    margin-right: 0;
+  }
 }
 
 .paz-video-frame {
