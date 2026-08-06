@@ -43,7 +43,7 @@ export default function MagneticHero() {
             </h1>
 
             <p className="text-base sm:text-lg text-slate-400 max-w-2xl mt-4 sm:mt-6 font-medium landing-dark-text">
-              Nuestro ecosistema integra reloj biométrico inteligente con software en un solo flujo. Digitaliza el control de asistencia, automatiza deducciones legales, elimina errores de Excel y libera a tu equipo para hacer crecer la empresa.
+              Ecosistema integrado. Del registro a la nómina sin intervención humana. Reloj biométrico inteligente y software en un solo flujo.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-3 mt-6 sm:mt-8">
