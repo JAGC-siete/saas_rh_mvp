@@ -74,4 +74,26 @@ describe('ventas business rules', () => {
   it('mensaje de mensual no disponible menciona umbral', () => {
     assert.match(ventasMonthlyUnavailableMessage(), new RegExp(String(VENTAS_MONTHLY_MIN_EMPLOYEES)))
   })
+
+  it('tier override included/sale gana sobre umbral auto', () => {
+    assert.equal(
+      resolveHardwareMode('annual', 20, { tier: { annual_terminal_mode: 'included' } }),
+      'included'
+    )
+    assert.equal(
+      resolveHardwareMode('annual', 100, { tier: { annual_terminal_mode: 'sale' } }),
+      'sale'
+    )
+    assert.equal(
+      resolveHardwareMode('annual', 100, {
+        rules: { annual_terminals_included_min_employees: 200 },
+        tier: { annual_terminal_mode: 'auto' },
+      }),
+      'sale'
+    )
+  })
+
+  it('hardwareSaleTotal respeta unit price de rules', () => {
+    assert.equal(hardwareSaleTotal(1, { hardware_sale_unit_price: 8000 }).total, 8000)
+  })
 })

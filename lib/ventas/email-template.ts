@@ -62,8 +62,18 @@ export function generateVentasQuotationEmailHTML(params: {
   const companyLabel = companyName?.trim() || 'tu empresa'
   const isAnnual = quote.billing_modality === 'annual'
   const employees = employeesCountFromQuote(quote)
-  const includesTerminals = quoteIncludesBiometricTerminals(quote.billing_modality, employees)
-  const hardwareMode = resolveHardwareMode(quote.billing_modality, employees)
+  const ruleOpts = {
+    rules: quote.business_rules,
+    tier: {
+      annual_terminal_mode: quote.tier?.annual_terminal_mode,
+      included_terminals_max: quote.tier?.included_terminals_max,
+    },
+  }
+  const includesTerminals =
+    quote.hardware_mode === 'included' ||
+    quoteIncludesBiometricTerminals(quote.billing_modality, employees, ruleOpts)
+  const hardwareMode =
+    quote.hardware_mode || resolveHardwareMode(quote.billing_modality, employees, ruleOpts)
   const summary = buildQuotationPlanSummary({ quote, sentAt, now })
   const quoteLabel = isAnnual ? 'COTIZACIÓN ANUAL' : 'COTIZACIÓN MENSUAL'
   const refLabel = buildVentasRefLabel(companyName, contactName)
@@ -105,16 +115,29 @@ export function generateVentasQuotationEmailText(params: {
   const companyLabel = companyName?.trim() || 'tu empresa'
   const summary = buildQuotationPlanSummary({ quote, sentAt, now })
   const employees = employeesCountFromQuote(quote)
+  const ruleOpts = {
+    rules: quote.business_rules,
+    tier: {
+      annual_terminal_mode: quote.tier?.annual_terminal_mode,
+      included_terminals_max: quote.tier?.included_terminals_max,
+    },
+  }
   const modalityLabel = getVentasModalityDefinition(quote.billing_modality, {
     employeesCount: employees,
+    currency: quote.currency,
+    rules: quote.business_rules,
+    tier: ruleOpts.tier,
   }).label
   const isAnnual = quote.billing_modality === 'annual'
   const quoteLabel = isAnnual ? 'COTIZACIÓN ANUAL' : 'COTIZACIÓN MENSUAL'
   const refLabel = buildVentasRefLabel(companyName, contactName)
   const terminals = buildTerminalsDisplayLabel({
     terminalsCount: quote.terminals_count,
-    includesTerminals: quoteIncludesBiometricTerminals(quote.billing_modality, employees),
-    hardwareMode: resolveHardwareMode(quote.billing_modality, employees),
+    includesTerminals:
+      quote.hardware_mode === 'included' ||
+      quoteIncludesBiometricTerminals(quote.billing_modality, employees, ruleOpts),
+    hardwareMode:
+      quote.hardware_mode || resolveHardwareMode(quote.billing_modality, employees, ruleOpts),
   })
 
   const lines: string[] = [

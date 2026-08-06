@@ -9,13 +9,16 @@ import { notificationManager } from '../../lib/notification-providers'
 import { getResendFromContact } from '../../lib/resend-from'
 import type { QuotationRequest, QuotationResponse, VentasPricingTier, CurrencyCode } from '../../lib/ventas/types'
 import { clampInt, resolveTierByEmployees, roundMoney } from '../../lib/ventas/pricing'
-import { hardwareFeeMonthly, ventasTooManyTerminalsErrorMessage } from '../../lib/ventas/modality-includes'
+import { hardwareFeeMonthly } from '../../lib/ventas/modality-includes'
 import {
+  DEFAULT_VENTAS_BUSINESS_RULES,
   hardwareSaleTotal,
   isMonthlyModalityAvailable,
+  resolveHardwareMode,
   shouldChargeHardwareContinuity,
   shouldChargeHardwareSale,
   ventasMonthlyUnavailableMessage,
+  ventasTooManyTerminalsErrorMessage,
 } from '../../lib/ventas/business-rules'
 import { loadActiveVentasConfig, resolveSubmittedPromo } from '../../lib/ventas/load-ventas-config'
 import { generateVentasQuotationPDF } from '../../lib/ventas/pdf'
@@ -235,9 +238,6 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
   }
 
   const billingModality = normalizeBillingModality((body as any).billing_modality)
-  if (billingModality === 'monthly' && !isMonthlyModalityAvailable(employeesCount)) {
-    return res.status(400).json({ error: ventasMonthlyUnavailableMessage() })
-  }
   const terminalsCountRaw = (body as any).terminals_count
   const terminalsCount = clampInt(Number(terminalsCountRaw ?? 0), 0, 10000)
 
@@ -273,10 +273,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
         currency: FALLBACK_CURRENCY,
         tiers: FALLBACK_TIERS,
         promoCodes: [],
+        businessRules: DEFAULT_VENTAS_BUSINESS_RULES,
       }
     }
 
-    const { currency: configCurrency, tiers, promoCodes } = ventasConfig
+    const { currency: configCurrency, tiers, promoCodes, businessRules } = ventasConfig
     const listCurrency: CurrencyCode = configCurrency || FALLBACK_CURRENCY
     const displayCurrency = currencyForCountryCode(countryCode)
     const promo = resolveSubmittedPromo({
@@ -296,6 +297,16 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
     }
     pricingTierId = (tier as any).id || null
 
+    const tierHardware = {
+      annual_terminal_mode: tier.annual_terminal_mode ?? 'auto',
+      included_terminals_max: tier.included_terminals_max ?? null,
+    }
+    const ruleOpts = { rules: businessRules, tier: tierHardware }
+
+    if (billingModality === 'monthly' && !isMonthlyModalityAvailable(employeesCount, businessRules)) {
+      return res.status(400).json({ error: ventasMonthlyUnavailableMessage(businessRules) })
+    }
+
     // Software tiers viven en la moneda de config; hardware lista en HNL.
     const annualSubtotal = roundMoney(Number(tier.price))
     const annualDiscountAmount = roundMoney(annualSubtotal * discountPctApplied)
@@ -303,11 +314,15 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
 
     const monthlySoftwareTotal = roundMoney(annualTotal / 12)
     const terminalsForPricing = terminalsCount >= 1 ? terminalsCount : 1
-    const hwQuote = hardwareFeeMonthly(terminalsForPricing)
+    const hwQuote = hardwareFeeMonthly(terminalsForPricing, businessRules, tierHardware)
     if (hwQuote.special) {
-      return res.status(400).json({ error: ventasTooManyTerminalsErrorMessage() })
+      return res.status(400).json({ error: ventasTooManyTerminalsErrorMessage(businessRules) })
     }
-    const monthlyHardwareFeeList = shouldChargeHardwareContinuity(billingModality, employeesCount)
+    const monthlyHardwareFeeList = shouldChargeHardwareContinuity(
+      billingModality,
+      employeesCount,
+      ruleOpts
+    )
       ? hwQuote.fee
       : 0
     const monthlyHardwareFee = convertVentasMoney(
@@ -315,8 +330,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
       VENTAS_PRICE_LIST_CURRENCY,
       listCurrency
     )
-    const saleQuote = shouldChargeHardwareSale(billingModality, employeesCount)
-      ? hardwareSaleTotal(terminalsForPricing)
+    const saleQuote = shouldChargeHardwareSale(billingModality, employeesCount, ruleOpts)
+      ? hardwareSaleTotal(terminalsForPricing, businessRules)
       : null
     const hardwareSaleTotalAmount = saleQuote
       ? convertVentasMoney(saleQuote.total, VENTAS_PRICE_LIST_CURRENCY, listCurrency)
@@ -325,6 +340,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
       ? convertVentasMoney(saleQuote.unitPrice, VENTAS_PRICE_LIST_CURRENCY, listCurrency)
       : undefined
     const monthlyTotal = roundMoney(monthlySoftwareTotal + monthlyHardwareFee)
+    const hardwareMode = resolveHardwareMode(billingModality, employeesCount, ruleOpts)
 
     const quoteList = {
       currency: listCurrency,
@@ -340,7 +356,14 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
       coupon_applied: isCouponValid,
       discount_pct_applied: discountPctApplied,
       coupon_code_applied: couponCodeApplied,
-      tier: { min_employees: tier.min_employees, max_employees: tier.max_employees },
+      tier: {
+        min_employees: tier.min_employees,
+        max_employees: tier.max_employees,
+        annual_terminal_mode: tierHardware.annual_terminal_mode,
+        included_terminals_max: tierHardware.included_terminals_max,
+      },
+      hardware_mode: hardwareMode,
+      business_rules: businessRules,
       billing_modality: billingModality,
       terminals_count: terminalsForPricing,
       employees_count: employeesCount,
@@ -389,6 +412,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
           max_employees: tier.max_employees,
           price: Number(tier.price),
           list_currency: listCurrency,
+          annual_terminal_mode: tierHardware.annual_terminal_mode,
+          included_terminals_max: tierHardware.included_terminals_max,
         },
         status: 'created',
         meta,

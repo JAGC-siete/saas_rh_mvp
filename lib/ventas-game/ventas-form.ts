@@ -1,11 +1,18 @@
 import type { QuotationRequest } from '../ventas/types'
-import { VENTAS_MAX_AUTO_QUOTE_TERMINALS } from '../ventas/modality-includes'
 import {
   isMonthlyModalityAvailable,
+  mergeVentasBusinessRules,
   ventasMonthlyUnavailableMessage,
+  VENTAS_MAX_AUTO_QUOTE_TERMINALS,
+  type VentasBusinessRules,
 } from '../ventas/business-rules'
 import type { CountryCode } from '../country/supported'
 import { isCountryCode } from '../country/supported'
+
+export type VentasFormLimits = {
+  monthly_min_employees?: number
+  max_auto_quote_terminals?: number
+}
 
 export type VentasValidationErrors = {
   contact_email?: string
@@ -17,7 +24,21 @@ export type VentasValidationErrors = {
   submit?: string
 }
 
-export function computeVentasErrors(fd: QuotationRequest): VentasValidationErrors {
+function limitsToRules(limits?: VentasFormLimits | null): Partial<VentasBusinessRules> {
+  return {
+    monthly_min_employees: limits?.monthly_min_employees,
+    max_auto_quote_terminals: limits?.max_auto_quote_terminals,
+  }
+}
+
+function maxTerminals(limits?: VentasFormLimits | null): number {
+  return mergeVentasBusinessRules(limitsToRules(limits)).max_auto_quote_terminals
+}
+
+export function computeVentasErrors(
+  fd: QuotationRequest,
+  limits?: VentasFormLimits | null
+): VentasValidationErrors {
   const e: VentasValidationErrors = {}
   const email = (fd.contact_email || '').trim()
   if (!email) e.contact_email = 'Indique un correo; ahí le enviamos la propuesta.'
@@ -31,9 +52,10 @@ export function computeVentasErrors(fd: QuotationRequest): VentasValidationError
   const emp = Number(fd.employees_count)
   if (!Number.isFinite(emp) || emp < 1 || emp > 200) e.employees_count = 'Indique entre 1 y 200 empleados.'
 
+  const rules = limitsToRules(limits)
   const modality = fd.billing_modality === 'monthly' ? 'monthly' : 'annual'
-  if (modality === 'monthly' && Number.isFinite(emp) && !isMonthlyModalityAvailable(emp)) {
-    e.billing_modality = ventasMonthlyUnavailableMessage()
+  if (modality === 'monthly' && Number.isFinite(emp) && !isMonthlyModalityAvailable(emp, rules)) {
+    e.billing_modality = ventasMonthlyUnavailableMessage(rules)
   }
 
   const cc = fd.country_code
@@ -42,15 +64,19 @@ export function computeVentasErrors(fd: QuotationRequest): VentasValidationError
   }
 
   const t = Number(fd.terminals_count)
+  const maxT = maxTerminals(limits)
   if (!Number.isFinite(t) || t < 1) e.terminals_count = 'Indique cuántos terminales necesita.'
-  else if (t > VENTAS_MAX_AUTO_QUOTE_TERMINALS) {
-    e.terminals_count = `Indique entre 1 y ${VENTAS_MAX_AUTO_QUOTE_TERMINALS} terminales.`
+  else if (t > maxT) {
+    e.terminals_count = `Indique entre 1 y ${maxT} terminales.`
   }
 
   return e
 }
 
-export function ventasScopeErrors(fd: QuotationRequest): VentasValidationErrors {
+export function ventasScopeErrors(
+  fd: QuotationRequest,
+  limits?: VentasFormLimits | null
+): VentasValidationErrors {
   const e: VentasValidationErrors = {}
   const cc = fd.country_code
   if (!cc || !isCountryCode(cc)) e.country_code = 'Seleccione el país.'
@@ -58,13 +84,15 @@ export function ventasScopeErrors(fd: QuotationRequest): VentasValidationErrors 
   const emp = Number(fd.employees_count)
   if (!Number.isFinite(emp) || emp < 1 || emp > 200) e.employees_count = 'Indique entre 1 y 200 empleados.'
 
+  const rules = limitsToRules(limits)
   const modality = fd.billing_modality === 'monthly' ? 'monthly' : 'annual'
-  if (modality === 'monthly' && Number.isFinite(emp) && !isMonthlyModalityAvailable(emp)) {
-    e.billing_modality = ventasMonthlyUnavailableMessage()
+  if (modality === 'monthly' && Number.isFinite(emp) && !isMonthlyModalityAvailable(emp, rules)) {
+    e.billing_modality = ventasMonthlyUnavailableMessage(rules)
   }
 
   const t = Number(fd.terminals_count)
-  if (!Number.isFinite(t) || t < 1 || t > VENTAS_MAX_AUTO_QUOTE_TERMINALS) {
+  const maxT = maxTerminals(limits)
+  if (!Number.isFinite(t) || t < 1 || t > maxT) {
     e.terminals_count = 'Indique terminales válidas.'
   }
 
@@ -111,3 +139,6 @@ export const VENTAS_SECTOR_OPTIONS: { value: string; label: string }[] = [
   { value: 'servicios', label: 'Servicios profesionales' },
   { value: 'otro', label: 'Otro' },
 ]
+
+/** @deprecated use limits from public-config; kept for callers that import the constant */
+export { VENTAS_MAX_AUTO_QUOTE_TERMINALS }

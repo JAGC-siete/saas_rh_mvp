@@ -40,13 +40,25 @@ export async function generateVentasQuotationPDF(params: {
   } = params
 
   const employees = quote.employees_count || employeesCount || employeesCountFromQuote(quote)
-  const includesTerminals = quoteIncludesBiometricTerminals(quote.billing_modality, employees)
-  const hardwareMode = resolveHardwareMode(quote.billing_modality, employees)
+  const ruleOpts = {
+    rules: quote.business_rules,
+    tier: {
+      annual_terminal_mode: quote.tier?.annual_terminal_mode,
+      included_terminals_max: quote.tier?.included_terminals_max,
+    },
+  }
+  const includesTerminals =
+    quote.hardware_mode === 'included' ||
+    quoteIncludesBiometricTerminals(quote.billing_modality, employees, ruleOpts)
+  const hardwareMode =
+    quote.hardware_mode || resolveHardwareMode(quote.billing_modality, employees, ruleOpts)
   const planSummary = buildQuotationPlanSummary({ quote, sentAt })
   const modalityComparison = buildModalityComparison({ quote, sentAt })
   const modalityDef = getVentasModalityDefinition(quote.billing_modality, {
     employeesCount: employees,
     currency: quote.currency,
+    rules: quote.business_rules,
+    tier: ruleOpts.tier,
   })
   const isAnnual = quote.billing_modality === 'annual'
   const refLabel = buildVentasRefLabel(companyName, contactName)

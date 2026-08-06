@@ -1,6 +1,9 @@
 import type { CountryCode } from '../country/supported'
+import type { VentasBusinessRules, VentasHardwareMode } from './business-rules'
 
 export type CurrencyCode = 'HNL' | 'USD' | 'GTQ'
+
+export type VentasAnnualTerminalMode = 'auto' | 'included' | 'sale'
 
 export interface VentasPricingTier {
   id?: string
@@ -9,6 +12,10 @@ export interface VentasPricingTier {
   price: number
   is_active?: boolean
   sort_order?: number
+  /** Override de terminales en plan anual; auto = umbral global. */
+  annual_terminal_mode?: VentasAnnualTerminalMode
+  /** Tope de terminales incluidas (null = tope global). */
+  included_terminals_max?: number | null
 }
 
 export interface VentasConfig {
@@ -63,7 +70,7 @@ export interface QuotationQuote {
   /** Total mensual final (= monthly_software_total + monthly_hardware_fee) */
   monthly_total: number
   /**
-   * Venta one-shot de terminales (solo anual con empleados < 51).
+   * Venta one-shot de terminales (plan anual en modo sale).
    * 0 cuando están incluidas o aplica Continuidad.
    */
   hardware_sale_total: number
@@ -75,7 +82,16 @@ export interface QuotationQuote {
   discount_pct_applied: number
   /** Código normalizado del cupón aplicado (si coupon_applied). */
   coupon_code_applied?: string | null
-  tier: { min_employees: number; max_employees: number }
+  tier: {
+    min_employees: number
+    max_employees: number
+    annual_terminal_mode?: VentasAnnualTerminalMode
+    included_terminals_max?: number | null
+  }
+  /** Modo de hardware resuelto al cotizar (evita recomputar con defaults). */
+  hardware_mode?: VentasHardwareMode
+  /** Snapshot de reglas de negocio usadas al cotizar. */
+  business_rules?: VentasBusinessRules
   billing_modality: 'annual' | 'monthly'
   terminals_count: number
   /** Conteo de empleados usado para umbrales de modalidad e inclusión de hardware. */

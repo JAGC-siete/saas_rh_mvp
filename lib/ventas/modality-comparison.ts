@@ -37,7 +37,15 @@ export function buildModalityComparison(params: {
   const alternateModality: 'annual' | 'monthly' =
     primaryModality === 'monthly' ? 'annual' : 'monthly'
 
-  if (alternateModality === 'monthly' && !isMonthlyModalityAvailable(employees)) {
+  const ruleOpts = {
+    rules: quote.business_rules,
+    tier: {
+      annual_terminal_mode: quote.tier?.annual_terminal_mode,
+      included_terminals_max: quote.tier?.included_terminals_max,
+    },
+  }
+
+  if (alternateModality === 'monthly' && !isMonthlyModalityAvailable(employees, quote.business_rules)) {
     return null
   }
 
@@ -52,6 +60,8 @@ export function buildModalityComparison(params: {
   const def = getVentasModalityDefinition(alternateModality, {
     employeesCount: employees,
     currency: quote.currency,
+    rules: quote.business_rules,
+    tier: ruleOpts.tier,
   })
 
   const listPriceNote =
@@ -62,7 +72,7 @@ export function buildModalityComparison(params: {
   let footnote: string
   if (alternateModality === 'monthly') {
     footnote = `La terminal biométrica no está incluida en el plan mensual; se cotiza por separado. ${listPriceNote}`
-  } else if (quoteIncludesBiometricTerminals('annual', employees)) {
+  } else if (quoteIncludesBiometricTerminals('annual', employees, ruleOpts)) {
     footnote = `Incluye terminal biométrica en la propuesta. ${listPriceNote}`
   } else {
     footnote = `La terminal biométrica no está incluida en el plan anual de este rango; se vende por separado. ${listPriceNote}`
@@ -81,9 +91,12 @@ export function buildModalityComparison(params: {
   }
 }
 
-export function modalityComparisonUnavailableNote(employeesCount: number): string | null {
-  if (isMonthlyModalityAvailable(employeesCount)) return null
-  return ventasMonthlyUnavailableMessage()
+export function modalityComparisonUnavailableNote(
+  employeesCount: number,
+  rules?: Parameters<typeof isMonthlyModalityAvailable>[1]
+): string | null {
+  if (isMonthlyModalityAvailable(employeesCount, rules)) return null
+  return ventasMonthlyUnavailableMessage(rules)
 }
 
 export function buildModalityComparisonSnapshot(quote: QuotationQuote) {

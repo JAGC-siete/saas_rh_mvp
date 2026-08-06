@@ -1,10 +1,24 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { createAdminClient } from '../../../lib/supabase/server'
 import { requireSuperAdmin } from '../../../lib/auth/api-auth-fixed'
-import { normalizePromoCodeInputs } from '../../../lib/ventas/promo-codes'
+import {
+  mergeVentasBusinessRules,
+  normalizeAnnualTerminalMode,
+  type VentasAnnualTerminalMode,
+  type VentasBusinessRules,
+} from '../../../lib/ventas/business-rules'
+import { normalizePromoCodeInputs, planPromoCodeUpserts } from '../../../lib/ventas/promo-codes'
 
-type TierInput = { min_employees: number; max_employees: number; price: number; sort_order?: number }
-type PromoInput = { code?: unknown; discount_pct?: unknown; label?: unknown; sort_order?: unknown }
+type TierInput = {
+  min_employees: number
+  max_employees: number
+  price: number
+  sort_order?: number
+  annual_terminal_mode?: VentasAnnualTerminalMode | string
+  included_terminals_max?: number | null
+}
+
+type PromoBodyInput = { code?: unknown; discount_pct?: unknown; label?: unknown; sort_order?: unknown }
 
 function asString(v: unknown): string {
   return typeof v === 'string' ? v : ''
@@ -28,6 +42,13 @@ function validateTiers(tiers: TierInput[]): { ok: boolean; error?: string } {
     }
     if (min < 1 || max < min) return { ok: false, error: 'Rangos inválidos: min>=1 y max>=min.' }
     if (price <= 0) return { ok: false, error: 'El precio debe ser mayor a 0.' }
+
+    if (t.included_terminals_max != null && t.included_terminals_max !== ('' as any)) {
+      const cap = Math.trunc(asNumber(t.included_terminals_max as any))
+      if (!Number.isFinite(cap) || cap < 1) {
+        return { ok: false, error: 'Hasta N terminales debe ser un entero ≥ 1 o vacío.' }
+      }
+    }
   }
 
   const sorted = [...tiers].sort((a, b) => asNumber(a.min_employees) - asNumber(b.min_employees))
@@ -42,31 +63,75 @@ function validateTiers(tiers: TierInput[]): { ok: boolean; error?: string } {
   return { ok: true }
 }
 
+function parseIncludedTerminalsMax(raw: unknown): number | null {
+  if (raw == null || raw === '') return null
+  const n = Math.trunc(asNumber(raw))
+  return Number.isFinite(n) && n >= 1 ? n : null
+}
+
+function tierRows(config_id: string, tiersInput: TierInput[]) {
+  return tiersInput.map((t, i) => ({
+    config_id,
+    min_employees: Math.trunc(asNumber(t.min_employees)),
+    max_employees: Math.trunc(asNumber(t.max_employees)),
+    price: asNumber(t.price),
+    is_active: true,
+    sort_order: Number.isFinite(asNumber(t.sort_order)) ? Math.trunc(asNumber(t.sort_order)) : (i + 1) * 10,
+    annual_terminal_mode: normalizeAnnualTerminalMode(t.annual_terminal_mode),
+    included_terminals_max: parseIncludedTerminalsMax(t.included_terminals_max),
+  }))
+}
+
 async function replacePromoCodes(
   supabase: ReturnType<typeof createAdminClient>,
   configId: string,
-  promoInput: PromoInput[]
+  promoInput: PromoBodyInput[]
 ) {
   const promoCodes = normalizePromoCodeInputs(promoInput)
 
-  await (supabase as any)
+  const { data: existing, error: existingErr } = await (supabase as any)
     .from('config_ventas_promo_codes')
-    .update({ is_active: false })
+    .select('id, code')
     .eq('config_id', configId)
 
-  if (promoCodes.length === 0) return
+  if (existingErr) throw new Error(existingErr.message)
 
-  const rows = promoCodes.map((p, i) => ({
-    config_id: configId,
-    code: p.code,
-    discount_pct: p.discount_pct,
-    label: p.label || null,
-    is_active: true,
-    sort_order: p.sort_order ?? (i + 1) * 10,
-  }))
+  const plan = planPromoCodeUpserts(existing || [], promoCodes)
 
-  const { error } = await (supabase as any).from('config_ventas_promo_codes').insert(rows)
-  if (error) throw new Error(error.message)
+  for (const u of plan.updates) {
+    const { error } = await (supabase as any)
+      .from('config_ventas_promo_codes')
+      .update({
+        code: u.code,
+        discount_pct: u.discount_pct,
+        label: u.label,
+        is_active: true,
+        sort_order: u.sort_order,
+      })
+      .eq('id', u.id)
+    if (error) throw new Error(error.message)
+  }
+
+  if (plan.inserts.length > 0) {
+    const rows = plan.inserts.map((p) => ({
+      config_id: configId,
+      code: p.code,
+      discount_pct: p.discount_pct,
+      label: p.label,
+      is_active: true,
+      sort_order: p.sort_order,
+    }))
+    const { error } = await (supabase as any).from('config_ventas_promo_codes').insert(rows)
+    if (error) throw new Error(error.message)
+  }
+
+  if (plan.deactivateIds.length > 0) {
+    const { error } = await (supabase as any)
+      .from('config_ventas_promo_codes')
+      .update({ is_active: false })
+      .in('id', plan.deactivateIds)
+    if (error) throw new Error(error.message)
+  }
 }
 
 async function loadPromoCodes(supabase: ReturnType<typeof createAdminClient>, configId: string) {
@@ -93,18 +158,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (req.method === 'GET') {
     const { data: configRow, error: cfgErr } = await (supabase as any)
       .from('config_ventas')
-      .select('id, is_active, currency, coupon_code, coupon_discount_pct, created_at, updated_at')
+      .select('id, is_active, currency, coupon_code, coupon_discount_pct, business_rules, created_at, updated_at')
       .eq('is_active', true)
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle()
 
     if (cfgErr) return res.status(500).json({ error: 'Error leyendo config_ventas' })
-    if (!configRow) return res.status(200).json({ config: null, tiers: [], promo_codes: [] })
+    if (!configRow) {
+      return res.status(200).json({
+        config: null,
+        tiers: [],
+        promo_codes: [],
+        business_rules: mergeVentasBusinessRules(null),
+      })
+    }
 
     const { data: tiers, error: tiersErr } = await (supabase as any)
       .from('config_ventas_pricing_tiers')
-      .select('id, min_employees, max_employees, price, is_active, sort_order, updated_at')
+      .select(
+        'id, min_employees, max_employees, price, is_active, sort_order, annual_terminal_mode, included_terminals_max, updated_at'
+      )
       .eq('config_id', configRow.id)
       .eq('is_active', true)
       .order('sort_order', { ascending: true })
@@ -127,14 +201,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     }
 
-    return res.status(200).json({ config: configRow, tiers: tiers || [], promo_codes })
+    const business_rules = mergeVentasBusinessRules(configRow.business_rules)
+
+    return res.status(200).json({
+      config: configRow,
+      tiers: tiers || [],
+      promo_codes,
+      business_rules,
+    })
   }
 
   const currency = asString((req.body || {}).currency || 'HNL').trim().toUpperCase()
-  const promoInput: PromoInput[] = Array.isArray((req.body || {}).promo_codes)
+  const promoInput: PromoBodyInput[] = Array.isArray((req.body || {}).promo_codes)
     ? (req.body || {}).promo_codes
     : []
   const tiersInput: TierInput[] = Array.isArray((req.body || {}).tiers) ? (req.body || {}).tiers : []
+  const businessRulesInput = (req.body || {}).business_rules as Partial<VentasBusinessRules> | undefined
+  const business_rules = mergeVentasBusinessRules(businessRulesInput)
 
   if (!['HNL', 'USD', 'GTQ'].includes(currency)) {
     return res.status(400).json({ error: 'Moneda inválida. Use HNL, USD o GTQ.' })
@@ -171,6 +254,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         currency,
         coupon_code: primaryPromo?.code || null,
         coupon_discount_pct: primaryPromo?.discount_pct ?? null,
+        business_rules,
       })
       .select('id')
       .single()
@@ -178,14 +262,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (cfgErr) return res.status(500).json({ error: 'No se pudo crear config_ventas' })
 
     const config_id = cfg.id
-    const rows = tiersInput.map((t, i) => ({
-      config_id,
-      min_employees: Math.trunc(asNumber(t.min_employees)),
-      max_employees: Math.trunc(asNumber(t.max_employees)),
-      price: asNumber(t.price),
-      is_active: true,
-      sort_order: Number.isFinite(asNumber(t.sort_order)) ? Math.trunc(asNumber(t.sort_order)) : (i + 1) * 10,
-    }))
+    const rows = tierRows(config_id, tiersInput)
 
     const { error: tiersErr } = await (supabase as any).from('config_ventas_pricing_tiers').insert(rows)
     if (tiersErr) return res.status(500).json({ error: 'No se pudieron crear los tiers' })
@@ -196,7 +273,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(500).json({ error: e?.message || 'No se pudieron guardar los cupones' })
     }
 
-    return res.status(200).json({ success: true, config_id })
+    return res.status(200).json({ success: true, config_id, business_rules })
   }
 
   const { data: active, error: activeErr } = await (supabase as any)
@@ -218,6 +295,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       currency,
       coupon_code: primaryPromo?.code || null,
       coupon_discount_pct: primaryPromo?.discount_pct ?? null,
+      business_rules,
     })
     .eq('id', config_id)
 
@@ -228,14 +306,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     .update({ is_active: false })
     .eq('config_id', config_id)
 
-  const rows = tiersInput.map((t, i) => ({
-    config_id,
-    min_employees: Math.trunc(asNumber(t.min_employees)),
-    max_employees: Math.trunc(asNumber(t.max_employees)),
-    price: asNumber(t.price),
-    is_active: true,
-    sort_order: Number.isFinite(asNumber(t.sort_order)) ? Math.trunc(asNumber(t.sort_order)) : (i + 1) * 10,
-  }))
+  const rows = tierRows(config_id, tiersInput)
 
   const { error: tiersErr } = await (supabase as any).from('config_ventas_pricing_tiers').insert(rows)
   if (tiersErr) return res.status(500).json({ error: 'No se pudieron actualizar los tiers' })
@@ -246,5 +317,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(500).json({ error: e?.message || 'No se pudieron guardar los cupones' })
   }
 
-  return res.status(200).json({ success: true, config_id })
+  return res.status(200).json({ success: true, config_id, business_rules })
 }

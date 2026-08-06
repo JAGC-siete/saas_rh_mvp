@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/router'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
@@ -10,7 +10,6 @@ import { Card, CardContent } from '../ui/card'
 import BorderBeam from '../landing/BorderBeam'
 import WizardStepProgress from '../funnel/WizardStepProgress'
 import type { QuotationRequest, QuotationResponse } from '../../lib/ventas/types'
-import { VENTAS_MAX_AUTO_QUOTE_TERMINALS } from '../../lib/ventas/modality-includes'
 import {
   buildQuotationAcquisitionWhatsAppText,
   buildVentasSupportWhatsAppUrl,
@@ -18,6 +17,7 @@ import {
 import { getVentasModalityDefinition } from '../../lib/ventas/modality-includes'
 import {
   isMonthlyModalityAvailable,
+  VENTAS_MAX_AUTO_QUOTE_TERMINALS,
   VENTAS_MONTHLY_MIN_EMPLOYEES,
 } from '../../lib/ventas/business-rules'
 import { isCountryCode, currencyForCountryCode, type CountryCode } from '../../lib/country/supported'
@@ -36,6 +36,7 @@ import {
   ventasScopeErrors,
   VENTAS_COUNTRY_LABEL,
   VENTAS_SECTOR_OPTIONS,
+  type VentasFormLimits,
   type VentasValidationErrors,
 } from '../../lib/ventas-game/ventas-form'
 import { hasValidationErrors, omitValidationField } from '../../lib/forms/validation-errors'
@@ -82,6 +83,31 @@ export default function CotizacionGuiadaLead({
   const [isLoading, setIsLoading] = useState(false)
   const [errors, setErrors] = useState<VentasValidationErrors>({})
   const [formData, setFormData] = useState<QuotationRequest>(() => defaultForm(initialCountryCode))
+  const [formLimits, setFormLimits] = useState<VentasFormLimits>({
+    monthly_min_employees: VENTAS_MONTHLY_MIN_EMPLOYEES,
+    max_auto_quote_terminals: VENTAS_MAX_AUTO_QUOTE_TERMINALS,
+  })
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const res = await fetch('/api/ventas/public-config')
+        const data = await res.json()
+        if (!res.ok || cancelled) return
+        setFormLimits({
+          monthly_min_employees: Number(data.monthly_min_employees) || VENTAS_MONTHLY_MIN_EMPLOYEES,
+          max_auto_quote_terminals:
+            Number(data.max_auto_quote_terminals) || VENTAS_MAX_AUTO_QUOTE_TERMINALS,
+        })
+      } catch {
+        /* keep defaults */
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const headline = utmContext.headline ?? copy.intro.headline
   const subheadline = utmContext.subheadline ?? copy.intro.subheadline
@@ -92,7 +118,9 @@ export default function CotizacionGuiadaLead({
       : ''
 
   const employeesCount = Number(formData.employees_count) || 1
-  const monthlyAvailable = isMonthlyModalityAvailable(employeesCount)
+  const monthlyMin = formLimits.monthly_min_employees ?? VENTAS_MONTHLY_MIN_EMPLOYEES
+  const maxTerminals = formLimits.max_auto_quote_terminals ?? VENTAS_MAX_AUTO_QUOTE_TERMINALS
+  const monthlyAvailable = isMonthlyModalityAvailable(employeesCount, formLimits)
 
   const patchForm = (patch: Partial<QuotationRequest>) => {
     setFormData((prev) => {
@@ -101,7 +129,7 @@ export default function CotizacionGuiadaLead({
       if (
         next.billing_modality === 'monthly' &&
         Number.isFinite(emp) &&
-        !isMonthlyModalityAvailable(emp)
+        !isMonthlyModalityAvailable(emp, formLimits)
       ) {
         next.billing_modality = 'annual'
       }
@@ -116,7 +144,7 @@ export default function CotizacionGuiadaLead({
   }
 
   const goCompany = () => {
-    const e = ventasScopeErrors(formData)
+    const e = ventasScopeErrors(formData, formLimits)
     if (hasValidationErrors(e)) {
       setErrors(e)
       return
@@ -136,7 +164,7 @@ export default function CotizacionGuiadaLead({
   }
 
   const handleSubmit = async () => {
-    const all = computeVentasErrors(formData)
+    const all = computeVentasErrors(formData, formLimits)
     if (hasValidationErrors(all)) {
       setErrors(all)
       return
@@ -303,12 +331,12 @@ export default function CotizacionGuiadaLead({
                           >
                             {monthlyAvailable
                               ? 'Mensual'
-                              : `Mensual (desde ${VENTAS_MONTHLY_MIN_EMPLOYEES} empleados)`}
+                              : `Mensual (desde ${monthlyMin} empleados)`}
                           </option>
                         </select>
                         {!monthlyAvailable && (
                           <p className="text-xs text-brand-400 mt-2">
-                            Modalidad mensual disponible a partir de {VENTAS_MONTHLY_MIN_EMPLOYEES}{' '}
+                            Modalidad mensual disponible a partir de {monthlyMin}{' '}
                             empleados.
                           </p>
                         )}
@@ -323,7 +351,7 @@ export default function CotizacionGuiadaLead({
                           onChange={(e) => patchForm({ terminals_count: parseInt(e.target.value, 10) || 1 })}
                           className={`${inputClass} ${errors.terminals_count ? 'border-red-500/50' : ''}`}
                         >
-                          {Array.from({ length: VENTAS_MAX_AUTO_QUOTE_TERMINALS }, (_, i) => i + 1).map((n) => (
+                          {Array.from({ length: maxTerminals }, (_, i) => i + 1).map((n) => (
                             <option key={n} value={n} className="bg-slate-800">
                               {n === 1 ? '1 terminal' : `${n} terminales`}
                             </option>

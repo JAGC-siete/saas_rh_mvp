@@ -8,7 +8,21 @@ import {
   shouldChargeHardwareContinuity,
   shouldChargeHardwareSale,
   VENTAS_HARDWARE_SALE_UNIT_PRICE,
+  type VentasTierHardwareHints,
 } from './business-rules'
+
+export function hardwareOptsFromQuote(quote: QuotationQuote): {
+  rules: QuotationQuote['business_rules']
+  tier: VentasTierHardwareHints
+} {
+  return {
+    rules: quote.business_rules,
+    tier: {
+      annual_terminal_mode: quote.tier?.annual_terminal_mode,
+      included_terminals_max: quote.tier?.included_terminals_max,
+    },
+  }
+}
 import {
   convertVentasMoney,
   VENTAS_PRICE_LIST_CURRENCY,
@@ -28,7 +42,8 @@ export function employeesCountFromQuote(quote: QuotationQuote): number {
 
 function resolveListedHardwareFee(quote: QuotationQuote): number {
   if (quote.monthly_hardware_fee > 0) return quote.monthly_hardware_fee
-  const hw = hardwareFeeMonthly(quote.terminals_count || 1)
+  const opts = hardwareOptsFromQuote(quote)
+  const hw = hardwareFeeMonthly(quote.terminals_count || 1, opts.rules, opts.tier)
   if (hw.special) return 0
   return convertVentasMoney(hw.fee, VENTAS_PRICE_LIST_CURRENCY, quote.currency)
 }
@@ -39,7 +54,8 @@ export function resolveHardwareFeeForModality(
   modality: 'annual' | 'monthly'
 ): number {
   const employees = employeesCountFromQuote(quote)
-  if (!shouldChargeHardwareContinuity(modality, employees)) return 0
+  const opts = hardwareOptsFromQuote(quote)
+  if (!shouldChargeHardwareContinuity(modality, employees, opts)) return 0
   return resolveListedHardwareFee(quote)
 }
 
@@ -49,12 +65,13 @@ export function resolveHardwareSaleForModality(
   modality: 'annual' | 'monthly'
 ): number {
   const employees = employeesCountFromQuote(quote)
-  if (!shouldChargeHardwareSale(modality, employees)) return 0
+  const opts = hardwareOptsFromQuote(quote)
+  if (!shouldChargeHardwareSale(modality, employees, opts)) return 0
   if ((quote.hardware_sale_total || 0) > 0 && modality === quote.billing_modality) {
     return quote.hardware_sale_total
   }
   return convertVentasMoney(
-    hardwareSaleTotal(quote.terminals_count || 1).total,
+    hardwareSaleTotal(quote.terminals_count || 1, quote.business_rules).total,
     VENTAS_PRICE_LIST_CURRENCY,
     quote.currency
   )
@@ -102,10 +119,15 @@ export function buildUrgencyPriceDisplay(params: {
   const { periodLabel, isMonthly } = summary
   const count = quote.terminals_count
   const terminalWord = count === 1 ? 'terminal' : 'terminales'
-  const mode = resolveHardwareMode(
-    isMonthly ? 'monthly' : 'annual',
-    employeesCountFromQuote(quote)
-  )
+  const mode =
+    quote.hardware_mode &&
+    (isMonthly ? quote.billing_modality === 'monthly' : quote.billing_modality === 'annual')
+      ? quote.hardware_mode
+      : resolveHardwareMode(
+          isMonthly ? 'monthly' : 'annual',
+          employeesCountFromQuote(quote),
+          hardwareOptsFromQuote(quote)
+        )
 
   const listPriceLabel = isMonthly
     ? `Precio mensual con ${count} ${terminalWord}`

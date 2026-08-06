@@ -77,3 +77,69 @@ export function normalizePromoCodeInputs(
 
   return out.sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
 }
+
+export type ExistingPromoRow = { id: string; code: string }
+
+export type PromoCodeUpsertPlan = {
+  updates: Array<{
+    id: string
+    code: string
+    discount_pct: number
+    label: string | null
+    sort_order: number
+  }>
+  inserts: Array<{
+    code: string
+    discount_pct: number
+    label: string | null
+    sort_order: number
+  }>
+  deactivateIds: string[]
+}
+
+/**
+ * Plan upsert for promo codes under UNIQUE (config_id, lower(trim(code))).
+ * Soft-delete + insert of the same code collides; update in place instead.
+ */
+export function planPromoCodeUpserts(
+  existing: ExistingPromoRow[],
+  desired: VentasPromoCode[]
+): PromoCodeUpsertPlan {
+  const byNorm = new Map<string, string>()
+  for (const row of existing || []) {
+    const norm = normalizeCouponCode(row.code)
+    if (norm && !byNorm.has(norm)) byNorm.set(norm, row.id)
+  }
+
+  const keepNorms = new Set<string>()
+  const updates: PromoCodeUpsertPlan['updates'] = []
+  const inserts: PromoCodeUpsertPlan['inserts'] = []
+
+  for (const [i, p] of desired.entries()) {
+    const norm = normalizeCouponCode(p.code)
+    if (!norm) continue
+    keepNorms.add(norm)
+    const sort_order = p.sort_order ?? (i + 1) * 10
+    const payload = {
+      code: p.code.trim(),
+      discount_pct: p.discount_pct,
+      label: p.label || null,
+      sort_order,
+    }
+    const existingId = byNorm.get(norm)
+    if (existingId) {
+      updates.push({ id: existingId, ...payload })
+    } else {
+      inserts.push(payload)
+    }
+  }
+
+  const deactivateIds = (existing || [])
+    .filter((row) => {
+      const norm = normalizeCouponCode(row.code)
+      return !!norm && !keepNorms.has(norm)
+    })
+    .map((row) => row.id)
+
+  return { updates, inserts, deactivateIds }
+}
