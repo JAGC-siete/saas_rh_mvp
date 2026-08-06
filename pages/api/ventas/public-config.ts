@@ -22,6 +22,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       monthly_min_employees: rules.monthly_min_employees,
       max_auto_quote_terminals: rules.max_auto_quote_terminals,
       annual_terminals_included_min_employees: rules.annual_terminals_included_min_employees,
+      hardware_sale_unit_price: rules.hardware_sale_unit_price,
       tiers: (cfg.tiers || []).map((t) => ({
         min_employees: t.min_employees,
         max_employees: t.max_employees,
@@ -37,6 +38,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       monthly_min_employees: rules.monthly_min_employees,
       max_auto_quote_terminals: rules.max_auto_quote_terminals,
       annual_terminals_included_min_employees: rules.annual_terminals_included_min_employees,
+      hardware_sale_unit_price: rules.hardware_sale_unit_price,
       tiers: [],
     })
   }

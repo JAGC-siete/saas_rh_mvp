@@ -15,8 +15,8 @@ import type { QuotationQuote } from '../lib/ventas/types'
 describe('ventas modality includes', () => {
   it('plan anual ≥51 incluye terminal biométrica', () => {
     const def = getVentasModalityDefinition('annual', { employeesCount: 51 })
-    assert.ok(def.includes.some((i) => i.toLowerCase().includes('terminal biométrica incluida')))
-    assert.ok(!def.excludesOrNotes.some((n) => n.toLowerCase().includes('por separado')))
+    assert.ok(def.includes.some((i) => /terminales biométricas incluidas/i.test(i)))
+    assert.ok(def.excludesOrNotes.some((n) => /adicionales/i.test(n) && /por separado/i.test(n)))
   })
 
   it('plan anual <51 cotiza terminal por venta', () => {
@@ -79,7 +79,7 @@ describe('ventas modality includes', () => {
     assert.equal(hardwareFeeMonthly(5).fee, 3936.65)
   })
 
-  it('mensaje unificado para más de 10 terminales', () => {
+  it('mensaje unificado para más terminales del tope del formulario', () => {
     assert.match(ventasTooManyTerminalsErrorMessage(), new RegExp(String(VENTAS_MAX_AUTO_QUOTE_TERMINALS)))
   })
 
@@ -99,10 +99,47 @@ describe('ventas modality includes', () => {
       discount_pct_applied: 0,
       terminals_count: 2,
       employees_count: 60,
+      hardware_mode: 'included',
+      terminals_included_count: 2,
+      terminals_extra_count: 0,
     }
     const summary = buildQuotationPlanSummary({ quote })
     assert.equal(summary.isMonthly, false)
     assert.equal(summary.lines.some((l) => l.label.includes('Hardware') || l.label.includes('venta')), false)
+  })
+
+  it('plan summary anual con extras suma terminales al compromiso', () => {
+    const quote: QuotationQuote = {
+      tier: {
+        min_employees: 11,
+        max_employees: 100,
+        annual_terminal_mode: 'included',
+        included_terminals_max: 3,
+      },
+      billing_modality: 'annual',
+      currency: 'HNL',
+      annual_subtotal: 45000.41,
+      annual_discount_amount: 0,
+      annual_total: 45000.41,
+      monthly_software_total: 3750.03,
+      monthly_hardware_fee: 0,
+      monthly_total: 3750.03,
+      hardware_sale_total: 12000,
+      hardware_sale_unit_price: 7500,
+      hardware_sale_discount_pct: 0.2,
+      coupon_applied: false,
+      discount_pct_applied: 0,
+      terminals_count: 5,
+      employees_count: 40,
+      hardware_mode: 'included',
+      terminals_included_count: 3,
+      terminals_extra_count: 2,
+    }
+    const summary = buildQuotationPlanSummary({ quote })
+    assert.equal(summary.isMonthly, false)
+    assert.ok(summary.lines.some((l) => /adicionales/i.test(l.label) && /−20%/.test(l.label)))
+    assert.match(summary.totalLabel, /compromiso/i)
+    assert.match(summary.totalValue, /57,000\.41/)
   })
 
   it('plan summary anual <51 muestra venta de terminales', () => {

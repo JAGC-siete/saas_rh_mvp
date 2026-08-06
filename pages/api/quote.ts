@@ -11,12 +11,11 @@ import type { QuotationRequest, QuotationResponse, VentasPricingTier, CurrencyCo
 import { clampInt, resolveTierByEmployees, roundMoney } from '../../lib/ventas/pricing'
 import { hardwareFeeMonthly } from '../../lib/ventas/modality-includes'
 import {
+  computeAnnualHardwareCharges,
   DEFAULT_VENTAS_BUSINESS_RULES,
-  hardwareSaleTotal,
   isMonthlyModalityAvailable,
-  resolveHardwareMode,
+  resolveFormMaxTerminals,
   shouldChargeHardwareContinuity,
-  shouldChargeHardwareSale,
   ventasMonthlyUnavailableMessage,
   ventasTooManyTerminalsErrorMessage,
 } from '../../lib/ventas/business-rules'
@@ -232,9 +231,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
   }
   const contactEmail = emailValidation.sanitized as string
 
-  const employeesCount = clampInt(Number(body.employees_count), 1, 200)
-  if (employeesCount < 1 || employeesCount > 200) {
-    return res.status(400).json({ error: 'El número de empleados debe estar entre 1 y 200.' })
+  const employeesCount = clampInt(Number(body.employees_count), 1, 10000)
+  if (employeesCount < 1) {
+    return res.status(400).json({ error: 'Seleccione un rango de empleados válido.' })
   }
 
   const billingModality = normalizeBillingModality((body as any).billing_modality)
@@ -314,6 +313,10 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
 
     const monthlySoftwareTotal = roundMoney(annualTotal / 12)
     const terminalsForPricing = terminalsCount >= 1 ? terminalsCount : 1
+    const formMaxTerminals = resolveFormMaxTerminals(businessRules)
+    if (terminalsForPricing > formMaxTerminals) {
+      return res.status(400).json({ error: ventasTooManyTerminalsErrorMessage(businessRules) })
+    }
     const hwQuote = hardwareFeeMonthly(terminalsForPricing, businessRules, tierHardware)
     if (hwQuote.special) {
       return res.status(400).json({ error: ventasTooManyTerminalsErrorMessage(businessRules) })
@@ -330,9 +333,14 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
       VENTAS_PRICE_LIST_CURRENCY,
       listCurrency
     )
-    const saleQuote = shouldChargeHardwareSale(billingModality, employeesCount, ruleOpts)
-      ? hardwareSaleTotal(terminalsForPricing, businessRules)
-      : null
+    const hwCharges = computeAnnualHardwareCharges({
+      modality: billingModality,
+      employeesCount,
+      terminalsCount: terminalsForPricing,
+      rules: businessRules,
+      tier: tierHardware,
+    })
+    const saleQuote = hwCharges.sale
     const hardwareSaleTotalAmount = saleQuote
       ? convertVentasMoney(saleQuote.total, VENTAS_PRICE_LIST_CURRENCY, listCurrency)
       : 0
@@ -340,7 +348,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
       ? convertVentasMoney(saleQuote.unitPrice, VENTAS_PRICE_LIST_CURRENCY, listCurrency)
       : undefined
     const monthlyTotal = roundMoney(monthlySoftwareTotal + monthlyHardwareFee)
-    const hardwareMode = resolveHardwareMode(billingModality, employeesCount, ruleOpts)
+    const hardwareMode = hwCharges.mode
 
     const quoteList = {
       currency: listCurrency,
@@ -366,6 +374,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
       business_rules: businessRules,
       billing_modality: billingModality,
       terminals_count: terminalsForPricing,
+      terminals_included_count: hwCharges.includedCount,
+      terminals_extra_count: hwCharges.extraCount,
       employees_count: employeesCount,
     }
 
@@ -381,6 +391,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
       sector_rubro: sectorRubro || undefined,
       billing_modality: billingModality,
       terminals_count: terminalsForPricing,
+      terminals_included_count: hwCharges.includedCount,
+      terminals_extra_count: hwCharges.extraCount,
       list_currency: listCurrency,
       monthly_hardware_fee: quote.monthly_hardware_fee || undefined,
       hardware_sale_total: quote.hardware_sale_total || undefined,

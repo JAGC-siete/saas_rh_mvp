@@ -285,14 +285,34 @@ export default function VentasConfigPage() {
     }
   }
 
-  const preview40 = resolveHardwareMode('annual', 40, {
-    rules: businessRules,
-    tier: { annual_terminal_mode: 'auto' },
-  })
-  const preview60 = resolveHardwareMode('annual', 60, {
-    rules: businessRules,
-    tier: { annual_terminal_mode: 'auto' },
-  })
+  const runtimePreviews = useMemo(() => {
+    const samples = [10, 40, 60, 150, 350]
+    return samples.map((emps) => {
+      const tier = tiers.find((t) => emps >= t.min_employees && emps <= t.max_employees)
+      const tierHints = tier
+        ? {
+            annual_terminal_mode: tier.annual_terminal_mode,
+            included_terminals_max:
+              tier.included_terminals_max === '' ? null : Number(tier.included_terminals_max),
+          }
+        : { annual_terminal_mode: 'auto' as const }
+      const mode = resolveHardwareMode('annual', emps, {
+        rules: businessRules,
+        tier: tierHints,
+      })
+      const cap =
+        tier?.included_terminals_max === '' || tier?.included_terminals_max == null
+          ? null
+          : Number(tier.included_terminals_max)
+      const detail =
+        mode === 'included' && cap != null
+          ? `${mode} (hasta ${cap})`
+          : mode === 'included'
+            ? `${mode} (tope form ${businessRules.max_auto_quote_terminals})`
+            : mode
+      return { emps, mode: detail, hasTier: Boolean(tier) }
+    })
+  }, [businessRules, tiers])
 
   const busy = loading || saving || creating
 
@@ -561,18 +581,21 @@ export default function VentasConfigPage() {
                       </div>
                     </div>
                     <div className="rounded-lg border border-white/10 bg-white/5 p-3 text-sm text-white/80 space-y-1">
-                      <p className="text-xs uppercase tracking-wide text-white/50">Preview (modo Auto)</p>
-                      <p>
-                        40 empleados · anual →{' '}
-                        <span className="text-white font-medium">{preview40}</span>
+                      <p className="text-xs uppercase tracking-wide text-white/50">
+                        Preview runtime (reglas + rango)
                       </p>
-                      <p>
-                        60 empleados · anual →{' '}
-                        <span className="text-white font-medium">{preview60}</span>
-                      </p>
+                      {runtimePreviews.map((p) => (
+                        <p key={p.emps}>
+                          {p.emps} empleados · anual →{' '}
+                          <span className="text-white font-medium">{p.mode}</span>
+                          {!p.hasTier ? (
+                            <span className="text-amber-300/80"> · sin rango</span>
+                          ) : null}
+                        </p>
+                      ))}
                       <p className="text-xs text-white/50">
-                        Mensual siempre usa continuidad de hardware. Los overrides por rango
-                        tienen prioridad sobre el umbral Auto.
+                        Mensual siempre usa continuidad. Override por rango gana sobre umbral
+                        Auto. Form máx. terminales = «Máx. terminales cotización web».
                       </p>
                     </div>
                   </>
@@ -691,8 +714,9 @@ export default function VentasConfigPage() {
                       </div>
                     ))}
                     <p className="text-xs text-white/60">
-                      Los rangos no pueden traslaparse. “Hasta N” limita terminales incluidas /
-                      cotización auto en ese rango (vacío = tope global).
+                      Los rangos no pueden traslaparse. “Hasta N” = cupo de terminales incluidas
+                      sin cargo (modo Incluidas/Auto). El máximo seleccionable en el form es
+                      «Máx. terminales cotización web». Vacío = todas incluidas hasta ese tope.
                     </p>
                   </div>
                 )}

@@ -34,8 +34,18 @@ export function buildTerminalsDisplayLabel(params: {
   includesTerminals: boolean
   /** sale = one-shot purchase; continuity = monthly HW fee. Ignored if includesTerminals. */
   hardwareMode?: 'included' | 'sale' | 'continuity'
+  /** Cupo incluido sin cargo (plan anual). */
+  includedCount?: number
+  /** Terminales adicionales cobradas. */
+  extraCount?: number
 }): string {
-  const { terminalsCount, includesTerminals, hardwareMode } = params
+  const { terminalsCount, includesTerminals, hardwareMode, includedCount, extraCount } = params
+  const extras = Math.max(0, Math.floor(Number(extraCount) || 0))
+  const included = Math.max(0, Math.floor(Number(includedCount) || 0))
+
+  if ((includesTerminals || hardwareMode === 'included') && extras > 0 && included > 0) {
+    return `${terminalsCount} (${included} incluidas + ${extras} adicional${extras === 1 ? '' : 'es'})`
+  }
   if (includesTerminals || hardwareMode === 'included') {
     return terminalsCount === 1 ? '1 (incluida)' : `${terminalsCount} (incluidas)`
   }

@@ -88,6 +88,8 @@ export function generateVentasQuotationEmailHTML(params: {
         terminalsCount: quote.terminals_count,
         includesTerminals,
         hardwareMode,
+        includedCount: quote.terminals_included_count,
+        extraCount: quote.terminals_extra_count,
       })}
       <p style="margin: 0 0 14px 0; font-size: 18px; line-height: 1.4; font-weight: bold; color: ${B.emailText};">${opening}</p>
       ${buildPriceCardHtml({ quote, sentAt, now })}
@@ -138,6 +140,8 @@ export function generateVentasQuotationEmailText(params: {
       quoteIncludesBiometricTerminals(quote.billing_modality, employees, ruleOpts),
     hardwareMode:
       quote.hardware_mode || resolveHardwareMode(quote.billing_modality, employees, ruleOpts),
+    includedCount: quote.terminals_included_count,
+    extraCount: quote.terminals_extra_count,
   })
 
   const lines: string[] = [

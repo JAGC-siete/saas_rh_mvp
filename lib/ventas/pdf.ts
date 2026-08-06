@@ -10,7 +10,7 @@ import { buildModalityComparison } from './modality-comparison'
 import { getVentasModalityDefinition } from './modality-includes'
 import { buildTerminalsDisplayLabel, buildVentasRefLabel } from './brand-styles'
 import { quoteIncludesBiometricTerminals, resolveHardwareMode } from './business-rules'
-import { pricesInCurrencyFooter } from './currency'
+import { convertVentasMoney, pricesInCurrencyFooter, VENTAS_PRICE_LIST_CURRENCY } from './currency'
 import { PDF_TYPE as TYPE, VENTAS_PDF_THEME as T } from './pdf-theme'
 
 const MARGIN = 40
@@ -103,6 +103,8 @@ export async function generateVentasQuotationPDF(params: {
         terminalsCount: quote.terminals_count,
         includesTerminals,
         hardwareMode,
+        includedCount: quote.terminals_included_count,
+        extraCount: quote.terminals_extra_count,
       })
 
       const featuresY = 178
@@ -114,6 +116,17 @@ export async function generateVentasQuotationPDF(params: {
         includesTerminals,
         hardwareMode,
         currency: quote.currency,
+        includedCount: quote.terminals_included_count,
+        extraCount: quote.terminals_extra_count,
+        hardwareSaleUnitPrice:
+          quote.hardware_sale_unit_price ??
+          (quote.business_rules?.hardware_sale_unit_price != null
+            ? convertVentasMoney(
+                quote.business_rules.hardware_sale_unit_price,
+                VENTAS_PRICE_LIST_CURRENCY,
+                quote.currency
+              )
+            : undefined),
       })
 
       const priceY = featuresY + featuresH + 10
@@ -199,6 +212,8 @@ function drawClientFicha(
     terminalsCount: number
     includesTerminals: boolean
     hardwareMode: 'included' | 'sale' | 'continuity'
+    includedCount?: number
+    extraCount?: number
   }
 ) {
   const {
@@ -211,6 +226,8 @@ function drawClientFicha(
     terminalsCount,
     includesTerminals,
     hardwareMode,
+    includedCount,
+    extraCount,
   } = params
   const boxH = 76
   const colW = (contentW - 36) / 2
@@ -239,7 +256,13 @@ function drawClientFicha(
   drawMetaValue(doc, countryLabel, colAX, rowY, colW)
   drawMetaValue(
     doc,
-    buildTerminalsDisplayLabel({ terminalsCount, includesTerminals, hardwareMode }),
+    buildTerminalsDisplayLabel({
+      terminalsCount,
+      includesTerminals,
+      hardwareMode,
+      includedCount,
+      extraCount,
+    }),
     colBX,
     rowY,
     colW
@@ -256,15 +279,32 @@ function drawFeaturesRow(
     includesTerminals: boolean
     hardwareMode: 'included' | 'sale' | 'continuity'
     currency: QuotationQuote['currency']
+    includedCount?: number
+    extraCount?: number
+    hardwareSaleUnitPrice?: number
   }
 ): number {
-  const { y, contentW, isAnnual, terminalsCount, includesTerminals, hardwareMode, currency } = params
+  const {
+    y,
+    contentW,
+    isAnnual,
+    terminalsCount,
+    includesTerminals,
+    hardwareMode,
+    currency,
+    includedCount,
+    extraCount,
+    hardwareSaleUnitPrice,
+  } = params
   const labels = getContractIncludesLabels({
     isAnnual,
     terminalsCount,
     includesTerminals,
     hardwareMode,
     currency,
+    includedCount,
+    extraCount,
+    hardwareSaleUnitPrice,
   })
   const colGap = 16
   const colW = (contentW - colGap) / 2

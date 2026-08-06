@@ -21,7 +21,7 @@ export const VENTAS_ANNUAL_TERMINALS_INCLUDED_MIN_EMPLOYEES = 51
 export const VENTAS_HARDWARE_SALE_UNIT_PRICE = 6500
 
 /** Máximo de terminales en cotización automática del formulario web. */
-export const VENTAS_MAX_AUTO_QUOTE_TERMINALS = 10
+export const VENTAS_MAX_AUTO_QUOTE_TERMINALS = 5
 
 /** Cuota mensual de la primera terminal (base). */
 export const VENTAS_HARDWARE_BASE_MONTHLY = 958.33
@@ -189,24 +189,43 @@ export function quoteIncludesBiometricTerminals(
   return resolveHardwareMode(modality, employeesCount, options) === 'included'
 }
 
+/** Descuento fijo sobre terminales adicionales cuando el plan anual ya incluye N. */
+export const VENTAS_EXTRA_TERMINALS_DISCOUNT_PCT = 0.2
+
 /**
- * Cap de terminales en cotización auto / incluidas.
- * Si el tier define included_terminals_max, gana; si no, tope global.
+ * Tope del formulario / cotización automática (cuántas terminales puede elegir el lead).
+ * No usa included_terminals_max: ese cupo es “gratis”, no el máximo seleccionable.
  */
+export function resolveFormMaxTerminals(rules?: Partial<VentasBusinessRules> | null): number {
+  return mergeVentasBusinessRules(rules).max_auto_quote_terminals
+}
+
+/** @deprecated Use resolveFormMaxTerminals — kept for callers during transition. */
 export function resolveMaxAutoQuoteTerminals(
+  rules?: Partial<VentasBusinessRules> | null,
+  _tier?: VentasTierHardwareHints | null
+): number {
+  return resolveFormMaxTerminals(rules)
+}
+
+/**
+ * Cuántas terminales van incluidas sin cargo en plan anual (modo included).
+ * Si el tier no define cupo, se asume el tope del formulario (todas incluidas).
+ */
+export function resolveIncludedTerminalsCap(
   rules?: Partial<VentasBusinessRules> | null,
   tier?: VentasTierHardwareHints | null
 ): number {
   const r = mergeVentasBusinessRules(rules)
   const tierMax = tier?.included_terminals_max
   if (tierMax != null && Number.isFinite(Number(tierMax)) && Number(tierMax) >= 1) {
-    return Math.min(r.max_auto_quote_terminals, Math.trunc(Number(tierMax)))
+    return Math.trunc(Number(tierMax))
   }
   return r.max_auto_quote_terminals
 }
 
 /**
- * Descuento volumen sobre venta de terminales (plan anual).
+ * Descuento volumen sobre venta de terminales (plan anual en modo sale total).
  * 2 → 5%, 3 → 10%, 4 → 15%, 5+ → 20%.
  */
 export function hardwareSaleVolumeDiscountPct(terminalsCount: number): number {
@@ -218,16 +237,18 @@ export function hardwareSaleVolumeDiscountPct(terminalsCount: number): number {
   return 0
 }
 
-export function hardwareSaleTotal(
-  terminalsCount: number,
-  rules?: Partial<VentasBusinessRules> | null
-): {
+export type HardwareSaleBreakdown = {
   listTotal: number
   discountPct: number
   discountAmount: number
   total: number
   unitPrice: number
-} {
+}
+
+export function hardwareSaleTotal(
+  terminalsCount: number,
+  rules?: Partial<VentasBusinessRules> | null
+): HardwareSaleBreakdown {
   const n = Math.max(0, Math.floor(Number(terminalsCount) || 0))
   const unitPrice = mergeVentasBusinessRules(rules).hardware_sale_unit_price
   const listTotal = roundMoney(unitPrice * n)
@@ -235,6 +256,65 @@ export function hardwareSaleTotal(
   const discountAmount = roundMoney(listTotal * discountPct)
   const total = roundMoney(listTotal - discountAmount)
   return { listTotal, discountPct, discountAmount, total, unitPrice }
+}
+
+/** Venta de solo terminales extras (plan anual con cupo incluido) a −20%. */
+export function hardwareExtraTerminalsSaleTotal(
+  extraCount: number,
+  rules?: Partial<VentasBusinessRules> | null
+): HardwareSaleBreakdown {
+  const n = Math.max(0, Math.floor(Number(extraCount) || 0))
+  const unitPrice = mergeVentasBusinessRules(rules).hardware_sale_unit_price
+  const listTotal = roundMoney(unitPrice * n)
+  const discountPct = n > 0 ? VENTAS_EXTRA_TERMINALS_DISCOUNT_PCT : 0
+  const discountAmount = roundMoney(listTotal * discountPct)
+  const total = roundMoney(listTotal - discountAmount)
+  return { listTotal, discountPct, discountAmount, total, unitPrice }
+}
+
+export type AnnualHardwareChargeResult = {
+  mode: VentasHardwareMode
+  includedCount: number
+  extraCount: number
+  sale: HardwareSaleBreakdown | null
+}
+
+/**
+ * Cobro de terminales en cotización:
+ * - monthly → continuidad (sin venta aquí)
+ * - annual sale → todas a precio unitario con descuento volumen
+ * - annual included → primeras N gratis; extras a unitario −20%
+ */
+export function computeAnnualHardwareCharges(params: {
+  modality: VentasBillingModality
+  employeesCount: number
+  terminalsCount: number
+  rules?: Partial<VentasBusinessRules> | null
+  tier?: VentasTierHardwareHints | null
+}): AnnualHardwareChargeResult {
+  const { modality, employeesCount, terminalsCount, rules, tier } = params
+  const opts = { rules, tier }
+  const mode = resolveHardwareMode(modality, employeesCount, opts)
+  const n = Math.max(0, Math.floor(Number(terminalsCount) || 0))
+
+  if (mode === 'continuity') {
+    return { mode, includedCount: 0, extraCount: 0, sale: null }
+  }
+
+  if (mode === 'sale') {
+    const sale = n > 0 ? hardwareSaleTotal(n, rules) : null
+    return { mode, includedCount: 0, extraCount: n, sale }
+  }
+
+  const includedCap = resolveIncludedTerminalsCap(rules, tier)
+  const includedCount = Math.min(n, includedCap)
+  const extraCount = Math.max(0, n - includedCap)
+  const sale = extraCount > 0 ? hardwareExtraTerminalsSaleTotal(extraCount, rules) : null
+  return { mode, includedCount, extraCount, sale }
+}
+
+export function annualIncludesExtrasMessage(includedCap: number): string {
+  return `La modalidad anual incluye hasta ${includedCap} terminales sin costo adicional; las terminales extra se venden por separado.`
 }
 
 export function ventasMonthlyUnavailableMessage(rules?: Partial<VentasBusinessRules> | null): string {

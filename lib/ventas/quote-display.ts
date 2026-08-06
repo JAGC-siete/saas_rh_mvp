@@ -2,11 +2,10 @@ import type { CurrencyCode, QuotationQuote } from './types'
 import { formatMoney } from './pricing'
 import { hardwareFeeMonthly } from './modality-includes'
 import {
-  hardwareSaleTotal,
+  computeAnnualHardwareCharges,
   quoteIncludesBiometricTerminals,
   resolveHardwareMode,
   shouldChargeHardwareContinuity,
-  shouldChargeHardwareSale,
   VENTAS_HARDWARE_SALE_UNIT_PRICE,
   type VentasTierHardwareHints,
 } from './business-rules'
@@ -59,22 +58,26 @@ export function resolveHardwareFeeForModality(
   return resolveListedHardwareFee(quote)
 }
 
-/** One-shot terminal sale total for a given modality. */
+/** One-shot terminal sale total for a given modality (incluye extras sobre cupo incluido). */
 export function resolveHardwareSaleForModality(
   quote: QuotationQuote,
   modality: 'annual' | 'monthly'
 ): number {
-  const employees = employeesCountFromQuote(quote)
-  const opts = hardwareOptsFromQuote(quote)
-  if (!shouldChargeHardwareSale(modality, employees, opts)) return 0
+  if (modality === 'monthly') return 0
   if ((quote.hardware_sale_total || 0) > 0 && modality === quote.billing_modality) {
     return quote.hardware_sale_total
   }
-  return convertVentasMoney(
-    hardwareSaleTotal(quote.terminals_count || 1, quote.business_rules).total,
-    VENTAS_PRICE_LIST_CURRENCY,
-    quote.currency
-  )
+  const employees = employeesCountFromQuote(quote)
+  const opts = hardwareOptsFromQuote(quote)
+  const charges = computeAnnualHardwareCharges({
+    modality,
+    employeesCount: employees,
+    terminalsCount: quote.terminals_count || 1,
+    rules: opts.rules,
+    tier: opts.tier,
+  })
+  if (!charges.sale) return 0
+  return convertVentasMoney(charges.sale.total, VENTAS_PRICE_LIST_CURRENCY, quote.currency)
 }
 
 function resolveMonthlyTotal(quote: QuotationQuote): number {
@@ -129,12 +132,16 @@ export function buildUrgencyPriceDisplay(params: {
           hardwareOptsFromQuote(quote)
         )
 
+  const extras = Number(quote.terminals_extra_count) || 0
+  const included = Number(quote.terminals_included_count) || 0
   const listPriceLabel = isMonthly
     ? `Precio mensual con ${count} ${terminalWord}`
     : mode === 'included'
-      ? count === 1
-        ? 'Precio anual con 1 terminal incluida'
-        : `Precio anual con ${count} terminales incluidas`
+      ? extras > 0 && included > 0
+        ? `Precio anual (${included} incluidas + ${extras} adicional${extras === 1 ? '' : 'es'})`
+        : count === 1
+          ? 'Precio anual con 1 terminal incluida'
+          : `Precio anual con ${count} terminales incluidas`
       : count === 1
         ? 'Precio anual (terminal en venta por separado)'
         : `Precio anual (${count} terminales en venta por separado)`
@@ -154,24 +161,29 @@ export function getContractIncludesLabels(params: {
   includesTerminals: boolean
   hardwareMode?: 'included' | 'sale' | 'continuity'
   currency?: CurrencyCode
+  includedCount?: number
+  extraCount?: number
+  /** Precio unitario vigente (lista HNL o ya localizado). */
+  hardwareSaleUnitPrice?: number
 }): string[] {
   const { isAnnual, terminalsCount, includesTerminals, hardwareMode } = params
   const currency = params.currency || 'HNL'
-  const unitPrice = convertVentasMoney(
-    VENTAS_HARDWARE_SALE_UNIT_PRICE,
-    VENTAS_PRICE_LIST_CURRENCY,
-    currency
-  )
+  const extras = Math.max(0, Math.floor(Number(params.extraCount) || 0))
+  const included = Math.max(0, Math.floor(Number(params.includedCount) || 0))
+  const unitPrice =
+    params.hardwareSaleUnitPrice != null && Number.isFinite(Number(params.hardwareSaleUnitPrice))
+      ? Number(params.hardwareSaleUnitPrice)
+      : convertVentasMoney(VENTAS_HARDWARE_SALE_UNIT_PRICE, VENTAS_PRICE_LIST_CURRENCY, currency)
   const unitPriceLabel = formatMoney(currency, unitPrice)
 
   if (isAnnual && includesTerminals) {
-    const terminalPhrase =
-      terminalsCount === 1
-        ? '1 terminal (sin costo adicional)'
-        : `${terminalsCount} terminales (sin costo adicional)`
+    const terminalsLine =
+      extras > 0 && included > 0
+        ? `${included} terminales incluidas + ${extras} adicional${extras === 1 ? '' : 'es'} (−20% unitario)`
+        : 'Terminales incluidas según cupo del plan (extras se venden por separado −20%)'
     return [
       'Subscripción anual de software',
-      `Hasta ${terminalPhrase}`,
+      terminalsLine,
       'Instalación y sincronización de terminales',
       'Migración y capacitación del personal',
       'Actualizaciones',
@@ -322,10 +334,28 @@ export function buildQuotationPlanSummary(params: {
 
   if (saleTotal > 0) {
     const discPct = Math.round((quote.hardware_sale_discount_pct || 0) * 100)
-    const saleLabel =
-      !isMonthly && discPct > 0 && modalityMatchesSaleQuote(quote, resolvedModality)
-        ? `Terminales biométricas (venta, −${discPct}% volumen) (${terminalsLabel})`
-        : `Terminales biométricas (venta) (${terminalsLabel})`
+    const extras =
+      resolvedModality === quote.billing_modality
+        ? Number(quote.terminals_extra_count) || 0
+        : computeAnnualHardwareCharges({
+            modality: resolvedModality,
+            employeesCount: employeesCountFromQuote(quote),
+            terminalsCount: quote.terminals_count || 1,
+            rules: quote.business_rules,
+            tier: hardwareOptsFromQuote(quote).tier,
+          }).extraCount
+    const included =
+      resolvedModality === quote.billing_modality
+        ? Number(quote.terminals_included_count) || 0
+        : Math.max(0, (quote.terminals_count || 0) - extras)
+    let saleLabel: string
+    if (!isMonthly && extras > 0 && included > 0) {
+      saleLabel = `Terminales adicionales (${extras} × unitario${discPct > 0 ? `, −${discPct}%` : ''})`
+    } else if (!isMonthly && discPct > 0 && modalityMatchesSaleQuote(quote, resolvedModality)) {
+      saleLabel = `Terminales biométricas (venta, −${discPct}% volumen) (${terminalsLabel})`
+    } else {
+      saleLabel = `Terminales biométricas (venta) (${terminalsLabel})`
+    }
     lines.push({
       label: saleLabel,
       value: fmt(saleTotal),

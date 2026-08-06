@@ -3,7 +3,8 @@ import { formatMoney, roundMoney } from './pricing'
 import {
   mergeVentasBusinessRules,
   quoteIncludesBiometricTerminals,
-  resolveMaxAutoQuoteTerminals,
+  resolveFormMaxTerminals,
+  resolveIncludedTerminalsCap,
   shouldChargeHardwareSale,
   ventasTooManyTerminalsErrorMessage,
   VENTAS_HARDWARE_BASE_MONTHLY,
@@ -35,8 +36,6 @@ const SHARED_SERVICE_INCLUDES = [
   'Soporte local',
   'Impuestos',
 ] as const
-
-const TERMINALS_INCLUDED_LINE = 'Terminal biométrica incluida en la propuesta' as const
 
 const TERMINALS_CONTINUITY_NOTES = [
   'La terminal biométrica se vende por separado (no está incluida en el total de software); se cotiza como Servicio de Continuidad de Hardware',
@@ -92,7 +91,7 @@ export function getVentasModalityDefinition(
   const employeesCount = employeesFromContext(ctx)
   const currency = currencyFromContext(ctx)
   const ruleOpts = { rules: ctx?.rules, tier: ctx?.tier }
-  const maxTerminals = resolveMaxAutoQuoteTerminals(ctx?.rules, ctx?.tier)
+  const includedCap = resolveIncludedTerminalsCap(ctx?.rules, ctx?.tier)
 
   if (modality === 'monthly') {
     return {
@@ -113,14 +112,16 @@ export function getVentasModalityDefinition(
     return {
       modality: 'annual',
       label: 'Plan Anual',
-      formHint: `Incluye licencia anual del software, terminal biométrica incluida (hasta ${maxTerminals} en cotización automática), instalación, migración, capacitación, soporte local e impuestos.`,
+      formHint: `Incluye licencia anual del software, hasta ${includedCap} terminales biométricas sin costo adicional (extras se venden por separado), instalación, migración, capacitación, soporte local e impuestos.`,
       includes: [
         'Licencia anual de software Humano SISU',
         ...SHARED_SERVICE_INCLUDES,
-        TERMINALS_INCLUDED_LINE,
+        `Hasta ${includedCap} terminales biométricas incluidas`,
       ],
-      excludesOrNotes: [],
-      successSummaryLine: `Incluye licencia anual del software, terminal biométrica (hasta ${maxTerminals} en esta propuesta), instalación, migración, capacitación, soporte local e impuestos.`,
+      excludesOrNotes: [
+        `Terminales adicionales (más de ${includedCap}) se venden por separado con −20% sobre el precio unitario`,
+      ],
+      successSummaryLine: `Incluye licencia anual del software y hasta ${includedCap} terminales biométricas; extras (−20%) se suman al compromiso anual. Incluye instalación, migración, capacitación, soporte local e impuestos.`,
     }
   }
 
@@ -151,10 +152,10 @@ export function hardwareUnitFeeMonthly(
 export function hardwareFeeMonthly(
   terminalsCount: number,
   rules?: Partial<VentasBusinessRules> | null,
-  tier?: VentasTierHardwareHints | null
+  _tier?: VentasTierHardwareHints | null
 ): { fee: number; special: boolean } {
   if (terminalsCount <= 0) return { fee: 0, special: false }
-  const max = resolveMaxAutoQuoteTerminals(rules, tier)
+  const max = resolveFormMaxTerminals(rules)
   if (terminalsCount > max) return { fee: 0, special: true }
   let total = 0
   for (let i = 1; i <= terminalsCount; i++) {
@@ -176,11 +177,15 @@ export function buildTerminalsPricingNote(params: {
   const ruleOpts = { rules: params.rules, tier: params.tier }
   const includes = quoteIncludesBiometricTerminals(params.modality, params.employeesCount, ruleOpts)
   const currency = params.currency || 'HNL'
-  const maxTerminals = resolveMaxAutoQuoteTerminals(params.rules, params.tier)
+  const includedCap = resolveIncludedTerminalsCap(params.rules, params.tier)
   const unitLabel = hardwareSaleUnitLabel(currency, params.rules)
+  const extraCount = Math.max(0, n - includedCap)
 
   if (includes) {
-    return `${label} · terminal biométrica incluida en plan anual (hasta ${maxTerminals} en cotización automática)`
+    if (extraCount > 0) {
+      return `${label} · ${includedCap} incluidas + ${extraCount} adicional${extraCount === 1 ? '' : 'es'} (−20% sobre unitario ${unitLabel})`
+    }
+    return `${label} · hasta ${includedCap} terminales incluidas en plan anual sin costo adicional`
   }
 
   if (shouldChargeHardwareSale(params.modality, params.employeesCount, ruleOpts)) {
@@ -255,6 +260,11 @@ export function buildMonthlyPricingBreakdownLines(quote: QuotationQuote, fmt: (n
       terminalsCount: quote.terminals_count,
       employeesCount,
       currency: quote.currency,
+      rules: quote.business_rules,
+      tier: {
+        annual_terminal_mode: quote.tier?.annual_terminal_mode,
+        included_terminals_max: quote.tier?.included_terminals_max,
+      },
     })
   )
   return lines
@@ -287,10 +297,16 @@ export function buildAnnualPricingBreakdownLines(quote: QuotationQuote, fmt: (n:
   lines.push(`- Total anual cotizado: ${fmt(quote.annual_total)} / año`)
   if ((quote.hardware_sale_total || 0) > 0) {
     const discPct = Math.round((quote.hardware_sale_discount_pct || 0) * 100)
-    const saleLabel =
-      discPct > 0
-        ? `Terminales (venta, −${discPct}% volumen)`
-        : 'Terminales (venta)'
+    const extras = Number(quote.terminals_extra_count) || 0
+    const included = Number(quote.terminals_included_count) || 0
+    let saleLabel: string
+    if (extras > 0 && included > 0) {
+      saleLabel = `Terminales adicionales (${extras}${discPct > 0 ? `, −${discPct}%` : ''})`
+    } else if (discPct > 0) {
+      saleLabel = `Terminales (venta, −${discPct}% volumen)`
+    } else {
+      saleLabel = 'Terminales (venta)'
+    }
     lines.push(`- ${saleLabel}: ${fmt(quote.hardware_sale_total)}`)
   }
   if (quote.monthly_hardware_fee > 0) {
@@ -302,6 +318,11 @@ export function buildAnnualPricingBreakdownLines(quote: QuotationQuote, fmt: (n:
       terminalsCount: quote.terminals_count,
       employeesCount,
       currency: quote.currency,
+      rules: quote.business_rules,
+      tier: {
+        annual_terminal_mode: quote.tier?.annual_terminal_mode,
+        included_terminals_max: quote.tier?.included_terminals_max,
+      },
     })
   )
   return lines

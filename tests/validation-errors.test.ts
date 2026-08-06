@@ -52,6 +52,20 @@ describe('ventas form step validators', () => {
     assert.equal(hasValidationErrors(e), true)
     assert.match(e.billing_modality || '', /21/)
   })
+
+  it('ventasScopeErrors requires employees inside published tiers', () => {
+    const tiers = [
+      { min_employees: 2, max_employees: 10 },
+      { min_employees: 11, max_employees: 100 },
+    ]
+    assert.equal(
+      hasValidationErrors(ventasScopeErrors({ ...validQuote, employees_count: 11 }, null, tiers)),
+      false
+    )
+    const e = ventasScopeErrors({ ...validQuote, employees_count: 1 }, null, tiers)
+    assert.equal(hasValidationErrors(e), true)
+    assert.match(e.employees_count || '', /rango/i)
+  })
 })
 
 describe('activar step validators', () => {

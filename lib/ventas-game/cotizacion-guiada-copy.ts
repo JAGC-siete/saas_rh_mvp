@@ -13,8 +13,8 @@ export const COTIZACION_GUIADA_COPY = {
   scope: {
     title: 'Qué vas a delegar',
     subtitle: 'País, tamaño del equipo y modalidad: así ajustamos la propuesta.',
-    tierHint: (employees: number, country: string) =>
-      `Con ${employees} empleado${employees === 1 ? '' : 's'} en ${country}, armamos el alcance con leyes locales aplicadas.`,
+    tierHint: (rangeLabel: string, country: string) =>
+      `Con ${rangeLabel} en ${country}, armamos el alcance con leyes locales aplicadas.`,
   },
 
   company: {

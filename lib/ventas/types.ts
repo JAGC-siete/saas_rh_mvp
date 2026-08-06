@@ -76,7 +76,7 @@ export interface QuotationQuote {
   hardware_sale_total: number
   /** Precio lista unitario de venta (si aplica). */
   hardware_sale_unit_price?: number
-  /** Descuento volumen aplicado a la venta (0–0.2). */
+  /** Descuento aplicado a la venta (volumen o extras −20%). */
   hardware_sale_discount_pct?: number
   coupon_applied: boolean
   discount_pct_applied: number
@@ -94,6 +94,10 @@ export interface QuotationQuote {
   business_rules?: VentasBusinessRules
   billing_modality: 'annual' | 'monthly'
   terminals_count: number
+  /** Terminales cubiertas sin cargo (plan anual included). */
+  terminals_included_count?: number
+  /** Terminales de más que se cobran (venta). */
+  terminals_extra_count?: number
   /** Conteo de empleados usado para umbrales de modalidad e inclusión de hardware. */
   employees_count: number
 }

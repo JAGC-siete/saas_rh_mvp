@@ -16,9 +16,16 @@ import {
 } from '../../lib/ventas/bank-details'
 import { getVentasModalityDefinition } from '../../lib/ventas/modality-includes'
 import {
+  annualIncludesExtrasMessage,
   isMonthlyModalityAvailable,
+  resolveHardwareMode,
+  resolveIncludedTerminalsCap,
+  VENTAS_ANNUAL_TERMINALS_INCLUDED_MIN_EMPLOYEES,
+  VENTAS_EXTRA_TERMINALS_DISCOUNT_PCT,
+  VENTAS_HARDWARE_SALE_UNIT_PRICE,
   VENTAS_MAX_AUTO_QUOTE_TERMINALS,
   VENTAS_MONTHLY_MIN_EMPLOYEES,
+  type VentasAnnualTerminalMode,
 } from '../../lib/ventas/business-rules'
 import { isCountryCode, currencyForCountryCode, type CountryCode } from '../../lib/country/supported'
 import {
@@ -31,6 +38,9 @@ import type { VentasUtmContext } from '../../lib/ventas-game/ventas-utm-context'
 import { COTIZACION_GUIADA_COPY } from '../../lib/ventas-game/cotizacion-guiada-copy'
 import {
   computeVentasErrors,
+  findPublicTierForEmployees,
+  formatEmployeeRangeLabel,
+  sortPublicTiers,
   ventasCompanyErrors,
   ventasDeliveryErrors,
   ventasScopeErrors,
@@ -86,7 +96,17 @@ export default function CotizacionGuiadaLead({
   const [formLimits, setFormLimits] = useState<VentasFormLimits>({
     monthly_min_employees: VENTAS_MONTHLY_MIN_EMPLOYEES,
     max_auto_quote_terminals: VENTAS_MAX_AUTO_QUOTE_TERMINALS,
+    annual_terminals_included_min_employees: VENTAS_ANNUAL_TERMINALS_INCLUDED_MIN_EMPLOYEES,
+    hardware_sale_unit_price: VENTAS_HARDWARE_SALE_UNIT_PRICE,
   })
+  const [publicTiers, setPublicTiers] = useState<
+    Array<{
+      min_employees: number
+      max_employees: number
+      annual_terminal_mode: VentasAnnualTerminalMode
+      included_terminals_max: number | null
+    }>
+  >([])
 
   useEffect(() => {
     let cancelled = false
@@ -99,7 +119,33 @@ export default function CotizacionGuiadaLead({
           monthly_min_employees: Number(data.monthly_min_employees) || VENTAS_MONTHLY_MIN_EMPLOYEES,
           max_auto_quote_terminals:
             Number(data.max_auto_quote_terminals) || VENTAS_MAX_AUTO_QUOTE_TERMINALS,
+          annual_terminals_included_min_employees:
+            Number(data.annual_terminals_included_min_employees) ||
+            VENTAS_ANNUAL_TERMINALS_INCLUDED_MIN_EMPLOYEES,
+          hardware_sale_unit_price:
+            Number(data.hardware_sale_unit_price) || VENTAS_HARDWARE_SALE_UNIT_PRICE,
         })
+        if (Array.isArray(data.tiers)) {
+          const mapped = sortPublicTiers(
+            data.tiers.map((t: any) => ({
+              min_employees: Number(t.min_employees),
+              max_employees: Number(t.max_employees),
+              annual_terminal_mode: (['auto', 'included', 'sale'].includes(t.annual_terminal_mode)
+                ? t.annual_terminal_mode
+                : 'auto') as VentasAnnualTerminalMode,
+              included_terminals_max:
+                t.included_terminals_max == null ? null : Number(t.included_terminals_max),
+            }))
+          )
+          setPublicTiers(mapped)
+          if (mapped.length > 0) {
+            setFormData((prev) => {
+              const current = Number(prev.employees_count)
+              if (findPublicTierForEmployees(current, mapped)) return prev
+              return { ...prev, employees_count: mapped[0].min_employees }
+            })
+          }
+        }
       } catch {
         /* keep defaults */
       }
@@ -121,6 +167,28 @@ export default function CotizacionGuiadaLead({
   const monthlyMin = formLimits.monthly_min_employees ?? VENTAS_MONTHLY_MIN_EMPLOYEES
   const maxTerminals = formLimits.max_auto_quote_terminals ?? VENTAS_MAX_AUTO_QUOTE_TERMINALS
   const monthlyAvailable = isMonthlyModalityAvailable(employeesCount, formLimits)
+  const matchedTier = findPublicTierForEmployees(employeesCount, publicTiers)
+  const tierHints = {
+    annual_terminal_mode: matchedTier?.annual_terminal_mode,
+    included_terminals_max: matchedTier?.included_terminals_max,
+  }
+  const selectedRangeLabel = matchedTier
+    ? formatEmployeeRangeLabel(matchedTier.min_employees, matchedTier.max_employees)
+    : null
+  const selectEmployeesValue = matchedTier
+    ? matchedTier.min_employees
+    : publicTiers[0]?.min_employees ?? employeesCount
+  const hardwareModeForSelection = resolveHardwareMode(
+    (formData.billing_modality || 'annual') as 'annual' | 'monthly',
+    employeesCount,
+    { rules: formLimits, tier: tierHints }
+  )
+  const includedCap = resolveIncludedTerminalsCap(formLimits, tierHints)
+  const selectedTerminals = Number(formData.terminals_count) || 1
+  const showAnnualExtrasHint =
+    hardwareModeForSelection === 'included' && selectedTerminals > includedCap
+  const extrasCount = Math.max(0, selectedTerminals - includedCap)
+  const extrasPct = Math.round(VENTAS_EXTRA_TERMINALS_DISCOUNT_PCT * 100)
 
   const patchForm = (patch: Partial<QuotationRequest>) => {
     setFormData((prev) => {
@@ -144,7 +212,7 @@ export default function CotizacionGuiadaLead({
   }
 
   const goCompany = () => {
-    const e = ventasScopeErrors(formData, formLimits)
+    const e = ventasScopeErrors(formData, formLimits, publicTiers)
     if (hasValidationErrors(e)) {
       setErrors(e)
       return
@@ -164,7 +232,7 @@ export default function CotizacionGuiadaLead({
   }
 
   const handleSubmit = async () => {
-    const all = computeVentasErrors(formData, formLimits)
+    const all = computeVentasErrors(formData, formLimits, publicTiers)
     if (hasValidationErrors(all)) {
       setErrors(all)
       return
@@ -357,25 +425,64 @@ export default function CotizacionGuiadaLead({
                             </option>
                           ))}
                         </select>
+                        {hardwareModeForSelection === 'included' && (
+                          <p className="text-xs text-brand-400 mt-2">
+                            {annualIncludesExtrasMessage(includedCap)}
+                          </p>
+                        )}
+                        {showAnnualExtrasHint && (
+                          <p className="text-xs text-amber-300/90 mt-2">
+                            Seleccionó {selectedTerminals}: {includedCap} incluidas sin costo y{' '}
+                            {extrasCount} adicional{extrasCount === 1 ? '' : 'es'} a precio unitario
+                            con −{extrasPct}% de descuento, sumadas al total anual.
+                          </p>
+                        )}
+                        {hardwareModeForSelection === 'continuity' && (
+                          <p className="text-xs text-brand-400 mt-2">
+                            En plan mensual cada terminal suma Continuidad de Hardware (cuota
+                            mensual decreciente).
+                          </p>
+                        )}
+                        {errors.terminals_count && (
+                          <p className="text-red-400 text-xs mt-2">{errors.terminals_count}</p>
+                        )}
                       </div>
                     </div>
 
                     <div>
-                      <label className="block text-white font-medium mb-2 text-sm">Empleados en planilla *</label>
-                      <input
-                        type="number"
-                        min={1}
-                        max={200}
-                        value={Number(formData.employees_count)}
-                        onChange={(e) => patchForm({ employees_count: parseInt(e.target.value, 10) || 1 })}
+                      <label className="block text-white font-medium mb-2 text-sm">
+                        Rango de empleados *
+                      </label>
+                      <select
+                        value={selectEmployeesValue}
+                        onChange={(e) =>
+                          patchForm({ employees_count: parseInt(e.target.value, 10) || 1 })
+                        }
+                        disabled={publicTiers.length === 0}
                         className={`${inputClass} ${errors.employees_count ? 'border-red-500/50' : ''}`}
-                      />
+                      >
+                        {publicTiers.length === 0 ? (
+                          <option value={selectEmployeesValue} className="bg-slate-800">
+                            Cargando rangos…
+                          </option>
+                        ) : (
+                          publicTiers.map((t) => (
+                            <option
+                              key={`${t.min_employees}-${t.max_employees}`}
+                              value={t.min_employees}
+                              className="bg-slate-800"
+                            >
+                              {formatEmployeeRangeLabel(t.min_employees, t.max_employees)}
+                            </option>
+                          ))
+                        )}
+                      </select>
                       {errors.employees_count && (
                         <p className="text-red-400 text-xs mt-2">{errors.employees_count}</p>
                       )}
-                      {countryLabel && (
+                      {countryLabel && selectedRangeLabel && (
                         <p className="text-xs text-brand-400 mt-2">
-                          {copy.scope.tierHint(Number(formData.employees_count), countryLabel)}
+                          {copy.scope.tierHint(selectedRangeLabel, countryLabel)}
                         </p>
                       )}
                     </div>
@@ -389,6 +496,8 @@ export default function CotizacionGuiadaLead({
                             currency: currencyForCountryCode(
                               isCountryCode(formData.country_code) ? formData.country_code : 'HND'
                             ),
+                            rules: formLimits,
+                            tier: tierHints,
                           }
                         ).formHint
                       }
