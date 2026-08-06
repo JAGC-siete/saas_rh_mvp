@@ -37,7 +37,7 @@ const TESTIMONIALS = [
     rating: 5,
   },
   {
-    name: 'Karla Maradiaga',
+    name: 'Cinthia López',
     company: 'Enlace',
     employees: 'Jefa de Personal',
     image: '/images/testimonials/karla.jpg',
@@ -47,7 +47,7 @@ const TESTIMONIALS = [
     rating: 5,
   },
   {
-    name: 'Roberto A.',
+    name: 'Manuel Sierra',
     company: 'Agrocomercial Ferretero Eben-Ezer',
     employees: 'Administrador',
     image: '/images/testimonials/roberto.jpg',
@@ -57,7 +57,7 @@ const TESTIMONIALS = [
     rating: 5,
   },
   {
-    name: 'Nancy U.',
+    name: 'Ligia Mejia',
     company: 'Rooster Cafe',
     employees: 'Gerente de RRHH',
     image: '/images/testimonials/nancy.jpg',
@@ -67,7 +67,7 @@ const TESTIMONIALS = [
     rating: 5,
   },
   {
-    name: 'Jorge Aldana',
+    name: 'Jorge Sierra',
     company: 'Grupo Gastro Cueva',
     employees: 'Contador',
     image: '/images/testimonials/jorge.jpg',
