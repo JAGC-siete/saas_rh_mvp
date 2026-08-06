@@ -79,12 +79,13 @@ export default function MagneticHero() {
 
           <div className="w-full max-w-sm mx-auto lg:max-w-none lg:mx-0">
             <div className="glass-modern rounded-2xl p-2 shadow-[0_20px_50px_rgba(0,0,0,0.4)]">
-              <div className="relative aspect-[3/4] w-full rounded-xl overflow-hidden bg-slate-900/50 border border-white/5">
+              <div className="rounded-xl overflow-hidden bg-slate-900/50 border border-white/5 leading-none">
                 <Image
                   src="/images/landing/hero-human.jpg"
                   alt="Profesional de RRHH en oficina, con café y libretas de trabajo"
-                  fill
-                  className="object-cover object-top"
+                  width={682}
+                  height={1024}
+                  className="block w-full h-auto object-cover object-top"
                   loading="lazy"
                   sizes="(max-width: 1024px) 80vw, 28vw"
                 />

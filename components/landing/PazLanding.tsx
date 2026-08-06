@@ -142,17 +142,21 @@ export default function PazLanding() {
               </div>
             </div>
 
+            {/* Panel lateral (mismo rol que MagneticHero): foto contenida, nunca fill a pantalla completa */}
             <div className="paz-hero-media">
-              <figure className="paz-hero-photo">
-                <Image
-                  src="/images/paz/hero-human.jpg"
-                  alt="Profesional en escritorio con cuaderno y pluma, enfocada en su trabajo de RRHH"
-                  fill
-                  className="object-cover object-top"
-                  loading="lazy"
-                  sizes="(max-width: 1024px) 80vw, 28vw"
-                />
-              </figure>
+              <div className="paz-hero-photo-frame">
+                <div className="paz-hero-photo">
+                  <Image
+                    src="/images/paz/hero-human.jpg"
+                    alt="Profesional en escritorio con cuaderno y pluma, enfocada en su trabajo de RRHH"
+                    width={682}
+                    height={1024}
+                    className="paz-hero-photo-img"
+                    loading="lazy"
+                    sizes="(max-width: 1024px) 80vw, 28vw"
+                  />
+                </div>
+              </div>
               <p className="paz-hero-caption">
                 RRHH con cara humana: menos Excel, más tiempo para tu equipo
               </p>
