@@ -138,12 +138,20 @@
   width: max-content;
 }
 
+.testimonials-marquee-viewport {
+  overflow: hidden;
+  padding-inline: 1rem;
+}
+
 .testimonials-marquee {
   display: flex;
-  gap: 1.25rem;
+  /* margin on children (not gap): keeps -50% loop seamless with duplicated sets */
   animation: marquee-scroll 55s linear infinite;
   width: max-content;
-  padding-inline: 1rem;
+}
+
+.testimonials-marquee > * {
+  margin-right: 1.25rem;
 }
 
 .testimonials-marquee:hover {

@@ -17,7 +17,7 @@ const HREF: Record<MarketingStyleSheet, string> = {
 const CSS_V =
   process.env.RAILWAY_GIT_COMMIT_SHA?.slice(0, 8) ||
   process.env.NEXT_PUBLIC_ASSET_VERSION ||
-  '20260806c'
+  '20260806e'
 
 /** Route-scoped marketing CSS — keeps campaign/landing rules off /app/* (Remove unused CSS). */
 export default function MarketingStyles({ sheets }: { sheets: MarketingStyleSheet[] }) {

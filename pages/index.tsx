@@ -176,7 +176,7 @@ export default function LandingPage() {
           />
         ))}
 
-        <div className="relative">
+        <div className="testimonials-marquee-viewport relative">
           <div className="testimonials-marquee">
             {[...TESTIMONIALS, ...TESTIMONIALS].map((testimonial, i) => {
               const isDuplicate = i >= TESTIMONIALS.length
