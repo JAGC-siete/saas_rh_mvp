@@ -160,7 +160,7 @@ export default function PazLanding() {
                   </div>
                 </div>
                 <p className="text-center mt-3 text-xs font-medium text-[var(--paz-ink-soft)]">
-                  Contrata hoy tu nueva asistente de RRHH. Digital y Automatizado.
+                  Recupera la paz hoy con tu nueva asistente de RRHH. Digital y Automatizado.
                 </p>
               </div>
             </div>
@@ -285,7 +285,7 @@ export default function PazLanding() {
 
         <section className="paz-section py-16 sm:py-20 text-center">
           <h2 className="paz-dual-cta paz-serif mb-6">
-            Cerrar planilla <span>/</span> Hacer las paces
+            Perder la paz <span>/</span> Hacer las paces
           </h2>
           <p className="paz-lead max-w-lg mx-auto mb-10">
             La ayuda está a un click. Activá tu trial o pedí de una vez tu cotización. El tiempo
