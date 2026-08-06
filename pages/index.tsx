@@ -1,4 +1,5 @@
 import Head from 'next/head'
+import Image from 'next/image'
 import { useCallback, useEffect, useState } from 'react'
 import dynamic from 'next/dynamic'
 import DemoFooter from '../components/DemoFooter'
@@ -29,39 +30,50 @@ const TESTIMONIALS = [
     name: 'Felix G.',
     company: "Tony's Mar Restaurante",
     employees: 'Dueño',
+    image: '/images/testimonials/felix.jpg',
+    imagePosition: 'object-top' as const,
     quote:
-      'Perdía los domingos con Excel. Ahora cierro planilla en minutos y el equipo ya no me pide “una corrección más”.',
+      'Siempre descargando la asistencia a una USB, no había control de asistencia. Perdía los domingos batallando con fórmulas de Excel. Ahora cierro planilla en minutos y las muchachas ya no me piden “una corrección más”.',
     rating: 5,
   },
   {
-    name: 'Karla M.',
+    name: 'Karla Maradiaga',
     company: 'Enlace',
     employees: 'Jefa de Personal',
+    image: '/images/testimonials/karla.jpg',
+    imagePosition: 'object-top' as const,
     quote:
-      'Lo que más me quitó paz eran IHSS, RAP e ISR a mano. Con SISU dejo de ser la máquina de Excel de la empresa.',
+      'Lo que más me quitaba la paz eran las deducciones IHSS, RAP e ISR a mano. Con SISU dejé de ser la máquina de Excel de la empresa.',
     rating: 5,
   },
   {
     name: 'Roberto A.',
     company: 'Agrocomercial Ferretero Eben-Ezer',
     employees: 'Administrador',
+    image: '/images/testimonials/roberto.jpg',
+    imagePosition: 'object-top' as const,
     quote:
-      'El biométrico y la nómina en un solo flujo nos bajó errores y peleas de fin de quincena. Remedio inmediato, de verdad.',
+      'El biométrico y la nómina en un solo servicio fué lo que nos terminó de convencer, redujo los errores y conflictos de fin de cada quincena. Remedio inmediato, verdaderamente.',
     rating: 5,
   },
   {
-    name: 'Nancy L.',
+    name: 'Nancy U.',
     company: 'Rooster Cafe',
     employees: 'Gerente de RRHH',
-    quote: 'Antes cada cierre era un drama. Hoy activo, reviso y listo. Recuperé tiempo… y un poco de paz.',
+    image: '/images/testimonials/nancy.jpg',
+    imagePosition: 'object-center' as const,
+    quote:
+      'Antes necesitaba un experto para operar la gestión de recursos humanos. Desde que activé solamente reviso y listo. Recuperé mi tiempo… y un poco de paz.',
     rating: 5,
   },
   {
-    name: 'Marcio P.',
+    name: 'Jorge Aldana',
     company: 'Grupo Gastro Cueva',
     employees: 'Contador',
+    image: '/images/testimonials/jorge.jpg',
+    imagePosition: 'object-[center_20%]' as const,
     quote:
-      'Pasamos de pelear con deducciones a tener un flujo claro. Mis clientes (y yo) dormimos mejor en quincena.',
+      'Pasamos de pelear con deducciones y no contar con controles a tener un flujo claro. Se acabaron los reclamos por deducciones mal aplicadas.',
     rating: 5,
   },
 ]
@@ -161,8 +173,14 @@ export default function LandingPage() {
                 <SchemaMarkup schema={reviewSchema} />
                 <div className="glass-modern rounded-2xl p-6 h-full hover:scale-[1.01] transition-transform duration-300">
                   <div className="flex items-center gap-3 mb-4">
-                    <div className="w-12 h-12 bg-brand-500/80 rounded-full flex items-center justify-center text-white font-bold shrink-0">
-                      {testimonial.name[0]}
+                    <div className="relative w-14 h-14 shrink-0 rounded-full overflow-hidden ring-2 ring-white/15 bg-brand-500/40">
+                      <Image
+                        src={testimonial.image}
+                        alt={`Foto de ${testimonial.name}`}
+                        fill
+                        className={`object-cover ${testimonial.imagePosition}`}
+                        sizes="56px"
+                      />
                     </div>
                     <div className="min-w-0">
                       <p className="text-white font-medium">{testimonial.name}</p>
