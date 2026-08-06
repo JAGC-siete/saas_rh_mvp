@@ -152,58 +152,74 @@ export default function LandingPage() {
 
       <MagneticHero />
 
-      <section id="prueba-social" className="relative py-12 sm:py-16 md:py-20 px-4 sm:px-6 max-w-7xl mx-auto">
+      <section
+        id="prueba-social"
+        className="relative py-12 sm:py-16 md:py-20 overflow-hidden"
+        aria-label="Testimonios de clientes"
+      >
         <ScrollReveal>
-          <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-center text-white leading-tight mb-6 sm:mb-8 px-2 max-w-5xl mx-auto">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-center text-white leading-tight mb-8 sm:mb-10 px-4 sm:px-6 max-w-5xl mx-auto">
             <span className="text-white block sm:inline">Clientes de SISU lo certifican: </span>
             <span className="text-brand-300 block sm:inline mt-1 sm:mt-0">el control de asistencia integrado con la nómina es la ventaja verdadera</span>
           </h2>
         </ScrollReveal>
 
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 max-w-6xl mx-auto">
-          {TESTIMONIALS.map((testimonial, i) => {
-            const reviewSchema = generateReviewSchema({
+        {TESTIMONIALS.map((testimonial, i) => (
+          <SchemaMarkup
+            key={`review-schema-${i}`}
+            schema={generateReviewSchema({
               productName: 'Humano SISU',
               authorName: testimonial.name,
               rating: testimonial.rating,
               reviewText: testimonial.quote,
-            })
-            return (
-              <ScrollReveal key={`testimonial-${i}`} delay={i * 0.08}>
-                <SchemaMarkup schema={reviewSchema} />
-                <div className="glass-modern rounded-2xl p-6 h-full hover:scale-[1.01] transition-transform duration-300">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="relative w-14 h-14 shrink-0 rounded-full overflow-hidden ring-2 ring-white/15 bg-brand-500/40">
+            })}
+          />
+        ))}
+
+        <div className="relative">
+          <div className="testimonials-marquee">
+            {[...TESTIMONIALS, ...TESTIMONIALS].map((testimonial, i) => {
+              const isDuplicate = i >= TESTIMONIALS.length
+              return (
+                <article
+                  key={`${testimonial.name}-${i}`}
+                  className="glass-modern rounded-2xl p-5 sm:p-6 w-[min(22rem,85vw)] sm:w-[24rem] shrink-0"
+                  aria-hidden={isDuplicate}
+                >
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="relative w-12 h-12 sm:w-14 sm:h-14 shrink-0 rounded-full overflow-hidden ring-2 ring-white/15 bg-brand-500/40">
                       <Image
                         src={testimonial.image}
-                        alt={`Foto de ${testimonial.name}`}
+                        alt={isDuplicate ? '' : `Foto de ${testimonial.name}`}
                         fill
                         className={`object-cover ${testimonial.imagePosition}`}
                         sizes="56px"
                       />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-white font-medium">{testimonial.name}</p>
+                      <p className="text-white font-medium truncate">{testimonial.name}</p>
                       {testimonial.company ? (
-                        <p className="text-slate-400 text-sm font-medium opacity-50 grayscale">{testimonial.company}</p>
+                        <p className="text-slate-400 text-sm font-medium opacity-50 grayscale truncate">{testimonial.company}</p>
                       ) : (
-                        <p className="text-slate-400 text-sm font-medium">{testimonial.employees}</p>
+                        <p className="text-slate-400 text-sm font-medium truncate">{testimonial.employees}</p>
                       )}
                     </div>
                   </div>
-                  <div className="mb-2">
+                  <div className="mb-2" aria-hidden="true">
                     {[...Array(5)].map((_, idx) => (
                       <span key={idx} className={`text-lg ${idx < testimonial.rating ? 'text-yellow-400' : 'text-slate-600'}`}>★</span>
                     ))}
                   </div>
-                  <blockquote className="text-slate-400 italic mb-4 font-medium landing-dark-text">&ldquo;{testimonial.quote}&rdquo;</blockquote>
+                  <blockquote className="text-slate-400 italic text-sm sm:text-base font-medium landing-dark-text line-clamp-5">
+                    &ldquo;{testimonial.quote}&rdquo;
+                  </blockquote>
                   {testimonial.company && (
-                    <span className="text-brand-400 text-sm font-medium">{testimonial.employees}</span>
+                    <span className="mt-3 inline-block text-brand-400 text-sm font-medium">{testimonial.employees}</span>
                   )}
-                </div>
-              </ScrollReveal>
-            )
-          })}
+                </article>
+              )
+            })}
+          </div>
         </div>
       </section>
 

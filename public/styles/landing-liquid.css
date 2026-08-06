@@ -138,6 +138,18 @@
   width: max-content;
 }
 
+.testimonials-marquee {
+  display: flex;
+  gap: 1.25rem;
+  animation: marquee-scroll 55s linear infinite;
+  width: max-content;
+  padding-inline: 1rem;
+}
+
+.testimonials-marquee:hover {
+  animation-play-state: paused;
+}
+
 .landing-footer-bridge {
   background: linear-gradient(
     to bottom,
@@ -165,7 +177,8 @@
   .radar-pulse::before,
   .radar-pulse::after,
   .flags-marquee,
-  .trust-marquee {
+  .trust-marquee,
+  .testimonials-marquee {
     animation: none;
   }
 }
