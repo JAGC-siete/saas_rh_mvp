@@ -40,8 +40,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Transform timeline to match component expectations
     // Component expects: { ts_local: string, event_type: string, source?: string, justification?: string }
     // RPC returns: { date, check_in, check_out, lunch_start?, lunch_end?, late_minutes, status, ... }
+    // Group by attendance `date` (local calendar day), NOT UTC from timestamps —
+    // evening check-outs in HN are next-day UTC and would otherwise float to the top.
     const timeline = (timelineRaw || []).flatMap((record: any) => {
       const events: any[] = []
+      const day =
+        typeof record.date === 'string'
+          ? record.date.slice(0, 10)
+          : record.date
+            ? new Date(record.date).toISOString().slice(0, 10)
+            : null
 
       if (record.check_in) {
         events.push({
@@ -50,7 +58,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                      record.late_minutes < -5 ? 'Check-in Temprano' :
                      'Check-in',
           source: 'attendance_system',
-          justification: record.late_minutes > 5 ? `Llegó ${record.late_minutes} minutos tarde` : null
+          justification: record.late_minutes > 5 ? `Llegó ${record.late_minutes} minutos tarde` : null,
+          _day: day,
         })
       }
       if (record.lunch_start) {
@@ -58,7 +67,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           ts_local: record.lunch_start,
           event_type: 'Inicio almuerzo',
           source: 'attendance_system',
-          justification: null
+          justification: null,
+          _day: day,
         })
       }
       if (record.lunch_end) {
@@ -66,7 +76,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           ts_local: record.lunch_end,
           event_type: 'Fin almuerzo',
           source: 'attendance_system',
-          justification: null
+          justification: null,
+          _day: day,
         })
       }
       if (record.check_out) {
@@ -74,17 +85,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           ts_local: record.check_out,
           event_type: 'Check-out',
           source: 'attendance_system',
-          justification: null
+          justification: null,
+          _day: day,
         })
       }
 
       return events
     }).sort((a: any, b: any) => {
-      const dayA = new Date(a.ts_local).toISOString().slice(0, 10)
-      const dayB = new Date(b.ts_local).toISOString().slice(0, 10)
+      const dayA = a._day || ''
+      const dayB = b._day || ''
       if (dayB !== dayA) return dayB.localeCompare(dayA)
       return new Date(a.ts_local).getTime() - new Date(b.ts_local).getTime()
-    })
+    }).map(({ _day, ...ev }: any) => ev)
 
     // Get employee details
     const { data: employee, error: employeeError } = await supabase

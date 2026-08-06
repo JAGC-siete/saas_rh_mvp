@@ -54,6 +54,17 @@ function isAnomalyEvent(ev: TimelineEvent): boolean {
   return t.includes('anomal') || t.includes('late') || t.includes('oor') || t.includes('tarde')
 }
 
+/** Check-in / entrada only — do not match "Inicio almuerzo" via substring "in". */
+function isCheckInEvent(eventType: string): boolean {
+  const t = eventType.toLowerCase()
+  return t.startsWith('check-in') || t === 'entrada' || t.includes('check-in')
+}
+
+function isCheckOutEvent(eventType: string): boolean {
+  const t = eventType.toLowerCase()
+  return t.startsWith('check-out') || t === 'salida' || t.includes('check-out')
+}
+
 export default function EmployeeDrawer({
   open,
   onClose,
@@ -248,7 +259,8 @@ export default function EmployeeDrawer({
                   <div className="relative pl-6 space-y-1">
                     <div className="absolute left-[11px] top-3 bottom-3 w-px bg-gradient-to-b from-brand-500/40 via-white/10 to-transparent" aria-hidden />
                     {events.map((ev, idx) => {
-                      const isIn = ev.event_type.toLowerCase().includes('in')
+                      const isIn = isCheckInEvent(ev.event_type)
+                      const isOut = isCheckOutEvent(ev.event_type)
                       const anomaly = isAnomalyEvent(ev)
                       return (
                         <motion.div
@@ -264,15 +276,21 @@ export default function EmployeeDrawer({
                                 ? 'bg-orange-400 animate-pulse-slow shadow-[0_0_8px_rgba(251,146,60,0.6)]'
                                 : isIn
                                   ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.4)]'
-                                  : 'bg-rose-400 shadow-[0_0_8px_rgba(251,113,133,0.4)]'
+                                  : isOut
+                                    ? 'bg-rose-400 shadow-[0_0_8px_rgba(251,113,133,0.4)]'
+                                    : 'bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.35)]'
                             }`}
                           />
                           <div className="flex-1 min-w-0">
                             <div className="flex items-start gap-2">
-                              {isIn ? (
-                                <CheckCircleIcon className="h-4 w-4 text-emerald-400 mt-0.5 flex-shrink-0" />
-                              ) : (
+                              {isOut ? (
                                 <ArrowRightStartOnRectangleIcon className="h-4 w-4 text-rose-300 mt-0.5 flex-shrink-0" />
+                              ) : (
+                                <CheckCircleIcon
+                                  className={`h-4 w-4 mt-0.5 flex-shrink-0 ${
+                                    isIn ? 'text-emerald-400' : 'text-amber-300'
+                                  }`}
+                                />
                               )}
                               <div>
                                 <p className="text-white text-sm font-medium">{ev.event_type}</p>
