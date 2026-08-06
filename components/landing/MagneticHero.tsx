@@ -15,9 +15,9 @@ export default function MagneticHero() {
   return (
     <section className="relative py-6 sm:py-8 md:py-12 lg:py-16 overflow-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 lg:grid-cols-[7fr_3fr] gap-8 lg:gap-12 items-center">
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,7fr)_minmax(0,3fr)] gap-8 lg:gap-12 items-center">
           {/* Above-fold: no opacity:0 motion — LCP was delayed ~94% by ScrollReveal/framer. */}
-          <div>
+          <div className="min-w-0">
             <div className="flex flex-wrap gap-2 sm:gap-3 mb-6">
               <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-500/15 text-green-300 text-xs rounded-full border border-green-500/25 font-medium">
                 <CheckCircleIcon className="h-3.5 w-3.5 shrink-0" aria-hidden />
@@ -77,7 +77,7 @@ export default function MagneticHero() {
             </p>
           </div>
 
-          <div className="w-full max-w-sm mx-auto lg:max-w-none lg:mx-0">
+          <div className="w-full max-w-sm mx-auto lg:max-w-none lg:mx-0 min-w-0">
             <div className="glass-modern rounded-2xl p-2 shadow-[0_20px_50px_rgba(0,0,0,0.4)]">
               <div className="rounded-xl overflow-hidden bg-slate-900/50 border border-white/5 leading-none">
                 <Image
@@ -85,9 +85,8 @@ export default function MagneticHero() {
                   alt="Profesional de RRHH en oficina, con café y libretas de trabajo"
                   width={682}
                   height={1024}
-                  className="block w-full h-auto object-cover object-top"
-                  loading="lazy"
-                  sizes="(max-width: 1024px) 80vw, 28vw"
+                  className="block w-full max-w-full h-auto object-cover object-top"
+                  sizes="(max-width: 1023px) min(100vw - 2rem, 24rem), 28vw"
                 />
               </div>
             </div>

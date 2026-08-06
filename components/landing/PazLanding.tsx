@@ -121,20 +121,26 @@ export default function PazLanding() {
 
       <div className="paz-page flex-grow">
         <section className="paz-hero pt-8 sm:pt-12">
+          {/*
+            Hero = CSS Grid de 2 tracks con minmax(0, fr).
+            Sin minmax(0), el min-content de next/image (682px) explota la columna
+            y la foto invade el copy (CTA encima de la imagen). Ver css-tricks grid blowout.
+            Imagen en flujo normal (width/height + width:100% / height:auto) — no fill.
+          */}
           <div className="paz-hero-grid">
             <div className="paz-hero-copy">
               <span className="paz-badge">La forma pacífica de cerrar planilla</span>
-              <h1 className="paz-serif paz-hero-title mb-6">
+              <h1 className="paz-serif paz-hero-title">
                 ¿Conocés a alguien que perdió la paz cerrando planilla?
                 <br />
                 <span className="italic">¿Esa persona sos vos?</span>
               </h1>
-              <p className="paz-mantra mb-10">
+              <p className="paz-mantra">
                 Ayudamos a dueños de negocio y equipos de RRHH como vos a encontrar una forma más
                 pacífica de pagar nómina.{' '}
                 <strong className="font-semibold text-[var(--paz-ink)]">No sos una máquina de Excel.</strong>
               </p>
-              <div className="flex flex-col sm:flex-row flex-wrap items-center sm:items-start justify-center sm:justify-start gap-3">
+              <div className="paz-hero-actions">
                 <button type="button" onClick={scrollToVideo} className="paz-btn paz-btn-primary">
                   Ver el video
                   <span className="text-sm opacity-75">(Método revelado)</span>
@@ -142,25 +148,23 @@ export default function PazLanding() {
               </div>
             </div>
 
-            {/* Panel lateral (mismo rol que MagneticHero): foto contenida, nunca fill a pantalla completa */}
-            <div className="paz-hero-media">
-              <div className="paz-hero-photo-frame">
+            <aside className="paz-hero-media" aria-label="Imagen de campaña">
+              <figure className="paz-hero-figure">
                 <div className="paz-hero-photo">
                   <Image
                     src="/images/paz/hero-human.jpg"
-                    alt="Profesional en escritorio con cuaderno y pluma, enfocada en su trabajo de RRHH"
+                    alt="Profesional agobiada frente a su laptop, con las manos en la cara al cerrar planilla"
                     width={682}
                     height={1024}
                     className="paz-hero-photo-img"
-                    loading="lazy"
-                    sizes="(max-width: 1024px) 80vw, 28vw"
+                    sizes="(max-width: 767px) min(100vw - 3rem, 22rem), 30vw"
                   />
                 </div>
-              </div>
-              <p className="paz-hero-caption">
-                Contrata hoy tu nueva asistente de RRHH. Digital y Automatizado.
-              </p>
-            </div>
+                <figcaption className="paz-hero-caption">
+                  Contrata hoy tu nueva asistente de RRHH. Digital y Automatizado.
+                </figcaption>
+              </figure>
+            </aside>
           </div>
         </section>
 
