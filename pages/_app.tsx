@@ -41,6 +41,28 @@ export default function App({ Component, pageProps }: AppProps) {
     setIsClient(true)
   }, [])
 
+  // After a new deploy, soft-nav can request stale /_next/static chunks and hang on
+  // next/dynamic "Cargando…" placeholders. Force a full reload once to pick up the new build.
+  React.useEffect(() => {
+    const key = 'chunk-load-reload'
+    const onError = (err: Error) => {
+      const msg = err?.message || ''
+      if (!/ChunkLoadError|Loading chunk [\d]+ failed|Failed to fetch dynamically imported module/i.test(msg)) {
+        return
+      }
+      if (sessionStorage.getItem(key) === '1') return
+      sessionStorage.setItem(key, '1')
+      window.location.reload()
+    }
+    const clearReloadFlag = () => sessionStorage.removeItem(key)
+    router.events.on('routeChangeError', onError)
+    router.events.on('routeChangeComplete', clearReloadFlag)
+    return () => {
+      router.events.off('routeChangeError', onError)
+      router.events.off('routeChangeComplete', clearReloadFlag)
+    }
+  }, [router.events])
+
   const isMeshAppRoute =
     router.pathname.startsWith('/app') &&
     router.pathname !== '/app/login' &&
