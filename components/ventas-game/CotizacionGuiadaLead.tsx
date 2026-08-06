@@ -47,6 +47,7 @@ import {
   VENTAS_COUNTRY_LABEL,
   VENTAS_SECTOR_OPTIONS,
   type VentasFormLimits,
+  type VentasPublicTier,
   type VentasValidationErrors,
 } from '../../lib/ventas-game/ventas-form'
 import { hasValidationErrors, omitValidationField } from '../../lib/forms/validation-errors'
@@ -99,14 +100,7 @@ export default function CotizacionGuiadaLead({
     annual_terminals_included_min_employees: VENTAS_ANNUAL_TERMINALS_INCLUDED_MIN_EMPLOYEES,
     hardware_sale_unit_price: VENTAS_HARDWARE_SALE_UNIT_PRICE,
   })
-  const [publicTiers, setPublicTiers] = useState<
-    Array<{
-      min_employees: number
-      max_employees: number
-      annual_terminal_mode: VentasAnnualTerminalMode
-      included_terminals_max: number | null
-    }>
-  >([])
+  const [publicTiers, setPublicTiers] = useState<VentasPublicTier[]>([])
 
   useEffect(() => {
     let cancelled = false
@@ -169,8 +163,8 @@ export default function CotizacionGuiadaLead({
   const monthlyAvailable = isMonthlyModalityAvailable(employeesCount, formLimits)
   const matchedTier = findPublicTierForEmployees(employeesCount, publicTiers)
   const tierHints = {
-    annual_terminal_mode: matchedTier?.annual_terminal_mode,
-    included_terminals_max: matchedTier?.included_terminals_max,
+    annual_terminal_mode: matchedTier?.annual_terminal_mode ?? ('auto' as VentasAnnualTerminalMode),
+    included_terminals_max: matchedTier?.included_terminals_max ?? null,
   }
   const selectedRangeLabel = matchedTier
     ? formatEmployeeRangeLabel(matchedTier.min_employees, matchedTier.max_employees)

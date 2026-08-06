@@ -28,6 +28,8 @@
     "node_modules",
     "supabase/functions/**/*",
     "services/**/*",
-    "railway/**/*"
+    "railway/**/*",
+    "scripts/**/*",
+    "tests/**/*"
   ]
 }

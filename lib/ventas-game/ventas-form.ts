@@ -4,6 +4,7 @@ import {
   mergeVentasBusinessRules,
   ventasMonthlyUnavailableMessage,
   VENTAS_MAX_AUTO_QUOTE_TERMINALS,
+  type VentasAnnualTerminalMode,
   type VentasBusinessRules,
 } from '../ventas/business-rules'
 import type { CountryCode } from '../country/supported'
@@ -20,7 +21,7 @@ export type VentasFormLimits = {
 export type VentasPublicTier = {
   min_employees: number
   max_employees: number
-  annual_terminal_mode?: string
+  annual_terminal_mode?: VentasAnnualTerminalMode
   included_terminals_max?: number | null
 }
 
