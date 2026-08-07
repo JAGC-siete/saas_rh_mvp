@@ -33,6 +33,11 @@ export const GUIDE_LINKS: Record<string, GuideLink> = {
     href: '/alternativa-odoo-honduras',
     label: 'Alternativa a Odoo',
     description: 'Compara Humano SISU con Odoo para RH regional'
+  },
+  domingosSinPlanilla: {
+    href: '/domingos-sin-planilla',
+    label: 'Domingos sin planilla',
+    description: 'Método para digitalizar y automatizar RR.HH. sin apagar la operación'
   }
 } as const
 
@@ -42,7 +47,8 @@ export const FOOTER_GUIDE_KEYS: Array<keyof typeof GUIDE_LINKS> = [
   'deduccionesHonduras',
   'biometricoNomina',
   'implementacion48h',
-  'alternativaOdoo'
+  'alternativaOdoo',
+  'domingosSinPlanilla'
 ]
 
 /** Cross-links "También te puede interesar" por landing (clave = ruta actual). */

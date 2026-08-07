@@ -134,7 +134,13 @@ export default function CalculadoraHubPage() {
               href={`${CALCULATOR_HUB_LINKS.info.href}?utm_source=calculadora-hub&utm_medium=cta&utm_campaign=footer`}
               className="inline-flex justify-center py-3 px-6 glass-modern hover:bg-white/10 text-white font-semibold rounded-xl border border-white/20"
             >
-              Más información
+              {CALCULATOR_HUB_LINKS.info.label}
+            </Link>
+            <Link
+              href={`${CALCULATOR_HUB_LINKS.viernes.href}?utm_source=calculadora-hub&utm_medium=cta&utm_campaign=footer`}
+              className="inline-flex justify-center py-3 px-6 glass-modern hover:bg-white/10 text-white font-semibold rounded-xl border border-white/20"
+            >
+              {CALCULATOR_HUB_LINKS.viernes.label}
             </Link>
             <TrackedInternalCta
               href="/ventas?utm_source=calculadora-hub&utm_medium=cta&utm_campaign=pricing"

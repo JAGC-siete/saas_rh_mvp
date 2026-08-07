@@ -1,5 +1,6 @@
 /** Enlaces del cluster de calculadoras — hub & spoke para SEO interno. */
 import { INFO_FUNNEL_PUBLIC_PATH } from '../marketing/info-funnel-path'
+import { VIERNES_PUBLIC_PATH } from '../marketing/viernes-copy'
 import { deductionCalculatorPublicPath } from '../marketing/calculator-public-paths'
 
 export const CALCULATOR_HUB_LINKS = {
@@ -11,8 +12,13 @@ export const CALCULATOR_HUB_LINKS = {
   },
   info: {
     href: INFO_FUNNEL_PUBLIC_PATH,
-    label: 'El Secreto',
-    subtitle: 'Archivo reservado: truco y misiones sobre nómina',
+    label: 'Cerrar planilla en paz',
+    subtitle: 'Claves para recuperar la paz al cerrar nómina',
+  },
+  viernes: {
+    href: VIERNES_PUBLIC_PATH,
+    label: 'Domingos sin planilla',
+    subtitle: 'Método para digitalizar y automatizar RR.HH. en MiPyMes',
   },
   landing: { href: '/#como-funciona', label: 'Automatizar nómina con Humano SISU' },
   deductions: [

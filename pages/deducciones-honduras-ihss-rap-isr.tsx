@@ -122,8 +122,8 @@ export default function DeduccionesHondurasPage() {
           {/* Hero Title */}
           <div className="text-center mb-6 sm:mb-8 px-2">
             <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-white leading-tight sm:leading-tight">
-              <span className="text-white block sm:inline">Control de asistencia y nómina en un solo lugar:</span>
-              <span className="text-brand-300 block text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl mt-2 sm:mt-1">Sin cálculos manuales, sin errores.</span>
+              <span className="text-white block sm:inline">IHSS, RAP e ISR en Honduras:</span>
+              <span className="text-brand-300 block text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl mt-2 sm:mt-1">deducciones de ley sin Excel ni errores.</span>
             </h1>
             <p className="text-lg sm:text-xl text-brand-200/90 max-w-3xl mx-auto mt-4 sm:mt-6">
               Esta guía profundiza en IHSS, RAP e ISR en Honduras. Humano SISU es regional: misma plataforma con reglas nacionales para El Salvador, Guatemala y Honduras.

@@ -54,7 +54,7 @@ export const pageTitles = {
   calculatorSlv: 'Calculadora ISR El Salvador | ISSS, AFP y sueldo neto | Humano SISU',
   calculatorGtm: 'Calculadora sueldo neto Guatemala | IGSS e ISR | Humano SISU',
   privacy: 'Política de Privacidad | Humano SISU',
-  subscription: 'Suscripción | Planes y Precios | Humano SISU',
+  subscription: 'Alertas legales sobre tu sueldo | Humano SISU',
   login: 'Iniciar Sesión | Humano SISU',
   dashboard: 'Dashboard | Humano SISU',
   employees: 'Gestión de Empleados | Humano SISU',

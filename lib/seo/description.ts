@@ -47,7 +47,7 @@ export const pageDescriptions = {
   calculatorSlv: 'Calculadora ISR El Salvador: ISSS, AFP y sueldo neto en USD. Motor de nómina Humano SISU. Automatiza planilla en El Salvador.',
   calculatorGtm: 'Calculadora sueldo neto Guatemala: IGSS e ISR en quetzales. Mismo motor de nómina Humano SISU. Prueba gratis.',
   privacy: 'Política de privacidad de Humano SISU. Conoce cómo protegemos y manejamos tus datos personales y de tus empleados.',
-  subscription: 'Elige el plan perfecto para tu empresa. Desde startups hasta empresas establecidas, tenemos el plan ideal para ti.',
+  subscription: 'Alertas gratis de aguinaldo, catorceavo y cambios en deducciones para quien revisa su recibo en Honduras, El Salvador y Guatemala.',
   login: 'Inicia sesión en tu cuenta de Humano SISU. Accede a tu dashboard, gestiona empleados, nómina y más.',
   dashboard: 'Dashboard principal de Humano SISU. Visualiza estadísticas, empleados, asistencia y nómina en un solo lugar.',
   employees: 'Gestiona tus empleados de forma eficiente. Agrega, edita y organiza la información de tu equipo.',
@@ -64,7 +64,7 @@ export const pageDescriptions = {
   ventasGracias:
     'Confirmación de cotización Humano SISU. Revisá tu correo para el PDF y las credenciales de acceso.',
   gracias: 'Confirmación de pago recibida. Tu sistema Humano SISU se activará en las próximas horas.',
-  info: '¿Perdés la paz cada vez que cerrás planilla? Descubrí cómo recuperarla automatizando asistencia biométrica, nómina y deducciones de ley (IHSS, RAP, ISR) en Honduras, El Salvador y Guatemala. Sin compromiso.',
+  info: '¿Perdés la paz al cerrar planilla? Recuperála automatizando asistencia, nómina y deducciones (IHSS, RAP, ISR) en HN, SV y GT. Sin compromiso.',
   paz: '¿Perdiste un domingo haciendo Excel? No sos una máquina de errores de deducción. Encontrá tu paz con Humano SISU.',
   viernes:
     '¿El drama de la planilla te quitó la paz? Descargá las claves para digitalizar y automatizar la gestión de RR.HH. en tu MiPyMe sin apagar la operación.',

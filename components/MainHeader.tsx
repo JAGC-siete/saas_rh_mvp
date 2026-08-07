@@ -216,15 +216,13 @@ export default function MainHeader({ enableScrollEffect = false, fixed = true }:
                     </div>
                   )}
                 </div>
-                <button
-                  onClick={() => {
-                    window.location.href = '/activar'
-                    setIsMobileMenuOpen(false)
-                  }}
-                  className="bg-green-600 hover:bg-green-700 text-white px-6 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 shadow-[0_8px_30px_rgb(0,0,0,0.12)] hover:-translate-y-0.5 active:translate-y-0 whitespace-nowrap min-w-[160px] text-center min-h-[48px]"
+                <Link
+                  href="/activar"
+                  className="bg-green-600 hover:bg-green-700 text-white px-6 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 shadow-[0_8px_30px_rgb(0,0,0,0.12)] hover:-translate-y-0.5 active:translate-y-0 whitespace-nowrap min-w-[160px] text-center min-h-[48px] inline-flex items-center justify-center"
+                  onClick={() => setIsMobileMenuOpen(false)}
                 >
                   Activación inmediata
-                </button>
+                </Link>
                 <Link
                   href="/app/login"
                   className="bg-brand-600 hover:bg-brand-700 text-white px-6 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 shadow-[0_8px_30px_rgb(0,0,0,0.12)] hover:-translate-y-0.5 active:translate-y-0 whitespace-nowrap min-w-[140px] text-center min-h-[48px] inline-flex items-center justify-center"
@@ -358,15 +356,13 @@ export default function MainHeader({ enableScrollEffect = false, fixed = true }:
                   </Link>
                 </div>
               )}
-              <button
-                onClick={() => {
-                  setIsMobileMenuOpen(false)
-                  window.location.href = '/activar'
-                }}
+              <Link
+                href="/activar"
                 className="bg-green-600 hover:bg-green-700 text-white w-full text-center block py-3 px-4 rounded-xl transition-colors mb-2 min-h-[48px]"
+                onClick={() => setIsMobileMenuOpen(false)}
               >
                 Activación inmediata
-              </button>
+              </Link>
               <Link
                 href="/app/login"
                 className="bg-brand-900 hover:bg-brand-800 text-white w-full text-center block py-2 px-4 rounded-lg transition-colors"

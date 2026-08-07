@@ -165,13 +165,13 @@ export default function DockNavbar({
           </div>
 
           <div className="hidden md:flex items-center gap-2 ml-auto shrink-0">
-            <button
-              type="button"
-              onClick={() => { window.location.href = '/activar' }}
-              className="bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-colors shadow-[0_0_20px_rgba(34,197,94,0.25)] min-h-[36px]"
+            <Link
+              prefetch={false}
+              href="/activar"
+              className="bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-colors shadow-[0_0_20px_rgba(34,197,94,0.25)] min-h-[36px] inline-flex items-center"
             >
               Activar
-            </button>
+            </Link>
             <AnimatePresence>
               {showLogin && (
                 <motion.div
@@ -269,13 +269,14 @@ export default function DockNavbar({
                 ))}
               </div>
             )}
-            <button
-              type="button"
-              onClick={() => { setIsMobileMenuOpen(false); window.location.href = '/activar' }}
-              className="w-full mt-2 bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl text-sm font-medium min-h-[48px]"
+            <Link
+              prefetch={false}
+              href="/activar"
+              className="block w-full mt-2 text-center bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl text-sm font-medium min-h-[48px]"
+              onClick={() => setIsMobileMenuOpen(false)}
             >
               Activación inmediata
-            </button>
+            </Link>
             <Link prefetch={false}
               href="/app/login"
               className="block w-full mt-2 text-center bg-brand-600 hover:bg-brand-700 text-white py-3 rounded-xl text-sm font-medium min-h-[48px]"
