@@ -251,7 +251,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           }
           const allKeys = new Set([...Object.keys(existingMetadata), ...Object.keys(mergedMetadata)])
           for (const key of allKeys) {
-            if (key === '_deduction_plan_ids') continue
+            if (key === '_deduction_plan_ids' || key === '_deduction_plan_breakdown') continue
             const oldVal = existingMetadata[key]
             const newVal = mergedMetadata[key]
             const oldNum = typeof oldVal === 'number' ? oldVal : (typeof oldVal === 'string' && !isNaN(parseFloat(oldVal)) ? parseFloat(oldVal) : null)

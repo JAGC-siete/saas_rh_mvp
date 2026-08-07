@@ -96,6 +96,39 @@ describe('buildCustomDeductionsList', () => {
     assert.equal(list[0].amount, 105)
   })
 
+  it('lists each same-field_key plan from _deduction_plan_breakdown', async () => {
+    const supabase = mockSupabase({
+      cxc_optica: {
+        label: 'CXC Óptica',
+        type: 'number',
+        category: 'deductions',
+        required: false,
+        default: 0,
+      },
+    })
+
+    const list = await buildCustomDeductionsList(
+      'company-test',
+      {
+        cxc_optica: 150,
+        _deduction_plan_ids: ['p1', 'p2'],
+        _deduction_plan_breakdown: [
+          { plan_id: 'p1', field_key: 'cxc_optica', monto: 100 },
+          { plan_id: 'p2', field_key: 'cxc_optica', monto: 50 },
+        ],
+      },
+      7500,
+      supabase
+    )
+
+    assert.equal(list.length, 2)
+    assert.deepEqual(
+      list.map((x) => x.amount).sort((a, b) => b - a),
+      [100, 50]
+    )
+    assert.ok(list.every((x) => x.name === 'CXC Óptica'))
+  })
+
   it('skips statutory-reserved key isr even when labeled Impuestos', async () => {
     const supabase = mockSupabase({
       isr: {

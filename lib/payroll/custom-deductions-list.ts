@@ -57,6 +57,7 @@ const METADATA_SKIP_KEYS = new Set([
   'statutory_override_isr',
   'septimo_dia',
   '_deduction_plan_ids',
+  '_deduction_plan_breakdown',
 ])
 
 const LEGACY_DEDUCTION_KEYS = new Set<string>(
@@ -119,11 +120,17 @@ export async function buildCustomDeductionsList(
   const customFields = await getCustomFieldsFromDB(companyId, supabase)
   const list: Array<{ name: string; amount: number }> = []
   const seen = new Set<string>()
+  const breakdown = Array.isArray(meta._deduction_plan_breakdown)
+    ? (meta._deduction_plan_breakdown as Array<{ plan_id?: string; field_key?: string; monto?: unknown }>)
+    : []
+  const breakdownFieldKeys = new Set(
+    breakdown.map((b) => b.field_key).filter((k): k is string => typeof k === 'string' && k.length > 0)
+  )
 
-  const pushDeduction = (name: string, amount: number) => {
+  const pushDeduction = (name: string, amount: number, dedupeId?: string) => {
     const rounded = Math.round(amount * 100) / 100
     if (rounded <= 0) return
-    const dedupeKey = `${name}:${rounded}`
+    const dedupeKey = dedupeId ? `id:${dedupeId}` : `${name}:${rounded}`
     if (seen.has(dedupeKey)) return
     seen.add(dedupeKey)
     list.push({ name, amount: rounded })
@@ -133,6 +140,17 @@ export async function buildCustomDeductionsList(
     for (const [fieldName, fieldDef] of Object.entries(customFields)) {
       if (fieldDef.category !== 'deductions') continue
       if (isStatutoryReservedCustomKey(fieldName)) continue
+      if (breakdownFieldKeys.has(fieldName)) {
+        for (const item of breakdown) {
+          if (item.field_key !== fieldName) continue
+          pushDeduction(
+            formatFieldLabel(fieldName, fieldDef.label),
+            parseAmount(item.monto),
+            item.plan_id
+          )
+        }
+        continue
+      }
       const calculated = parseAmount(calc.calculatedFields?.[fieldName])
       const fromMeta = parseAmount(meta[fieldName])
       const amount = resolveDeductionAmount(calculated, fromMeta)
@@ -143,37 +161,50 @@ export async function buildCustomDeductionsList(
     for (const [key, value] of Object.entries(meta)) {
       if (!isDeductionMetadataKey(key) || customFields[key]) continue
       if (isStatutoryReservedCustomKey(key)) continue
+      if (breakdownFieldKeys.has(key)) continue
       pushDeduction(formatFieldLabel(key), parseAmount(value))
     }
   } else {
     for (const field of LEGACY_DEDUCTION_FIELDS) {
+      if (breakdownFieldKeys.has(field.key)) {
+        for (const item of breakdown) {
+          if (item.field_key !== field.key) continue
+          pushDeduction(field.label, parseAmount(item.monto), item.plan_id)
+        }
+        continue
+      }
       pushDeduction(field.label, parseAmount(meta[field.key]))
     }
 
     for (const [key, value] of Object.entries(meta)) {
       if (!isDeductionMetadataKey(key) || LEGACY_DEDUCTION_KEYS.has(key)) continue
       if (isStatutoryReservedCustomKey(key)) continue
+      if (breakdownFieldKeys.has(key)) continue
       pushDeduction(formatFieldLabel(key), parseAmount(value))
     }
   }
 
-  const planIds = meta._deduction_plan_ids as string[] | undefined
-  if (planIds?.length && supabase) {
-    const { data: plans } = await supabase
-      .from('employee_deduction_plans')
-      .select('field_key, monto_por_plazo')
-      .in('id', planIds)
-      .eq('company_id', companyId)
+  // Legacy lines without breakdown: enrich from plan ids (scalar meta may already cover amount).
+  if (!breakdown.length) {
+    const planIds = meta._deduction_plan_ids as string[] | undefined
+    if (planIds?.length && supabase) {
+      const { data: plans } = await supabase
+        .from('employee_deduction_plans')
+        .select('id, field_key, monto_por_plazo')
+        .in('id', planIds)
+        .eq('company_id', companyId)
 
-    for (const plan of plans || []) {
-      const fieldKey = plan.field_key as string
-      if (isStatutoryReservedCustomKey(fieldKey)) continue
-      const fieldDef = customFields?.[fieldKey]
-      const amount =
-        parseAmount(meta[fieldKey]) > 0
-          ? parseAmount(meta[fieldKey])
-          : parseAmount(plan.monto_por_plazo)
-      pushDeduction(formatFieldLabel(fieldKey, fieldDef?.label), amount)
+      for (const plan of plans || []) {
+        const fieldKey = plan.field_key as string
+        if (isStatutoryReservedCustomKey(fieldKey)) continue
+        const fieldDef = customFields?.[fieldKey]
+        const amount =
+          parseAmount(meta[fieldKey]) > 0
+            ? parseAmount(meta[fieldKey])
+            : parseAmount(plan.monto_por_plazo)
+        // Dedupe by name:amount (legacy scalar); new lines use _deduction_plan_breakdown above.
+        pushDeduction(formatFieldLabel(fieldKey, fieldDef?.label), amount)
+      }
     }
   }
 

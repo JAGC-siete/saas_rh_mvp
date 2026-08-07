@@ -52,8 +52,10 @@ export default function ArrivalTable({
   const [expandedId, setExpandedId] = useState<string | null>(null)
 
   useEffect(() => {
-    if (externalSeverityFilter === 'all') return
-    if (externalSeverityFilter === 'late') {
+    if (externalSeverityFilter === 'all') {
+      setSeverityFilter('all')
+    } else if (externalSeverityFilter === 'late') {
+      // Parent filter "Tarde" covers warn+alert+danger; chip state is informational only.
       setSeverityFilter('warn')
     } else if (
       externalSeverityFilter === 'early' ||
@@ -122,7 +124,7 @@ export default function ArrivalTable({
     { key: 'all' as SeverityFilter, label: 'Todos', count: unifiedRows.length },
     { key: 'early' as SeverityFilter, label: 'Temprano', count: unifiedRows.filter((r) => r.tone === 'info').length },
     { key: 'on_time' as SeverityFilter, label: 'A tiempo', count: unifiedRows.filter((r) => r.tone === 'ok').length },
-    { key: 'warn' as SeverityFilter, label: 'Tarde 5–10', count: unifiedRows.filter((r) => r.tone === 'warn').length },
+    { key: 'warn' as SeverityFilter, label: 'Tarde 6–10', count: unifiedRows.filter((r) => r.tone === 'warn').length },
     { key: 'alert' as SeverityFilter, label: 'Tarde 11–20', count: unifiedRows.filter((r) => r.tone === 'alert').length },
     { key: 'danger' as SeverityFilter, label: 'Tarde >20', count: unifiedRows.filter((r) => r.tone === 'danger').length },
   ]

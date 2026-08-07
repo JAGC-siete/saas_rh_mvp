@@ -18,6 +18,7 @@ import {
   resolvePayrollPeriodContext,
   computeFixedGrossFromDays,
   computeFixedLineDeductionsAndNet,
+  applyDeductionPlansToMetadata,
   buildFixedLinePlanMetadata,
   type PreviewPaymentFrequency
 } from '../../../lib/payroll/fixed-line-recalc'
@@ -1263,12 +1264,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         lineMetadata.pay_type = effectivePayType === 'admin_floor' ? 'admin_floor' : 'hourly'
         lineMetadata.horas_extras = horasExtrasDisplay
         lineMetadata.days_worked = days_worked
-        const planIdsHourly: string[] = []
-        for (const plan of empPlansHourly) {
-          lineMetadata[plan.field_key] = plan.monto_por_plazo
-          planIdsHourly.push(plan.id)
-        }
-        if (planIdsHourly.length > 0) lineMetadata._deduction_plan_ids = planIdsHourly
+        applyDeductionPlansToMetadata(lineMetadata, empPlansHourly)
 
         const { data: insertedLine, error: lineError } = await supabase
           .from('payroll_run_lines')

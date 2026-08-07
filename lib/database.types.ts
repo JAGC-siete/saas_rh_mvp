@@ -1516,7 +1516,7 @@ export type Database = {
       }
       employees: {
         Row: {
-          address: Json | null
+          address: string | null
           bank_account: string | null
           bank_name: string | null
           base_salary: number
@@ -1548,7 +1548,7 @@ export type Database = {
           work_schedule_id: string | null
         }
         Insert: {
-          address?: Json | null
+          address?: string | null
           bank_account?: string | null
           bank_name?: string | null
           base_salary: number
@@ -1578,7 +1578,7 @@ export type Database = {
           work_schedule_id?: string | null
         }
         Update: {
-          address?: Json | null
+          address?: string | null
           bank_account?: string | null
           bank_name?: string | null
           base_salary?: number

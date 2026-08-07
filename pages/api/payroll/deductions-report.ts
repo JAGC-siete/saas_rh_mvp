@@ -123,7 +123,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const employeeDni = (line.employees as any)?.dni || (line.employees as any)?.employee_code || ''
 
       for (const [key, value] of Object.entries(meta)) {
-        if (key === '_deduction_plan_ids') continue
+        if (key === '_deduction_plan_ids' || key === '_deduction_plan_breakdown') continue
         const num = typeof value === 'number' ? value : parseFloat(String(value || 0))
         if (!isNaN(num) && num > 0) {
           deductions.push({

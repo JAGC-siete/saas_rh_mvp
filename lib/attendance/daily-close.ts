@@ -12,6 +12,7 @@ import {
   loadEmployeeScheduleAssignments,
   resolveEffectiveWorkScheduleIdFromAssignments,
 } from './resolve-schedule-batch'
+import { lateFieldsForAttendanceRecord } from './compute-late-minutes'
 
 /** super_admin must pass explicit company_id (query/body). */
 export function resolveCompanyIdForDailyClose(
@@ -200,7 +201,7 @@ export async function generateDailyCloseReport(params: {
     const { data: schedData } = await supabase
       .from('work_schedules')
       .select(
-        'id, monday_start, monday_end, tuesday_start, tuesday_end, wednesday_start, wednesday_end, thursday_start, thursday_end, friday_start, friday_end, saturday_start, saturday_end, sunday_start, sunday_end, shift_config, break_duration'
+        'id, monday_start, monday_end, tuesday_start, tuesday_end, wednesday_start, wednesday_end, thursday_start, thursday_end, friday_start, friday_end, saturday_start, saturday_end, sunday_start, sunday_end, shift_config, break_duration, shift_type'
       )
       .in('id', scheduleIds)
     for (const s of (schedData || []) as WorkScheduleRow[]) {
@@ -349,6 +350,16 @@ export async function generateDailyCloseReport(params: {
       daily_close_version: prevVersion + 1,
     })
 
+    const effectiveScheduleId = effectiveScheduleIdByEmployee.get(employeeId) ?? null
+    const schedule = effectiveScheduleId ? scheduleById.get(effectiveScheduleId) ?? null : null
+    const expectedStart = getScheduleStartForDate(schedule, localDate)
+    const lateFields = lateFieldsForAttendanceRecord({
+      checkInIso: mapped.check_in,
+      expectedStart,
+      shiftType: schedule?.shift_type,
+      timeZone: timezone,
+    })
+
     const row = {
       employee_id: employeeId,
       date: localDate,
@@ -361,6 +372,8 @@ export async function generateDailyCloseReport(params: {
       tz: timezone,
       tz_offset_minutes: -360,
       updated_at: nowIso,
+      expected_check_in: lateFields.expected_check_in,
+      late_minutes: lateFields.late_minutes ?? 0,
     }
 
     const { data: upserted, error: upErr } = await supabase
@@ -436,7 +449,7 @@ function removeMissingPunchWhenInProgress(anomalyTypes: string[], inProgress: bo
   return anomalyTypes.filter((t) => t !== 'missing_punch')
 }
 
-type WorkScheduleRow = LegacyScheduleColumns & { id: string }
+type WorkScheduleRow = LegacyScheduleColumns & { id: string; shift_type?: string | null }
 
 function getScheduleEndForDate(schedule: WorkScheduleRow | null, localDate: string, zone: string): string | null {
   if (!schedule) return null
@@ -610,7 +623,7 @@ export async function buildDailyCloseReportPayload(params: {
     const { data: schedData } = await supabase
       .from('work_schedules')
       .select(
-        'id, monday_start, monday_end, tuesday_start, tuesday_end, wednesday_start, wednesday_end, thursday_start, thursday_end, friday_start, friday_end, saturday_start, saturday_end, sunday_start, sunday_end, shift_config, break_duration'
+        'id, monday_start, monday_end, tuesday_start, tuesday_end, wednesday_start, wednesday_end, thursday_start, thursday_end, friday_start, friday_end, saturday_start, saturday_end, sunday_start, sunday_end, shift_config, break_duration, shift_type'
       )
       .in('id', scheduleIds)
     for (const s of (schedData || []) as WorkScheduleRow[]) {

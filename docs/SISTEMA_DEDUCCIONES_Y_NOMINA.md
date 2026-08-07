@@ -54,7 +54,13 @@ Preview (generar nómina)
     │  - Guarda _deduction_plan_ids en metadata
     ▼
 payroll_run_lines
-    │  metadata: { cxc_optica: 150, plan_dental: 200, _deduction_plan_ids: [...] }
+    │  metadata: {
+    │    cxc_optica: 150,           # suma de cuotas del mismo field_key
+    │    plan_dental: 200,
+    │    _deduction_plan_ids: [...],
+    │    _deduction_plan_breakdown: [{ plan_id, field_key, monto }, ...]
+    │  }
+    │  (Varios planes activos del mismo field_key están permitidos; authorize quema cada plan_id.)
     │  eff_neto: bruto - statutory - custom_plans
     ▼
 Autorizar

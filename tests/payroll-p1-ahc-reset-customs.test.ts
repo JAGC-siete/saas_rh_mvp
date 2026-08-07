@@ -66,12 +66,14 @@ describe('metadataWithoutPlanKeys', () => {
         prestamo: 50,
         tax_year: 2026,
         _deduction_plan_ids: ['x'],
+        _deduction_plan_breakdown: [{ plan_id: 'x', field_key: 'prestamo', monto: 50 }],
       },
       new Set(['prestamo'])
     )
     assert.equal(out.bono, 100)
     assert.equal(out.prestamo, undefined)
     assert.equal(out._deduction_plan_ids, undefined)
+    assert.equal(out._deduction_plan_breakdown, undefined)
     assert.equal(out.tax_year, 2026)
   })
 })

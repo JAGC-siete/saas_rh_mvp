@@ -16,6 +16,7 @@ export function metadataWithoutPlanKeys(
     delete out[k]
   }
   delete out._deduction_plan_ids
+  delete out._deduction_plan_breakdown
   return out
 }
 

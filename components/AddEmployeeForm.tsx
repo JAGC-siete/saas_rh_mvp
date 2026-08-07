@@ -94,9 +94,9 @@ function AddEmployeeForm({
   const addressValue =
     typeof formData?.address === 'string'
       ? formData.address
-      : formData?.address
-      ? JSON.stringify(formData.address, null, 2)
-      : ''
+      : formData?.address && typeof formData.address === 'object'
+        ? Object.values(formData.address as Record<string, unknown>).filter(Boolean).join(', ')
+        : ''
 
   return (
     <Card variant="liquid">
@@ -635,7 +635,7 @@ function AddEmployeeForm({
                   disabled={loading}
                   value={addressValue}
                   onChange={(e) => onFormChange('address', e.target.value)}
-                  placeholder='{"street": "Calle Principal #123", "neighborhood": "Colonia Los Laureles", "city": "Tegucigalpa", "country": "Honduras"}'
+                  placeholder="Calle Principal #123, Colonia Los Laureles, Tegucigalpa, Honduras"
                   rows={3}
                   className="w-full p-2 border border-white/20 rounded-md focus:ring-2 focus:ring-brand-500 focus:border-brand-500 bg-white/10 text-white placeholder-gray-400"
                 />

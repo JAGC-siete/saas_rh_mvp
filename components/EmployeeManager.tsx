@@ -158,14 +158,23 @@ const formatAddress = (address: EmployeeShaped['address']) => {
   if (!address) return 'No especificada'
 
   if (typeof address === 'string') {
-    const parsed = parseMaybeJsonObject(address)
-    if (!parsed) return address
-    const values = Object.values(parsed).filter(Boolean)
+    const trimmed = address.trim()
+    if (!trimmed) return 'No especificada'
+    // Legacy rows may still hold a JSON object string after migration edge-cases.
+    const parsed = parseMaybeJsonObject(trimmed)
+    if (parsed) {
+      const values = Object.values(parsed).filter(Boolean)
+      return values.length ? values.join(', ') : trimmed
+    }
+    return trimmed
+  }
+
+  if (typeof address === 'object') {
+    const values = Object.values(address as Record<string, unknown>).filter(Boolean)
     return values.length ? values.join(', ') : 'No especificada'
   }
 
-  const values = Object.values(address).filter(Boolean)
-  return values.length ? values.join(', ') : 'No especificada'
+  return String(address)
 }
 
 const EMPLOYEE_SORT_CYCLE: EmployeeListSortBy[] = ['name', 'department', 'team', 'position']
@@ -527,23 +536,29 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
           sanitizedFormData.payment_frequency = null
         }
       }
-      // Campos JSONB: normalizar a objeto o null
-      for (const key of ['address', 'metadata'] as const) {
-        const value = sanitizedFormData[key]
+      // Dirección = texto libre
+      if (typeof sanitizedFormData.address === 'string') {
+        const trimmed = sanitizedFormData.address.trim()
+        sanitizedFormData.address = trimmed || null
+      } else if (sanitizedFormData.address === '' || sanitizedFormData.address === undefined) {
+        sanitizedFormData.address = null
+      }
+
+      // Metadatos = JSONB (sigue esperando JSON válido)
+      {
+        const value = sanitizedFormData.metadata
         if (value === '' || value === null || value === undefined) {
-          sanitizedFormData[key] = null
-          continue
-        }
-        if (typeof value === 'string') {
+          sanitizedFormData.metadata = null
+        } else if (typeof value === 'string') {
           const trimmed = value.trim()
           if (!trimmed) {
-            sanitizedFormData[key] = null
-            continue
-          }
-          try {
-            sanitizedFormData[key] = JSON.parse(trimmed)
-          } catch {
-            throw new Error(`El campo ${key === 'address' ? 'Dirección' : 'Metadatos'} debe ser JSON válido.`)
+            sanitizedFormData.metadata = null
+          } else {
+            try {
+              sanitizedFormData.metadata = JSON.parse(trimmed)
+            } catch {
+              throw new Error('El campo Metadatos debe ser JSON válido.')
+            }
           }
         }
       }
@@ -629,7 +644,12 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
       bank_account: employee.bank_account || '',
       emergency_contact_name: employee.emergency_contact_name || '',
       emergency_contact_phone: employee.emergency_contact_phone || '',
-      address: typeof employee.address === 'string' ? employee.address : JSON.stringify(employee.address || {}),
+      address:
+        typeof employee.address === 'string'
+          ? employee.address
+          : employee.address && typeof employee.address === 'object'
+            ? Object.values(employee.address as Record<string, unknown>).filter(Boolean).join(', ')
+            : '',
       metadata: typeof employee.metadata === 'object' ? JSON.stringify(employee.metadata || {}) : (employee.metadata || ''),
       termination_reason_code: employee.termination_reason_code || '',
       termination_reason_detail: employee.termination_reason_detail || ''
