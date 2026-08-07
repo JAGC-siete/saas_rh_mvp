@@ -11,8 +11,14 @@
 
 import { trackGA4Event } from './ga4'
 
-/** Primary — trial thank-you */
-const SEND_TO_ACTIVATION = process.env.NEXT_PUBLIC_GADS_SEND_TO_ACTIVATION?.trim()
+/**
+ * Primary — trial thank-you (/activar/gracias).
+ * Fallback temporal al label Contact ya creado en Ads (migrar a ACTIVATION dedicado).
+ */
+const SEND_TO_ACTIVATION =
+  process.env.NEXT_PUBLIC_GADS_SEND_TO_ACTIVATION?.trim() ||
+  process.env.NEXT_PUBLIC_GADS_SEND_TO_CONTACT?.trim() ||
+  'AW-17840996991/-3XtCO6xydccEP-EoLtC'
 /**
  * Primary — quote thank-you.
  * Fallback temporal al label Contact ya creado en Ads (migrar a QUOTE dedicado).
@@ -117,7 +123,7 @@ const QUOTE_THANK_YOU_DEDUPE_KEY = 'gads_dedupe_quote_thank_you'
 
 /**
  * Primary page-load en /activar/gracias.
- * Requiere NEXT_PUBLIC_GADS_SEND_TO_ACTIVATION (sin fallback Contact).
+ * Usa NEXT_PUBLIC_GADS_SEND_TO_ACTIVATION o fallback Contact hasta label dedicado.
  */
 export function trackTrialThankYouPageView(transactionId?: string): void {
   if (typeof window !== 'undefined') {

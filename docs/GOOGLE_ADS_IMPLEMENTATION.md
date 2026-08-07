@@ -12,7 +12,7 @@
 
 | Acción | Rol Ads | `send_to` env | Momento | URL |
 |--------|---------|---------------|---------|-----|
-| Trial signup | **Primary** | `NEXT_PUBLIC_GADS_SEND_TO_ACTIVATION` | page-load | `/activar/gracias` |
+| Trial signup | **Primary** | `NEXT_PUBLIC_GADS_SEND_TO_ACTIVATION` (fallback Contact label) | page-load | `/activar/gracias` |
 | Cotización | **Primary** | `NEXT_PUBLIC_GADS_SEND_TO_QUOTE` (fallback Contact label) | page-load | `/ventas/gracias` |
 | Lead (info/viernes/PDF/newsletter) | Secondary | `NEXT_PUBLIC_GADS_SEND_TO_LEAD` | submit | in-page |
 | WhatsApp | Secondary | `NEXT_PUBLIC_GADS_SEND_TO_WHATSAPP` | click | n/a |
