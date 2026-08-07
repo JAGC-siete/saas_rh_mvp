@@ -1,13 +1,15 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import AbsenceTable from './AbsenceTable'
 import ArrivalTable from './ArrivalTable'
 import OutsideScheduleTable from './OutsideScheduleTable'
 import type { AttendanceRow } from '../../lib/hooks/useAttendanceData'
-import type { KpiFilter } from '../../lib/attendance/kpi-filter'
-import { kpiFilterToTab, kpiFilterToSeverity } from '../../lib/attendance/kpi-filter'
-
-type TabId = 'absent' | 'arrivals' | 'outside'
+import type { AttendanceListTab, KpiFilter } from '../../lib/attendance/kpi-filter'
+import {
+  isLateArrival,
+  kpiFilterToTab,
+  tabToKpiFilter,
+} from '../../lib/attendance/kpi-filter'
 
 interface AttendanceTablesSectionProps {
   absent: AttendanceRow[]
@@ -18,6 +20,7 @@ interface AttendanceTablesSectionProps {
   preset?: string
   onSelectEmployee: (_employeeId: string, _employeeName: string) => void
   kpiFilter?: KpiFilter
+  onKpiFilterChange?: (filter: KpiFilter) => void
 }
 
 export default function AttendanceTablesSection({
@@ -29,22 +32,31 @@ export default function AttendanceTablesSection({
   preset = 'today',
   onSelectEmployee,
   kpiFilter = 'all',
+  onKpiFilterChange,
 }: AttendanceTablesSectionProps) {
   const showAbsenceDates = preset !== 'today'
   const mappedTab = kpiFilterToTab(kpiFilter)
-  const [tab, setTab] = useState<TabId>(mappedTab ?? 'absent')
+  const [tab, setTab] = useState<AttendanceListTab>(mappedTab ?? 'presentes')
 
   useEffect(() => {
     if (mappedTab) setTab(mappedTab)
   }, [mappedTab, kpiFilter])
 
-  const externalSeverity = kpiFilterToSeverity(kpiFilter)
+  const lateOnly = useMemo(() => late.filter(isLateArrival), [late])
+  const presentCount = early.length + late.length
 
-  const tabs: { id: TabId; label: string; count: number }[] = [
-    { id: 'absent', label: 'Ausentes', count: absent.length },
-    { id: 'arrivals', label: 'Presentes', count: early.length + late.length },
+  const tabs: { id: AttendanceListTab; label: string; count: number }[] = [
+    { id: 'temprano', label: 'Temprano', count: early.length },
+    { id: 'tarde', label: 'Tarde', count: lateOnly.length },
+    { id: 'presentes', label: 'Presentes', count: presentCount },
+    { id: 'ausentes', label: 'Ausentes', count: absent.length },
     { id: 'outside', label: 'Fuera de horario', count: outsideSchedule.length },
   ]
+
+  const selectTab = (next: AttendanceListTab) => {
+    setTab(next)
+    onKpiFilterChange?.(tabToKpiFilter(next))
+  }
 
   return (
     <motion.div
@@ -67,7 +79,7 @@ export default function AttendanceTablesSection({
             aria-selected={tab === t.id}
             id={`attendance-tab-${t.id}`}
             aria-controls={`attendance-panel-${t.id}`}
-            onClick={() => setTab(t.id)}
+            onClick={() => selectTab(t.id)}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
               tab === t.id
                 ? 'bg-brand-600 text-white shadow-md shadow-brand-600/25'
@@ -89,24 +101,46 @@ export default function AttendanceTablesSection({
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.3, ease: 'easeOut' }}
           >
-            {tab === 'absent' && (
-              <div id="attendance-panel-absent" role="tabpanel" aria-labelledby="attendance-tab-absent">
-                <AbsenceTable
-                  data={absent}
-                  title={`Ausentes ${presetLabel}`}
+            {tab === 'temprano' && (
+              <div id="attendance-panel-temprano" role="tabpanel" aria-labelledby="attendance-tab-temprano">
+                <ArrivalTable
+                  earlyData={early}
+                  lateData={[]}
+                  title={`Temprano ${presetLabel}`}
                   onSelect={onSelectEmployee}
-                  showDate={showAbsenceDates}
+                  externalSeverityFilter="early"
                 />
               </div>
             )}
-            {tab === 'arrivals' && (
-              <div id="attendance-panel-arrivals" role="tabpanel" aria-labelledby="attendance-tab-arrivals">
+            {tab === 'tarde' && (
+              <div id="attendance-panel-tarde" role="tabpanel" aria-labelledby="attendance-tab-tarde">
+                <ArrivalTable
+                  earlyData={[]}
+                  lateData={lateOnly}
+                  title={`Tarde ${presetLabel}`}
+                  onSelect={onSelectEmployee}
+                  externalSeverityFilter="late"
+                />
+              </div>
+            )}
+            {tab === 'presentes' && (
+              <div id="attendance-panel-presentes" role="tabpanel" aria-labelledby="attendance-tab-presentes">
                 <ArrivalTable
                   earlyData={early}
                   lateData={late}
                   title={`Presentes ${presetLabel}`}
                   onSelect={onSelectEmployee}
-                  externalSeverityFilter={externalSeverity}
+                  externalSeverityFilter="all"
+                />
+              </div>
+            )}
+            {tab === 'ausentes' && (
+              <div id="attendance-panel-ausentes" role="tabpanel" aria-labelledby="attendance-tab-ausentes">
+                <AbsenceTable
+                  data={absent}
+                  title={`Ausentes ${presetLabel}`}
+                  onSelect={onSelectEmployee}
+                  showDate={showAbsenceDates}
                 />
               </div>
             )}

@@ -1,5 +1,11 @@
 import { DateTime } from 'luxon'
-import { BEST_FIT_THRESHOLD_MINUTES } from './best-fit-schedule'
+
+/**
+ * Max |delta| still counted as early/late vs schedule start.
+ * Wider than best-fit (90m): a 1–3h late arrival is still KPI "tarde".
+ * Night punches vs morning start (~6h+) stay outside the window.
+ */
+export const LATE_MINUTES_MAX_ABS_MINUTES = 240
 
 /** Parse "HH:MM" / "HH:MM:SS" → minutes from midnight. */
 export function parseHhmmToMinutes(time: string | null | undefined): number | null {
@@ -48,7 +54,7 @@ export type LateMinutesForRecordInput = {
   expectedStart: string | null | undefined
   shiftType?: string | null
   timeZone?: string
-  /** Reject deltas outside this window (default: best-fit 90m) to avoid night punches vs morning start. */
+  /** Reject deltas outside this window (default 240m) to avoid night punches vs morning start. */
   maxAbsMinutes?: number
 }
 
@@ -77,7 +83,7 @@ export function lateFieldsForAttendanceRecord(input: LateMinutesForRecordInput):
   if (late == null) {
     return { expected_check_in: null, late_minutes: null }
   }
-  const maxAbs = input.maxAbsMinutes ?? BEST_FIT_THRESHOLD_MINUTES
+  const maxAbs = input.maxAbsMinutes ?? LATE_MINUTES_MAX_ABS_MINUTES
   const expected = normalizeTimeForDb(input.expectedStart)
   if (Math.abs(late) > maxAbs) {
     return {

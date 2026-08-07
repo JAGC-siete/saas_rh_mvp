@@ -629,6 +629,7 @@ export default function AttendanceDashboardApp() {
             preset={preset}
             onSelectEmployee={handleEmployeeClick}
             kpiFilter={kpiFilter}
+            onKpiFilterChange={setKpiFilter}
           />
 
           <Card variant="liquid" className="border border-white/10">

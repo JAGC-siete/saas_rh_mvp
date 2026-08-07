@@ -59,10 +59,10 @@ bounded AS (
   SELECT
     record_id,
     expected_start,
-    -- Match lib/attendance/best-fit-schedule BEST_FIT_THRESHOLD_MINUTES (90):
+    -- Match lib/attendance/compute-late-minutes LATE_MINUTES_MAX_ABS_MINUTES (240):
     -- punches outside the start window are not KPI tarde/temprano.
     CASE
-      WHEN ABS(raw_delta) > 90 THEN 0
+      WHEN ABS(raw_delta) > 240 THEN 0
       ELSE raw_delta
     END AS late_minutes_calc
   FROM calc

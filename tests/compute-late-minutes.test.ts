@@ -68,8 +68,21 @@ describe('compute-late-minutes', () => {
     assert.ok((fields.late_minutes ?? 0) > 5)
   })
 
+  it('counts 110m late (Manuel-style) within 4h window', () => {
+    // 09:05 HN vs 07:15 → +110m
+    const fields = lateFieldsForAttendanceRecord({
+      checkInIso: '2026-08-07T15:05:00.000Z',
+      expectedStart: '07:15',
+      shiftType: 'normal',
+      timeZone: 'America/Tegucigalpa',
+    })
+    assert.equal(fields.expected_check_in, '07:15:00')
+    assert.equal(fields.late_minutes, 110)
+    assert.equal(fields.outside_start_window, undefined)
+  })
+
   it('ignores punches far from schedule start (night punch vs morning start)', () => {
-    // 21:58 HN vs 11:00 → 658m; outside best-fit window → not KPI tarde
+    // 21:58 HN vs 11:00 → 658m; outside 4h window → not KPI tarde
     const fields = lateFieldsForAttendanceRecord({
       checkInIso: '2026-08-07T03:58:00.000Z',
       expectedStart: '11:00',
