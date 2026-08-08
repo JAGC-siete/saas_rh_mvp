@@ -2,11 +2,12 @@
 
 ## Principios ([Google Tag Platform](https://developers.google.com/tag-platform/devguides/conversions))
 
-1. **Google tag** (`gtag config AW-17840996991`) en rutas de marketing vía `MarketingAnalytics`.
+1. **Google tag** (`gtag config AW-17840996991`) carga **inmediato** en rutas de marketing vía `MarketingAnalytics` (Meta Pixel sigue diferido).
 2. **Event snippet** solo en el momento de conversión (nunca en el head global).
 3. **Primary** = page-load en thank-you URL **limpia** (sin PII en query).
 4. **Secondary** = click (WhatsApp) o lead in-page con `transaction_id`.
 5. **CTAs** a `/activar` / `/ventas` = solo engagement GA4 (`TrackedInternalCta` / `trackCTAClick`).
+6. En Ads UI: Contact (o Trial/Quote) debe ser **page load** en `/activar/gracias` y `/ventas/gracias`, no click.
 
 ## Taxonomía
 

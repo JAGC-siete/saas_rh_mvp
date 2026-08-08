@@ -92,7 +92,7 @@ export default function App({ Component, pageProps }: AppProps) {
     </div>
   )
 
-  // Marketing: skip Auth/Notification (unused JS + main-thread) and load analytics late.
+  // Marketing: skip Auth/Notification; gtag loads immediately (Meta stays deferred).
   if (isMarketingRoute) {
     return (
       <SupabaseContext.Provider value={null}>

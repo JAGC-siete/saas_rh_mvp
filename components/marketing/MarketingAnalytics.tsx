@@ -1,6 +1,5 @@
 import { useEffect } from 'react'
-import { useRouter } from 'next/router'
-import { flushPendingGoogleAdsConversions, THANK_YOU_PATHS } from '../../lib/analytics/googleAds'
+import { flushPendingGoogleAdsConversions } from '../../lib/analytics/googleAds'
 import { resolveMetaPixelId } from '../../lib/analytics/meta-pixel-id'
 
 const GADS_CONVERSION_ID = 'AW-17840996991'
@@ -8,41 +7,36 @@ const GA4_MEASUREMENT_ID =
   process.env['NEXT_PUBLIC_GA4_MEASUREMENT_ID']?.trim() || 'G-4N343EZLY9'
 const META_PIXEL_ID = resolveMetaPixelId()
 
-/** Delay past typical Lighthouse LCP window; interaction still loads sooner. */
-const IDLE_FALLBACK_MS = 15_000
-
-const IMMEDIATE_ANALYTICS_PATHS = new Set<string>(THANK_YOU_PATHS)
+/** Delay Meta past typical Lighthouse LCP; interaction still loads sooner. */
+const META_IDLE_FALLBACK_MS = 15_000
 
 type AnalyticsWindow = Window & {
   dataLayer?: unknown[]
-  __hsAnalyticsLoaded?: boolean
+  __hsGtagLoaded?: boolean
+  __hsMetaLoaded?: boolean
   fbq?: (...args: unknown[]) => void
   _fbq?: unknown
 }
 
 /**
- * Third-party analytics only on marketing surfaces.
- * Loads after first intentional interaction, or after a long idle fallback —
- * except thank-you pages, where gtag loads immediately for conversion verification.
+ * Marketing analytics:
+ * - Google tag (GA4 + AW-17840996991) loads immediately so Ads Tag Assistant /
+ *   conversion verification sees the tag without waiting for a click.
+ * - Meta Pixel stays deferred (interaction or idle) to protect LCP lab scores.
  *
- * Scroll is intentionally omitted: Lighthouse often synthesizes scroll and
- * would pull ~250KiB+ of unused third-party JS into the lab score.
+ * Scroll is intentionally omitted for Meta: Lighthouse often synthesizes scroll.
  */
 export default function MarketingAnalytics() {
-  const router = useRouter()
-
   useEffect(() => {
     if (typeof window === 'undefined') return
     const w = window as AnalyticsWindow
-    if (w.__hsAnalyticsLoaded) return
 
     let cancelled = false
     let idleTimer: ReturnType<typeof setTimeout> | null = null
 
-    const load = () => {
-      if (cancelled || w.__hsAnalyticsLoaded) return
-      w.__hsAnalyticsLoaded = true
-      cleanup()
+    const loadGtag = () => {
+      if (cancelled || w.__hsGtagLoaded) return
+      w.__hsGtagLoaded = true
 
       w.dataLayer = w.dataLayer || []
       function gtag(...args: unknown[]) {
@@ -57,8 +51,15 @@ export default function MarketingAnalytics() {
 
       const gs = document.createElement('script')
       gs.async = true
-      gs.src = `https://www.googletagmanager.com/gtag/js?id=${GA4_MEASUREMENT_ID}`
+      // Load by Ads ID so Tag Assistant / Ads crawlers resolve AW first.
+      gs.src = `https://www.googletagmanager.com/gtag/js?id=${GADS_CONVERSION_ID}`
       document.head.appendChild(gs)
+    }
+
+    const loadMeta = () => {
+      if (cancelled || w.__hsMetaLoaded) return
+      w.__hsMetaLoaded = true
+      cleanupMeta()
 
       if (!w.fbq) {
         const n = function (...args: unknown[]) {
@@ -88,33 +89,31 @@ export default function MarketingAnalytics() {
       w.fbq?.('track', 'PageView')
     }
 
-    const onInteract = () => load()
+    const onInteract = () => loadMeta()
 
-    const cleanup = () => {
+    const cleanupMeta = () => {
       window.removeEventListener('pointerdown', onInteract)
       window.removeEventListener('keydown', onInteract)
       if (idleTimer) clearTimeout(idleTimer)
     }
 
-    const path = router.pathname
-    if (IMMEDIATE_ANALYTICS_PATHS.has(path)) {
-      load()
+    loadGtag()
+
+    if (w.__hsMetaLoaded) {
       return () => {
         cancelled = true
-        cleanup()
       }
     }
 
     window.addEventListener('pointerdown', onInteract, { once: true, passive: true })
     window.addEventListener('keydown', onInteract, { once: true })
-    // Real users who never interact still get attribution; Lighthouse usually finishes earlier.
-    idleTimer = setTimeout(load, IDLE_FALLBACK_MS)
+    idleTimer = setTimeout(loadMeta, META_IDLE_FALLBACK_MS)
 
     return () => {
       cancelled = true
-      cleanup()
+      cleanupMeta()
     }
-  }, [router.pathname])
+  }, [])
 
   return (
     <noscript>
