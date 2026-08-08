@@ -44,10 +44,13 @@ const PUBLIC_SSR_EXACT = new Set([
 ])
 
 export function isPublicMarketingRoute(pathname: string): boolean {
-  if (PUBLIC_SSR_EXACT.has(pathname)) return true
-  if (pathname.startsWith('/recursos')) return true
-  if (pathname.startsWith(`${INFO_FUNNEL_PUBLIC_PATH}/m/`)) return true
-  if (pathname.startsWith('/info/m/')) return true
-  if (pathname.startsWith('/secreto/m/')) return true
+  // /en rewrites strip prefix for page matching; still accept prefixed paths if seen.
+  const bare =
+    pathname === '/en' ? '/' : pathname.startsWith('/en/') ? pathname.slice(3) : pathname
+  if (PUBLIC_SSR_EXACT.has(bare)) return true
+  if (bare.startsWith('/recursos')) return true
+  if (bare.startsWith(`${INFO_FUNNEL_PUBLIC_PATH}/m/`)) return true
+  if (bare.startsWith('/info/m/')) return true
+  if (bare.startsWith('/secreto/m/')) return true
   return false
 }

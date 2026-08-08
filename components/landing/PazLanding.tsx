@@ -6,6 +6,9 @@ import PublicPageHead from '../SEO/PublicPageHead'
 import SchemaMarkup from '../SEO/SchemaMarkup'
 import CampaignStyles from '../marketing/CampaignStyles'
 import { generateFAQPageSchema, generateWebPageSchema, generateBreadcrumbListSchema } from '../../lib/seo/schema'
+import { useLandingPreferences } from './LandingPreferencesProvider'
+import { getCampaignsCopy } from '../../lib/i18n/landings/campaigns'
+import { LOCALE_SCHEMA_LANG } from '../../lib/i18n/locale'
 
 const PAZ_VIDEO_EMBED_SRC = 'https://www.youtube.com/embed/TTrBvcpDM3k?si=AdRkiKk1PpJ3WiJ6'
 
@@ -92,20 +95,23 @@ function scrollToVideo() {
 }
 
 export default function PazLanding() {
+  const { locale, href } = useLandingPreferences()
+  const campaigns = getCampaignsCopy(locale)
   const webPageSchema = generateWebPageSchema({
-    url: '/paz',
+    url: locale === 'en' ? '/en/paz' : '/paz',
     title: PAGE_TITLE,
     description: PAGE_DESCRIPTION,
+    inLanguage: LOCALE_SCHEMA_LANG[locale],
   })
   const faqSchema = generateFAQPageSchema(FAQS)
   const breadcrumbSchema = generateBreadcrumbListSchema([
-    { name: 'Inicio', url: '/' },
-    { name: 'Paz al cerrar planilla', url: '/paz' },
+    { name: locale === 'en' ? 'Home' : 'Inicio', url: href('/') },
+    { name: 'Paz al cerrar planilla', url: href('/paz') },
   ])
 
   return (
     <PublicPageShell
-      tone="light"
+      toneLock="light"
       showTrustBar
       loginAlwaysVisible
       mainClassName="flex flex-col"
@@ -120,6 +126,9 @@ export default function PazLanding() {
       <SchemaMarkup schema={[webPageSchema, breadcrumbSchema, faqSchema]} />
 
       <div className="paz-page flex-grow">
+        {campaigns.enNote ? (
+          <p className="mx-auto max-w-2xl px-4 pt-4 text-center text-sm text-slate-600">{campaigns.enNote}</p>
+        ) : null}
         {/* Mismo patrón que MagneticHero: Tailwind grid + next/image en flujo (no fill). */}
         <section className="relative pt-8 sm:pt-12 pb-14 overflow-hidden">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

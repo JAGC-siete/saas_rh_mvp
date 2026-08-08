@@ -3,6 +3,9 @@ import Link from 'next/link'
 import TrackedWhatsAppLink from './TrackedWhatsAppLink'
 import { FOOTER_GUIDE_KEYS, GUIDE_LINKS } from '../lib/seo/internal-links'
 import { SOCIAL_LINKS } from '../lib/marketing/social-links'
+import { PRIVACY_PUBLIC_PATH, TERMS_PUBLIC_PATH } from '../lib/marketing/legal-paths'
+import { getCommonCopy } from '../lib/i18n/landings/common'
+import { useLandingPreferences } from './landing/LandingPreferencesProvider'
 
 interface DemoFooterProps {
   variant?: 'default' | 'minimal'
@@ -10,6 +13,8 @@ interface DemoFooterProps {
 
 const DemoFooter: React.FC<DemoFooterProps> = ({ variant = 'default' }) => {
   const isMinimal = variant === 'minimal'
+  const { locale, href } = useLandingPreferences()
+  const copy = getCommonCopy(locale)
 
   return (
     <footer className={`bg-slate-50 border-t border-slate-200 mt-auto ${isMinimal ? 'py-20' : ''}`}>
@@ -17,7 +22,7 @@ const DemoFooter: React.FC<DemoFooterProps> = ({ variant = 'default' }) => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12">
           <div>
             <h3 className={`font-semibold text-brand-900 mb-4 ${isMinimal ? 'text-xs uppercase tracking-widest' : 'text-lg'}`}>
-              Contacto
+              {copy.contact}
             </h3>
             <div className="space-y-2">
               <div className={`flex items-center text-gray-600 ${isMinimal ? 'text-sm' : ''}`}>
@@ -45,19 +50,17 @@ const DemoFooter: React.FC<DemoFooterProps> = ({ variant = 'default' }) => {
             </div>
           </div>
 
-          {/* Join Community */}
           <div>
             <h3 className={`font-semibold text-brand-900 mb-4 ${isMinimal ? 'text-xs uppercase tracking-widest' : 'text-lg'}`}>
-              Únete a la Comunidad
+              {copy.joinCommunity}
             </h3>
             <p className={`text-gray-600 mb-4 ${isMinimal ? 'text-xs' : 'text-sm'}`}>
-              Síguenos en nuestras redes sociales para conocer las últimas actualizaciones
+              {copy.followBlurb}
             </p>
             <div className="flex space-x-4">
-              {/* Facebook */}
-              <a 
-                href={SOCIAL_LINKS.facebook} 
-                target="_blank" 
+              <a
+                href={SOCIAL_LINKS.facebook}
+                target="_blank"
                 rel="noopener noreferrer"
                 className="text-gray-400 hover:text-blue-600 transition-colors"
                 title="Facebook"
@@ -67,7 +70,6 @@ const DemoFooter: React.FC<DemoFooterProps> = ({ variant = 'default' }) => {
                 </svg>
               </a>
 
-              {/* Instagram — @humanosisu666 */}
               <a
                 href={SOCIAL_LINKS.instagram}
                 target="_blank"
@@ -81,10 +83,9 @@ const DemoFooter: React.FC<DemoFooterProps> = ({ variant = 'default' }) => {
                 </svg>
               </a>
 
-              {/* LinkedIn */}
-              <a 
-                href={SOCIAL_LINKS.linkedin} 
-                target="_blank" 
+              <a
+                href={SOCIAL_LINKS.linkedin}
+                target="_blank"
                 rel="noopener noreferrer"
                 className="text-gray-400 hover:text-blue-700 transition-colors"
                 title="LinkedIn"
@@ -94,10 +95,9 @@ const DemoFooter: React.FC<DemoFooterProps> = ({ variant = 'default' }) => {
                 </svg>
               </a>
 
-              {/* YouTube */}
-              <a 
-                href={SOCIAL_LINKS.youtube} 
-                target="_blank" 
+              <a
+                href={SOCIAL_LINKS.youtube}
+                target="_blank"
                 rel="noopener noreferrer"
                 className="text-gray-400 hover:text-red-600 transition-colors"
                 title="YouTube"
@@ -107,7 +107,6 @@ const DemoFooter: React.FC<DemoFooterProps> = ({ variant = 'default' }) => {
                 </svg>
               </a>
 
-              {/* TikTok */}
               <a
                 href={SOCIAL_LINKS.tiktok}
                 target="_blank"
@@ -120,7 +119,6 @@ const DemoFooter: React.FC<DemoFooterProps> = ({ variant = 'default' }) => {
                 </svg>
               </a>
 
-              {/* X */}
               <a
                 href={SOCIAL_LINKS.x}
                 target="_blank"
@@ -135,61 +133,58 @@ const DemoFooter: React.FC<DemoFooterProps> = ({ variant = 'default' }) => {
             </div>
           </div>
 
-          {/* Guides & Resources */}
           <div>
             <h3 className={`font-semibold text-brand-900 mb-4 ${isMinimal ? 'text-xs uppercase tracking-widest' : 'text-lg'}`}>
-              Guías y recursos
+              {copy.guides}
             </h3>
             <ul className="space-y-2">
               {FOOTER_GUIDE_KEYS.map((key) => (
                 <li key={GUIDE_LINKS[key].href}>
                   <Link
-                    href={GUIDE_LINKS[key].href}
+                    href={href(GUIDE_LINKS[key].href)}
                     className={`text-gray-600 hover:text-blue-600 transition-colors ${isMinimal ? 'text-xs uppercase tracking-wider' : 'text-sm'}`}
                   >
-                    {GUIDE_LINKS[key].label}
+                    {copy.guideLabels[key as keyof typeof copy.guideLabels] ?? GUIDE_LINKS[key].label}
                   </Link>
                 </li>
               ))}
             </ul>
           </div>
 
-          {/* About */}
           <div>
             <h3 className={`font-semibold text-brand-900 mb-4 ${isMinimal ? 'text-xs uppercase tracking-widest' : 'text-lg'}`}>
               SISU
             </h3>
             <p className={`text-gray-600 mb-4 ${isMinimal ? 'text-xs' : 'text-sm'}`}>
-              Tecnología de Recursos Humanos integrada para MiPyMes en Centroamérica
+              {copy.aboutBlurb}
             </p>
             <div className="text-sm text-gray-500">
-              <p>© 2026 SISU RRHH exclusivo El Salvador | Guatemala | Honduras.</p>
+              <p>{copy.aboutCopyright}</p>
             </div>
           </div>
         </div>
 
-        {/* Privacy Notice */}
         <div className={`border-t border-slate-200 mt-8 ${isMinimal ? 'pt-12' : 'pt-8'}`}>
           <div className="text-center">
             <p className="text-sm text-gray-600 mb-3">
-              Protegemos tu información. <strong>Solo será utilizada para contactarte</strong>.
+              {copy.privacyNotice} <strong>{copy.privacyNoticeStrong}</strong>.
             </p>
             <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 justify-center items-center text-xs text-gray-500">
-              <a 
-                href="/politica-de-privacidad" 
+              <Link
+                href={href(PRIVACY_PUBLIC_PATH)}
                 className="text-gray-600 hover:text-gray-900 transition-colors underline decoration-gray-400/30 hover:decoration-gray-600"
               >
-                Política de Privacidad
-              </a>
+                {copy.privacy}
+              </Link>
               <span className="hidden sm:inline">•</span>
-              <a
-                href="/terminos-de-servicio"
+              <Link
+                href={href(TERMS_PUBLIC_PATH)}
                 className="text-gray-600 hover:text-gray-900 transition-colors underline decoration-gray-400/30 hover:decoration-gray-600"
               >
-                Términos de servicio
-              </a>
+                {copy.terms}
+              </Link>
               <span className="hidden sm:inline">•</span>
-              <span>© 2026 Humano SISU. Todos los derechos reservados.</span>
+              <span>{copy.rightsReserved}</span>
             </div>
           </div>
         </div>

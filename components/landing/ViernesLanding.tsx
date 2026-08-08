@@ -9,6 +9,9 @@ import CampaignStyles from '../marketing/CampaignStyles'
 import PeaceLeadWizard, { type PeaceLeadWizardHandle } from '../info-game/PeaceLeadWizard'
 import { generateFAQPageSchema, generateWebPageSchema, generateBreadcrumbListSchema } from '../../lib/seo/schema'
 import { VIERNES_COPY, VIERNES_PUBLIC_PATH } from '../../lib/marketing/viernes-copy'
+import { useLandingPreferences } from './LandingPreferencesProvider'
+import { getCampaignsCopy } from '../../lib/i18n/landings/campaigns'
+import { LOCALE_SCHEMA_LANG } from '../../lib/i18n/locale'
 
 function scrollToPeaceWizard() {
   document.getElementById('peace-wizard')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
@@ -17,18 +20,21 @@ function scrollToPeaceWizard() {
 export default function ViernesLanding() {
   const copy = VIERNES_COPY
   const router = useRouter()
+  const { locale, href } = useLandingPreferences()
+  const campaigns = getCampaignsCopy(locale)
   const wizardRef = useRef<PeaceLeadWizardHandle>(null)
   const autoUnlockDone = useRef(false)
 
   const webPageSchema = generateWebPageSchema({
-    url: VIERNES_PUBLIC_PATH,
+    url: locale === 'en' ? `/en${VIERNES_PUBLIC_PATH}` : VIERNES_PUBLIC_PATH,
     title: copy.seo.title,
     description: copy.seo.description,
+    inLanguage: LOCALE_SCHEMA_LANG[locale],
   })
   const faqSchema = generateFAQPageSchema(copy.faq.map((f) => ({ question: f.question, answer: f.answer })))
   const breadcrumbSchema = generateBreadcrumbListSchema([
-    { name: 'Inicio', url: '/' },
-    { name: 'Domingos sin planilla', url: VIERNES_PUBLIC_PATH },
+    { name: locale === 'en' ? 'Home' : 'Inicio', url: href('/') },
+    { name: 'Domingos sin planilla', url: href(VIERNES_PUBLIC_PATH) },
   ])
 
   const openPeaceWizard = () => {
@@ -54,6 +60,9 @@ export default function ViernesLanding() {
       <SchemaMarkup schema={[webPageSchema, breadcrumbSchema, faqSchema]} />
 
       <div className="viernes-page flex-grow">
+        {campaigns.enNote ? (
+          <p className="mx-auto max-w-2xl px-4 pt-4 text-center text-sm text-slate-300">{campaigns.enNote}</p>
+        ) : null}
         <section className="viernes-section pt-8 sm:pt-12 text-center">
           <span className="viernes-badge">{copy.hero.badge}</span>
           <h1 className="viernes-serif viernes-hero-title mb-4">{copy.hero.headlineLead}</h1>

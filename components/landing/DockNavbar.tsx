@@ -2,21 +2,31 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { AnimatePresence, motion } from 'framer-motion'
-import { LANDING_NAV_LINKS, CALCULATOR_MENU_ITEMS, CALCULATOR_MOBILE_LINKS } from '../../lib/landing/nav-links'
+import { MoonIcon, SunIcon } from '@heroicons/react/24/outline'
 import { useScrollThreshold, useScrollY } from '../../lib/hooks/useScrollThreshold'
+import { getNavCopy } from '../../lib/i18n/landings/nav'
+import { useLandingPreferences } from './LandingPreferencesProvider'
+import type { LandingTone } from '../../lib/landing/theme'
 
 interface DockNavbarProps {
   loginAlwaysVisible?: boolean
   /** Extra top offset in px when a fixed banner sits above the dock (e.g. home announcement). */
   topOffsetPx?: number
-  tone?: 'dark' | 'light'
+  tone?: LandingTone
+  /** When true (e.g. /paz toneLock), hide theme toggle — DOM is forced by shell. */
+  toneLocked?: boolean
 }
 
 export default function DockNavbar({
   loginAlwaysVisible = false,
   topOffsetPx = 0,
-  tone = 'dark',
+  tone: toneProp,
+  toneLocked = false,
 }: DockNavbarProps) {
+  const { tone: prefTone, toggleTone, locale, href, switchLocaleHref, enabled } = useLandingPreferences()
+  const tone = toneProp ?? prefTone
+  const showThemeToggle = enabled && !toneLocked
+  const nav = getNavCopy(locale)
   const isScrolled = useScrollY(50)
   const showLoginOnScroll = useScrollThreshold(0.2)
   const showLogin = loginAlwaysVisible || showLoginOnScroll
@@ -75,8 +85,11 @@ export default function DockNavbar({
     ? 'block px-3 py-2.5 text-sm text-slate-600 hover:text-slate-900 rounded-xl transition-colors'
     : 'block px-3 py-2.5 text-sm text-slate-400 hover:text-white rounded-xl transition-colors'
   const iconBtnClass = isLight
-    ? 'md:hidden ml-auto p-2 rounded-full text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors'
-    : 'md:hidden ml-auto p-2 rounded-full text-slate-400 hover:text-white hover:bg-white/10 transition-colors'
+    ? 'p-2 rounded-full text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors'
+    : 'p-2 rounded-full text-slate-400 hover:text-white hover:bg-white/10 transition-colors'
+  const chromeBtnClass = isLight
+    ? 'px-2.5 py-1.5 rounded-full text-xs sm:text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors'
+    : 'px-2.5 py-1.5 rounded-full text-xs sm:text-sm font-medium text-slate-400 hover:text-white hover:bg-white/10 transition-colors'
 
   return (
     <header
@@ -90,7 +103,7 @@ export default function DockNavbar({
         }`}
       >
         <div className="flex items-center gap-2 sm:gap-3 h-11 sm:h-12">
-          <Link prefetch={false} href="/" className="shrink-0">
+          <Link prefetch={false} href={href('/')} className="shrink-0">
             <Image
               src="/brand/logo-humano-sisu-sm.png"
               alt="Humano SISU"
@@ -103,11 +116,11 @@ export default function DockNavbar({
 
           {/* Desktop nav */}
           <div className="hidden md:flex items-center gap-1 flex-1 justify-center">
-            {LANDING_NAV_LINKS.map((link) => (
+            {nav.links.map((link) => (
               <Link
                 prefetch={false}
                 key={link.href}
-                href={link.href}
+                href={href(link.href)}
                 className={linkClass}
               >
                 {link.label}
@@ -122,7 +135,7 @@ export default function DockNavbar({
                 aria-controls={calculatorMenuId}
                 onClick={() => setIsCalculatorMenuOpen((v) => !v)}
               >
-                Calculadora
+                {nav.calculator}
                 <svg
                   className={`h-3.5 w-3.5 transition-transform ${isCalculatorMenuOpen ? 'rotate-180' : ''}`}
                   fill="none"
@@ -144,11 +157,12 @@ export default function DockNavbar({
                     transition={{ duration: 0.15 }}
                     className={`absolute left-1/2 -translate-x-1/2 mt-2 w-[320px] ${menuSurface}`}
                   >
-                    {CALCULATOR_MENU_ITEMS.map((item, i) => (
+                    {nav.calculatorMenu.map((item, i) => (
                       <div key={item.href}>
                         {i === 1 && <div className={dividerClass} />}
-                        <Link prefetch={false}
-                          href={item.href}
+                        <Link
+                          prefetch={false}
+                          href={href(item.href)}
                           role="menuitem"
                           className={menuItemClass}
                           onClick={() => setIsCalculatorMenuOpen(false)}
@@ -164,13 +178,29 @@ export default function DockNavbar({
             </div>
           </div>
 
-          <div className="hidden md:flex items-center gap-2 ml-auto shrink-0">
+          <div className="hidden md:flex items-center gap-1.5 ml-auto shrink-0">
+            {showThemeToggle && (
+              <button
+                type="button"
+                onClick={toggleTone}
+                className={iconBtnClass}
+                aria-label={isLight ? nav.themeToDark : nav.themeToLight}
+                title={isLight ? nav.themeToDark : nav.themeToLight}
+              >
+                {isLight ? <MoonIcon className="h-4 w-4" /> : <SunIcon className="h-4 w-4" />}
+              </button>
+            )}
+            {enabled && (
+              <Link prefetch={false} href={switchLocaleHref} className={chromeBtnClass} hrefLang={locale === 'es' ? 'en' : 'es'}>
+                {locale === 'es' ? nav.switchToEn : nav.switchToEs}
+              </Link>
+            )}
             <Link
               prefetch={false}
-              href="/activar"
+              href={href('/activar')}
               className="bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-colors shadow-[0_0_20px_rgba(34,197,94,0.25)] min-h-[36px] inline-flex items-center"
             >
-              Activar
+              {nav.activate}
             </Link>
             <AnimatePresence>
               {showLogin && (
@@ -180,34 +210,52 @@ export default function DockNavbar({
                   exit={{ opacity: 0, width: 0 }}
                   transition={{ duration: 0.2 }}
                 >
-                  <Link prefetch={false}
+                  <Link
+                    prefetch={false}
                     href="/app/login"
                     className="bg-brand-600 hover:bg-brand-700 text-white px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-colors whitespace-nowrap block min-h-[36px] leading-[36px]"
                   >
-                    Iniciar sesión
+                    {nav.login}
                   </Link>
                 </motion.div>
               )}
             </AnimatePresence>
           </div>
 
-          {/* Mobile toggle */}
-          <button
-            type="button"
-            className={iconBtnClass}
-            onClick={() => setIsMobileMenuOpen((v) => !v)}
-            aria-label={isMobileMenuOpen ? 'Cerrar menú' : 'Abrir menú'}
-          >
-            {isMobileMenuOpen ? (
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            ) : (
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
+          {/* Mobile chrome + menu toggle */}
+          <div className="flex md:hidden items-center gap-0.5 ml-auto">
+            {showThemeToggle && (
+              <button
+                type="button"
+                onClick={toggleTone}
+                className={iconBtnClass}
+                aria-label={isLight ? nav.themeToDark : nav.themeToLight}
+              >
+                {isLight ? <MoonIcon className="h-4 w-4" /> : <SunIcon className="h-4 w-4" />}
+              </button>
             )}
-          </button>
+            {enabled && (
+              <Link prefetch={false} href={switchLocaleHref} className={chromeBtnClass}>
+                {locale === 'es' ? 'EN' : 'ES'}
+              </Link>
+            )}
+            <button
+              type="button"
+              className={iconBtnClass}
+              onClick={() => setIsMobileMenuOpen((v) => !v)}
+              aria-label={isMobileMenuOpen ? nav.closeMenu : nav.openMenu}
+            >
+              {isMobileMenuOpen ? (
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              ) : (
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              )}
+            </button>
+          </div>
         </div>
       </motion.nav>
 
@@ -224,22 +272,24 @@ export default function DockNavbar({
                 : 'glass-modern border border-white/10'
             }`}
           >
-            {LANDING_NAV_LINKS.map((link) => (
-              <Link prefetch={false}
+            {nav.links.map((link) => (
+              <Link
+                prefetch={false}
                 key={link.href}
-                href={link.href}
+                href={href(link.href)}
                 className={mobileLinkClass}
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 {link.label}
               </Link>
             ))}
-            <Link prefetch={false}
-              href="/calculadora"
+            <Link
+              prefetch={false}
+              href={href('/calculadora')}
               className={mobileLinkClass}
               onClick={() => setIsMobileMenuOpen(false)}
             >
-              Calculadora
+              {nav.calculator}
             </Link>
             <button
               type="button"
@@ -248,21 +298,25 @@ export default function DockNavbar({
               }`}
               onClick={() => setIsCalculatorMobileOpen((v) => !v)}
             >
-              Elige una calculadora
+              {nav.calculatorPick}
               <svg className={`h-4 w-4 transition-transform ${isCalculatorMobileOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
               </svg>
             </button>
             {isCalculatorMobileOpen && (
               <div className="pl-2 pb-1 space-y-0.5">
-                {CALCULATOR_MOBILE_LINKS.map((link) => (
-                  <Link prefetch={false}
+                {nav.calculatorMobile.map((link) => (
+                  <Link
+                    prefetch={false}
                     key={link.href}
-                    href={link.href}
+                    href={href(link.href)}
                     className={`block px-3 py-2 text-xs rounded-lg ${
                       isLight ? 'text-slate-500 hover:text-slate-900' : 'text-slate-400 hover:text-white'
                     }`}
-                    onClick={() => { setIsCalculatorMobileOpen(false); setIsMobileMenuOpen(false) }}
+                    onClick={() => {
+                      setIsCalculatorMobileOpen(false)
+                      setIsMobileMenuOpen(false)
+                    }}
                   >
                     {link.label}
                   </Link>
@@ -271,18 +325,19 @@ export default function DockNavbar({
             )}
             <Link
               prefetch={false}
-              href="/activar"
+              href={href('/activar')}
               className="block w-full mt-2 text-center bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl text-sm font-medium min-h-[48px]"
               onClick={() => setIsMobileMenuOpen(false)}
             >
-              Activación inmediata
+              {nav.activateMobile}
             </Link>
-            <Link prefetch={false}
+            <Link
+              prefetch={false}
               href="/app/login"
               className="block w-full mt-2 text-center bg-brand-600 hover:bg-brand-700 text-white py-3 rounded-xl text-sm font-medium min-h-[48px]"
               onClick={() => setIsMobileMenuOpen(false)}
             >
-              Iniciar sesión
+              {nav.login}
             </Link>
           </motion.div>
         )}

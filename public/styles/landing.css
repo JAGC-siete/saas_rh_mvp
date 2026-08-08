@@ -7,6 +7,163 @@
   --bg-hero: #f3f4f6;
 }
 
+/*
+ * Landing tone tokens (mesh dark vs /paz light).
+ * Driven by <html data-landing-tone="dark|light"> — not Tailwind .dark.
+ */
+:root,
+[data-landing-tone='dark'] {
+  --landing-canvas: #020617;
+  --landing-ink: #f8fafc;
+  --landing-ink-soft: #94a3b8;
+  --landing-brand-soft: #93c5fd;
+  --landing-accent: #2563eb;
+  --landing-accent-hover: #1d4ed8;
+  --landing-border: rgba(255, 255, 255, 0.1);
+  --landing-glass: rgba(15, 23, 42, 0.6);
+  --landing-glass-border: rgba(255, 255, 255, 0.08);
+  --landing-hero-from: #ffffff;
+  --landing-hero-via: #bfdbfe;
+  --landing-hero-to: #60a5fa;
+}
+
+[data-landing-tone='light'] {
+  --landing-canvas: #ffffff;
+  --landing-ink: #0f172a;
+  --landing-ink-soft: #475569;
+  --landing-brand-soft: #2563eb;
+  --landing-accent: #2563eb;
+  --landing-accent-hover: #1d4ed8;
+  --landing-border: rgba(15, 23, 42, 0.12);
+  --landing-glass: rgba(15, 23, 42, 0.04);
+  --landing-glass-border: rgba(15, 23, 42, 0.12);
+  --landing-hero-from: #0f172a;
+  --landing-hero-via: #1e3a8a;
+  --landing-hero-to: #2563eb;
+}
+
+.landing-ink {
+  color: var(--landing-ink);
+}
+
+.landing-muted {
+  color: var(--landing-ink-soft);
+}
+
+.landing-brand-soft {
+  color: var(--landing-brand-soft);
+}
+
+.landing-hero-gradient {
+  background-image: linear-gradient(
+    to right,
+    var(--landing-hero-from),
+    var(--landing-hero-via),
+    var(--landing-hero-to)
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.landing-hero-gradient-sub {
+  background-image: linear-gradient(to right, var(--landing-hero-via), var(--landing-hero-to));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+[data-landing-tone='light'] .glass-modern {
+  background: var(--landing-glass);
+  border-color: var(--landing-glass-border);
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+}
+
+@media (max-width: 768px) {
+  [data-landing-tone='light'] .glass-modern {
+    background: rgba(15, 23, 42, 0.06);
+  }
+}
+
+[data-landing-tone='light'] .landing-shell .bg-mesh {
+  background-color: #ffffff;
+  background-image: none;
+}
+
+/* Contrast helpers for common dark-only Tailwind on light canvas */
+[data-landing-tone='light'] .landing-tone-surface .text-white {
+  color: var(--landing-ink);
+}
+
+[data-landing-tone='light'] .landing-tone-surface .text-slate-400,
+[data-landing-tone='light'] .landing-tone-surface .text-slate-300 {
+  color: var(--landing-ink-soft);
+}
+
+[data-landing-tone='light'] .landing-tone-surface .text-brand-300,
+[data-landing-tone='light'] .landing-tone-surface .text-brand-200,
+[data-landing-tone='light'] .landing-tone-surface .text-brand-400 {
+  color: var(--landing-brand-soft);
+}
+
+[data-landing-tone='light'] .landing-tone-surface .border-white\/10,
+[data-landing-tone='light'] .landing-tone-surface .border-white\/25,
+[data-landing-tone='light'] .landing-tone-surface .border-white\/5 {
+  border-color: var(--landing-border);
+}
+
+[data-landing-tone='light'] .landing-tone-surface .hover\:bg-white\/10:hover {
+  background-color: rgba(15, 23, 42, 0.06);
+}
+
+[data-landing-tone='light'] .landing-tone-surface .bg-slate-900\/50 {
+  background-color: rgba(15, 23, 42, 0.04);
+}
+
+[data-landing-tone='light'] .landing-tone-surface .ring-white\/15 {
+  --tw-ring-color: rgba(15, 23, 42, 0.12);
+}
+
+/* Badge / accent text: light canvas needs darker greens & cyans for contrast */
+[data-landing-tone='light'] .landing-tone-surface .text-cyan-200,
+[data-landing-tone='light'] .landing-tone-surface .text-cyan-300 {
+  color: #0e7490; /* cyan-700 */
+}
+
+[data-landing-tone='light'] .landing-tone-surface .text-green-300,
+[data-landing-tone='light'] .landing-tone-surface .text-green-400 {
+  color: #15803d; /* green-700 */
+}
+
+[data-landing-tone='light'] .landing-tone-surface .text-blue-200,
+[data-landing-tone='light'] .landing-tone-surface .text-blue-300 {
+  color: #1d4ed8; /* blue-700 */
+}
+
+[data-landing-tone='light'] .landing-tone-surface .text-amber-100 {
+  color: #92400e; /* amber-800 */
+}
+
+[data-landing-tone='light'] .landing-tone-surface .border-cyan-500\/30 {
+  border-color: rgba(14, 116, 144, 0.35);
+}
+
+[data-landing-tone='light'] .landing-tone-surface .border-green-400\/40 {
+  border-color: rgba(21, 128, 61, 0.4);
+}
+
+[data-landing-tone='light'] .landing-tone-surface .bg-cyan-500\/20 {
+  background-color: rgba(14, 116, 144, 0.12);
+}
+
+[data-landing-tone='light'] .landing-tone-surface .bg-blue-500\/20 {
+  background-color: rgba(29, 78, 216, 0.1);
+}
+
+[data-landing-tone='light'] .landing-tone-surface .bg-amber-500\/10 {
+  background-color: rgba(245, 158, 11, 0.12);
+}
+
 .dark {
   --bg-hero: #1f2937;
   --primary-color: #60a5fa;

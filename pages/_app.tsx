@@ -7,6 +7,7 @@ import { ToastContainer } from '../lib/toast'
 import { cn } from '../lib/utils'
 import { isPublicMarketingRoute } from '../lib/seo/public-ssr-routes'
 import MarketingAnalytics from '../components/marketing/MarketingAnalytics'
+import { LandingPreferencesProvider } from '../components/landing/LandingPreferencesProvider'
 import '../styles/globals.css'
 import '../styles/templates.css'
 
@@ -96,9 +97,11 @@ export default function App({ Component, pageProps }: AppProps) {
   if (isMarketingRoute) {
     return (
       <SupabaseContext.Provider value={null}>
-        {page}
-        <ToastContainer />
-        <MarketingAnalytics />
+        <LandingPreferencesProvider>
+          {page}
+          <ToastContainer />
+          <MarketingAnalytics />
+        </LandingPreferencesProvider>
       </SupabaseContext.Provider>
     )
   }

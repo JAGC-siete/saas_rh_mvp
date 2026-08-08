@@ -2,6 +2,8 @@ import Image from 'next/image'
 import { CheckBadgeIcon } from '@heroicons/react/24/solid'
 import ScrollReveal from './landing/ScrollReveal'
 import BorderBeam from './landing/BorderBeam'
+import { getHomeCopy } from '../lib/i18n/landings/home'
+import { useLandingPreferences } from './landing/LandingPreferencesProvider'
 
 const certifications = [
   { name: 'AWS Solutions Architect', icon: '/image-aws-solutions-architect.png' },
@@ -10,19 +12,20 @@ const certifications = [
 ]
 
 export default function AWSCertificationsSection() {
+  const { locale } = useLandingPreferences()
+  const copy = getHomeCopy(locale).aws
+
   return (
     <section className="py-16 px-4">
       <div className="max-w-6xl mx-auto">
         <ScrollReveal>
           <div className="text-center mb-10">
-            <h2 className="text-2xl sm:text-3xl font-bold text-white mb-6">
-              Potenciada con la tecnología de la nube utilizada por gigantes mundiales como Netflix o Airbnb.
-            </h2>
-            <p className="text-slate-400 max-w-4xl mx-auto mb-4 text-base sm:text-lg font-medium landing-dark-text">
-              Diseñada por ingenieros certificados
+            <h2 className="text-2xl sm:text-3xl font-bold landing-ink mb-6">{copy.title}</h2>
+            <p className="landing-muted max-w-4xl mx-auto mb-4 text-base sm:text-lg font-medium landing-dark-text">
+              {copy.designedBy}
             </p>
-            <p className="text-sm text-slate-400 max-w-2xl mx-auto font-medium">
-              <span className="text-white font-semibold">Datos seguros:</span> Infraestructura AWS regional encriptada
+            <p className="text-sm landing-muted max-w-2xl mx-auto font-medium">
+              <span className="landing-ink font-semibold">{copy.dataSecureLabel}</span> {copy.dataSecure}
             </p>
           </div>
         </ScrollReveal>
@@ -33,7 +36,7 @@ export default function AWSCertificationsSection() {
               <BorderBeam>
                 <div className="glass-modern rounded-2xl p-4 flex flex-col items-center text-center hover:scale-[1.01] transition-transform">
                   <Image src={cert.icon} alt={`${cert.name} logo`} width={80} height={80} className="w-20 h-20 mb-3" />
-                  <div className="text-sm font-medium text-white">{cert.name}</div>
+                  <div className="text-sm font-medium landing-ink">{cert.name}</div>
                 </div>
               </BorderBeam>
             </ScrollReveal>
@@ -44,7 +47,7 @@ export default function AWSCertificationsSection() {
           <div className="text-center">
             <div className="inline-flex items-center gap-3 bg-green-500/10 text-green-400 px-4 py-2 rounded-full border border-green-500/20">
               <CheckBadgeIcon className="h-5 w-5" />
-              <span className="font-medium text-sm">Garantía de calidad y seguridad certificada por AWS</span>
+              <span className="font-medium text-sm">{copy.guarantee}</span>
             </div>
           </div>
         </ScrollReveal>

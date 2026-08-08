@@ -72,25 +72,32 @@ const nextConfig = {
   
   // Configuración para rutas internas (no subdominios)
   async rewrites() {
-    return [
-      {
-        source: '/favicon.ico',
-        destination: '/brand/favicon-humano-sisu.png',
-      },
-      // Public descriptive slugs → internal page files
-      {
-        source: '/cerrar-planilla-en-paz',
-        destination: '/info',
-      },
-      {
-        source: '/cerrar-planilla-en-paz/m/:id',
-        destination: '/info/m/:id',
-      },
-      {
-        source: '/domingos-sin-planilla',
-        destination: '/viernes',
-      },
-    ]
+    return {
+      // /en/... → same page files; locale read from asPath (no Next i18n — keeps /app clean)
+      beforeFiles: [
+        { source: '/en', destination: '/' },
+        { source: '/en/:path*', destination: '/:path*' },
+      ],
+      afterFiles: [
+        {
+          source: '/favicon.ico',
+          destination: '/brand/favicon-humano-sisu.png',
+        },
+        // Public descriptive slugs → internal page files
+        {
+          source: '/cerrar-planilla-en-paz',
+          destination: '/info',
+        },
+        {
+          source: '/cerrar-planilla-en-paz/m/:id',
+          destination: '/info/m/:id',
+        },
+        {
+          source: '/domingos-sin-planilla',
+          destination: '/viernes',
+        },
+      ],
+    }
   },
   
   // Redirecciones para mantener compatibilidad
