@@ -400,7 +400,10 @@ export default function ProspectionPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => fetchRuns().then(() => selectedRunId && loadRun(selectedRunId))}
+              onClick={async () => {
+                await fetchRuns()
+                if (selectedRunId) await loadRun(selectedRunId)
+              }}
               disabled={busy || loading}
               className="border-white/20 text-white"
             >

@@ -1,12 +1,12 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { requireSuperAdminWithAudit } from '../../../../lib/auth/api-guards'
-import { createSuccessResponse, createErrorResponse } from '../../../../lib/security/api-responses'
-import { logger } from '../../../../lib/logger'
+import { requireSuperAdminWithAudit } from '../../../../../lib/auth/api-guards'
+import { createSuccessResponse, createErrorResponse } from '../../../../../lib/security/api-responses'
+import { logger } from '../../../../../lib/logger'
 import {
   DEFAULT_OUTREACH_BODY,
   DEFAULT_OUTREACH_SUBJECT,
   parseRubrosInput,
-} from '../../../../lib/admin/prospection'
+} from '../../../../../lib/admin/prospection'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
