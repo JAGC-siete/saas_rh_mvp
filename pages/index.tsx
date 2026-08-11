@@ -62,11 +62,11 @@ export default function LandingPage() {
 
   const pageTitle =
     locale === 'en'
-      ? 'Payroll & attendance system | HN, SV & GT | Biometrics + payroll | Humano SISU'
+      ? 'Human resources software (HR) | Biometric attendance + payroll | Humano SISU'
       : getPageTitle('home')
   const pageDescription =
     locale === 'en'
-      ? 'Biometric attendance + local payroll (Honduras, El Salvador, Guatemala). Try free.'
+      ? 'HR system with attendance control (fingerprint/facial) and local payroll in Honduras, El Salvador, and Guatemala. Try free.'
       : getPageDescription('home')
   const ogImage = SEO_DEFAULT_OG_IMAGE_PATH
   const ogImageUrl = seoAbsoluteUrl(ogImage)

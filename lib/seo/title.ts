@@ -46,7 +46,7 @@ export function generateTitle(options: TitleOptions = {}): string {
  * Predefined titles for common pages
  */
 export const pageTitles = {
-  home: 'Sistema de nómina y asistencia | HN, SV y GT | Biométrico + planilla | Humano SISU',
+  home: 'Software de recursos humanos (RRHH) | Asistencia biométrica + nómina | Humano SISU',
   activate: 'Activa SISU | Toca el cielo | Humano SISU',
   activarGracias: 'Trial activado | Llaves enviadas | Humano SISU',
   affiliates: 'Programa de Afiliados | Humano SISU',

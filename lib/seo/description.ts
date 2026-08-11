@@ -38,7 +38,7 @@ export function generateDescription(options: DescriptionOptions = {}): string {
  * Predefined descriptions for common pages
  */
 export const pageDescriptions = {
-  home: 'Asistencia biométrica + nómina local (Honduras, El Salvador, Guatemala): IHSS, RAP, ISR y comprobantes en un solo lugar. Prueba gratis.',
+  home: 'Sistema de RRHH con control de asistencia (huella/facial) y planillas en Honduras, El Salvador y Guatemala. Prueba gratis.',
   activate: 'Activa SISU y toca el cielo: entorno de prueba con nómina local en minutos. Sin tarjeta. Alcanzá la paz contable.',
   activarGracias:
     'Confirmación de trial Humano SISU. Revisá tu correo para las credenciales del entorno de prueba.',
