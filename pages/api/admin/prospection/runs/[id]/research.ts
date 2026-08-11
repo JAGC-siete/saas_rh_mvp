@@ -4,6 +4,7 @@ import { createSuccessResponse, createErrorResponse } from '../../../../../../li
 import { logger } from '../../../../../../lib/logger'
 import {
   normalizeResearchImport,
+  parseResearchImportPaste,
   researchLocalBusinesses,
   researchProviderConfigured,
   type ResearchCandidate,
@@ -92,9 +93,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     let queries: string[] = []
 
     try {
-      const importRows = Array.isArray(req.body?.candidates) ? req.body.candidates : null
+      let importRows: unknown[] | null = null
+      if (Array.isArray(req.body?.candidates)) {
+        importRows = req.body.candidates
+      } else if (typeof req.body?.importJson === 'string' && req.body.importJson.trim()) {
+        importRows = parseResearchImportPaste(req.body.importJson)
+      }
+
       if (importRows) {
-        candidates = normalizeResearchImport(importRows)
+        candidates = normalizeResearchImport(importRows as any)
         provider = 'import'
       } else if (researchProviderConfigured()) {
         const result = await researchLocalBusinesses({

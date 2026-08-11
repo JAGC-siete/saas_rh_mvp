@@ -1,4 +1,5 @@
 import { Resend } from 'resend'
+import { escapeMultiline } from '../emails/liquid-layout'
 import { getResendFromContact } from '../resend-from'
 import {
   isRateLimitError,
@@ -6,6 +7,11 @@ import {
   sleep,
   type B2bProspectContact,
 } from './prospection'
+
+/** Plain outreach → HTML so Resend Preview and HTML clients are not empty. */
+export function outreachBodyToHtml(plainText: string): string {
+  return `<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 15px; line-height: 1.55; color: #111827;">${escapeMultiline(plainText)}</div>`
+}
 
 export type SendProspectionEmailInput = {
   to: string
@@ -46,11 +52,16 @@ async function sendOnce(params: {
   text: string
 }): Promise<{ ok: true; id: string | null } | { ok: false; error: string }> {
   const resend = new Resend(params.apiKey)
+  const text = params.text.trim()
+  if (!text) {
+    return { ok: false, error: 'Email body is empty' }
+  }
   const result = await resend.emails.send({
     from: getResendFromContact(),
     to: params.to,
     subject: params.subject,
-    text: params.text,
+    text,
+    html: outreachBodyToHtml(text),
   })
 
   const err = extractResendError(result)

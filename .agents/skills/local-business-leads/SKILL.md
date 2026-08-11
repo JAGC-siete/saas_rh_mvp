@@ -4,8 +4,8 @@ description: >-
   Busca, verifica y lista teléfonos y emails de comercios locales por ciudad y
   rubro (ferreterías, agroferreterías, comercial ferretero u otros). Use when
   the user asks for leads, contactos, teléfonos, emails, o lista de comercios
-  en una ciudad; también cuando pide prospección B2B local o verificación de
-  negocios reales.
+  en una ciudad; también cuando pide prospección B2B local, verificación de
+  negocios reales, o JSON exportable para Super Admin → Prospección leads.
 ---
 
 # Local Business Leads
@@ -40,6 +40,7 @@ Leads Progress:
 - [ ] Fase 1: Búsqueda general
 - [ ] Fase 2: Verificación cruzada
 - [ ] Fase 3: Lista de principales comercios
+- [ ] Export JSON Super Admin
 ```
 
 ### Fase 1 — Búsqueda general
@@ -51,7 +52,7 @@ Leads Progress:
    - `"{rubro}" "{ciudad}" "horario" OR dirección`
    - `"comercial ferretero" "{ciudad}"` (y sinónimos del rubro)
 3. Recolectar candidatos crudos: nombre comercial, teléfono, email, dirección/barrio, URL fuente, notas.
-4. No inventar contactos. Si no hay teléfono/email, dejar celda vacía y marcar `sin_dato`.
+4. No inventar contactos. Si no hay teléfono/email, dejar celda vacía y marcar `sin_dato` **solo en la tabla markdown**.
 
 ### Fase 2 — Verificación cruzada
 
@@ -88,9 +89,15 @@ Seleccionar los principales del rubro en la ciudad según:
 
 Ordenar: `confianza` desc, luego nombre A–Z.
 
-## Formato de salida (solo tabla markdown)
+## Formato de salida (tabla + JSON UI)
 
-Entregar **una** tabla markdown principal. No CSV salvo que el usuario lo pida después.
+Entregar **siempre** en este orden:
+
+1. Tabla markdown (lectura humana)
+2. Resumen corto
+3. Bloque JSON listo para pegar en Super Admin → Prospección leads → textarea de importación
+
+### 1) Tabla markdown
 
 ```markdown
 | # | Comercio | Rubro | Teléfono | Email | Dirección / zona | Confianza | Fuentes | Notas |
@@ -98,7 +105,9 @@ Entregar **una** tabla markdown principal. No CSV salvo que el usuario lo pida d
 | 1 | ... | ferretería | +504... | ...@... | ... | alta | Maps; FB | ... |
 ```
 
-Después de la tabla, un bloque corto:
+En la tabla, si falta dato: `sin_dato`.
+
+### 2) Resumen
 
 ```markdown
 ### Resumen
@@ -108,6 +117,40 @@ Después de la tabla, un bloque corto:
 - Sin email: N
 - Limitaciones: [qué no se pudo verificar]
 ```
+
+### 3) JSON exportable (obligatorio)
+
+Bloque fenced `json` **copiable de un click**, schema exacto que acepta la UI:
+
+```json
+[
+  {
+    "comercio": "Ferretería Ejemplo",
+    "rubro": "ferretería",
+    "telefono": "+504 9999-0000",
+    "email": "ventas@ejemplo.hn",
+    "direccion": "Barrio Centro",
+    "confianza": "alta",
+    "fuentes": "Maps; sitio propio",
+    "notas": "Verificado en 2 fuentes"
+  }
+]
+```
+
+Reglas del JSON (críticas para que cargue en la UI):
+
+- Array de objetos (también válido: `{ "candidates": [ ... ] }`).
+- Campos: `comercio` (obligatorio), `rubro`, `telefono`, `email`, `direccion`, `confianza`, `fuentes`, `notas`.
+- `confianza`: solo `alta` | `media` | `baja` | `descartado`.
+- Sin teléfono/email: usar `null` (nunca string `"sin_dato"` en JSON).
+- Incluir solo filas de Fase 3 (preferir alta/media; baja solo si el usuario lo pide).
+- No inventar emails/teléfonos; omitir o `null` si no verificados.
+- JSON válido (comillas dobles, sin trailing commas, sin comentarios).
+- Tras el bloque, una línea de instrucción:
+
+> Pegar este JSON en Super Admin → Prospección leads → paso 1 (textarea) → Investigar contactos.
+
+Si el usuario pide **solo JSON** / **export UI** / **para Prospección**, entregar el bloque JSON primero (tabla opcional).
 
 ## Herramientas
 
@@ -122,3 +165,4 @@ Después de la tabla, un bloque corto:
 - No marcar `alta` con una sola mención de blog/SEO scraper.
 - No rellenar email/teléfono “probable”.
 - No mezclar comercios de otras ciudades con el mismo nombre sin confirmar ubicación.
+- No entregar solo tabla markdown sin el JSON exportable (salvo que el usuario lo prohíba).

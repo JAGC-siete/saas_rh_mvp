@@ -231,13 +231,52 @@ export async function researchLocalBusinesses(params: {
   return { candidates, queries, provider: 'serper' }
 }
 
+/**
+ * Parse pasted skill/UI JSON. Accepts raw array, { candidates: [] }, or ```json fences.
+ */
+export function parseResearchImportPaste(raw: string): ImportContactInput[] {
+  let text = raw.trim()
+  if (!text) return []
+
+  const fence = text.match(/^```(?:json)?\s*([\s\S]*?)```$/i)
+  if (fence) text = fence[1].trim()
+
+  // If agent pasted prose + JSON, take outermost array or object
+  if (!text.startsWith('[') && !text.startsWith('{')) {
+    const startArr = text.indexOf('[')
+    const startObj = text.indexOf('{')
+    if (startArr >= 0 && (startObj < 0 || startArr < startObj)) {
+      text = text.slice(startArr)
+      const end = text.lastIndexOf(']')
+      if (end >= 0) text = text.slice(0, end + 1)
+    } else if (startObj >= 0) {
+      text = text.slice(startObj)
+      const end = text.lastIndexOf('}')
+      if (end >= 0) text = text.slice(0, end + 1)
+    }
+  }
+
+  const parsed = JSON.parse(text) as unknown
+  if (Array.isArray(parsed)) return parsed as ImportContactInput[]
+  if (parsed && typeof parsed === 'object' && Array.isArray((parsed as { candidates?: unknown }).candidates)) {
+    return (parsed as { candidates: ImportContactInput[] }).candidates
+  }
+  throw new Error('JSON inválido: se espera un array [{comercio,...}] o { "candidates": [...] }')
+}
+
 export function normalizeResearchImport(rows: ImportContactInput[]): ResearchCandidate[] {
   const out: ResearchCandidate[] = []
   for (const row of rows) {
     const comercio = (row.comercio || '').trim()
     if (!comercio) continue
-    const email = normalizeProspectEmail(row.email)
-    const telefono = normalizeHnPhone(row.telefono || null)
+    const emailRaw = row.email?.trim() || null
+    const email =
+      !emailRaw || emailRaw.toLowerCase() === 'sin_dato' ? null : normalizeProspectEmail(emailRaw)
+    const telefonoRaw = row.telefono?.trim() || null
+    const telefono =
+      !telefonoRaw || telefonoRaw.toLowerCase() === 'sin_dato'
+        ? null
+        : normalizeHnPhone(telefonoRaw)
     const confianza = isValidConfidence(row.confianza) ? row.confianza : 'media'
     out.push({
       comercio,

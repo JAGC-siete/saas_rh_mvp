@@ -15,6 +15,10 @@ import {
   type B2bProspectContact,
   type B2bProspectRun,
 } from '../../../lib/admin/prospection'
+import {
+  normalizeResearchImport,
+  parseResearchImportPaste,
+} from '../../../lib/admin/prospection-research'
 import { DEFAULT_WHATSAPP_TEMPLATE } from '../../../lib/admin/prospection-whatsapp'
 import {
   MapPin,
@@ -26,6 +30,7 @@ import {
   Copy,
   ExternalLink,
   Loader2,
+  ClipboardPaste,
 } from 'lucide-react'
 
 type LedgerRow = {
@@ -92,6 +97,25 @@ export default function ProspectionPage() {
     [emailBody, run?.ciudad, ciudad]
   )
 
+  const importPreview = useMemo(() => {
+    const raw = importJson.trim()
+    if (!raw) return { ok: false as const, count: 0, error: null as string | null }
+    try {
+      const rows = parseResearchImportPaste(raw)
+      const normalized = normalizeResearchImport(rows)
+      if (!normalized.length) {
+        return { ok: false as const, count: 0, error: 'JSON sin comercios válidos (falta campo comercio)' }
+      }
+      return { ok: true as const, count: normalized.length, error: null }
+    } catch (e) {
+      return {
+        ok: false as const,
+        count: 0,
+        error: e instanceof Error ? e.message : 'JSON inválido',
+      }
+    }
+  }, [importJson])
+
   const fetchRuns = useCallback(async () => {
     const res = await fetch('/api/admin/prospection/runs', { credentials: 'include' })
     const data = await readJson(res)
@@ -143,7 +167,7 @@ export default function ProspectionPage() {
     }
   }, [fetchRuns])
 
-  const investigate = async () => {
+  const investigate = async (mode: 'serper' | 'import' = 'serper') => {
     if (!ciudad.trim() || !departamento.trim() || !rubros.trim()) {
       addNotification({
         type: 'error',
@@ -151,6 +175,17 @@ export default function ProspectionPage() {
         message: 'Rubro(s), ciudad y departamento son obligatorios.',
       })
       return
+    }
+
+    if (mode === 'import') {
+      if (!importPreview.ok) {
+        addNotification({
+          type: 'error',
+          title: 'JSON',
+          message: importPreview.error || 'Pega el JSON del skill antes de cargar.',
+        })
+        return
+      }
     }
 
     try {
@@ -177,9 +212,8 @@ export default function ProspectionPage() {
 
       const runId = createData.data.run.id as string
       const researchBody: Record<string, unknown> = {}
-      if (importJson.trim()) {
-        const parsed = JSON.parse(importJson)
-        researchBody.candidates = Array.isArray(parsed) ? parsed : parsed.candidates
+      if (mode === 'import' || importJson.trim()) {
+        researchBody.candidates = parseResearchImportPaste(importJson)
       }
 
       const researchRes = await fetch(`/api/admin/prospection/runs/${runId}/research`, {
@@ -198,7 +232,7 @@ export default function ProspectionPage() {
       setStep(2)
       addNotification({
         type: 'success',
-        title: 'Investigación lista',
+        title: mode === 'import' ? 'JSON cargado' : 'Investigación lista',
         message: `${researchData.data.summary?.found ?? 0} hallazgos`,
       })
     } catch (e) {
@@ -456,7 +490,7 @@ export default function ProspectionPage() {
                     Rubro(s), ciudad y departamento obligatorios. País: Honduras.
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-3">
+                <CardContent className="space-y-4">
                   <input
                     className="w-full rounded-md bg-white/5 border border-white/10 px-3 py-2 text-sm text-white"
                     placeholder="Rubro(s) * — ej. ferreterías, agroferreterías"
@@ -477,29 +511,105 @@ export default function ProspectionPage() {
                       onChange={(e) => setDepartamento(e.target.value)}
                     />
                   </div>
-                  <textarea
-                    className="w-full min-h-[80px] rounded-md bg-white/5 border border-white/10 px-3 py-2 text-xs text-white font-mono"
-                    placeholder='Opcional: pegar hallazgos JSON si no hay SERPER_API_KEY — [{"comercio":"…","email":"…","telefono":"…"}]'
-                    value={importJson}
-                    onChange={(e) => setImportJson(e.target.value)}
-                  />
-                  <Button onClick={investigate} disabled={busy || researching} className="w-full md:w-auto">
-                    {researching ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Investigando contactos…
-                      </>
-                    ) : (
-                      <>
-                        <Search className="h-4 w-4 mr-2" />
-                        Investigar contactos
-                      </>
-                    )}
-                  </Button>
+
+                  <div className="rounded-lg border border-brand-400/30 bg-brand-600/10 p-4 space-y-3">
+                    <div className="flex items-start gap-2">
+                      <ClipboardPaste className="h-5 w-5 text-brand-300 mt-0.5 shrink-0" aria-hidden />
+                      <div>
+                        <p className="text-sm font-medium text-white">Pegar resultados del agente</p>
+                        <p className="text-xs text-white/55 mt-0.5">
+                          Copia el bloque JSON de la skill{' '}
+                          <code className="text-white/80">local-business-leads</code> y pégalo aquí.
+                          Acepta array, {'{ "candidates": [] }'} o bloque markdown json del agente.
+                        </p>
+                      </div>
+                    </div>
+                    <textarea
+                      id="prospection-import-json"
+                      aria-label="Pegar JSON de hallazgos del agente"
+                      className="w-full min-h-[180px] rounded-md bg-black/30 border border-white/15 px-3 py-2 text-xs text-white font-mono"
+                      placeholder={`[\n  {\n    "comercio": "Ferretería Ejemplo",\n    "rubro": "ferretería",\n    "telefono": "+504 9999-0000",\n    "email": "ventas@ejemplo.hn",\n    "confianza": "alta",\n    "fuentes": "Maps; sitio"\n  }\n]`}
+                      value={importJson}
+                      onChange={(e) => setImportJson(e.target.value)}
+                    />
+                    <div className="flex flex-wrap items-center gap-2 justify-between">
+                      <p className="text-xs text-white/50">
+                        {importJson.trim() === '' && 'Sin JSON todavía.'}
+                        {importJson.trim() !== '' && importPreview.ok && (
+                          <span className="text-emerald-300">
+                            {importPreview.count} comercios listos para cargar
+                          </span>
+                        )}
+                        {importJson.trim() !== '' && !importPreview.ok && (
+                          <span className="text-amber-300">{importPreview.error}</span>
+                        )}
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {importJson.trim() !== '' && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="text-white/70"
+                            onClick={() => setImportJson('')}
+                          >
+                            Limpiar
+                          </Button>
+                        )}
+                        <Button
+                          type="button"
+                          onClick={() => investigate('import')}
+                          disabled={busy || researching || !importPreview.ok}
+                        >
+                          {researching ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              Cargando…
+                            </>
+                          ) : (
+                            <>
+                              <ClipboardPaste className="h-4 w-4 mr-2" />
+                              Cargar JSON pegado
+                              {importPreview.ok ? ` (${importPreview.count})` : ''}
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-3">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="border-white/20 text-white"
+                      onClick={() => investigate('serper')}
+                      disabled={busy || researching || importJson.trim() !== ''}
+                      title={
+                        importJson.trim()
+                          ? 'Limpia el JSON para investigar con Serper'
+                          : 'Buscar con SERPER_API_KEY'
+                      }
+                    >
+                      {researching ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Investigando…
+                        </>
+                      ) : (
+                        <>
+                          <Search className="h-4 w-4 mr-2" />
+                          Investigar con Serper
+                        </>
+                      )}
+                    </Button>
+                    <p className="text-xs text-white/40">
+                      Con JSON pegado usa “Cargar JSON pegado”. Serper queda deshabilitado hasta limpiar.
+                    </p>
+                  </div>
                   {researching && (
                     <p className="text-xs text-white/50">
-                      Búsqueda general → verificación cruzada → lista de principales. No se inventan
-                      teléfonos ni emails.
+                      No se inventan teléfonos ni emails. Tras cargar → paso 2 (selección).
                     </p>
                   )}
                 </CardContent>
