@@ -46,6 +46,7 @@ export default function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
     { name: 'Ventas', href: '/app/admin/ventas-config', icon: DollarSign, description: 'Configurar /ventas' },
     { name: 'Afiliados', href: '/app/admin/affiliates', icon: Users, description: 'Gestión de afiliados' },
     { name: 'Leads marketing', href: '/app/admin/mail-list', icon: Mail, description: 'Secuencia de email y suscriptores' },
+    { name: 'Marketing KPIs', href: '/app/admin/marketing', icon: Activity, description: 'Conversiones: leads, email y cotizaciones' },
     { name: 'Comunicaciones', href: '/app/admin/communications', icon: Send, description: 'Campañas y secuencias de adopción' },
     { name: 'Recursos SEO', href: '/app/admin/recursos', icon: BookOpen, description: 'Artículos públicos en /recursos' },
     { name: 'Soporte', href: '/app/admin/support', icon: LifeBuoy, description: 'Cola de tickets de soporte' },

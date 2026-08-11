@@ -199,7 +199,8 @@ async function sumColumn(
   return (data || []).reduce((sum: number, row: any) => sum + Number(row[column] || 0), 0)
 }
 
-async function fetchCommercialStats(supabase: SupabaseClient): Promise<CommercialStats> {
+/** Commercial quote/deposit KPIs (window hard-coded to 30d for sent/converted quotes). */
+export async function fetchCommercialStats(supabase: SupabaseClient): Promise<CommercialStats> {
   const since30d = thirtyDaysAgoIso()
   const { startIso, endIso } = monthBoundsHonduras()
 
