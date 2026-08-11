@@ -11,11 +11,22 @@ import {
   MAX_PROSPECTION_SEND_BATCH,
   PREFERRED_SEND_CONFIDENCES,
   renderOutreachBody,
-  type B2bProspectConfidence,
+  type B2bProspectCandidate,
   type B2bProspectContact,
   type B2bProspectRun,
 } from '../../../lib/admin/prospection'
-import { MapPin, Plus, Send, Trash2, Upload, RefreshCw, Mail } from 'lucide-react'
+import { DEFAULT_WHATSAPP_TEMPLATE } from '../../../lib/admin/prospection-whatsapp'
+import {
+  MapPin,
+  Search,
+  Send,
+  MessageCircle,
+  RefreshCw,
+  ChevronRight,
+  Copy,
+  ExternalLink,
+  Loader2,
+} from 'lucide-react'
 
 type LedgerRow = {
   id: string
@@ -27,53 +38,54 @@ type LedgerRow = {
   sent_at: string
 }
 
-type SendResultRow = {
+type WaResult = {
   contactId: string
   comercio: string
-  to: string
   status: string
-  resendId: string | null
+  link: string | null
+  message: string | null
   error: string | null
 }
+
+type Step = 1 | 2 | 3 | 4
 
 async function readJson(res: Response) {
   return res.json().catch(() => ({ success: false, error: 'Respuesta inválida' }))
 }
 
+const STEPS: { id: Step; label: string }[] = [
+  { id: 1, label: 'Parámetros' },
+  { id: 2, label: 'Resultados' },
+  { id: 3, label: 'Outreach' },
+  { id: 4, label: 'Auditoría' },
+]
+
 export default function ProspectionPage() {
   const { addNotification } = useNotificationContext()
 
+  const [step, setStep] = useState<Step>(1)
   const [runs, setRuns] = useState<B2bProspectRun[]>([])
-  const [selectedRunId, setSelectedRunId] = useState<string | null>(null)
   const [run, setRun] = useState<B2bProspectRun | null>(null)
+  const [candidates, setCandidates] = useState<B2bProspectCandidate[]>([])
   const [contacts, setContacts] = useState<B2bProspectContact[]>([])
   const [ledger, setLedger] = useState<LedgerRow[]>([])
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
+  const [researching, setResearching] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // New run form
   const [ciudad, setCiudad] = useState('')
   const [departamento, setDepartamento] = useState('')
   const [rubros, setRubros] = useState('ferreterías, agroferreterías, comercial ferretero')
-
-  // Editable template (synced from selected run)
-  const [emailSubject, setEmailSubject] = useState(DEFAULT_OUTREACH_SUBJECT)
-  const [emailBody, setEmailBody] = useState(DEFAULT_OUTREACH_BODY)
-
-  // Manual contact
-  const [comercio, setComercio] = useState('')
-  const [contactEmail, setContactEmail] = useState('')
-  const [contactPhone, setContactPhone] = useState('')
-  const [contactRubro, setContactRubro] = useState('')
-  const [confianza, setConfianza] = useState<B2bProspectConfidence>('media')
-
-  // Import JSON
   const [importJson, setImportJson] = useState('')
 
-  // Selection + send
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
-  const [lastSendResults, setLastSendResults] = useState<SendResultRow[] | null>(null)
+  const [emailSubject, setEmailSubject] = useState(DEFAULT_OUTREACH_SUBJECT)
+  const [emailBody, setEmailBody] = useState(DEFAULT_OUTREACH_BODY)
+  const [waTemplate, setWaTemplate] = useState(DEFAULT_WHATSAPP_TEMPLATE)
+
+  const [candidateSelected, setCandidateSelected] = useState<Set<string>>(new Set())
+  const [contactSelected, setContactSelected] = useState<Set<string>>(new Set())
+  const [waResults, setWaResults] = useState<WaResult[] | null>(null)
 
   const previewBody = useMemo(
     () => renderOutreachBody(emailBody, run?.ciudad || ciudad || 'Siguatepeque'),
@@ -83,26 +95,35 @@ export default function ProspectionPage() {
   const fetchRuns = useCallback(async () => {
     const res = await fetch('/api/admin/prospection/runs', { credentials: 'include' })
     const data = await readJson(res)
-    if (!res.ok || !data.success) {
-      throw new Error(data.error || 'No se pudieron cargar las corridas')
-    }
+    if (!res.ok || !data.success) throw new Error(data.error || 'No se pudieron cargar corridas')
     setRuns(data.data.runs || [])
   }, [])
 
   const loadRun = useCallback(async (id: string) => {
     const res = await fetch(`/api/admin/prospection/runs/${id}`, { credentials: 'include' })
     const data = await readJson(res)
-    if (!res.ok || !data.success) {
-      throw new Error(data.error || 'No se pudo cargar la corrida')
-    }
+    if (!res.ok || !data.success) throw new Error(data.error || 'No se pudo cargar la corrida')
     const nextRun = data.data.run as B2bProspectRun
+    const nextCandidates = (data.data.candidates || []) as B2bProspectCandidate[]
+    const nextContacts = (data.data.contacts || []) as B2bProspectContact[]
     setRun(nextRun)
-    setContacts(data.data.contacts || [])
+    setCandidates(nextCandidates)
+    setContacts(nextContacts)
     setLedger(data.data.ledger || [])
     setEmailSubject(nextRun.email_subject)
     setEmailBody(nextRun.email_body)
-    setSelectedIds(new Set())
-    setLastSendResults(null)
+    setCiudad(nextRun.ciudad)
+    setDepartamento(nextRun.departamento || '')
+    setRubros((nextRun.rubros || []).join(', '))
+    setCandidateSelected(
+      new Set(
+        nextCandidates
+          .filter((c) => c.selected || (PREFERRED_SEND_CONFIDENCES as readonly string[]).includes(c.confianza))
+          .map((c) => c.id)
+      )
+    )
+    setContactSelected(new Set())
+    setWaResults(null)
   }, [])
 
   useEffect(() => {
@@ -110,7 +131,6 @@ export default function ProspectionPage() {
     ;(async () => {
       try {
         setLoading(true)
-        setError(null)
         await fetchRuns()
       } catch (e) {
         if (!cancelled) setError(e instanceof Error ? e.message : String(e))
@@ -123,190 +143,76 @@ export default function ProspectionPage() {
     }
   }, [fetchRuns])
 
-  useEffect(() => {
-    if (!selectedRunId) {
-      setRun(null)
-      setContacts([])
-      setLedger([])
+  const investigate = async () => {
+    if (!ciudad.trim() || !departamento.trim() || !rubros.trim()) {
+      addNotification({
+        type: 'error',
+        title: 'Campos requeridos',
+        message: 'Rubro(s), ciudad y departamento son obligatorios.',
+      })
       return
     }
-    let cancelled = false
-    ;(async () => {
-      try {
-        setBusy(true)
-        setError(null)
-        await loadRun(selectedRunId)
-      } catch (e) {
-        if (!cancelled) {
-          setError(e instanceof Error ? e.message : String(e))
-          addNotification({
-            type: 'error',
-            title: 'Error',
-            message: e instanceof Error ? e.message : String(e),
-          })
-        }
-      } finally {
-        if (!cancelled) setBusy(false)
-      }
-    })()
-    return () => {
-      cancelled = true
-    }
-  }, [selectedRunId, loadRun, addNotification])
 
-  const createRun = async () => {
-    if (!ciudad.trim()) {
-      addNotification({ type: 'error', title: 'Ciudad requerida', message: 'Indica la ciudad de la corrida.' })
-      return
-    }
     try {
+      setResearching(true)
       setBusy(true)
-      const res = await fetch('/api/admin/prospection/runs', {
+      setError(null)
+
+      const createRes = await fetch('/api/admin/prospection/runs', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ciudad: ciudad.trim(),
-          departamento: departamento.trim() || null,
+          departamento: departamento.trim(),
           rubros,
           email_subject: emailSubject,
           email_body: emailBody,
         }),
       })
-      const data = await readJson(res)
-      if (!res.ok || !data.success) throw new Error(data.error || 'No se pudo crear')
+      const createData = await readJson(createRes)
+      if (!createRes.ok || !createData.success) {
+        throw new Error(createData.error || 'No se pudo crear la corrida')
+      }
+
+      const runId = createData.data.run.id as string
+      const researchBody: Record<string, unknown> = {}
+      if (importJson.trim()) {
+        const parsed = JSON.parse(importJson)
+        researchBody.candidates = Array.isArray(parsed) ? parsed : parsed.candidates
+      }
+
+      const researchRes = await fetch(`/api/admin/prospection/runs/${runId}/research`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(researchBody),
+      })
+      const researchData = await readJson(researchRes)
+      if (!researchRes.ok || !researchData.success) {
+        throw new Error(researchData.error || 'Investigación falló')
+      }
+
       await fetchRuns()
-      setSelectedRunId(data.data.run.id)
-      addNotification({ type: 'success', title: 'Corrida creada', message: data.data.run.ciudad })
-    } catch (e) {
-      addNotification({
-        type: 'error',
-        title: 'Error',
-        message: e instanceof Error ? e.message : String(e),
-      })
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  const saveTemplate = async () => {
-    if (!selectedRunId) return
-    try {
-      setBusy(true)
-      const res = await fetch(`/api/admin/prospection/runs/${selectedRunId}`, {
-        method: 'PATCH',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email_subject: emailSubject, email_body: emailBody }),
-      })
-      const data = await readJson(res)
-      if (!res.ok || !data.success) throw new Error(data.error || 'No se pudo guardar')
-      setRun(data.data.run)
-      addNotification({ type: 'success', title: 'Plantilla guardada', message: 'Asunto y cuerpo actualizados.' })
-    } catch (e) {
-      addNotification({
-        type: 'error',
-        title: 'Error',
-        message: e instanceof Error ? e.message : String(e),
-      })
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  const addContact = async () => {
-    if (!selectedRunId || !comercio.trim()) return
-    try {
-      setBusy(true)
-      const res = await fetch(`/api/admin/prospection/runs/${selectedRunId}/contacts`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          comercio: comercio.trim(),
-          email: contactEmail.trim() || null,
-          telefono: contactPhone.trim() || null,
-          rubro: contactRubro.trim() || null,
-          confianza,
-        }),
-      })
-      const data = await readJson(res)
-      if (!res.ok || !data.success) throw new Error(data.error || 'No se pudo agregar')
-      setComercio('')
-      setContactEmail('')
-      setContactPhone('')
-      setContactRubro('')
-      await loadRun(selectedRunId)
-      addNotification({ type: 'success', title: 'Contacto agregado', message: 'OK' })
-    } catch (e) {
-      addNotification({
-        type: 'error',
-        title: 'Error',
-        message: e instanceof Error ? e.message : String(e),
-      })
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  const importContacts = async () => {
-    if (!selectedRunId) return
-    try {
-      const parsed = JSON.parse(importJson)
-      const contactsPayload = Array.isArray(parsed) ? parsed : parsed.contacts
-      if (!Array.isArray(contactsPayload)) throw new Error('JSON debe ser un array de contactos')
-      setBusy(true)
-      const res = await fetch(`/api/admin/prospection/runs/${selectedRunId}/contacts`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contacts: contactsPayload }),
-      })
-      const data = await readJson(res)
-      if (!res.ok || !data.success) throw new Error(data.error || 'Import falló')
-      setImportJson('')
-      await loadRun(selectedRunId)
+      await loadRun(runId)
+      setStep(2)
       addNotification({
         type: 'success',
-        title: 'Importación',
-        message: `${data.data.imported || 0} contactos`,
+        title: 'Investigación lista',
+        message: `${researchData.data.summary?.found ?? 0} hallazgos`,
       })
     } catch (e) {
-      addNotification({
-        type: 'error',
-        title: 'Error import',
-        message: e instanceof Error ? e.message : String(e),
-      })
+      const message = e instanceof Error ? e.message : String(e)
+      setError(message)
+      addNotification({ type: 'error', title: 'Investigación', message })
     } finally {
+      setResearching(false)
       setBusy(false)
     }
   }
 
-  const deleteContact = async (contactId: string) => {
-    if (!selectedRunId) return
-    if (!confirm('¿Eliminar este contacto?')) return
-    try {
-      setBusy(true)
-      const res = await fetch(
-        `/api/admin/prospection/runs/${selectedRunId}/contacts/${contactId}`,
-        { method: 'DELETE', credentials: 'include' }
-      )
-      const data = await readJson(res)
-      if (!res.ok || !data.success) throw new Error(data.error || 'No se pudo eliminar')
-      await loadRun(selectedRunId)
-    } catch (e) {
-      addNotification({
-        type: 'error',
-        title: 'Error',
-        message: e instanceof Error ? e.message : String(e),
-      })
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  const toggleSelect = (id: string) => {
-    setSelectedIds((prev) => {
+  const toggleCandidate = (id: string) => {
+    setCandidateSelected((prev) => {
       const next = new Set(prev)
       if (next.has(id)) next.delete(id)
       else next.add(id)
@@ -314,48 +220,101 @@ export default function ProspectionPage() {
     })
   }
 
-  const selectWithEmail = () => {
-    setSelectedIds(
+  const loadSelected = async () => {
+    if (!run || candidateSelected.size === 0) return
+    try {
+      setBusy(true)
+      const res = await fetch(`/api/admin/prospection/runs/${run.id}/load-selected`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ candidateIds: Array.from(candidateSelected) }),
+      })
+      const data = await readJson(res)
+      if (!res.ok || !data.success) throw new Error(data.error || 'No se pudo cargar')
+      await loadRun(run.id)
+      setStep(3)
+      addNotification({
+        type: 'success',
+        title: 'Tabla de trabajo',
+        message: `${data.data.summary?.loaded ?? 0} contactos cargados`,
+      })
+    } catch (e) {
+      addNotification({
+        type: 'error',
+        title: 'Error',
+        message: e instanceof Error ? e.message : String(e),
+      })
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const toggleContact = (id: string) => {
+    setContactSelected((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const selectContactsPreferred = () => {
+    setContactSelected(
       new Set(
         contacts
-          .filter((c) => {
-            const hasEmail = Boolean(c.email_normalized || c.email)
-            if (!hasEmail) return false
-            if (c.confianza === 'descartado') return false
-            return (PREFERRED_SEND_CONFIDENCES as readonly string[]).includes(c.confianza)
-          })
+          .filter(
+            (c) =>
+              (c.email_normalized || c.email || c.telefono) &&
+              (PREFERRED_SEND_CONFIDENCES as readonly string[]).includes(c.confianza)
+          )
           .map((c) => c.id)
           .slice(0, MAX_PROSPECTION_SEND_BATCH)
       )
     )
   }
 
+  const saveTemplate = async () => {
+    if (!run) return
+    const res = await fetch(`/api/admin/prospection/runs/${run.id}`, {
+      method: 'PATCH',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email_subject: emailSubject, email_body: emailBody }),
+    })
+    const data = await readJson(res)
+    if (!res.ok || !data.success) {
+      addNotification({ type: 'error', title: 'Plantilla', message: data.error || 'Error' })
+      return
+    }
+    setRun(data.data.run)
+    addNotification({ type: 'success', title: 'Plantilla guardada', message: 'OK' })
+  }
+
   const sendEmails = async (dryRun: boolean) => {
-    if (!selectedRunId || selectedIds.size === 0) return
-    if (selectedIds.size > MAX_PROSPECTION_SEND_BATCH) {
+    if (!run || contactSelected.size === 0) return
+    if (contactSelected.size > MAX_PROSPECTION_SEND_BATCH) {
       addNotification({
         type: 'error',
-        title: 'Batch grande',
-        message: `Máximo ${MAX_PROSPECTION_SEND_BATCH} por envío. Reduce la selección.`,
+        title: 'Batch',
+        message: `Máximo ${MAX_PROSPECTION_SEND_BATCH} por envío`,
       })
       return
     }
     if (!dryRun) {
       const ok = confirm(
-        `Enviar correo REAL a ${selectedIds.size} contacto(s) vía Resend?\n` +
-          `Re-envíos a contactos ya enviados se omiten (idempotente).\n` +
-          `No se enrollarán en marketing_leads.`
+        `Enviar correo REAL a ${contactSelected.size} contacto(s)?\nIdempotente (no reenvía sent).\nNo enrolla marketing_leads.`
       )
       if (!ok) return
     }
     try {
       setBusy(true)
-      const res = await fetch(`/api/admin/prospection/runs/${selectedRunId}/send`, {
+      const res = await fetch(`/api/admin/prospection/runs/${run.id}/send`, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          contactIds: Array.from(selectedIds),
+          contactIds: Array.from(contactSelected),
           dryRun,
           email_subject: emailSubject,
           email_body: emailBody,
@@ -364,18 +323,68 @@ export default function ProspectionPage() {
       })
       const data = await readJson(res)
       if (!res.ok || !data.success) throw new Error(data.error || 'Envío falló')
-      setLastSendResults(data.data.results || [])
-      await loadRun(selectedRunId)
+      await loadRun(run.id)
+      setStep(4)
       const s = data.data.summary
       addNotification({
         type: dryRun ? 'info' : 'success',
-        title: dryRun ? 'Dry-run OK' : 'Envío completado',
-        message: `sent=${s.sent} dry=${s.dryRun} err=${s.errors} skip=${s.skipped}`,
+        title: dryRun ? 'Dry-run' : 'Enviado',
+        message: `sent=${s.sent} dry=${s.dryRun} skip=${s.skipped} err=${s.errors}`,
       })
     } catch (e) {
       addNotification({
         type: 'error',
-        title: 'Error envío',
+        title: 'Envío',
+        message: e instanceof Error ? e.message : String(e),
+      })
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const generateWhatsApp = async () => {
+    if (!run || contactSelected.size === 0) return
+    try {
+      setBusy(true)
+      const res = await fetch(`/api/admin/prospection/runs/${run.id}/whatsapp`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contactIds: Array.from(contactSelected),
+          whatsapp_template: waTemplate,
+        }),
+      })
+      const data = await readJson(res)
+      if (!res.ok || !data.success) throw new Error(data.error || 'WhatsApp falló')
+      setWaResults(data.data.results || [])
+      await loadRun(run.id)
+      setStep(4)
+      addNotification({
+        type: 'success',
+        title: 'WhatsApp',
+        message: `${data.data.summary?.ok ?? 0} enlaces wa.me generados`,
+      })
+    } catch (e) {
+      addNotification({
+        type: 'error',
+        title: 'WhatsApp',
+        message: e instanceof Error ? e.message : String(e),
+      })
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const openExistingRun = async (id: string) => {
+    try {
+      setBusy(true)
+      await loadRun(id)
+      setStep(2)
+    } catch (e) {
+      addNotification({
+        type: 'error',
+        title: 'Error',
         message: e instanceof Error ? e.message : String(e),
       })
     } finally {
@@ -394,22 +403,42 @@ export default function ProspectionPage() {
                 Prospección leads
               </h1>
               <p className="text-sm text-white/60 mt-1">
-                Corridas por ciudad/rubro, import de contactos y outreach Resend (sin enroll marketing).
+                Parámetros → Investigar → Seleccionar → Outreach (correo / WhatsApp)
               </p>
             </div>
             <Button
               variant="outline"
               size="sm"
+              className="border-white/20 text-white"
+              disabled={busy || loading}
               onClick={async () => {
                 await fetchRuns()
-                if (selectedRunId) await loadRun(selectedRunId)
+                if (run) await loadRun(run.id)
               }}
-              disabled={busy || loading}
-              className="border-white/20 text-white"
             >
               <RefreshCw className="h-4 w-4 mr-2" />
               Recargar
             </Button>
+          </div>
+
+          {/* Stepper */}
+          <div className="flex flex-wrap gap-2">
+            {STEPS.map((s, idx) => (
+              <button
+                key={s.id}
+                type="button"
+                onClick={() => setStep(s.id)}
+                className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm transition ${
+                  step === s.id
+                    ? 'border-brand-400/40 bg-brand-600/20 text-white'
+                    : 'border-white/10 bg-white/5 text-white/60 hover:bg-white/10'
+                }`}
+              >
+                <span className="font-semibold">{idx + 1}</span>
+                {s.label}
+                {idx < STEPS.length - 1 && <ChevronRight className="h-3 w-3 opacity-40" />}
+              </button>
+            ))}
           </div>
 
           {error && (
@@ -418,317 +447,389 @@ export default function ProspectionPage() {
             </div>
           )}
 
-          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-            {/* Runs list + create */}
-            <Card variant="liquid" className="border-white/10 xl:col-span-1">
-              <CardHeader>
-                <CardTitle className="text-white">Corridas</CardTitle>
-                <CardDescription className="text-white/60">
-                  Nueva búsqueda (import/manual en MVP)
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
+          {step === 1 && (
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+              <Card variant="liquid" className="border-white/10 xl:col-span-2">
+                <CardHeader>
+                  <CardTitle className="text-white">1. Parámetros de búsqueda</CardTitle>
+                  <CardDescription className="text-white/60">
+                    Rubro(s), ciudad y departamento obligatorios. País: Honduras.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
                   <input
                     className="w-full rounded-md bg-white/5 border border-white/10 px-3 py-2 text-sm text-white"
-                    placeholder="Ciudad *"
-                    value={ciudad}
-                    onChange={(e) => setCiudad(e.target.value)}
-                  />
-                  <input
-                    className="w-full rounded-md bg-white/5 border border-white/10 px-3 py-2 text-sm text-white"
-                    placeholder="Departamento"
-                    value={departamento}
-                    onChange={(e) => setDepartamento(e.target.value)}
-                  />
-                  <input
-                    className="w-full rounded-md bg-white/5 border border-white/10 px-3 py-2 text-sm text-white"
-                    placeholder="Rubros (coma)"
+                    placeholder="Rubro(s) * — ej. ferreterías, agroferreterías"
                     value={rubros}
                     onChange={(e) => setRubros(e.target.value)}
                   />
-                  <Button onClick={createRun} disabled={busy} className="w-full">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Crear corrida
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    <input
+                      className="rounded-md bg-white/5 border border-white/10 px-3 py-2 text-sm text-white"
+                      placeholder="Ciudad *"
+                      value={ciudad}
+                      onChange={(e) => setCiudad(e.target.value)}
+                    />
+                    <input
+                      className="rounded-md bg-white/5 border border-white/10 px-3 py-2 text-sm text-white"
+                      placeholder="Departamento *"
+                      value={departamento}
+                      onChange={(e) => setDepartamento(e.target.value)}
+                    />
+                  </div>
+                  <textarea
+                    className="w-full min-h-[80px] rounded-md bg-white/5 border border-white/10 px-3 py-2 text-xs text-white font-mono"
+                    placeholder='Opcional: pegar hallazgos JSON si no hay SERPER_API_KEY — [{"comercio":"…","email":"…","telefono":"…"}]'
+                    value={importJson}
+                    onChange={(e) => setImportJson(e.target.value)}
+                  />
+                  <Button onClick={investigate} disabled={busy || researching} className="w-full md:w-auto">
+                    {researching ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Investigando contactos…
+                      </>
+                    ) : (
+                      <>
+                        <Search className="h-4 w-4 mr-2" />
+                        Investigar contactos
+                      </>
+                    )}
                   </Button>
-                </div>
+                  {researching && (
+                    <p className="text-xs text-white/50">
+                      Búsqueda general → verificación cruzada → lista de principales. No se inventan
+                      teléfonos ni emails.
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
 
-                <div className="space-y-2 max-h-[420px] overflow-y-auto">
+              <Card variant="liquid" className="border-white/10">
+                <CardHeader>
+                  <CardTitle className="text-white text-base">Corridas recientes</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2 max-h-[360px] overflow-y-auto">
                   {loading && <p className="text-sm text-white/50">Cargando…</p>}
                   {!loading && runs.length === 0 && (
-                    <p className="text-sm text-white/50">Sin corridas aún.</p>
+                    <p className="text-sm text-white/50">Sin corridas.</p>
                   )}
                   {runs.map((r) => (
                     <button
                       key={r.id}
                       type="button"
-                      onClick={() => setSelectedRunId(r.id)}
-                      className={`w-full text-left rounded-lg border px-3 py-2 transition ${
-                        selectedRunId === r.id
-                          ? 'border-brand-400/40 bg-brand-600/20'
-                          : 'border-white/10 bg-white/5 hover:bg-white/10'
-                      }`}
+                      onClick={() => openExistingRun(r.id)}
+                      className="w-full text-left rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 px-3 py-2"
                     >
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-sm font-medium text-white">{r.ciudad}</span>
+                      <div className="flex justify-between gap-2">
+                        <span className="text-sm text-white font-medium">{r.ciudad}</span>
                         <Badge variant="secondary" className="text-[10px]">
                           {r.status}
                         </Badge>
                       </div>
                       <p className="text-xs text-white/50 truncate mt-1">
-                        {(r.rubros || []).join(', ') || 'sin rubros'}
+                        {(r.rubros || []).join(', ')}
                       </p>
                     </button>
                   ))}
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {step === 2 && (
+            <Card variant="liquid" className="border-white/10">
+              <CardHeader>
+                <CardTitle className="text-white">2. Resultados de investigación</CardTitle>
+                <CardDescription className="text-white/60">
+                  {run
+                    ? `${run.ciudad}${run.departamento ? `, ${run.departamento}` : ''} — marca los relevantes`
+                    : 'Sin corrida activa'}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="border-white/20 text-white"
+                    onClick={() =>
+                      setCandidateSelected(
+                        new Set(
+                          candidates
+                            .filter((c) =>
+                              (PREFERRED_SEND_CONFIDENCES as readonly string[]).includes(c.confianza)
+                            )
+                            .map((c) => c.id)
+                        )
+                      )
+                    }
+                  >
+                    Preseleccionar alta/media
+                  </Button>
+                  <Button onClick={loadSelected} disabled={busy || candidateSelected.size === 0}>
+                    Cargar seleccionados a la tabla de trabajo ({candidateSelected.size})
+                  </Button>
+                  <Button variant="outline" size="sm" className="border-white/20 text-white" onClick={() => setStep(1)}>
+                    Volver
+                  </Button>
+                </div>
+
+                <div className="overflow-x-auto rounded-lg border border-white/10">
+                  <table className="min-w-full divide-y divide-white/10 text-sm">
+                    <thead className="bg-white/5 text-white/60 text-left">
+                      <tr>
+                        <th className="px-3 py-2"> </th>
+                        <th className="px-3 py-2">Comercio</th>
+                        <th className="px-3 py-2">Teléfono</th>
+                        <th className="px-3 py-2">Email</th>
+                        <th className="px-3 py-2">Confianza</th>
+                        <th className="px-3 py-2">Fuentes</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/10 text-white/90">
+                      {candidates.map((c) => (
+                        <tr key={c.id}>
+                          <td className="px-3 py-2">
+                            <input
+                              type="checkbox"
+                              checked={candidateSelected.has(c.id)}
+                              onChange={() => toggleCandidate(c.id)}
+                            />
+                          </td>
+                          <td className="px-3 py-2">{c.comercio}</td>
+                          <td className="px-3 py-2 text-white/70">{c.telefono || '—'}</td>
+                          <td className="px-3 py-2 text-white/70">{c.email || '—'}</td>
+                          <td className="px-3 py-2">
+                            <Badge variant="secondary">{c.confianza}</Badge>
+                          </td>
+                          <td className="px-3 py-2 text-xs text-white/50 max-w-[220px] truncate">
+                            {c.fuentes || '—'}
+                          </td>
+                        </tr>
+                      ))}
+                      {candidates.length === 0 && (
+                        <tr>
+                          <td colSpan={6} className="px-3 py-8 text-center text-white/40">
+                            Sin hallazgos. Vuelve a Investigar o importa JSON.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
                 </div>
               </CardContent>
             </Card>
+          )}
 
-            {/* Contacts + template */}
-            <div className="xl:col-span-2 space-y-6">
-              {!run ? (
-                <Card variant="liquid" className="border-white/10">
-                  <CardContent className="py-12 text-center text-white/50 text-sm">
-                    Selecciona o crea una corrida para gestionar contactos y envío.
-                  </CardContent>
-                </Card>
-              ) : (
-                <>
-                  <Card variant="liquid" className="border-white/10">
-                    <CardHeader>
-                      <CardTitle className="text-white flex items-center gap-2">
-                        <Mail className="h-5 w-5 text-brand-400" />
-                        Plantilla editable
-                      </CardTitle>
-                      <CardDescription className="text-white/60">
-                        Usa {'{{ciudad}}'} — se sustituye al enviar. Ciudad actual:{' '}
-                        <strong className="text-white">{run.ciudad}</strong>
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
+          {step === 3 && (
+            <div className="space-y-6">
+              <Card variant="liquid" className="border-white/10">
+                <CardHeader>
+                  <CardTitle className="text-white">3. Tabla de trabajo + plantillas</CardTitle>
+                  <CardDescription className="text-white/60">
+                    Selecciona destinatarios. Correo vía Resend o genera wa.me (sin auto-enviar).
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <p className="text-xs text-white/50">Plantilla correo (usa {'{{ciudad}}'})</p>
                       <input
                         className="w-full rounded-md bg-white/5 border border-white/10 px-3 py-2 text-sm text-white"
                         value={emailSubject}
                         onChange={(e) => setEmailSubject(e.target.value)}
-                        placeholder="Asunto"
                       />
                       <textarea
-                        className="w-full min-h-[180px] rounded-md bg-white/5 border border-white/10 px-3 py-2 text-sm text-white font-mono"
+                        className="w-full min-h-[140px] rounded-md bg-white/5 border border-white/10 px-3 py-2 text-sm text-white font-mono"
                         value={emailBody}
                         onChange={(e) => setEmailBody(e.target.value)}
                       />
-                      <div className="rounded-md border border-white/10 bg-black/20 p-3">
-                        <p className="text-xs text-white/40 mb-2">Preview</p>
-                        <p className="text-sm text-white font-medium mb-2">{emailSubject}</p>
-                        <pre className="text-xs text-white/70 whitespace-pre-wrap font-sans">
-                          {previewBody}
-                        </pre>
-                      </div>
-                      <Button variant="outline" onClick={saveTemplate} disabled={busy} className="border-white/20 text-white">
+                      <Button variant="outline" size="sm" className="border-white/20 text-white" onClick={saveTemplate}>
                         Guardar plantilla
                       </Button>
-                    </CardContent>
-                  </Card>
+                      <pre className="text-xs text-white/50 whitespace-pre-wrap border border-white/10 rounded-md p-3">
+                        {previewBody}
+                      </pre>
+                    </div>
+                    <div className="space-y-2">
+                      <p className="text-xs text-white/50">Plantilla WhatsApp (corta)</p>
+                      <textarea
+                        className="w-full min-h-[140px] rounded-md bg-white/5 border border-white/10 px-3 py-2 text-sm text-white font-mono"
+                        value={waTemplate}
+                        onChange={(e) => setWaTemplate(e.target.value)}
+                      />
+                      <p className="text-xs text-white/40">
+                        Solo genera enlaces wa.me — no envía mensajes automáticamente.
+                      </p>
+                    </div>
+                  </div>
 
-                  <Card variant="liquid" className="border-white/10">
-                    <CardHeader>
-                      <CardTitle className="text-white">Contactos</CardTitle>
-                      <CardDescription className="text-white/60">
-                        Alta manual o import JSON (array con comercio, email, …)
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                        <input
-                          className="rounded-md bg-white/5 border border-white/10 px-3 py-2 text-sm text-white"
-                          placeholder="Comercio *"
-                          value={comercio}
-                          onChange={(e) => setComercio(e.target.value)}
-                        />
-                        <input
-                          className="rounded-md bg-white/5 border border-white/10 px-3 py-2 text-sm text-white"
-                          placeholder="Email"
-                          value={contactEmail}
-                          onChange={(e) => setContactEmail(e.target.value)}
-                        />
-                        <input
-                          className="rounded-md bg-white/5 border border-white/10 px-3 py-2 text-sm text-white"
-                          placeholder="Teléfono"
-                          value={contactPhone}
-                          onChange={(e) => setContactPhone(e.target.value)}
-                        />
-                        <input
-                          className="rounded-md bg-white/5 border border-white/10 px-3 py-2 text-sm text-white"
-                          placeholder="Rubro"
-                          value={contactRubro}
-                          onChange={(e) => setContactRubro(e.target.value)}
-                        />
-                        <select
-                          className="rounded-md bg-white/5 border border-white/10 px-3 py-2 text-sm text-white"
-                          value={confianza}
-                          onChange={(e) => setConfianza(e.target.value as B2bProspectConfidence)}
-                        >
-                          <option value="alta">alta</option>
-                          <option value="media">media</option>
-                          <option value="baja">baja</option>
-                          <option value="descartado">descartado</option>
-                        </select>
-                        <Button onClick={addContact} disabled={busy || !comercio.trim()}>
-                          <Plus className="h-4 w-4 mr-2" />
-                          Agregar
-                        </Button>
-                      </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Button variant="outline" size="sm" className="border-white/20 text-white" onClick={selectContactsPreferred}>
+                      Seleccionar alta/media (máx {MAX_PROSPECTION_SEND_BATCH})
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="border-white/20 text-white"
+                      disabled={busy || contactSelected.size === 0}
+                      onClick={() => sendEmails(true)}
+                    >
+                      Simular correo
+                    </Button>
+                    <Button disabled={busy || contactSelected.size === 0} onClick={() => sendEmails(false)}>
+                      <Send className="h-4 w-4 mr-2" />
+                      Enviar correo ({contactSelected.size})
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="border-white/20 text-white"
+                      disabled={busy || contactSelected.size === 0}
+                      onClick={generateWhatsApp}
+                    >
+                      <MessageCircle className="h-4 w-4 mr-2" />
+                      Generar WhatsApp
+                    </Button>
+                  </div>
 
-                      <div className="space-y-2">
-                        <textarea
-                          className="w-full min-h-[90px] rounded-md bg-white/5 border border-white/10 px-3 py-2 text-xs text-white font-mono"
-                          placeholder='[{"comercio":"…","email":"…","telefono":"…","confianza":"alta"}]'
-                          value={importJson}
-                          onChange={(e) => setImportJson(e.target.value)}
-                        />
-                        <Button
-                          variant="outline"
-                          onClick={importContacts}
-                          disabled={busy || !importJson.trim()}
-                          className="border-white/20 text-white"
-                        >
-                          <Upload className="h-4 w-4 mr-2" />
-                          Importar JSON
-                        </Button>
-                      </div>
-
-                      <div className="flex flex-wrap gap-2">
-                        <Button variant="outline" size="sm" onClick={selectWithEmail} className="border-white/20 text-white">
-                          Seleccionar alta/media c/ email (máx {MAX_PROSPECTION_SEND_BATCH})
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setSelectedIds(new Set())}
-                          className="border-white/20 text-white"
-                        >
-                          Limpiar selección
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          disabled={busy || selectedIds.size === 0}
-                          onClick={() => sendEmails(true)}
-                          className="border-white/20 text-white"
-                        >
-                          Simular envío
-                        </Button>
-                        <Button
-                          size="sm"
-                          disabled={busy || selectedIds.size === 0}
-                          onClick={() => sendEmails(false)}
-                        >
-                          <Send className="h-4 w-4 mr-2" />
-                          Enviar ({selectedIds.size})
-                        </Button>
-                      </div>
-
-                      <div className="overflow-x-auto rounded-lg border border-white/10">
-                        <table className="min-w-full divide-y divide-white/10 text-sm">
-                          <thead className="bg-white/5">
-                            <tr className="text-left text-white/60">
-                              <th className="px-3 py-2"> </th>
-                              <th className="px-3 py-2">Comercio</th>
-                              <th className="px-3 py-2">Email</th>
-                              <th className="px-3 py-2">Tel</th>
-                              <th className="px-3 py-2">Confianza</th>
-                              <th className="px-3 py-2"> </th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-white/10">
-                            {contacts.map((c) => (
-                              <tr key={c.id} className="text-white/90">
-                                <td className="px-3 py-2">
-                                  <input
-                                    type="checkbox"
-                                    checked={selectedIds.has(c.id)}
-                                    onChange={() => toggleSelect(c.id)}
-                                    disabled={!c.email && !c.email_normalized}
-                                  />
-                                </td>
-                                <td className="px-3 py-2">{c.comercio}</td>
-                                <td className="px-3 py-2 text-white/70">{c.email || '—'}</td>
-                                <td className="px-3 py-2 text-white/70">{c.telefono || '—'}</td>
-                                <td className="px-3 py-2">
-                                  <Badge variant="secondary">{c.confianza}</Badge>
-                                </td>
-                                <td className="px-3 py-2">
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => deleteContact(c.id)}
-                                    className="text-red-300 hover:text-red-200"
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                </td>
-                              </tr>
-                            ))}
-                            {contacts.length === 0 && (
-                              <tr>
-                                <td colSpan={6} className="px-3 py-6 text-center text-white/40">
-                                  Sin contactos. Agrega o importa JSON.
-                                </td>
-                              </tr>
-                            )}
-                          </tbody>
-                        </table>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {(lastSendResults || ledger.length > 0) && (
-                    <Card variant="liquid" className="border-white/10">
-                      <CardHeader>
-                        <CardTitle className="text-white">Ledger de envíos</CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-3">
-                        {lastSendResults && (
-                          <div className="overflow-x-auto rounded-lg border border-white/10">
-                            <table className="min-w-full divide-y divide-white/10 text-sm">
-                              <thead className="bg-white/5">
-                                <tr className="text-left text-white/60">
-                                  <th className="px-3 py-2">Comercio</th>
-                                  <th className="px-3 py-2">To</th>
-                                  <th className="px-3 py-2">Status</th>
-                                  <th className="px-3 py-2">Resend / error</th>
-                                </tr>
-                              </thead>
-                              <tbody className="divide-y divide-white/10">
-                                {lastSendResults.map((r) => (
-                                  <tr key={r.contactId} className="text-white/80">
-                                    <td className="px-3 py-2">{r.comercio}</td>
-                                    <td className="px-3 py-2">{r.to || '—'}</td>
-                                    <td className="px-3 py-2">{r.status}</td>
-                                    <td className="px-3 py-2 text-xs">{r.error || r.resendId || '—'}</td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
+                  <div className="overflow-x-auto rounded-lg border border-white/10">
+                    <table className="min-w-full divide-y divide-white/10 text-sm">
+                      <thead className="bg-white/5 text-white/60 text-left">
+                        <tr>
+                          <th className="px-3 py-2"> </th>
+                          <th className="px-3 py-2">Comercio</th>
+                          <th className="px-3 py-2">Teléfono</th>
+                          <th className="px-3 py-2">Email</th>
+                          <th className="px-3 py-2">Confianza</th>
+                          <th className="px-3 py-2">WhatsApp</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-white/10 text-white/90">
+                        {contacts.map((c) => (
+                          <tr key={c.id}>
+                            <td className="px-3 py-2">
+                              <input
+                                type="checkbox"
+                                checked={contactSelected.has(c.id)}
+                                onChange={() => toggleContact(c.id)}
+                              />
+                            </td>
+                            <td className="px-3 py-2">{c.comercio}</td>
+                            <td className="px-3 py-2 text-white/70">{c.telefono || '—'}</td>
+                            <td className="px-3 py-2 text-white/70">{c.email || '—'}</td>
+                            <td className="px-3 py-2">
+                              <Badge variant="secondary">{c.confianza}</Badge>
+                            </td>
+                            <td className="px-3 py-2 text-xs">
+                              {c.whatsapp_link ? (
+                                <a
+                                  href={c.whatsapp_link}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="text-brand-300 hover:underline"
+                                >
+                                  wa.me
+                                </a>
+                              ) : (
+                                '—'
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                        {contacts.length === 0 && (
+                          <tr>
+                            <td colSpan={6} className="px-3 py-8 text-center text-white/40">
+                              Carga contactos desde el paso 2.
+                            </td>
+                          </tr>
                         )}
-                        {!lastSendResults && ledger.length > 0 && (
-                          <ul className="space-y-1 text-xs text-white/60">
-                            {ledger.slice(0, 20).map((row) => (
-                              <li key={row.id}>
-                                {row.sent_at}: {row.to_email || '(sin email)'} — {row.status}
-                                {row.error ? ` (${row.error})` : ''}
-                              </li>
-                            ))}
-                          </ul>
-                        )}
-                      </CardContent>
-                    </Card>
-                  )}
-                </>
-              )}
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
-          </div>
+          )}
+
+          {step === 4 && (
+            <div className="space-y-6">
+              <Card variant="liquid" className="border-white/10">
+                <CardHeader>
+                  <CardTitle className="text-white">4. Auditoría</CardTitle>
+                  <CardDescription className="text-white/60">
+                    Ledger de correos y enlaces WhatsApp generados (persistidos en la corrida).
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <p className="text-sm text-white mb-2">Correo (ledger)</p>
+                    <ul className="space-y-1 text-xs text-white/60">
+                      {ledger.length === 0 && <li>Sin envíos aún.</li>}
+                      {ledger.slice(0, 30).map((row) => (
+                        <li key={row.id}>
+                          {row.sent_at}: {row.to_email || '(sin email)'} — {row.status}
+                          {row.error ? ` (${row.error})` : ''}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  <div>
+                    <p className="text-sm text-white mb-2">WhatsApp</p>
+                    <div className="space-y-2">
+                      {(waResults || contacts.filter((c) => c.whatsapp_link)).length === 0 && (
+                        <p className="text-xs text-white/50">Sin enlaces generados.</p>
+                      )}
+                      {(waResults ||
+                        contacts
+                          .filter((c) => c.whatsapp_link)
+                          .map((c) => ({
+                            contactId: c.id,
+                            comercio: c.comercio,
+                            status: 'ok',
+                            link: c.whatsapp_link || null,
+                            message: c.whatsapp_message || null,
+                            error: null,
+                          }))
+                      ).map((r) => (
+                        <div
+                          key={r.contactId}
+                          className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 flex flex-wrap items-center gap-2 justify-between"
+                        >
+                          <div>
+                            <p className="text-sm text-white">{r.comercio}</p>
+                            <p className="text-xs text-white/50">
+                              {r.status === 'ok' ? 'wa.me listo' : r.error || 'sin WhatsApp'}
+                            </p>
+                          </div>
+                          {r.link && (
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="border-white/20 text-white"
+                                onClick={() => navigator.clipboard.writeText(r.link!)}
+                              >
+                                <Copy className="h-3 w-3 mr-1" />
+                                Copiar
+                              </Button>
+                              <Button size="sm" asChild>
+                                <a href={r.link} target="_blank" rel="noreferrer">
+                                  <ExternalLink className="h-3 w-3 mr-1" />
+                                  Abrir
+                                </a>
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
         </div>
       </SuperAdminLayout>
     </SuperAdminGuard>

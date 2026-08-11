@@ -5,6 +5,8 @@
 
 export const B2B_PROSPECT_RUN_STATUSES = [
   'draft',
+  'researching',
+  'reviewed',
   'ready',
   'sending',
   'sent',
@@ -39,7 +41,28 @@ export type B2bProspectRun = {
   status: B2bProspectRunStatus
   email_subject: string
   email_body: string
+  research_status?: string | null
+  research_error?: string | null
+  research_completed_at?: string | null
   created_by: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type B2bProspectCandidate = {
+  id: string
+  run_id: string
+  comercio: string
+  rubro: string | null
+  telefono: string | null
+  email: string | null
+  email_normalized: string | null
+  direccion: string | null
+  confianza: B2bProspectConfidence
+  fuentes: string | null
+  notas: string | null
+  selected: boolean
+  loaded_at: string | null
   created_at: string
   updated_at: string
 }
@@ -56,6 +79,9 @@ export type B2bProspectContact = {
   confianza: B2bProspectConfidence
   fuentes: string | null
   notas: string | null
+  whatsapp_link?: string | null
+  whatsapp_message?: string | null
+  whatsapp_generated_at?: string | null
   created_at: string
   updated_at: string
 }

@@ -59,6 +59,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(500).json(createErrorResponse(contactsError.message, 'DB_ERROR'))
       }
 
+      const { data: candidates, error: candidatesError } = await adminClient
+        .from('b2b_prospect_candidates')
+        .select('*')
+        .eq('run_id', runId)
+        .order('created_at', { ascending: true })
+
+      if (candidatesError) {
+        return res.status(500).json(createErrorResponse(candidatesError.message, 'DB_ERROR'))
+      }
+
       const { data: ledger, error: ledgerError } = await adminClient
         .from('b2b_prospect_email_ledger')
         .select('*')
@@ -75,6 +85,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         createSuccessResponse({
           run,
           contacts: contacts || [],
+          candidates: candidates || [],
           ledger: ledger || [],
         })
       )
