@@ -7,6 +7,7 @@ import {
   type CanonicalPermissionKey,
   type CanonicalPermissions,
 } from '../security/canonical-permissions'
+import { CANCEL_DEDUCTION_PLANS_KEY } from '../security/deducciones-access'
 import { normalizeRole } from '../auth/role-access'
 
 export const COMPANY_MANAGED_ROLES = [
@@ -116,6 +117,8 @@ export function isModuleAssignableForRole(
 export type ModuleGrant = {
   view?: boolean
   manage?: boolean
+  /** Sub-capability under manage (e.g. cancel active deduction plans). */
+  cancel?: boolean
 }
 
 /** Maps UI modules → canonical permission keys + optional plan feature_key. */
@@ -125,6 +128,12 @@ export const COMPANY_MODULE_DEFS: Array<{
   featureKey: string | null
   viewKey?: CanonicalPermissionKey
   manageKey?: CanonicalPermissionKey
+  /**
+   * Optional sub-permission stored in permissions jsonb (not in canonical matrix).
+   * Defaults to true when manage is on; false clears cancel capability.
+   */
+  cancelKey?: typeof CANCEL_DEDUCTION_PLANS_KEY | string
+  cancelLabel?: string
   /** Stored as legacy boolean in permissions jsonb (no canonical key yet). */
   legacyKey?: string
 }> = [
@@ -168,6 +177,8 @@ export const COMPANY_MODULE_DEFS: Array<{
     label: 'Deducciones',
     featureKey: 'deducciones',
     manageKey: 'can_manage_deducciones',
+    cancelKey: CANCEL_DEDUCTION_PLANS_KEY,
+    cancelLabel: 'Cancelar planes',
   },
   {
     key: 'reports',
@@ -271,12 +282,35 @@ export function stripPermissionsOutsidePlan(
     if (features[def.featureKey] === true) continue
     if (def.viewKey) next[def.viewKey] = false
     if (def.manageKey) next[def.manageKey] = false
+    if (def.cancelKey) next[def.cancelKey] = false
     if (def.legacyKey) next[def.legacyKey] = false
     if (def.key === 'payroll') {
       next.can_authorize_payroll = false
     }
   }
   return next
+}
+
+/** Apply cancel sub-capability: requires manage; default allow when managing. */
+function applyModuleCancelGrant(
+  base: Record<string, boolean>,
+  def: (typeof COMPANY_MODULE_DEFS)[number],
+  grant: ModuleGrant | undefined,
+  enabled: boolean
+): void {
+  if (!def.cancelKey) return
+  const hasManage = def.manageKey ? base[def.manageKey] === true : false
+  if (!enabled || !hasManage) {
+    base[def.cancelKey] = false
+    return
+  }
+  if (grant && typeof grant.cancel === 'boolean') {
+    base[def.cancelKey] = grant.cancel
+    return
+  }
+  if (typeof base[def.cancelKey] !== 'boolean') {
+    base[def.cancelKey] = true
+  }
 }
 
 /**
@@ -303,12 +337,14 @@ export function buildCompanyUserPermissions(input: {
     if (!enabled) {
       if (def.viewKey) base[def.viewKey] = false
       if (def.manageKey) base[def.manageKey] = false
+      if (def.cancelKey) base[def.cancelKey] = false
       if (def.legacyKey) base[def.legacyKey] = false
       continue
     }
 
     if (def.legacyKey) {
       if (typeof grant.view === 'boolean') base[def.legacyKey] = grant.view
+      applyModuleCancelGrant(base, def, grant, enabled)
       continue
     }
 
@@ -319,17 +355,25 @@ export function buildCompanyUserPermissions(input: {
       base[def.manageKey] = grant.manage
       if (grant.manage && def.viewKey) base[def.viewKey] = true
     }
+    applyModuleCancelGrant(base, def, grant, enabled)
   }
 
   let next = stripPermissionsOutsidePlan(base, input.companyFeatures)
   // Re-normalize so role hard rules (e.g. manager: no payroll) stick after grants.
   next = { ...normalizePermissionsToCanonical(input.role, next) } as Record<string, boolean>
-  // Preserve legacy module flags that canonical normalizer does not know about.
+  // Preserve flags that canonical normalizer does not know about.
   for (const def of COMPANY_MODULE_DEFS) {
-    if (!def.legacyKey) continue
-    if (typeof base[def.legacyKey] === 'boolean') {
+    if (def.legacyKey && typeof base[def.legacyKey] === 'boolean') {
       next[def.legacyKey] = base[def.legacyKey]
     }
+    if (def.cancelKey && typeof base[def.cancelKey] === 'boolean') {
+      next[def.cancelKey] = base[def.cancelKey]
+    }
+  }
+  // Cancel requires manage after role hard-rules (e.g. manager without deducciones).
+  for (const def of COMPANY_MODULE_DEFS) {
+    if (!def.cancelKey || !def.manageKey) continue
+    if (next[def.manageKey] !== true) next[def.cancelKey] = false
   }
   next = stripPermissionsOutsidePlan(next, input.companyFeatures)
   next = applySalaryPermissionRules(input.role, next, input.canViewSalary)
@@ -352,7 +396,7 @@ export function moduleGrantsFromPermissions(
   for (const def of COMPANY_MODULE_DEFS) {
     const enabled = isModuleToggleEnabled(role, def.key, features)
     if (!enabled) {
-      out[def.key] = { view: false, manage: false }
+      out[def.key] = { view: false, manage: false, cancel: false }
       continue
     }
     if (def.legacyKey) {
@@ -365,10 +409,16 @@ export function moduleGrantsFromPermissions(
       out[def.key] = { view: v }
       continue
     }
-    out[def.key] = {
-      view: def.viewKey ? !!canonical[def.viewKey] : false,
-      manage: def.manageKey ? !!canonical[def.manageKey] : false,
+    const manage = def.manageKey ? !!canonical[def.manageKey] : false
+    // Manage-only modules (no viewKey): mirror manage into view for UI consistency.
+    const view = def.viewKey ? !!canonical[def.viewKey] : manage
+    const grant: ModuleGrant = { view, manage }
+    if (def.cancelKey) {
+      if (!manage) grant.cancel = false
+      else if (input[def.cancelKey] === false) grant.cancel = false
+      else grant.cancel = true
     }
+    out[def.key] = grant
   }
   return out
 }
@@ -403,6 +453,9 @@ export function parseModuleGrantsFromBody(
     }
     if ((g as ModuleGrant).manage === true || (g as ModuleGrant).manage === false) {
       grant.manage = (g as ModuleGrant).manage
+    }
+    if ((g as ModuleGrant).cancel === true || (g as ModuleGrant).cancel === false) {
+      grant.cancel = (g as ModuleGrant).cancel
     }
     if (Object.keys(grant).length > 0) out[def.key] = grant
   }

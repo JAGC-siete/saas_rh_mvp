@@ -5,6 +5,7 @@ import {
   canAccessDeduccionesModule,
   canCancelDeductionPlans,
   canSearchEmployeesForDeducciones,
+  CANCEL_DEDUCTION_PLANS_KEY,
 } from '../lib/security/deducciones-access'
 import { normalizePermissionsToCanonical } from '../lib/security/canonical-permissions'
 
@@ -58,7 +59,7 @@ describe('deducciones access', () => {
     assert.equal(
       canCancelDeductionPlans('manager', {
         can_manage_deducciones: true,
-        can_cancel_deduction_plans: false,
+        [CANCEL_DEDUCTION_PLANS_KEY]: false,
       }),
       false
     )

@@ -1,5 +1,8 @@
 import { normalizePermissionsToCanonical } from './canonical-permissions'
 
+/** JSON permission key: deny cancel of active deduction plans (e.g. adelanto salarial). */
+export const CANCEL_DEDUCTION_PLANS_KEY = 'can_cancel_deduction_plans' as const
+
 function parseRawPermissions(raw: unknown): Record<string, unknown> {
   if (!raw) return {}
   if (typeof raw === 'string') {
@@ -38,6 +41,6 @@ export function canSearchEmployeesForDeducciones(role: unknown, permissions: unk
 export function canCancelDeductionPlans(role: unknown, permissions: unknown): boolean {
   if (!canAccessDeduccionesModule(role, permissions)) return false
   const raw = parseRawPermissions(permissions)
-  if (raw.can_cancel_deduction_plans === false) return false
+  if (raw[CANCEL_DEDUCTION_PLANS_KEY] === false) return false
   return true
 }

@@ -451,29 +451,32 @@ export default function CompanyUsersPage() {
                   )}
                 </div>
                 <div className="mt-2 flex flex-wrap gap-3">
-                  <label className="flex items-center gap-1.5 text-xs text-white/70">
-                    <input
-                      type="checkbox"
-                      disabled={disabled || !enabled}
-                      checked={!!g.view && enabled}
-                      onChange={(e) =>
-                        onChange({
-                          ...grants,
-                          [def.key]: {
-                            ...g,
-                            view: e.target.checked,
-                            manage: e.target.checked ? g.manage : false,
-                          },
-                        })
-                      }
-                    />
-                    Ver
-                  </label>
+                  {def.viewKey ? (
+                    <label className="flex items-center gap-1.5 text-xs text-white/70">
+                      <input
+                        type="checkbox"
+                        disabled={disabled || !enabled}
+                        checked={!!g.view && enabled}
+                        onChange={(e) =>
+                          onChange({
+                            ...grants,
+                            [def.key]: {
+                              ...g,
+                              view: e.target.checked,
+                              manage: e.target.checked ? g.manage : false,
+                              cancel: e.target.checked ? g.cancel : false,
+                            },
+                          })
+                        }
+                      />
+                      Ver
+                    </label>
+                  ) : null}
                   {def.manageKey && (
                     <label className="flex items-center gap-1.5 text-xs text-white/70">
                       <input
                         type="checkbox"
-                        disabled={disabled || !enabled || !g.view}
+                        disabled={disabled || !enabled || (!!def.viewKey && !g.view)}
                         checked={!!g.manage && enabled}
                         onChange={(e) =>
                           onChange({
@@ -481,12 +484,35 @@ export default function CompanyUsersPage() {
                             [def.key]: {
                               ...g,
                               manage: e.target.checked,
-                              view: e.target.checked ? true : g.view,
+                              view: e.target.checked ? true : def.viewKey ? g.view : false,
+                              cancel: e.target.checked ? (g.cancel ?? true) : false,
                             },
                           })
                         }
                       />
                       Gestionar
+                    </label>
+                  )}
+                  {def.cancelKey && (
+                    <label
+                      className="flex items-center gap-1.5 text-xs text-white/70"
+                      title="Permitir cancelar planes activos (p. ej. adelanto salarial)"
+                    >
+                      <input
+                        type="checkbox"
+                        disabled={disabled || !enabled || !g.manage}
+                        checked={!!g.cancel && !!g.manage && enabled}
+                        onChange={(e) =>
+                          onChange({
+                            ...grants,
+                            [def.key]: {
+                              ...g,
+                              cancel: e.target.checked,
+                            },
+                          })
+                        }
+                      />
+                      {def.cancelLabel || 'Cancelar planes'}
                     </label>
                   )}
                 </div>

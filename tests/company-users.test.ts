@@ -150,4 +150,50 @@ describe('company-users build permissions', () => {
     assert.equal(perms.can_view_salary, false)
     assert.equal(perms.can_edit_salary, false)
   })
+
+  it('deducciones cancel defaults true when managing; can deny via grant', () => {
+    const withFeatures = { ...features, deducciones: true }
+    const allowed = buildCompanyUserPermissions({
+      role: 'manager',
+      companyFeatures: withFeatures,
+      moduleGrants: {
+        deducciones: { manage: true },
+      },
+    })
+    assert.equal(allowed.can_manage_deducciones, true)
+    assert.equal(allowed.can_cancel_deduction_plans, true)
+
+    const denied = buildCompanyUserPermissions({
+      role: 'manager',
+      companyFeatures: withFeatures,
+      moduleGrants: {
+        deducciones: { manage: true, cancel: false },
+      },
+      existingRaw: { can_cancel_deduction_plans: true },
+    })
+    assert.equal(denied.can_manage_deducciones, true)
+    assert.equal(denied.can_cancel_deduction_plans, false)
+
+    const noManage = buildCompanyUserPermissions({
+      role: 'manager',
+      companyFeatures: withFeatures,
+      moduleGrants: {
+        deducciones: { manage: false, cancel: true },
+      },
+    })
+    assert.equal(noManage.can_manage_deducciones, false)
+    assert.equal(noManage.can_cancel_deduction_plans, false)
+  })
+
+  it('strips cancel when deducciones feature is off', () => {
+    const stripped = stripPermissionsOutsidePlan(
+      {
+        can_manage_deducciones: true,
+        can_cancel_deduction_plans: true,
+      },
+      { deducciones: false }
+    )
+    assert.equal(stripped.can_manage_deducciones, false)
+    assert.equal(stripped.can_cancel_deduction_plans, false)
+  })
 })
