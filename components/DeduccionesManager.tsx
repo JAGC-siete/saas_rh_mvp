@@ -6,8 +6,10 @@ import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select'
 import { useCompanyContext } from '../lib/useCompanyContext'
+import { useAuth } from '../lib/auth'
 import { useToast } from '../lib/toast'
 import { formatDateOnlyForHonduras } from '../lib/timezone'
+import { canCancelDeductionPlans } from '../lib/security/deducciones-access'
 import { Loader2, Download, FileSignature, Ban } from 'lucide-react'
 
 interface DeductionType {
@@ -49,7 +51,9 @@ const formatFieldKey = (key: string) =>
 
 export default function DeduccionesManager() {
   const { companyId, loading: companyLoading, error: companyError } = useCompanyContext()
+  const { userProfile } = useAuth()
   const toast = useToast()
+  const allowCancelPlans = canCancelDeductionPlans(userProfile?.role, userProfile?.permissions)
 
   const [deductionTypes, setDeductionTypes] = useState<DeductionType[]>([])
   const [employees, setEmployees] = useState<Employee[]>([])
@@ -590,7 +594,7 @@ export default function DeduccionesManager() {
                               </>
                             )}
                           </Button>
-                          {p.activo ? (
+                          {p.activo && allowCancelPlans ? (
                             <Button
                               variant="ghost"
                               size="sm"

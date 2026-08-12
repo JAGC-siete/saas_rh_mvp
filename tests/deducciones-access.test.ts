@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 
 import {
   canAccessDeduccionesModule,
+  canCancelDeductionPlans,
   canSearchEmployeesForDeducciones,
 } from '../lib/security/deducciones-access'
 import { normalizePermissionsToCanonical } from '../lib/security/canonical-permissions'
@@ -51,6 +52,23 @@ describe('deducciones access', () => {
       }),
       false
     )
+  })
+
+  it('denies cancel when can_cancel_deduction_plans is false', () => {
+    assert.equal(
+      canCancelDeductionPlans('manager', {
+        can_manage_deducciones: true,
+        can_cancel_deduction_plans: false,
+      }),
+      false
+    )
+    assert.equal(
+      canCancelDeductionPlans('manager', {
+        can_manage_deducciones: true,
+      }),
+      true
+    )
+    assert.equal(canCancelDeductionPlans('company_admin', {}), true)
   })
 })
 

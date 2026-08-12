@@ -1,6 +1,9 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { requireCompanyAccess } from '../../../lib/auth/api-auth-fixed'
-import { canAccessDeduccionesModule } from '../../../lib/security/deducciones-access'
+import {
+  canAccessDeduccionesModule,
+  canCancelDeductionPlans,
+} from '../../../lib/security/deducciones-access'
 
 /**
  * API: CRUD for employee_deduction_plans
@@ -31,6 +34,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       case 'GET':
         return handleGet(req, res, supabase, companyId)
       case 'PATCH':
+        if (!canCancelDeductionPlans(role, userProfile?.permissions)) {
+          return res.status(403).json({
+            error: 'Permisos insuficientes',
+            message: 'No tiene permisos para cancelar planes de deducción',
+          })
+        }
         return handlePatch(req, res, supabase, companyId)
       default:
         return res.status(405).json({ error: 'Method not allowed' })

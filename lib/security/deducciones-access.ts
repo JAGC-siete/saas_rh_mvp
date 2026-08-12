@@ -30,3 +30,14 @@ export function canSearchEmployeesForDeducciones(role: unknown, permissions: unk
   const canonical = normalizePermissionsToCanonical(normalizedRole, parseRawPermissions(permissions))
   return canonical.can_view_employees === true || canonical.can_manage_deducciones === true
 }
+
+/**
+ * Cancelar planes activos (p. ej. adelanto salarial).
+ * Por defecto permitido si tiene acceso a Deducciones; se deniega con can_cancel_deduction_plans: false.
+ */
+export function canCancelDeductionPlans(role: unknown, permissions: unknown): boolean {
+  if (!canAccessDeduccionesModule(role, permissions)) return false
+  const raw = parseRawPermissions(permissions)
+  if (raw.can_cancel_deduction_plans === false) return false
+  return true
+}

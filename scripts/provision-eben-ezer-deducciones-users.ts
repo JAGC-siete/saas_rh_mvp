@@ -44,6 +44,7 @@ const USERS = [
 /** Solo módulo Deducciones — sin nómina, empleados, asistencia, etc. */
 const DEDUCCIONES_ONLY_PERMISSIONS = {
   can_manage_deducciones: true,
+  can_cancel_deduction_plans: false,
   can_access_dashboard: false,
   can_view_employees: false,
   can_manage_employees: false,
