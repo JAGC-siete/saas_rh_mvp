@@ -276,7 +276,7 @@ export function normalizeResearchImport(rows: ImportContactInput[]): ResearchCan
     const telefono =
       !telefonoRaw || telefonoRaw.toLowerCase() === 'sin_dato'
         ? null
-        : normalizeHnPhone(telefonoRaw)
+        : normalizeHnPhone(telefonoRaw) || telefonoRaw
     const confianza = isValidConfidence(row.confianza) ? row.confianza : 'media'
     out.push({
       comercio,
