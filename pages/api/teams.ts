@@ -16,10 +16,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     
     const roles = Array.from(new Set((data ?? []).map((r: any) => r.role))).sort()
     
-    // Cache corto para performance
-    res.setHeader('Cache-Control', 'public, max-age=60, stale-while-revalidate=120')
+    // Auth-bound response: never cache publicly
+    res.setHeader('Cache-Control', 'private, no-store')
     res.status(200).json({ success: true, roles })
   } catch (e: any) {
-    res.status(200).json({ success: false, roles: [], error: e.message })
+    // Auth helpers already sent 401/403/400 when applicable
+    if (res.headersSent) return
+    if (e?.message === 'UNAUTHORIZED') {
+      return res.status(401).json({
+        success: false,
+        roles: [],
+        error: 'Unauthorized',
+        message: 'Sesión inválida o expirada. Vuelve a iniciar sesión.',
+      })
+    }
+    res.status(500).json({ success: false, roles: [], error: e.message })
   }
 }

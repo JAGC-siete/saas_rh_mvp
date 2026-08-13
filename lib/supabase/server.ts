@@ -24,6 +24,8 @@ export function createClient(req: NextApiRequest, res: NextApiResponse) {
     })
   }
 
+  // Keep get/set/remove (no getAll/setAll): switching cookie adapters in prod broke
+  // session reads for some users (APIs returned 401 → empty UI) without profile changes.
   return createServerClient(supabaseUrl, supabaseAnonKey, {
     cookies: {
       get(name: string) {
@@ -33,7 +35,7 @@ export function createClient(req: NextApiRequest, res: NextApiResponse) {
         try {
           // Set maxAge to 1 day for auth cookies to match JWT expiry
           const isAuthCookie = name.includes('sb-') && name.includes('auth-token')
-          const cookieMaxAge = isAuthCookie && !options?.maxAge 
+          const cookieMaxAge = isAuthCookie && !options?.maxAge
             ? 24 * 60 * 60 // 1 day in seconds
             : options?.maxAge
 

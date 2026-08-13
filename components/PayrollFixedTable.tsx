@@ -8,12 +8,38 @@ import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Textarea } from './ui/textarea'
 import { Icon } from './Icon'
+import {
+  calculateOvertimePayFromAhc,
+  OVERTIME_PERCENT_GROUPS,
+  breakdownToPercentGroupValues,
+  percentGroupValuesToBreakdown,
+  readOvertimeOverrideFromMetadata,
+  emptyOvertimeBreakdown,
+  type OvertimeHoursBreakdown,
+  type OvertimePercentGroupKey,
+} from '../lib/payroll/overtime-pay'
+import { HONDURAS_LABOR_FACTOR } from '../lib/payroll/constants'
 
 const HORAS_EXTRA_AHC_INFO =
-  'Suma de horas extra en AHC (período de nómina: diurna, nocturna y feriado). El salario proporcional de esta vista sigue calculándose por días; un ajuste de monto por extras se hace vía campos personalizados o la política de pago de horas extra, según corresponda.'
+  'Administrativo por día: HE por recargo (25% 5–7pm y 5–7am, 50% 7–10pm, 75% 10pm–5am, 100% feriados). Si empresa y empleado pagan HE, el monto entra al bruto (IHSS/RAP/ISR sobre salario base). Sin salida no hay HE. Editable en la corrida.'
+
+const emptyOtPercentInputs = (): Record<OvertimePercentGroupKey, string> => ({
+  pct_25: '0',
+  night_50: '0',
+  late_75: '0',
+  holiday_100: '0',
+})
+
+type OtAdjustPayload = {
+  run_line_id: string
+  overtime: OvertimeHoursBreakdown
+  reason?: string
+}
 
 interface PayrollFixedTableProps {
   rows: UnifiedRow[]
+  // eslint-disable-next-line no-unused-vars
+  onPreviewVoucher: (_lineId: string) => void
   // eslint-disable-next-line no-unused-vars
   onGenerateVoucher: (_lineId: string) => void
   // eslint-disable-next-line no-unused-vars
@@ -28,6 +54,22 @@ interface PayrollFixedTableProps {
     days_worked: number
     reason?: string
   }) => Promise<void>
+  // eslint-disable-next-line no-unused-vars
+  onAdjustFixedOvertime?: (_payload: OtAdjustPayload) => Promise<void>
+  /** Company pays OT — used to enable Editar HE */
+  companyPayOvertime?: boolean
+  onResetLineRecalc?: (_runLineId: string) => Promise<void>
+  canResetLineRecalc?: boolean
+  /** Editar / omitir IHSS/RAP/ISR en esta línea (draft/edited) */
+  canZeroStatutory?: boolean
+  // eslint-disable-next-line no-unused-vars
+  onZeroStatutory?: (_payload: {
+    run_line_id: string
+    reason: string
+    ihss?: number
+    rap?: number
+    isr?: number
+  }) => Promise<void>
   loading?: boolean
   hasCustom?: boolean
   statutoryDeductions?: { ihss: boolean; rap: boolean; isr: boolean }
@@ -35,11 +77,18 @@ interface PayrollFixedTableProps {
 
 export default function PayrollFixedTable({
   rows,
+  onPreviewVoucher,
   onGenerateVoucher,
   onEditCustomFields,
   canAdjustFixedDays = false,
   payrollRunStatus,
   onAdjustFixedDays,
+  onAdjustFixedOvertime,
+  companyPayOvertime = true,
+  onResetLineRecalc,
+  canResetLineRecalc = false,
+  canZeroStatutory = false,
+  onZeroStatutory,
   loading = false,
   hasCustom = false,
   statutoryDeductions = { ihss: true, rap: true, isr: true }
@@ -52,6 +101,23 @@ export default function PayrollFixedTable({
   const [daysInput, setDaysInput] = useState('')
   const [daysReason, setDaysReason] = useState('')
   const [daysSaving, setDaysSaving] = useState(false)
+  const [otModal, setOtModal] = useState<{
+    runLineId: string
+    employeeName: string
+    baseSalary: number
+  } | null>(null)
+  const [otBands, setOtBands] = useState<Record<OvertimePercentGroupKey, string>>(emptyOtPercentInputs)
+  const [otReason, setOtReason] = useState('')
+  const [otSaving, setOtSaving] = useState(false)
+  const [statutoryModal, setStatutoryModal] = useState<{
+    runLineId: string
+    employeeName: string
+  } | null>(null)
+  const [statutoryIhss, setStatutoryIhss] = useState('')
+  const [statutoryRap, setStatutoryRap] = useState('')
+  const [statutoryIsr, setStatutoryIsr] = useState('')
+  const [statutoryReason, setStatutoryReason] = useState('')
+  const [statutorySaving, setStatutorySaving] = useState(false)
   const [ahcInfoOpen, setAhcInfoOpen] = useState(false)
   const [ahcPopoverPos, setAhcPopoverPos] = useState<{ top: number; left: number } | null>(null)
   const ahcInfoBtnRef = useRef<HTMLButtonElement>(null)
@@ -167,6 +233,156 @@ export default function PayrollFixedTable({
     }
   }
 
+  const openOtModal = (row: UnifiedRow) => {
+    const runLineId = row.line_id
+    if (!runLineId) {
+      alert('No hay línea de corrida para este empleado. Genere vista previa primero.')
+      return
+    }
+    const meta = (row as { metadata?: Record<string, unknown> }).metadata
+    const fromMeta =
+      readOvertimeOverrideFromMetadata(meta) ||
+      emptyOvertimeBreakdown()
+    // Prefer stored band hours even without ot_adjusted_at (from last preview)
+    const evening = Number(meta?.ot_evening_25)
+    const night = Number(meta?.ot_night_50)
+    const late = Number(meta?.ot_late_75)
+    const morning = Number(meta?.ot_morning_25)
+    const holiday = Number(meta?.ot_holiday_100)
+    const hasStored =
+      [evening, night, late, morning, holiday].some((n) => Number.isFinite(n) && n > 0) ||
+      meta?.ot_adjusted_at != null
+    const b = hasStored
+      ? {
+          evening_25: Number.isFinite(evening) ? evening : fromMeta.evening_25,
+          night_50: Number.isFinite(night) ? night : fromMeta.night_50,
+          late_75: Number.isFinite(late) ? late : fromMeta.late_75,
+          morning_25: Number.isFinite(morning) ? morning : fromMeta.morning_25,
+          holiday_100: Number.isFinite(holiday) ? holiday : fromMeta.holiday_100,
+        }
+      : fromMeta
+    const g = breakdownToPercentGroupValues(b)
+    setOtModal({
+      runLineId,
+      employeeName: row.name || 'Empleado',
+      baseSalary: row.base_salary || 0,
+    })
+    setOtBands({
+      pct_25: String(g.pct_25 || 0),
+      night_50: String(g.night_50 || 0),
+      late_75: String(g.late_75 || 0),
+      holiday_100: String(g.holiday_100 || 0),
+    })
+    setOtReason('')
+  }
+
+  const closeOtModal = () => {
+    setOtModal(null)
+    setOtBands(emptyOtPercentInputs())
+    setOtReason('')
+  }
+
+  const submitOtAdjust = async () => {
+    if (!otModal || !onAdjustFixedOvertime) return
+    const overtime = percentGroupValuesToBreakdown({
+      pct_25: Number(otBands.pct_25),
+      night_50: Number(otBands.night_50),
+      late_75: Number(otBands.late_75),
+      holiday_100: Number(otBands.holiday_100),
+    })
+    if (!Object.values(overtime).every((n) => Number.isFinite(n) && n >= 0)) {
+      alert('Ingrese horas ≥ 0 para cada recargo')
+      return
+    }
+    setOtSaving(true)
+    try {
+      await onAdjustFixedOvertime({
+        run_line_id: otModal.runLineId,
+        overtime,
+        reason: otReason.trim() || undefined,
+      })
+      closeOtModal()
+    } catch (e) {
+      console.error(e)
+      alert(e instanceof Error ? e.message : 'Error al ajustar horas extras')
+    } finally {
+      setOtSaving(false)
+    }
+  }
+
+  const openStatutoryModal = (row: UnifiedRow) => {
+    if (!row.line_id) {
+      alert('No hay línea de corrida para este empleado. Genere vista previa primero.')
+      return
+    }
+    setStatutoryModal({
+      runLineId: row.line_id,
+      employeeName: row.name || 'Empleado',
+    })
+    setStatutoryIhss(String(Number(row.IHSS) || 0))
+    setStatutoryRap(String(Number(row.RAP) || 0))
+    setStatutoryIsr(String(Number(row.ISR) || 0))
+    const meta = (row as { metadata?: Record<string, unknown> }).metadata
+    setStatutoryReason(
+      typeof meta?.statutory_zeroed_reason === 'string' ? meta.statutory_zeroed_reason : ''
+    )
+  }
+
+  const closeStatutoryModal = () => {
+    setStatutoryModal(null)
+    setStatutoryIhss('')
+    setStatutoryRap('')
+    setStatutoryIsr('')
+    setStatutoryReason('')
+  }
+
+  const parseStatutoryInput = (raw: string, label: string): number | null => {
+    const n = Number(String(raw).replace(',', '.').trim())
+    if (!Number.isFinite(n) || n < 0) {
+      alert(`${label} debe ser un número ≥ 0`)
+      return null
+    }
+    return Math.round(n * 100) / 100
+  }
+
+  const submitStatutoryOverride = async () => {
+    if (!statutoryModal || !onZeroStatutory) return
+    const reason = statutoryReason.trim()
+    if (reason.length < 3) {
+      alert('Indique un motivo (mín. 3 caracteres)')
+      return
+    }
+    const ihss = parseStatutoryInput(statutoryIhss, 'IHSS')
+    if (ihss === null) return
+    const rap = parseStatutoryInput(statutoryRap, 'RAP')
+    if (rap === null) return
+    const isr = parseStatutoryInput(statutoryIsr, 'ISR')
+    if (isr === null) return
+    if (
+      !confirm(
+        `¿Guardar retenciones de ley para ${statutoryModal.employeeName}? IHSS ${ihss}, RAP ${rap}, ISR ${isr}. El bruto no cambia; el neto se recalcula.`
+      )
+    ) {
+      return
+    }
+    setStatutorySaving(true)
+    try {
+      await onZeroStatutory({
+        run_line_id: statutoryModal.runLineId,
+        reason,
+        ihss,
+        rap,
+        isr,
+      })
+      closeStatutoryModal()
+    } catch (e) {
+      console.error(e)
+      alert(e instanceof Error ? e.message : 'Error al editar retenciones de ley')
+    } finally {
+      setStatutorySaving(false)
+    }
+  }
+
   const summary = rows.reduce((acc, r) => {
     acc.totalBruto += r.total_earnings || 0
     acc.totalDeducciones += r.total_deducciones || 0
@@ -177,7 +393,7 @@ export default function PayrollFixedTable({
   return (
     <div className="mb-8">
       <h3 className="text-lg font-semibold text-white mb-4 pb-2 border-b border-white/20">
-        Nómina — Empleados Fijos (fixed)
+        Nómina — Detalle por Empleado
       </h3>
       <div className="mb-4 grid grid-cols-3 gap-4">
         <div className="text-center p-3 bg-blue-500/20 rounded-lg border border-blue-500/20">
@@ -226,12 +442,34 @@ export default function PayrollFixedTable({
           </thead>
           <tbody className="bg-transparent divide-y divide-white/20">
             {rows.length > 0 ? (
-              rows.map((row) => (
+              rows.map((row) => {
+                const meta = (row as { metadata?: Record<string, unknown> }).metadata
+                const statutoryOverridden = meta?.statutory_zeroed_at != null
+                const statutoryFullyZeroed =
+                  statutoryOverridden &&
+                  (Number(row.IHSS) || 0) === 0 &&
+                  (Number(row.RAP) || 0) === 0 &&
+                  (Number(row.ISR) || 0) === 0
+                return (
                 <tr key={row.employee_id} className="hover:bg-white/10 transition-colors duration-200">
                   <td className="px-4 py-3 align-top min-w-[10rem] max-w-[18rem]">
                     <div>
                       <div className="text-sm font-medium text-white break-words leading-snug">{row.name}</div>
                       <div className="text-xs text-gray-300 break-words mt-0.5">{row.department || 'N/A'}</div>
+                      {statutoryOverridden ? (
+                        <div
+                          className="mt-1 inline-block rounded border border-amber-400/40 bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-amber-200"
+                          title={
+                            typeof meta?.statutory_zeroed_reason === 'string'
+                              ? meta.statutory_zeroed_reason
+                              : statutoryFullyZeroed
+                                ? 'Retenciones de ley omitidas en esta corrida'
+                                : 'Retenciones de ley editadas en esta corrida'
+                          }
+                        >
+                          {statutoryFullyZeroed ? 'Retenciones omitidas' : 'Retenciones editadas'}
+                        </div>
+                      ) : null}
                     </div>
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-200">
@@ -240,7 +478,7 @@ export default function PayrollFixedTable({
                   <td className="px-4 py-3 text-sm text-gray-200">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="tabular-nums font-medium text-white">{row.days_worked || 0}</span>
-                      {onAdjustFixedDays && row.line_id ? (
+                      {onAdjustFixedDays && row.line_id && row.pay_type !== 'admin_floor' ? (
                         <Button
                           type="button"
                           variant="outline"
@@ -261,10 +499,34 @@ export default function PayrollFixedTable({
                     </div>
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm align-top">
-                    <div className="tabular-nums font-medium text-amber-200/95">
-                      {(row.extras?.horas ?? 0) > 0
-                        ? `${(row.extras?.horas ?? 0).toFixed(2)} h`
-                        : '—'}
+                    <div className="flex flex-wrap items-center gap-2">
+                      <div className="tabular-nums font-medium text-amber-200/95">
+                        {(row.extras?.horas ?? 0) > 0
+                          ? `${(row.extras?.horas ?? 0).toFixed(2)} h`
+                          : '—'}
+                      </div>
+                      {onAdjustFixedOvertime &&
+                      row.line_id &&
+                      row.pay_type !== 'admin_floor' ? (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openOtModal(row)}
+                          disabled={loading || !canAdjustFixedDays || !companyPayOvertime}
+                          className="h-8 gap-1.5 border-white/30 bg-white/10 px-2.5 text-xs text-white hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-50"
+                          title={
+                            !companyPayOvertime
+                              ? 'La empresa tiene desactivado el pago de horas extras'
+                              : canAdjustFixedDays
+                                ? 'Ajustar franjas de HE y sumar al bruto'
+                                : `No se pueden editar HE con la corrida en estado "${payrollRunStatus || 'actual'}". Debe estar en borrador o consolidada (sin autorizar).`
+                          }
+                        >
+                          <Icon name="edit" className="h-3.5 w-3.5 shrink-0" />
+                          Editar HE
+                        </Button>
+                      ) : null}
                     </div>
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-green-300">
@@ -282,6 +544,20 @@ export default function PayrollFixedTable({
                         <div>ISR: {formatCurrency(row.ISR || 0)}</div>
                       )}
                       <div className="font-semibold mt-1">Total: {formatCurrency(row.total_deducciones || 0)}</div>
+                      {canZeroStatutory && onZeroStatutory && row.line_id ? (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openStatutoryModal(row)}
+                          disabled={loading}
+                          className="mt-1.5 h-7 border-amber-400/30 bg-amber-500/10 px-2 text-[10px] text-amber-100 hover:bg-amber-500/20"
+                          title="Editar IHSS/RAP/ISR en este período (valores ≥ 0)"
+                        >
+                          <Icon name="edit" className="mr-1 h-3 w-3" />
+                          Editar retenciones
+                        </Button>
+                      ) : null}
                     </div>
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm font-bold text-white">
@@ -292,10 +568,20 @@ export default function PayrollFixedTable({
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => onGenerateVoucher(row.line_id || row.employee_id)}
-                        disabled={loading}
+                        onClick={() => onPreviewVoucher(row.line_id || row.employee_id)}
+                        disabled={loading || !row.line_id}
                         className="bg-white/10 border-white/30 text-white hover:bg-white/20"
-                        title="Descargar comprobante"
+                        title="Ver comprobante"
+                      >
+                        <Icon name="eye" className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onGenerateVoucher(row.line_id || row.employee_id)}
+                        disabled={loading || !row.line_id}
+                        className="bg-white/10 border-white/30 text-white hover:bg-white/20"
+                        title="Descargar comprobante PDF"
                       >
                         <Icon name="download" className="h-4 w-4" />
                       </Button>
@@ -311,10 +597,44 @@ export default function PayrollFixedTable({
                           <Icon name="edit" className="h-4 w-4" />
                         </Button>
                       )}
+                      {canResetLineRecalc &&
+                        onResetLineRecalc &&
+                        row.line_id &&
+                        Boolean(
+                          (row as { edited?: boolean }).edited ||
+                            meta?.days_adjusted_at ||
+                            meta?.ot_adjusted_at ||
+                            meta?.statutory_zeroed_at
+                        ) && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={loading}
+                          className="bg-white/10 border-white/30 text-white hover:bg-white/20"
+                          title="Recalcular desde asistencia (quita ediciones manuales de esta línea)"
+                          onClick={async () => {
+                            if (
+                              !confirm(
+                                '¿Recalcular esta línea desde asistencia? Se perderán las ediciones manuales de este empleado (incl. override de retenciones de ley).'
+                              )
+                            ) {
+                              return
+                            }
+                            try {
+                              await onResetLineRecalc(row.line_id!)
+                            } catch (e) {
+                              alert(e instanceof Error ? e.message : 'Error al recalcular')
+                            }
+                          }}
+                        >
+                          <Icon name="refresh" className="h-4 w-4" />
+                        </Button>
+                      )}
                     </div>
                   </td>
                 </tr>
-              ))
+                )
+              })
             ) : (
               <tr>
                 <td colSpan={8} className="px-4 py-8 text-center text-gray-400">
@@ -353,7 +673,8 @@ export default function PayrollFixedTable({
             <h3 className="text-lg font-semibold">Ajustar días trabajados</h3>
             <p className="mt-1 text-sm text-gray-300">{daysModal.employeeName}</p>
             <p className="mt-2 text-xs text-amber-200/90">
-              Se recalculan salario proporcional, deducciones de ley y planes como en la vista previa.
+              Se recalculan salario proporcional, horas extras (override o AHC), deducciones de ley
+              (sobre salario base) y planes.
             </p>
             <div className="mt-4 space-y-3">
               <div>
@@ -390,6 +711,176 @@ export default function PayrollFixedTable({
               </Button>
               <Button type="button" onClick={submitDaysAdjust} disabled={daysSaving}>
                 {daysSaving ? 'Guardando…' : 'Recalcular y guardar'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {otModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-lg border border-white/20 bg-gray-900 p-6 text-white shadow-xl max-h-[90vh] overflow-y-auto">
+            <h3 className="text-lg font-semibold">Ajustar horas extras</h3>
+            <p className="mt-1 text-sm text-gray-300">{otModal.employeeName}</p>
+            <p className="mt-2 text-xs text-amber-200/90">
+              El monto se suma al bruto; IHSS/RAP/ISR no cambian de base.
+            </p>
+            {(() => {
+              const overtime = percentGroupValuesToBreakdown({
+                pct_25: Number(otBands.pct_25) || 0,
+                night_50: Number(otBands.night_50) || 0,
+                late_75: Number(otBands.late_75) || 0,
+                holiday_100: Number(otBands.holiday_100) || 0,
+              })
+              const rate = (otModal.baseSalary || 0) / HONDURAS_LABOR_FACTOR
+              const pay = calculateOvertimePayFromAhc(overtime, rate)
+              return (
+                <p className="mt-2 text-sm text-emerald-300">
+                  Vista previa HE: {formatCurrency(pay)}
+                </p>
+              )
+            })()}
+            <div className="mt-4 space-y-3">
+              {OVERTIME_PERCENT_GROUPS.map((group) => (
+                <div key={group.key}>
+                  <label
+                    htmlFor={`ot-${group.key}`}
+                    className="block text-sm font-medium text-gray-200"
+                  >
+                    {group.label}
+                  </label>
+                  <Input
+                    id={`ot-${group.key}`}
+                    type="number"
+                    min={0}
+                    step={0.25}
+                    value={otBands[group.key]}
+                    onChange={(e) =>
+                      setOtBands((prev) => ({ ...prev, [group.key]: e.target.value }))
+                    }
+                    className="mt-1 border-white/20 bg-white/10 text-white"
+                  />
+                </div>
+              ))}
+              <div>
+                <label htmlFor="ot-reason" className="block text-sm font-medium text-gray-200">
+                  Motivo (opcional)
+                </label>
+                <Textarea
+                  id="ot-reason"
+                  value={otReason}
+                  onChange={(e) => setOtReason(e.target.value)}
+                  rows={2}
+                  className="mt-1 border-white/20 bg-white/10 text-white"
+                  placeholder="Ej. corrección AHC"
+                />
+              </div>
+            </div>
+            <div className="mt-6 flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={closeOtModal} disabled={otSaving}>
+                Cancelar
+              </Button>
+              <Button type="button" onClick={submitOtAdjust} disabled={otSaving}>
+                {otSaving ? 'Guardando…' : 'Recalcular y guardar'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {statutoryModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-lg border border-white/20 bg-gray-900 p-6 text-white shadow-xl">
+            <h3 className="text-lg font-semibold">Editar retenciones de ley</h3>
+            <p className="mt-1 text-sm text-gray-300">{statutoryModal.employeeName}</p>
+            <p className="mt-2 text-xs text-amber-200/90">
+              Ajuste IHSS, RAP e ISR (≥ 0) en esta corrida. El bruto no cambia; el neto se
+              recalcula. Use 0 cuando esas retenciones se apliquen en finiquito u otro proceso.
+            </p>
+            <div className="mt-4 grid grid-cols-3 gap-3">
+              <div>
+                <label htmlFor="statutory-ihss" className="block text-xs font-medium text-gray-200">
+                  IHSS
+                </label>
+                <Input
+                  id="statutory-ihss"
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={statutoryIhss}
+                  onChange={(e) => setStatutoryIhss(e.target.value)}
+                  className="mt-1 border-white/20 bg-white/10 text-white"
+                />
+              </div>
+              <div>
+                <label htmlFor="statutory-rap" className="block text-xs font-medium text-gray-200">
+                  RAP
+                </label>
+                <Input
+                  id="statutory-rap"
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={statutoryRap}
+                  onChange={(e) => setStatutoryRap(e.target.value)}
+                  className="mt-1 border-white/20 bg-white/10 text-white"
+                />
+              </div>
+              <div>
+                <label htmlFor="statutory-isr" className="block text-xs font-medium text-gray-200">
+                  ISR
+                </label>
+                <Input
+                  id="statutory-isr"
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={statutoryIsr}
+                  onChange={(e) => setStatutoryIsr(e.target.value)}
+                  className="mt-1 border-white/20 bg-white/10 text-white"
+                />
+              </div>
+            </div>
+            <div className="mt-3">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={statutorySaving}
+                className="border-amber-400/30 bg-amber-500/10 text-amber-100 hover:bg-amber-500/20"
+                onClick={() => {
+                  setStatutoryIhss('0')
+                  setStatutoryRap('0')
+                  setStatutoryIsr('0')
+                }}
+              >
+                Poner todo en 0
+              </Button>
+            </div>
+            <div className="mt-4">
+              <label htmlFor="statutory-reason" className="block text-sm font-medium text-gray-200">
+                Motivo (requerido)
+              </label>
+              <Textarea
+                id="statutory-reason"
+                value={statutoryReason}
+                onChange={(e) => setStatutoryReason(e.target.value)}
+                rows={3}
+                className="mt-1 border-white/20 bg-white/10 text-white"
+                placeholder="Ej. Retenciones de ley se aplicarán en finiquito"
+              />
+            </div>
+            <div className="mt-6 flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={closeStatutoryModal}
+                disabled={statutorySaving}
+              >
+                Cancelar
+              </Button>
+              <Button type="button" onClick={submitStatutoryOverride} disabled={statutorySaving}>
+                {statutorySaving ? 'Guardando…' : 'Guardar retenciones'}
               </Button>
             </div>
           </div>

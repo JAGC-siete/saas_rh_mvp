@@ -1,0 +1,463 @@
+/**
+ * Company-scoped user management helpers.
+ * Actors: company_admin | hr_manager. Never creates super_admin; company_id always from session.
+ */
+import {
+  normalizePermissionsToCanonical,
+  type CanonicalPermissionKey,
+  type CanonicalPermissions,
+} from '../security/canonical-permissions'
+import { CANCEL_DEDUCTION_PLANS_KEY } from '../security/deducciones-access'
+import { normalizeRole } from '../auth/role-access'
+
+export const COMPANY_MANAGED_ROLES = [
+  'company_admin',
+  'hr_manager',
+  'manager',
+  'employee',
+] as const
+
+export type CompanyManagedRole = (typeof COMPANY_MANAGED_ROLES)[number]
+
+export const COMPANY_USER_ACTORS = ['company_admin', 'hr_manager'] as const
+
+export type CompanyUserActorRole = (typeof COMPANY_USER_ACTORS)[number]
+
+export const COMPANY_ROLE_LABELS: Record<string, string> = {
+  super_admin: 'Super admin',
+  admin: 'Admin',
+  company_admin: 'Admin empresa',
+  hr_manager: 'HR Manager',
+  manager: 'Manager',
+  employee: 'Empleado',
+}
+
+export function companyRoleLabel(role: unknown): string {
+  const r = normalizeRole(role)
+  if (!r) return 'Usuario'
+  return COMPANY_ROLE_LABELS[r] || r
+}
+
+export function canManageCompanyUsers(role: unknown): boolean {
+  const r = normalizeRole(role)
+  return !!r && (COMPANY_USER_ACTORS as readonly string[]).includes(r)
+}
+
+export type CompanyModuleKey =
+  | 'employees'
+  | 'departments'
+  | 'attendance'
+  | 'leave'
+  | 'payroll'
+  | 'deducciones'
+  | 'reports'
+  | 'settings'
+  | 'mtp'
+  | 'performance'
+
+/** Roles an actor may assign when creating/editing users. */
+export function assignableRolesForActor(actorRole: unknown): CompanyManagedRole[] {
+  const r = normalizeRole(actorRole)
+  if (r === 'company_admin') {
+    return ['company_admin', 'hr_manager', 'manager', 'employee']
+  }
+  if (r === 'hr_manager') {
+    return ['hr_manager', 'manager', 'employee']
+  }
+  return []
+}
+
+export function canActorAssignRole(actorRole: unknown, targetRole: unknown): boolean {
+  if (!isCompanyManagedRole(targetRole)) return false
+  return assignableRolesForActor(actorRole).includes(targetRole)
+}
+
+/**
+ * hr_manager cannot manage (edit/reset/deactivate) company_admin accounts.
+ * company_admin can manage all company-managed roles.
+ */
+export function canActorManageTarget(actorRole: unknown, targetRole: unknown): boolean {
+  const actor = normalizeRole(actorRole)
+  const target = normalizeRole(targetRole)
+  if (!actor || !canManageCompanyUsers(actor)) return false
+  if (target === 'super_admin') return false
+  if (actor === 'hr_manager' && target === 'company_admin') return false
+  if (!target) return false
+  return isCompanyManagedRole(target)
+}
+
+/**
+ * Modules the UI may toggle for a role (aligned with canonical hard rules).
+ * Plan/feature gating is separate via isModuleEnabledByFeatures.
+ */
+export function isModuleAssignableForRole(
+  role: unknown,
+  moduleKey: CompanyModuleKey
+): boolean {
+  const r = normalizeRole(role)
+  if (!r) return false
+
+  if (r === 'employee') {
+    return moduleKey === 'leave'
+  }
+
+  if (r === 'manager') {
+    return (
+      moduleKey === 'employees' ||
+      moduleKey === 'departments' ||
+      moduleKey === 'attendance' ||
+      moduleKey === 'leave' ||
+      moduleKey === 'deducciones'
+    )
+  }
+
+  return true
+}
+
+export type ModuleGrant = {
+  view?: boolean
+  manage?: boolean
+  /** Sub-capability under manage (e.g. cancel active deduction plans). */
+  cancel?: boolean
+}
+
+/** Maps UI modules → canonical permission keys + optional plan feature_key. */
+export const COMPANY_MODULE_DEFS: Array<{
+  key: CompanyModuleKey
+  label: string
+  featureKey: string | null
+  viewKey?: CanonicalPermissionKey
+  manageKey?: CanonicalPermissionKey
+  /**
+   * Optional sub-permission stored in permissions jsonb (not in canonical matrix).
+   * Defaults to true when manage is on; false clears cancel capability.
+   */
+  cancelKey?: typeof CANCEL_DEDUCTION_PLANS_KEY | string
+  cancelLabel?: string
+  /** Stored as legacy boolean in permissions jsonb (no canonical key yet). */
+  legacyKey?: string
+}> = [
+  {
+    key: 'employees',
+    label: 'Empleados',
+    featureKey: 'employees',
+    viewKey: 'can_view_employees',
+    manageKey: 'can_manage_employees',
+  },
+  {
+    key: 'departments',
+    label: 'Departamentos',
+    featureKey: 'departments',
+    viewKey: 'can_view_departments',
+    manageKey: 'can_manage_departments',
+  },
+  {
+    key: 'attendance',
+    label: 'Asistencia',
+    featureKey: 'attendance',
+    viewKey: 'can_view_attendance',
+    manageKey: 'can_manage_attendance',
+  },
+  {
+    key: 'leave',
+    label: 'Permisos / vacaciones',
+    featureKey: null,
+    viewKey: 'can_request_leave',
+    manageKey: 'can_approve_leave',
+  },
+  {
+    key: 'payroll',
+    label: 'Nómina',
+    featureKey: 'payroll',
+    viewKey: 'can_view_payroll',
+    manageKey: 'can_manage_payroll',
+  },
+  {
+    key: 'deducciones',
+    label: 'Deducciones',
+    featureKey: 'deducciones',
+    manageKey: 'can_manage_deducciones',
+    cancelKey: CANCEL_DEDUCTION_PLANS_KEY,
+    cancelLabel: 'Cancelar planes',
+  },
+  {
+    key: 'reports',
+    label: 'Reportes',
+    featureKey: 'reports',
+    viewKey: 'can_view_reports',
+    manageKey: 'can_export_reports',
+  },
+  {
+    key: 'settings',
+    label: 'Parámetros',
+    featureKey: null,
+    viewKey: 'can_view_settings',
+    manageKey: 'can_manage_settings',
+  },
+  {
+    key: 'mtp',
+    label: 'MTP Puestos',
+    featureKey: 'mtp_job_descriptions',
+    legacyKey: 'mtp',
+  },
+  {
+    key: 'performance',
+    label: 'Evaluaciones',
+    featureKey: 'performance_evaluations',
+    legacyKey: 'performance',
+  },
+]
+
+export function isCompanyManagedRole(role: unknown): role is CompanyManagedRole {
+  const r = normalizeRole(role)
+  return !!r && (COMPANY_MANAGED_ROLES as readonly string[]).includes(r)
+}
+
+export function roleCanEditSalary(role: unknown): boolean {
+  const r = normalizeRole(role)
+  return r === 'company_admin' || r === 'hr_manager' || r === 'admin'
+}
+
+/**
+ * Enforce salary rules:
+ * - can_edit_salary only for company_admin / hr_manager (by role)
+ * - others: can_edit_salary always false; can_view_salary optional
+ * - edit implies view
+ */
+export function applySalaryPermissionRules(
+  role: unknown,
+  permissions: Record<string, boolean>,
+  canViewSalary?: boolean | null
+): Record<string, boolean> {
+  const next = { ...permissions }
+  const canEdit = roleCanEditSalary(role)
+
+  if (canEdit) {
+    next.can_edit_salary = true
+    next.can_view_salary = true
+  } else {
+    next.can_edit_salary = false
+    if (canViewSalary === true) next.can_view_salary = true
+    else if (canViewSalary === false) next.can_view_salary = false
+    else if (typeof next.can_view_salary !== 'boolean') {
+      next.can_view_salary = false
+    }
+  }
+
+  if (next.can_edit_salary) next.can_view_salary = true
+  return next
+}
+
+export function isModuleEnabledByFeatures(
+  moduleKey: CompanyModuleKey,
+  features: Record<string, boolean>
+): boolean {
+  const def = COMPANY_MODULE_DEFS.find((d) => d.key === moduleKey)
+  if (!def) return false
+  if (!def.featureKey) return true
+  return features[def.featureKey] === true
+}
+
+export function isModuleToggleEnabled(
+  role: unknown,
+  moduleKey: CompanyModuleKey,
+  features: Record<string, boolean>
+): boolean {
+  return (
+    isModuleAssignableForRole(role, moduleKey) &&
+    isModuleEnabledByFeatures(moduleKey, features)
+  )
+}
+
+/**
+ * Strip module permissions that the company plan does not include.
+ */
+export function stripPermissionsOutsidePlan(
+  permissions: Record<string, boolean>,
+  features: Record<string, boolean>
+): Record<string, boolean> {
+  const next = { ...permissions }
+  for (const def of COMPANY_MODULE_DEFS) {
+    if (!def.featureKey) continue
+    if (features[def.featureKey] === true) continue
+    if (def.viewKey) next[def.viewKey] = false
+    if (def.manageKey) next[def.manageKey] = false
+    if (def.cancelKey) next[def.cancelKey] = false
+    if (def.legacyKey) next[def.legacyKey] = false
+    if (def.key === 'payroll') {
+      next.can_authorize_payroll = false
+    }
+  }
+  return next
+}
+
+/** Apply cancel sub-capability: requires manage; default allow when managing. */
+function applyModuleCancelGrant(
+  base: Record<string, boolean>,
+  def: (typeof COMPANY_MODULE_DEFS)[number],
+  grant: ModuleGrant | undefined,
+  enabled: boolean
+): void {
+  if (!def.cancelKey) return
+  const hasManage = def.manageKey ? base[def.manageKey] === true : false
+  if (!enabled || !hasManage) {
+    base[def.cancelKey] = false
+    return
+  }
+  if (grant && typeof grant.cancel === 'boolean') {
+    base[def.cancelKey] = grant.cancel
+    return
+  }
+  if (typeof base[def.cancelKey] !== 'boolean') {
+    base[def.cancelKey] = true
+  }
+}
+
+/**
+ * Build permissions for create/update from role defaults + optional module grants + salary toggle.
+ */
+export function buildCompanyUserPermissions(input: {
+  role: CompanyManagedRole
+  moduleGrants?: Partial<Record<CompanyModuleKey, ModuleGrant>>
+  canViewSalary?: boolean | null
+  companyFeatures: Record<string, boolean>
+  existingRaw?: Record<string, unknown> | null
+}): Record<string, boolean> {
+  const base = {
+    ...normalizePermissionsToCanonical(input.role, input.existingRaw || {}),
+  } as CanonicalPermissions & Record<string, boolean>
+
+  const grants = input.moduleGrants || {}
+
+  for (const def of COMPANY_MODULE_DEFS) {
+    const grant = grants[def.key]
+    if (!grant) continue
+
+    const enabled = isModuleToggleEnabled(input.role, def.key, input.companyFeatures)
+    if (!enabled) {
+      if (def.viewKey) base[def.viewKey] = false
+      if (def.manageKey) base[def.manageKey] = false
+      if (def.cancelKey) base[def.cancelKey] = false
+      if (def.legacyKey) base[def.legacyKey] = false
+      continue
+    }
+
+    if (def.legacyKey) {
+      if (typeof grant.view === 'boolean') base[def.legacyKey] = grant.view
+      applyModuleCancelGrant(base, def, grant, enabled)
+      continue
+    }
+
+    if (def.viewKey && typeof grant.view === 'boolean') {
+      base[def.viewKey] = grant.view
+    }
+    if (def.manageKey && typeof grant.manage === 'boolean') {
+      base[def.manageKey] = grant.manage
+      if (grant.manage && def.viewKey) base[def.viewKey] = true
+    }
+    applyModuleCancelGrant(base, def, grant, enabled)
+  }
+
+  let next = stripPermissionsOutsidePlan(base, input.companyFeatures)
+  // Re-normalize so role hard rules (e.g. manager: no payroll) stick after grants.
+  next = { ...normalizePermissionsToCanonical(input.role, next) } as Record<string, boolean>
+  // Preserve flags that canonical normalizer does not know about.
+  for (const def of COMPANY_MODULE_DEFS) {
+    if (def.legacyKey && typeof base[def.legacyKey] === 'boolean') {
+      next[def.legacyKey] = base[def.legacyKey]
+    }
+    if (def.cancelKey && typeof base[def.cancelKey] === 'boolean') {
+      next[def.cancelKey] = base[def.cancelKey]
+    }
+  }
+  // Cancel requires manage after role hard-rules (e.g. manager without deducciones).
+  for (const def of COMPANY_MODULE_DEFS) {
+    if (!def.cancelKey || !def.manageKey) continue
+    if (next[def.manageKey] !== true) next[def.cancelKey] = false
+  }
+  next = stripPermissionsOutsidePlan(next, input.companyFeatures)
+  next = applySalaryPermissionRules(input.role, next, input.canViewSalary)
+  return next
+}
+
+/** Defaults for UI toggles from role + current permissions. */
+export function moduleGrantsFromPermissions(
+  role: unknown,
+  raw: unknown,
+  features: Record<string, boolean>
+): Record<CompanyModuleKey, ModuleGrant> {
+  const canonical = normalizePermissionsToCanonical(role, raw)
+  const input =
+    raw && typeof raw === 'object' && !Array.isArray(raw)
+      ? (raw as Record<string, unknown>)
+      : {}
+
+  const out = {} as Record<CompanyModuleKey, ModuleGrant>
+  for (const def of COMPANY_MODULE_DEFS) {
+    const enabled = isModuleToggleEnabled(role, def.key, features)
+    if (!enabled) {
+      out[def.key] = { view: false, manage: false, cancel: false }
+      continue
+    }
+    if (def.legacyKey) {
+      const v =
+        input[def.legacyKey] === true
+          ? true
+          : input[def.legacyKey] === false
+            ? false
+            : roleCanEditSalary(role)
+      out[def.key] = { view: v }
+      continue
+    }
+    const manage = def.manageKey ? !!canonical[def.manageKey] : false
+    // Manage-only modules (no viewKey): mirror manage into view for UI consistency.
+    const view = def.viewKey ? !!canonical[def.viewKey] : manage
+    const grant: ModuleGrant = { view, manage }
+    if (def.cancelKey) {
+      if (!manage) grant.cancel = false
+      else if (input[def.cancelKey] === false) grant.cancel = false
+      else grant.cancel = true
+    }
+    out[def.key] = grant
+  }
+  return out
+}
+
+export function isAuthDuplicateUserError(err: unknown): boolean {
+  const e = err as { message?: string; code?: string }
+  const msg = (e?.message || '').toLowerCase()
+  const code = (e?.code || '').toLowerCase()
+  return (
+    code === 'email_exists' ||
+    msg.includes('already been registered') ||
+    msg.includes('already registered') ||
+    msg.includes('user already exists') ||
+    msg.includes('email address is already')
+  )
+}
+
+export function parseModuleGrantsFromBody(
+  body: unknown
+): Partial<Record<CompanyModuleKey, ModuleGrant>> | undefined {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) return undefined
+  const raw = (body as Record<string, unknown>).module_grants
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return undefined
+
+  const out: Partial<Record<CompanyModuleKey, ModuleGrant>> = {}
+  for (const def of COMPANY_MODULE_DEFS) {
+    const g = (raw as Record<string, unknown>)[def.key]
+    if (!g || typeof g !== 'object' || Array.isArray(g)) continue
+    const grant: ModuleGrant = {}
+    if ((g as ModuleGrant).view === true || (g as ModuleGrant).view === false) {
+      grant.view = (g as ModuleGrant).view
+    }
+    if ((g as ModuleGrant).manage === true || (g as ModuleGrant).manage === false) {
+      grant.manage = (g as ModuleGrant).manage
+    }
+    if ((g as ModuleGrant).cancel === true || (g as ModuleGrant).cancel === false) {
+      grant.cancel = (g as ModuleGrant).cancel
+    }
+    if (Object.keys(grant).length > 0) out[def.key] = grant
+  }
+  return Object.keys(out).length > 0 ? out : undefined
+}

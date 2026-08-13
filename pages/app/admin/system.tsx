@@ -212,7 +212,7 @@ export default function SystemPage() {
             {/* Jobs Tab */}
             {activeTab === 'jobs' && (
               <div className="space-y-4">
-                <Card variant="glass" className="border-white/10">
+                <Card variant="liquid" className="border-white/10">
                   <CardHeader>
                     <CardTitle className="text-white">Jobs Programados ({jobs.length})</CardTitle>
                   </CardHeader>
@@ -230,7 +230,7 @@ export default function SystemPage() {
                         {jobs.map((job) => (
                           <div
                             key={job.name}
-                            className="bg-white/5 border border-white/10 rounded-lg p-4 hover:bg-white/10 transition-colors"
+                            className="input-glass text-white"
                           >
                             <div className="flex items-start justify-between">
                               <div className="flex-1">
@@ -262,7 +262,7 @@ export default function SystemPage() {
             {activeTab === 'executions' && (
               <div className="space-y-4">
                 {/* Filters */}
-                <Card variant="glass" className="border-white/10">
+                <Card variant="liquid" className="border-white/10">
                   <CardHeader>
                     <CardTitle className="text-white">Filtros</CardTitle>
                   </CardHeader>
@@ -273,7 +273,7 @@ export default function SystemPage() {
                         <select
                           value={executionsFilters.job_name}
                           onChange={(e) => setExecutionsFilters({ ...executionsFilters, job_name: e.target.value })}
-                          className="w-full px-3 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-md text-white"
+                          className="input-glass w-full text-white"
                         >
                           <option value="">Todos</option>
                           {jobs.map((j) => (
@@ -286,7 +286,7 @@ export default function SystemPage() {
                         <select
                           value={executionsFilters.status}
                           onChange={(e) => setExecutionsFilters({ ...executionsFilters, status: e.target.value })}
-                          className="w-full px-3 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-md text-white"
+                          className="input-glass w-full text-white"
                         >
                           <option value="">Todos</option>
                           <option value="completed">Completado</option>
@@ -300,7 +300,7 @@ export default function SystemPage() {
                           type="date"
                           value={executionsFilters.start_date}
                           onChange={(e) => setExecutionsFilters({ ...executionsFilters, start_date: e.target.value })}
-                          className="w-full px-3 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-md text-white"
+                          className="input-glass w-full text-white"
                         />
                       </div>
                       <div>
@@ -309,7 +309,7 @@ export default function SystemPage() {
                           type="date"
                           value={executionsFilters.end_date}
                           onChange={(e) => setExecutionsFilters({ ...executionsFilters, end_date: e.target.value })}
-                          className="w-full px-3 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-md text-white"
+                          className="input-glass w-full text-white"
                         />
                       </div>
                     </div>
@@ -317,7 +317,7 @@ export default function SystemPage() {
                 </Card>
 
                 {/* Table */}
-                <Card variant="glass" className="border-white/10">
+                <Card variant="liquid" className="border-white/10">
                   <CardHeader>
                     <CardTitle className="text-white">
                       Historial de Ejecuciones ({executionsTotal} registros)

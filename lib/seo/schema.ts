@@ -2,7 +2,10 @@
  * Schema.org JSON-LD generators for SEO
  */
 
-const BASE_URL = 'https://humanosisu.net'
+import { SOCIAL_SAME_AS } from '../marketing/social-links'
+import { SEO_BASE_URL, SEO_LOGO_URL } from './assets'
+
+const BASE_URL = SEO_BASE_URL
 
 export interface OrganizationSchema {
   '@context': string
@@ -30,9 +33,9 @@ export function generateOrganizationSchema(): OrganizationSchema {
     '@type': 'Organization',
     name: 'Humano SISU',
     url: BASE_URL,
-    logo: `${BASE_URL}/logo-humano-sisu.png`,
+    logo: SEO_LOGO_URL,
     description:
-      'Sistema automatizado de recursos humanos para MIPYMES en El Salvador, Guatemala y Honduras. Gestión de asistencia, nómina con deducciones de ley locales y más.',
+      'Humano SISU es software de recursos humanos y control de asistencia para MIPYMES en Honduras, El Salvador y Guatemala. Nómina automatizada, biometría integrada y deducciones de ley locales.',
     contactPoint: {
       '@type': 'ContactPoint',
       telephone: '+504 32226773',
@@ -40,9 +43,7 @@ export function generateOrganizationSchema(): OrganizationSchema {
       areaServed: ['SV', 'GT', 'HN'],
       availableLanguage: 'Spanish'
     },
-    sameAs: [
-      // Add social media profiles if available
-    ]
+    sameAs: SOCIAL_SAME_AS,
   }
 }
 
@@ -51,6 +52,7 @@ export interface WebSiteSchema {
   '@type': string
   name: string
   url: string
+  description?: string
 }
 
 /**
@@ -62,6 +64,8 @@ export function generateWebSiteSchema(): WebSiteSchema {
     '@type': 'WebSite',
     name: 'Humano SISU',
     url: BASE_URL,
+    description:
+      'Software de recursos humanos y control de asistencia para Honduras, El Salvador y Guatemala.',
   }
 }
 
@@ -284,6 +288,7 @@ export interface ArticleSchema {
   author?: { '@type': string; name: string }
   publisher: { '@type': string; name: string; logo: { '@type': string; url: string } }
   url: string
+  articleSection?: string
 }
 
 /**
@@ -297,8 +302,9 @@ export function generateArticleSchema(options: {
   dateModified?: string
   image?: string
   author?: string
+  articleSection?: string
 }): ArticleSchema {
-  const { url, headline, description, datePublished, dateModified, image, author } = options
+  const { url, headline, description, datePublished, dateModified, image, author, articleSection } = options
   const fullUrl = url.startsWith('http') ? url : `${BASE_URL}${url}`
   return {
     '@context': 'https://schema.org',
@@ -312,9 +318,10 @@ export function generateArticleSchema(options: {
     publisher: {
       '@type': 'Organization',
       name: 'Humano SISU',
-      logo: { '@type': 'ImageObject', url: `${BASE_URL}/logo-humano-sisu.png` }
+      logo: { '@type': 'ImageObject', url: SEO_LOGO_URL }
     },
-    url: fullUrl
+    url: fullUrl,
+    ...(articleSection ? { articleSection } : {}),
   }
 }
 

@@ -174,7 +174,7 @@ export default function LeaveTypesSettings({ companyId }: LeaveTypesSettingsProp
 
   if (!companyId) {
     return (
-      <Card variant="glass" className="p-6">
+      <Card variant="liquid" className="p-6">
         <CardContent className="text-center text-gray-300 text-sm">
           Se requiere una empresa en el perfil para administrar tipos de permiso.
         </CardContent>
@@ -201,7 +201,7 @@ export default function LeaveTypesSettings({ companyId }: LeaveTypesSettingsProp
       </div>
 
       {!canEdit && (
-        <Card variant="glass" className="p-4 border border-amber-500/30 bg-amber-500/10">
+        <Card variant="liquid" className="p-4 border border-amber-500/30 bg-amber-500/10">
           <p className="text-sm text-amber-100">
             Solo administrador de empresa o RRHH pueden crear o editar tipos. Puede revisar el catálogo actual.
           </p>
@@ -209,13 +209,13 @@ export default function LeaveTypesSettings({ companyId }: LeaveTypesSettingsProp
       )}
 
       {error && (
-        <Card variant="glass" className="p-4 border border-red-500/30 bg-red-500/10">
+        <Card variant="liquid" className="p-4 border border-red-500/30 bg-red-500/10">
           <p className="text-red-200 text-sm">{error}</p>
         </Card>
       )}
 
       {canEdit && (
-        <Card variant="glass" className="p-5 border border-white/15">
+        <Card variant="liquid" className="p-5 border border-white/15">
           <h4 className="text-md font-medium text-white mb-3">Nuevo tipo de permiso</h4>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             <div className="md:col-span-2">
@@ -307,7 +307,7 @@ export default function LeaveTypesSettings({ companyId }: LeaveTypesSettingsProp
       {loading ? (
         <div className="flex justify-center py-12 text-gray-400 text-sm">Cargando tipos de permiso…</div>
       ) : rows.length === 0 ? (
-        <Card variant="glass" className="p-6">
+        <Card variant="liquid" className="p-6">
           <p className="text-gray-300 text-sm text-center">
             No hay tipos configurados para esta empresa. Cree el catálogo desde el formulario superior o ejecute las
             migraciones / datos iniciales.
@@ -328,7 +328,7 @@ export default function LeaveTypesSettings({ companyId }: LeaveTypesSettingsProp
               d.is_statutory_art95 !== (t.is_statutory_art95 === true) ||
               d.is_statutory !== (t.is_statutory === true)
             return (
-              <Card key={t.id} variant="glass" className="p-5 border border-white/15">
+              <Card key={t.id} variant="liquid" className="p-5 border border-white/15">
                 <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
                   <div className="flex items-center gap-2">
                     <span

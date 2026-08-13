@@ -5,6 +5,10 @@ import {
   validateCustomPayrollData, 
   calculatePayroll
 } from '../../../lib/payroll-client-specific'
+import {
+  computeCustomFieldsEffectiveAmounts,
+  isPayrollRunEditableForCustomFields,
+} from '../../../lib/payroll/custom-fields-eff-amounts'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -12,10 +16,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    // Authentication
     const { supabase, companyId, role, user } = await requireCompanyAccess(req, res)
     
-    // Check permissions
     if (!['super_admin', 'company_admin', 'hr_manager'].includes(role)) {
       return res.status(403).json({ 
         error: 'Permisos insuficientes',
@@ -37,7 +39,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'Company ID is required' })
     }
 
-    // Validate custom payroll data
     const validation = await validateCustomPayrollData(companyId, custom_fields, supabase)
     
     if (!validation.valid) {
@@ -47,13 +48,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })
     }
 
-    // Build metadata
     const metadata = await buildPayrollMetadata(companyId, custom_fields, supabase)
 
-    // Get existing payroll line (include effective statutory deductions to recompute net)
     const { data: existingLine, error: lineError } = await supabase
       .from('payroll_run_lines')
-      .select('metadata, eff_bruto, eff_neto, eff_ihss, eff_rap, eff_isr')
+      .select('metadata, calc_bruto, eff_bruto, eff_neto, eff_ihss, eff_rap, eff_isr, run_id')
       .eq('id', run_line_id)
       .eq('company_id', companyId)
       .single()
@@ -65,14 +64,38 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })
     }
 
-    // Merge with existing metadata
+    const { data: run, error: runError } = await supabase
+      .from('payroll_runs')
+      .select('id, status')
+      .eq('id', existingLine.run_id)
+      .eq('company_id', companyId)
+      .single()
+
+    if (runError || !run) {
+      return res.status(404).json({ error: 'Corrida de planilla no encontrada' })
+    }
+
+    if (!isPayrollRunEditableForCustomFields(run.status)) {
+      return res.status(400).json({
+        error: 'Corrida no editable',
+        message: `La corrida está en estado '${run.status}' y no se puede editar`,
+      })
+    }
+
     const existingMetadata = existingLine.metadata || {}
     const mergedMetadata = { ...existingMetadata, ...metadata }
 
-    // Calculate new totals using new calculation engine (supports DB configs)
+    const calcBruto = Number(existingLine.calc_bruto) || 0
+    // Prior earnings from existing metadata (engine baseline as formula context).
+    const priorCalc = await calculatePayroll(
+      companyId,
+      calcBruto,
+      existingMetadata,
+      supabase
+    )
     const calcResult = await calculatePayroll(
       companyId,
-      Number(existingLine.eff_bruto) || 0,
+      calcBruto,
       mergedMetadata,
       supabase
     )
@@ -80,17 +103,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const ingresosAdicionales = calcResult.totalIngresosAdicionales
     const deduccionesAdicionales = calcResult.totalDeduccionesAdicionales
 
-    // Compute new effective amounts using additional ingresos/deducciones
-    const baseEffBruto = Number(existingLine.eff_bruto) || 0
-    const effIHSS = Number((existingLine as any).eff_ihss) || 0
-    const effRAP = Number((existingLine as any).eff_rap) || 0
-    const effISR = Number((existingLine as any).eff_isr) || 0
-    const statutoryDeductions = effIHSS + effRAP + effISR
+    const { newEffBruto, newEffNeto } = computeCustomFieldsEffectiveAmounts({
+      calcBruto,
+      currentEffBruto: Number(existingLine.eff_bruto) || 0,
+      priorIngresosAdicionales: priorCalc.totalIngresosAdicionales,
+      ingresosAdicionales,
+      deduccionesAdicionales,
+      effIhss: Number(existingLine.eff_ihss) || 0,
+      effRap: Number(existingLine.eff_rap) || 0,
+      effIsr: Number(existingLine.eff_isr) || 0,
+    })
 
-    const newEffBruto = Math.round((baseEffBruto + ingresosAdicionales) * 100) / 100
-    const newEffNeto = Math.round((newEffBruto - statutoryDeductions - deduccionesAdicionales) * 100) / 100
-
-    // Update payroll line with new metadata and recalculated effective totals
     const { error: updateError } = await supabase
       .from('payroll_run_lines')
       .update({
@@ -111,7 +134,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })
     }
 
-    // Insert payroll_adjustments for historial and automatic snapshots (bruto, neto + custom keys)
     const adjustmentsToInsert: Array<{ run_line_id: string; company_id: string; field: string; old_value: number | null; new_value: number; user_id: string }> = []
     const oldEffBruto = Number(existingLine.eff_bruto) || 0
     const oldEffNeto = Number(existingLine.eff_neto) || 0
@@ -137,7 +159,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
     const allKeys = new Set([...Object.keys(existingMetadata), ...Object.keys(mergedMetadata)])
     for (const key of allKeys) {
-      if (key === '_deduction_plan_ids') continue
+      if (key === '_deduction_plan_ids' || key === '_deduction_plan_breakdown') continue
       const oldVal = existingMetadata[key]
       const newVal = mergedMetadata[key]
       const oldNum = typeof oldVal === 'number' ? oldVal : (typeof oldVal === 'string' && !isNaN(parseFloat(oldVal)) ? parseFloat(oldVal) : null)
@@ -157,11 +179,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const { error: adjError } = await supabase.from('payroll_adjustments').insert(adjustmentsToInsert)
       if (adjError) {
         console.error('Error inserting payroll_adjustments:', adjError)
-        // Do not fail the request - line was updated successfully
       }
     }
-
-    console.log('✅ Custom fields updated for line:', run_line_id)
 
     return res.status(200).json({
       success: true,
@@ -180,4 +199,3 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     })
   }
 }
-

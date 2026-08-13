@@ -4,6 +4,7 @@ import { useRouter } from 'next/router'
 import { parseDateOnlyAsHonduras, HONDURAS_TIMEZONE } from '../../lib/timezone'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
+import PublicPageShell from '../../components/landing/PublicPageShell'
 
 interface TrialPayrollRecord {
   employee_id: string
@@ -79,25 +80,25 @@ export default function TrialPayrollPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 flex items-center justify-center">
-        <div className="text-center">
+      <PublicPageShell centered showFooter={false}>
+        <div className="text-center p-4">
           <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-white mx-auto"></div>
           <p className="mt-4 text-white">Cargando nómina de agosto 2025...</p>
         </div>
-      </div>
+      </PublicPageShell>
     )
   }
 
   if (error || !data) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 flex items-center justify-center">
+      <PublicPageShell centered showFooter={false}>
         <div className="text-center max-w-md mx-auto p-6">
           <div className="text-red-400 text-6xl mb-4">⚠️</div>
           <h1 className="text-2xl font-bold text-white mb-4">Error cargando nómina</h1>
           <p className="text-gray-300 mb-6">{error || 'No se pudo cargar la información de nómina'}</p>
           <Button onClick={goBackToTrial}>Volver al Trial</Button>
         </div>
-      </div>
+      </PublicPageShell>
     )
   }
 
@@ -113,9 +114,8 @@ export default function TrialPayrollPage() {
         <meta name="description" content="Nómina de agosto 2025 para entorno de prueba SISU" />
       </Head>
 
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900">
-        {/* Header */}
-        <header className="glass-strong border-b border-white/10 shadow-lg">
+      <PublicPageShell showFooter={false}>
+        <header className="glass-modern border-b border-white/10 shadow-lg">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
             <div className="flex justify-between items-center">
               <div>
@@ -129,10 +129,9 @@ export default function TrialPayrollPage() {
           </div>
         </header>
 
-        {/* Content */}
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
           {/* Summary */}
-          <Card variant="glass">
+          <Card variant="liquid">
             <CardHeader>
               <CardTitle className="text-white">Resumen de Agosto 2025</CardTitle>
               <CardDescription className="text-gray-300">Cifras agregadas del período</CardDescription>
@@ -148,7 +147,7 @@ export default function TrialPayrollPage() {
           </Card>
 
           {/* Table */}
-          <Card variant="glass">
+          <Card variant="liquid">
             <CardHeader>
               <CardTitle className="text-white">Detalle por empleado</CardTitle>
               <CardDescription className="text-gray-300">Base en datos de asistencia de agosto 2025</CardDescription>
@@ -199,14 +198,14 @@ export default function TrialPayrollPage() {
           </Card>
 
           {/* Note */}
-          <Card variant="glass">
+          <Card variant="liquid">
             <CardHeader>
               <CardTitle className="text-white">Sobre este entorno</CardTitle>
               <CardDescription className="text-gray-300">Cálculos basados en datos de asistencia de agosto 2025 del entorno demo.</CardDescription>
             </CardHeader>
           </Card>
-        </main>
-      </div>
+        </div>
+      </PublicPageShell>
     </>
   )
 }

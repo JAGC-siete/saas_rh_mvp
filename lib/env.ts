@@ -37,6 +37,9 @@ export const env = {
   NEXT_TELEMETRY_DISABLED: getEnvVar('NEXT_TELEMETRY_DISABLED', '1'),
   SKIP_ENV_VALIDATION: getEnvVar('SKIP_ENV_VALIDATION', 'false'),
   BASES_DE_DATOS_URL: getEnvVar('BASES_DE_DATOS_URL', 'https://humanosisu.net'),
+
+  /** Content source for /recursos: 'files' (markdown in repo) or 'supabase' (DB + admin CRUD) */
+  RECURSOS_SOURCE: getEnvVar('RECURSOS_SOURCE', 'files'),
   
   // Database Configuration
   DATABASE_URL: getEnvVar('DATABASE_URL', ''),

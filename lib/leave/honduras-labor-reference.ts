@@ -5,7 +5,12 @@
  * Vacaciones anuales remuneradas (Arts. 345–359): días laborables consecutivos según años
  * de servicio continuo completados (convención producto: años completos entre hire_date y fecha de corte).
  *
+ * Este módulo regula el **goce** de vacaciones en empleados activos (requiere año completo, Art. 346).
+ * El **pago proporcional en liquidación/finiquito** usa la guía STSS (divisores 36/30/24/18 × salario
+ * promedio diario) en `lib/payroll/cesantias.ts`. Ver `docs/prestaciones-honduras-motor-stss.md`.
+ *
  * @see https://www.tsc.gob.hn/web/leyes/codigo_de_trabajo.pdf
+ * @see https://www.trabajo.gob.hn/wp-content/uploads/2017/11/guiacalculo.pdf
  */
 
 /** Años de servicio continuo completos (no fracción hasta el aniversario). */
@@ -22,7 +27,8 @@ export function completedFullYearsOfService(hireDateYmd: string | null | undefin
 
 /**
  * Días laborables consecutivos de vacaciones según antigüedad (tabla resumida del Código).
- * 0 años completos → 0 (aún no cumple el primer aniversario).
+ * 0 años completos → 0 para **goce** (aún no cumple el primer aniversario).
+ * En liquidación sí hay pago proporcional desde el día 1 (guía STSS, divisor 36).
  */
 export function vacationWorkingDaysByTenureYears(completedFullYears: number): number {
   if (completedFullYears >= 4) return 20

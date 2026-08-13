@@ -8,9 +8,13 @@ import { Icon } from './Icon'
 interface PayrollHourlyTableProps {
   rows: UnifiedRow[]
   // eslint-disable-next-line no-unused-vars
+  onPreviewVoucher: (_lineId: string) => void
+  // eslint-disable-next-line no-unused-vars
   onGenerateVoucher: (_lineId: string) => void
   // eslint-disable-next-line no-unused-vars
   onEditCustomFields?: (_lineId: string, _metadata: any, _baseSalary: number, _employeeId?: string) => void
+  onResetLineRecalc?: (_runLineId: string) => Promise<void>
+  canResetLineRecalc?: boolean
   loading?: boolean
   hasCustom?: boolean
   statutoryDeductions?: { ihss: boolean; rap: boolean; isr: boolean }
@@ -18,8 +22,11 @@ interface PayrollHourlyTableProps {
 
 export default function PayrollHourlyTable({
   rows,
+  onPreviewVoucher,
   onGenerateVoucher,
   onEditCustomFields,
+  onResetLineRecalc,
+  canResetLineRecalc = false,
   loading = false,
   hasCustom = false,
   statutoryDeductions = { ihss: true, rap: true, isr: true }
@@ -35,7 +42,7 @@ export default function PayrollHourlyTable({
   return (
     <div className="mb-8">
       <h3 className="text-lg font-semibold text-white mb-4 pb-2 border-b border-white/20">
-        Nómina — Detalle por Empleado (hourly)
+        Nómina — Detalle por Empleado (por hora exacta)
       </h3>
       <div className="mb-4 grid grid-cols-4 gap-4">
         <div className="text-center p-3 bg-blue-500/20 rounded-lg border border-blue-500/20">
@@ -121,10 +128,20 @@ export default function PayrollHourlyTable({
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => onGenerateVoucher(row.line_id || row.employee_id)}
-                          disabled={loading}
+                          onClick={() => onPreviewVoucher(row.line_id || row.employee_id)}
+                          disabled={loading || !row.line_id}
                           className="bg-white/10 border-white/30 text-white hover:bg-white/20"
-                          title="Descargar comprobante"
+                          title="Ver comprobante"
+                        >
+                          <Icon name="eye" className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => onGenerateVoucher(row.line_id || row.employee_id)}
+                          disabled={loading || !row.line_id}
+                          className="bg-white/10 border-white/30 text-white hover:bg-white/20"
+                          title="Descargar comprobante PDF"
                         >
                           <Icon name="download" className="h-4 w-4" />
                         </Button>
@@ -138,6 +155,31 @@ export default function PayrollHourlyTable({
                             title="Editar campos personalizados"
                           >
                             <Icon name="edit" className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {canResetLineRecalc && onResetLineRecalc && row.line_id && (row as any).edited && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={loading}
+                            className="bg-white/10 border-white/30 text-white hover:bg-white/20"
+                            title="Recalcular desde asistencia (quita ediciones manuales de esta línea)"
+                            onClick={async () => {
+                              if (
+                                !confirm(
+                                  '¿Recalcular esta línea desde asistencia? Se perderán las ediciones manuales de este empleado.'
+                                )
+                              ) {
+                                return
+                              }
+                              try {
+                                await onResetLineRecalc(row.line_id!)
+                              } catch (e) {
+                                alert(e instanceof Error ? e.message : 'Error al recalcular')
+                              }
+                            }}
+                          >
+                            <Icon name="refresh" className="h-4 w-4" />
                           </Button>
                         )}
                       </div>

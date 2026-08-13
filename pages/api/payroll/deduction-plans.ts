@@ -1,5 +1,9 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { requireCompanyAccess } from '../../../lib/auth/api-auth-fixed'
+import {
+  canAccessDeduccionesModule,
+  canCancelDeductionPlans,
+} from '../../../lib/security/deducciones-access'
 
 /**
  * API: CRUD for employee_deduction_plans
@@ -9,7 +13,7 @@ import { requireCompanyAccess } from '../../../lib/auth/api-auth-fixed'
  */
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
-    const { supabase, companyId: authCompanyId, role } = await requireCompanyAccess(req, res)
+    const { supabase, companyId: authCompanyId, role, userProfile } = await requireCompanyAccess(req, res)
 
     // Para super_admin sin company_id, usar company_id del body/query
     const companyId = authCompanyId ?? req.body?.company_id ?? req.query?.company_id
@@ -17,7 +21,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'company_id es requerido (o en body/query para super_admin)' })
     }
 
-    if (!['super_admin', 'company_admin', 'hr_manager'].includes(role)) {
+    if (!canAccessDeduccionesModule(role, userProfile?.permissions)) {
       return res.status(403).json({
         error: 'Permisos insuficientes',
         message: 'No tiene permisos para gestionar planes de deducción'
@@ -30,6 +34,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       case 'GET':
         return handleGet(req, res, supabase, companyId)
       case 'PATCH':
+        if (!canCancelDeductionPlans(role, userProfile?.permissions)) {
+          return res.status(403).json({
+            error: 'Permisos insuficientes',
+            message: 'No tiene permisos para cancelar planes de deducción',
+          })
+        }
         return handlePatch(req, res, supabase, companyId)
       default:
         return res.status(405).json({ error: 'Method not allowed' })
@@ -118,22 +128,7 @@ async function handlePost(
       .eq('is_active', true)
   }
 
-  // Validar que no exista plan activo para ese empleado+campo
-  const { data: existing } = await supabase
-    .from('employee_deduction_plans')
-    .select('id')
-    .eq('employee_id', employee_id)
-    .eq('company_id', companyId)
-    .eq('field_key', field_key)
-    .eq('activo', true)
-    .maybeSingle()
-
-  if (existing) {
-    return res.status(400).json({
-      error: 'Plan activo existente',
-      message: 'Ya existe un plan activo para este empleado y campo'
-    })
-  }
+  // Multiple active plans per employee+field_key are allowed; payroll sums cuotas.
 
   const insertPayload: Record<string, unknown> = {
     employee_id,

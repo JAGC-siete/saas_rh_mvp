@@ -3,6 +3,7 @@ import { useRouter } from 'next/router'
 import Head from 'next/head'
 import Link from 'next/link'
 import SuperAdminLayout from '../../../../components/SuperAdminLayout'
+import AppMeshShell from '../../../../components/landing/AppMeshShell'
 import SuperAdminGuard from '../../../../components/SuperAdminGuard'
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../components/ui/card'
 import { Button } from '../../../../components/ui/button'
@@ -201,12 +202,12 @@ export default function CompanyDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900">
-        <div className="glass border border-white/20 rounded-lg shadow-2xl p-6 text-center">
+      <AppMeshShell className="items-center justify-center">
+        <div className="glass-modern border border-white/20 rounded-lg shadow-2xl p-6 text-center relative z-10">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
           <p className="text-white text-lg">Cargando...</p>
         </div>
-      </div>
+      </AppMeshShell>
     )
   }
 
@@ -225,13 +226,13 @@ export default function CompanyDetailPage() {
             </Button>
 
             {error && (
-              <Card variant="glass" className="border-red-400/40 bg-red-500/10">
+              <Card variant="liquid" className="border-red-400/40 bg-red-500/10">
                 <CardContent className="pt-4 text-red-100 text-sm">{error}</CardContent>
               </Card>
             )}
 
             {company && (
-              <Card variant="glass" className="border-white/10">
+              <Card variant="liquid" className="border-white/10">
                 <CardHeader>
                   <CardTitle className="text-white">Empresa</CardTitle>
                 </CardHeader>
@@ -241,7 +242,7 @@ export default function CompanyDetailPage() {
                       <div>
                         <label className="block text-sm text-white/80 mb-1">Nombre</label>
                         <input
-                          className="w-full border border-white/20 rounded-md px-3 py-2 bg-white/10 text-white placeholder:text-white/50 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-amber-300/50 focus:border-amber-300/50"
+                          className="input-glass w-full text-white placeholder:text-white/50 focus:ring-amber-300/50"
                           value={form.name}
                           onChange={(e) => setForm({ ...form, name: e.target.value })}
                         />
@@ -249,7 +250,7 @@ export default function CompanyDetailPage() {
                       <div>
                         <label className="block text-sm text-white/80 mb-1">Subdominio</label>
                         <input
-                          className="w-full border border-white/20 rounded-md px-3 py-2 bg-white/10 text-white placeholder:text-white/50 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-amber-300/50 focus:border-amber-300/50"
+                          className="input-glass w-full text-white placeholder:text-white/50 focus:ring-amber-300/50"
                           value={form.subdomain}
                           onChange={(e) => setForm({ ...form, subdomain: e.target.value })}
                         />
@@ -257,7 +258,7 @@ export default function CompanyDetailPage() {
                       <div>
                         <label className="block text-sm text-white/80 mb-1">Plan</label>
                         <select
-                          className="w-full border border-white/20 rounded-md px-3 py-2 bg-white/10 text-white backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-amber-300/50 focus:border-amber-300/50"
+                          className="input-glass w-full text-white placeholder:text-white/50 focus:ring-amber-300/50"
                           value={form.plan_type}
                           onChange={(e) => setForm({ ...form, plan_type: e.target.value as CommercialPlanType })}
                         >
@@ -322,7 +323,7 @@ export default function CompanyDetailPage() {
             )}
 
             {features && (
-              <Card variant="glass" className="border-white/10">
+              <Card variant="liquid" className="border-white/10">
                 <CardHeader>
                   <CardTitle className="text-white">Módulos efectivos</CardTitle>
                   <p className="text-xs text-white/60 mt-1">

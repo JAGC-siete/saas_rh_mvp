@@ -1,5 +1,3 @@
-import { DateTime } from 'luxon'
-
 /**
  * 🇭🇳 TIMEZONE UTILITY FOR TEGUCIGALPA, HONDURAS
  * 
@@ -7,6 +5,8 @@ import { DateTime } from 'luxon'
  * 
  * This utility ensures CONSISTENT timezone handling across the entire application.
  * NEVER use new Date(), Date.now(), or any other timezone without this utility.
+ *
+ * Note: avoid luxon here — this module is imported by client shared paths (toast/_app).
  */
 
 export const HONDURAS_TIMEZONE = 'America/Tegucigalpa';
@@ -358,23 +358,27 @@ export function todayInHonduras(): string {
 
 /**
  * 🇭🇳 FORMAT DATE FOR DISPLAY IN HONDURAS LOCALE
- * Returns date formatted for Honduras (dd/mm/yyyy)
+ * Returns date formatted for Honduras (dd/mm/yyyy).
+ * Pass a real absolute instant (`new Date()` / DB UTC), not `nowInHonduras()`.
  */
 export function formatDateForHonduras(date: Date | string): string {
   const d = typeof date === 'string' ? new Date(date) : date;
-  const hondurasDate = convertToHondurasTime(d);
-  
-  return hondurasDate.toLocaleDateString('es-HN', {
+
+  return d.toLocaleDateString('es-HN', {
     timeZone: HONDURAS_TIMEZONE,
     day: '2-digit',
-    month: '2-digit', 
+    month: '2-digit',
     year: 'numeric'
   });
 }
 
 /**
  * 🇭🇳 FORMAT DATETIME FOR DISPLAY IN HONDURAS LOCALE
- * Returns datetime formatted for Honduras with timezone
+ * Returns datetime formatted for Honduras with timezone.
+ *
+ * Pass a real absolute instant (`new Date()` / DB UTC). Do NOT pass
+ * `nowInHonduras()` — that value is already offset by -6h, and combining it
+ * with `timeZone: America/Tegucigalpa` double-shifts another -6h.
  */
 export function formatDateTimeForHonduras(date: Date | string): string {
   const d = typeof date === 'string' ? new Date(date) : date;
@@ -501,7 +505,17 @@ export function isPayrollCalendarPeriodInFuture(
   month: number,
   timeZone: string
 ): boolean {
-  const now = DateTime.now().setZone(timeZone)
-  if (!now.isValid) return false
-  return year > now.year || (year === now.year && month > now.month)
+  try {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone,
+      year: 'numeric',
+      month: 'numeric',
+    }).formatToParts(new Date())
+    const nowYear = Number(parts.find((p) => p.type === 'year')?.value)
+    const nowMonth = Number(parts.find((p) => p.type === 'month')?.value)
+    if (!Number.isFinite(nowYear) || !Number.isFinite(nowMonth)) return false
+    return year > nowYear || (year === nowYear && month > nowMonth)
+  } catch {
+    return false
+  }
 }

@@ -63,7 +63,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     return res.status(200).json({
       success: true,
       message: 'Asientos contables generados correctamente',
-      journalEntryIds: result.journalEntryIds
+      journalEntryIds: result.journalEntryIds,
+      statutory_trace: result.statutoryTrace ?? null
     })
   } catch (err) {
     console.error('Error generando asientos contables:', err)

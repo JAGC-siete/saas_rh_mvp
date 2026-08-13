@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { requireCompanyAccess } from '../../../lib/auth/api-auth-fixed'
 import { logger } from '../../../lib/logger'
+import { canViewAttendanceReports, ATTENDANCE_REPORTS_FORBIDDEN } from '../../../lib/security/permissions'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -8,10 +9,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const { supabase, companyId } = await requireCompanyAccess(req, res)
+    const { supabase, companyId, role, userProfile } = await requireCompanyAccess(req, res)
 
     if (!companyId) {
       return res.status(400).json({ error: 'Company ID is required' })
+    }
+
+    if (!canViewAttendanceReports(role, userProfile)) {
+      return res.status(ATTENDANCE_REPORTS_FORBIDDEN.status).json(ATTENDANCE_REPORTS_FORBIDDEN.body)
     }
 
     // Parse query parameters

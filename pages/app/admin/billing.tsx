@@ -37,6 +37,20 @@ interface Company {
   name: string
 }
 
+interface PendingQuote {
+  id: string
+  company_id: string | null
+  company_name: string | null
+  payment_status: string
+  meta: { billing_modality?: string } | null
+  terminals_count: number | null
+  employees_count: number
+  expected_deposit_hnl: number | null
+  expected_total_hnl: number | null
+  total: number
+  currency: string
+}
+
 export default function BillingPage() {
   const { addNotification } = useNotificationContext()
   const [activeTab, setActiveTab] = useState<'meters' | 'payments'>('meters')
@@ -72,10 +86,14 @@ export default function BillingPage() {
   const [showPaymentForm, setShowPaymentForm] = useState(false)
   const [paymentForm, setPaymentForm] = useState({
     company_id: '',
+    quote_id: '',
     amount_hnl: '',
     reference: '',
     paid_at: new Date().toISOString().split('T')[0]
   })
+  const [pendingQuotes, setPendingQuotes] = useState<PendingQuote[]>([])
+  const [loadingPendingQuotes, setLoadingPendingQuotes] = useState(false)
+  const [selectedQuote, setSelectedQuote] = useState<PendingQuote | null>(null)
   const [submittingPayment, setSubmittingPayment] = useState(false)
 
   const tabs = [
@@ -158,6 +176,49 @@ export default function BillingPage() {
     loadPayments()
   }, [activeTab, paymentFilters, paymentsPage])
 
+  useEffect(() => {
+    if (!showPaymentForm || !paymentForm.company_id) {
+      setPendingQuotes([])
+      setSelectedQuote(null)
+      return
+    }
+
+    const loadPendingQuotes = async () => {
+      try {
+        setLoadingPendingQuotes(true)
+        const params = new URLSearchParams({ company_id: paymentForm.company_id })
+        const res = await fetch(`/api/admin/billing/pending-quotes?${params.toString()}`, {
+          credentials: 'include',
+        })
+        if (!res.ok) throw new Error('Error cargando cotizaciones')
+        const data = await res.json()
+        const quotes: PendingQuote[] = data.data || []
+        setPendingQuotes(quotes)
+        if (quotes.length === 1) {
+          applyQuoteToForm(quotes[0])
+        }
+      } catch (err) {
+        console.error('Error loading pending quotes:', err)
+        setPendingQuotes([])
+      } finally {
+        setLoadingPendingQuotes(false)
+      }
+    }
+
+    loadPendingQuotes()
+  }, [showPaymentForm, paymentForm.company_id])
+
+  const applyQuoteToForm = (quote: PendingQuote) => {
+    setSelectedQuote(quote)
+    const deposit = quote.expected_deposit_hnl
+    setPaymentForm((prev) => ({
+      ...prev,
+      quote_id: quote.id,
+      amount_hnl: deposit != null ? String(deposit) : prev.amount_hnl,
+      reference: `Cotización ${quote.id.slice(0, 8)} — 50% anticipo`,
+    }))
+  }
+
   const handleCreatePayment = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!paymentForm.company_id || !paymentForm.amount_hnl) {
@@ -180,10 +241,13 @@ export default function BillingPage() {
       setShowPaymentForm(false)
       setPaymentForm({
         company_id: '',
+        quote_id: '',
         amount_hnl: '',
         reference: '',
         paid_at: new Date().toISOString().split('T')[0]
       })
+      setSelectedQuote(null)
+      setPendingQuotes([])
       // Reload payments
       setPaymentsPage(1)
       setPaymentFilters({ ...paymentFilters })
@@ -273,7 +337,7 @@ export default function BillingPage() {
             {activeTab === 'meters' && (
               <div className="space-y-4">
                 {/* Filters */}
-                <Card variant="glass" className="border-white/10">
+                <Card variant="liquid" className="border-white/10">
                   <CardHeader>
                     <CardTitle className="text-white">Filtros</CardTitle>
                   </CardHeader>
@@ -284,7 +348,7 @@ export default function BillingPage() {
                         <select
                           value={meterFilters.company_id}
                           onChange={(e) => setMeterFilters({ ...meterFilters, company_id: e.target.value })}
-                          className="w-full px-3 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-md text-white"
+                          className="input-glass w-full text-white"
                         >
                           <option value="">Todas</option>
                           {companies.map((c) => (
@@ -298,7 +362,7 @@ export default function BillingPage() {
                           type="number"
                           value={meterFilters.year}
                           onChange={(e) => setMeterFilters({ ...meterFilters, year: e.target.value })}
-                          className="w-full px-3 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-md text-white"
+                          className="input-glass w-full text-white"
                           placeholder="2025"
                         />
                       </div>
@@ -307,7 +371,7 @@ export default function BillingPage() {
                         <select
                           value={meterFilters.month}
                           onChange={(e) => setMeterFilters({ ...meterFilters, month: e.target.value })}
-                          className="w-full px-3 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-md text-white"
+                          className="input-glass w-full text-white"
                         >
                           <option value="">Todos</option>
                           {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
@@ -320,7 +384,7 @@ export default function BillingPage() {
                 </Card>
 
                 {/* Table */}
-                <Card variant="glass" className="border-white/10">
+                <Card variant="liquid" className="border-white/10">
                   <CardHeader>
                     <CardTitle className="text-white">
                       Uso Mensual ({metersTotal} registros)
@@ -399,7 +463,7 @@ export default function BillingPage() {
             {activeTab === 'payments' && (
               <div className="space-y-4">
                 {/* Filters and Create Button */}
-                <Card variant="glass" className="border-white/10">
+                <Card variant="liquid" className="border-white/10">
                   <CardHeader>
                     <div className="flex justify-between items-center">
                       <CardTitle className="text-white">Filtros</CardTitle>
@@ -419,7 +483,7 @@ export default function BillingPage() {
                         <select
                           value={paymentFilters.company_id}
                           onChange={(e) => setPaymentFilters({ ...paymentFilters, company_id: e.target.value })}
-                          className="w-full px-3 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-md text-white"
+                          className="input-glass w-full text-white"
                         >
                           <option value="">Todas</option>
                           {companies.map((c) => (
@@ -433,7 +497,7 @@ export default function BillingPage() {
                           type="date"
                           value={paymentFilters.start_date}
                           onChange={(e) => setPaymentFilters({ ...paymentFilters, start_date: e.target.value })}
-                          className="w-full px-3 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-md text-white"
+                          className="input-glass w-full text-white"
                         />
                       </div>
                       <div>
@@ -442,7 +506,7 @@ export default function BillingPage() {
                           type="date"
                           value={paymentFilters.end_date}
                           onChange={(e) => setPaymentFilters({ ...paymentFilters, end_date: e.target.value })}
-                          className="w-full px-3 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-md text-white"
+                          className="input-glass w-full text-white"
                         />
                       </div>
                     </div>
@@ -451,7 +515,7 @@ export default function BillingPage() {
 
                 {/* Payment Form Modal */}
                 {showPaymentForm && (
-                  <Card variant="glass" className="border-white/10">
+                  <Card variant="liquid" className="border-white/10">
                     <CardHeader>
                       <CardTitle className="text-white">Registrar Pago Manual</CardTitle>
                     </CardHeader>
@@ -462,8 +526,14 @@ export default function BillingPage() {
                             <label className="block text-sm text-white/70 mb-1">Empresa *</label>
                             <select
                               value={paymentForm.company_id}
-                              onChange={(e) => setPaymentForm({ ...paymentForm, company_id: e.target.value })}
-                              className="w-full px-3 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-md text-white"
+                              onChange={(e) => setPaymentForm({
+                                ...paymentForm,
+                                company_id: e.target.value,
+                                quote_id: '',
+                                amount_hnl: '',
+                                reference: '',
+                              })}
+                              className="input-glass w-full text-white"
                               required
                             >
                               <option value="">Seleccionar...</option>
@@ -473,13 +543,61 @@ export default function BillingPage() {
                             </select>
                           </div>
                           <div>
+                            <label className="block text-sm text-white/70 mb-1">Cotización pendiente</label>
+                            <select
+                              value={paymentForm.quote_id}
+                              onChange={(e) => {
+                                const quote = pendingQuotes.find((q) => q.id === e.target.value)
+                                if (quote) applyQuoteToForm(quote)
+                                else setPaymentForm((prev) => ({ ...prev, quote_id: '', reference: '' }))
+                              }}
+                              className="input-glass w-full text-white"
+                              disabled={!paymentForm.company_id || loadingPendingQuotes}
+                            >
+                              <option value="">
+                                {loadingPendingQuotes
+                                  ? 'Cargando...'
+                                  : pendingQuotes.length === 0
+                                    ? 'Sin cotización pendiente'
+                                    : 'Seleccionar cotización...'}
+                              </option>
+                              {pendingQuotes.map((q) => (
+                                <option key={q.id} value={q.id}>
+                                  {q.company_name || 'Sin nombre'} — {q.meta?.billing_modality || 'anual'} — L. {q.expected_total_hnl ?? q.total}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          {selectedQuote && (
+                            <div className="md:col-span-2 rounded-md border border-white/15 bg-white/5 p-3 text-sm text-white/80">
+                              <p>
+                                <span className="text-white/60">Modalidad:</span>{' '}
+                                {selectedQuote.meta?.billing_modality === 'monthly' ? 'Mensual' : 'Anual'}
+                              </p>
+                              <p>
+                                <span className="text-white/60">Terminales:</span>{' '}
+                                {selectedQuote.terminals_count ?? 1} · {selectedQuote.employees_count} empleados
+                              </p>
+                              <p>
+                                <span className="text-white/60">Total cotizado:</span>{' '}
+                                {formatCurrency(Number(selectedQuote.expected_total_hnl ?? selectedQuote.total))}
+                              </p>
+                              <p>
+                                <span className="text-white/60">Depósito esperado (50%):</span>{' '}
+                                {selectedQuote.expected_deposit_hnl != null
+                                  ? formatCurrency(Number(selectedQuote.expected_deposit_hnl))
+                                  : '—'}
+                              </p>
+                            </div>
+                          )}
+                          <div>
                             <label className="block text-sm text-white/70 mb-1">Monto (HNL) *</label>
                             <input
                               type="number"
                               step="0.01"
                               value={paymentForm.amount_hnl}
                               onChange={(e) => setPaymentForm({ ...paymentForm, amount_hnl: e.target.value })}
-                              className="w-full px-3 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-md text-white"
+                              className="input-glass w-full text-white"
                               required
                             />
                           </div>
@@ -489,7 +607,7 @@ export default function BillingPage() {
                               type="text"
                               value={paymentForm.reference}
                               onChange={(e) => setPaymentForm({ ...paymentForm, reference: e.target.value })}
-                              className="w-full px-3 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-md text-white"
+                              className="input-glass w-full text-white"
                               placeholder="# transferencia, notas..."
                             />
                           </div>
@@ -499,7 +617,7 @@ export default function BillingPage() {
                               type="date"
                               value={paymentForm.paid_at}
                               onChange={(e) => setPaymentForm({ ...paymentForm, paid_at: e.target.value })}
-                              className="w-full px-3 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-md text-white"
+                              className="input-glass w-full text-white"
                             />
                           </div>
                         </div>
@@ -527,7 +645,7 @@ export default function BillingPage() {
                 )}
 
                 {/* Table */}
-                <Card variant="glass" className="border-white/10">
+                <Card variant="liquid" className="border-white/10">
                   <CardHeader>
                     <CardTitle className="text-white">
                       Pagos Manuales ({paymentsTotal} registros)

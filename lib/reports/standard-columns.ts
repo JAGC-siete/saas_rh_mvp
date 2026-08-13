@@ -24,12 +24,26 @@ const ATTENDANCE_COLUMNS: StandardColumnDef[] = [
 
 const PAYROLL_COLUMNS: StandardColumnDef[] = [
   { id: 'emp_code', label: 'Código', order: 1, sourceField: 'employee_code', source: 'standard' },
-  { id: 'emp_name', label: 'Empleado', order: 2, sourceField: 'employee_name', source: 'standard' },
-  { id: 'period', label: 'Período', order: 3, sourceField: 'period', source: 'standard' },
-  { id: 'gross_salary', label: 'Devengado', order: 4, sourceField: 'gross_salary', source: 'standard' },
-  { id: 'total_deductions', label: 'Deducciones', order: 5, sourceField: 'total_deductions', source: 'standard' },
-  { id: 'net_salary', label: 'Neto', order: 6, sourceField: 'net_salary', source: 'standard' },
-  { id: 'status', label: 'Estado', order: 7, sourceField: 'status', source: 'standard' }
+  { id: 'emp_name', label: 'Nombre', order: 2, sourceField: 'employee_name', source: 'standard' },
+  { id: 'department', label: 'Departamento', order: 3, sourceField: 'department', source: 'standard' },
+  { id: 'position', label: 'Puesto', order: 4, sourceField: 'position', source: 'standard' },
+  { id: 'days_worked', label: 'Días', order: 5, sourceField: 'days_worked', source: 'standard' },
+  { id: 'hours', label: 'Horas', order: 6, sourceField: 'total_hours_worked', source: 'standard' },
+  { id: 'hourly_rate', label: 'Tarifa/Hora', order: 7, sourceField: 'hourly_rate', source: 'standard' },
+  /** Ingresos: mensual → quincenal (mensual/2) → HE monto → total ingresos */
+  { id: 'base_salary', label: 'Sueldo Mensual', order: 8, sourceField: 'base_salary', source: 'standard' },
+  { id: 'biweekly_salary', label: 'Sueldo Quincenal', order: 9, sourceField: 'biweekly_salary', source: 'standard' },
+  { id: 'septimo_dia', label: 'Séptimo Día', order: 10, sourceField: 'septimo_dia', source: 'standard' },
+  { id: 'overtime_pay', label: 'Pago HE', order: 11, sourceField: 'overtime_pay', source: 'standard' },
+  { id: 'gross_salary', label: 'Total ingresos', order: 12, sourceField: 'gross_salary', source: 'standard' },
+  { id: 'ihss', label: 'IHSS', order: 13, sourceField: 'IHSS', source: 'standard' },
+  { id: 'rap', label: 'RAP', order: 14, sourceField: 'RAP', source: 'standard' },
+  { id: 'isr', label: 'ISR', order: 15, sourceField: 'ISR', source: 'standard' },
+  { id: 'total_deductions', label: 'Total Deducciones', order: 16, sourceField: 'total_deductions', source: 'standard' },
+  { id: 'net_salary', label: 'Neto a Pagar', order: 17, sourceField: 'net_salary', source: 'standard' },
+  /** Solo listados / export CSV-XLSX; no forman parte de la tabla del PDF de planilla. */
+  { id: 'period', label: 'Período', order: 18, sourceField: 'period', source: 'standard' },
+  { id: 'status', label: 'Estado', order: 19, sourceField: 'status', source: 'standard' }
 ]
 
 const EMPLOYEES_COLUMNS: StandardColumnDef[] = [
@@ -41,12 +55,36 @@ const EMPLOYEES_COLUMNS: StandardColumnDef[] = [
   { id: 'hire_date', label: 'Fecha Ingreso', order: 6, sourceField: 'hire_date', source: 'standard' }
 ]
 
+/** Secciones/campos del recibo de pago (denarius) — visibilidad y etiquetas en PDF. */
+const VOUCHER_COLUMNS: StandardColumnDef[] = [
+  { id: 'emp_code', label: 'Código', order: 1, sourceField: 'employee_code', source: 'standard' },
+  { id: 'emp_name', label: 'Nombre', order: 2, sourceField: 'employee_name', source: 'standard' },
+  { id: 'department', label: 'Departamento', order: 3, sourceField: 'department', source: 'standard' },
+  { id: 'position', label: 'Posición', order: 4, sourceField: 'position', source: 'standard' },
+  { id: 'period', label: 'Período', order: 5, sourceField: 'period', source: 'standard' },
+  { id: 'days_worked', label: 'Días trabajados', order: 6, sourceField: 'days_worked', source: 'standard' },
+  { id: 'base_salary', label: 'Salario base', order: 7, sourceField: 'base_salary', source: 'standard' },
+  { id: 'septimo_dia', label: 'Séptimo día', order: 8, sourceField: 'septimo_dia', source: 'standard' },
+  { id: 'overtime_pay', label: 'Horas extras', order: 9, sourceField: 'overtime_pay', source: 'standard' },
+  { id: 'ihss', label: 'IHSS', order: 10, sourceField: 'social_security', source: 'standard' },
+  { id: 'rap', label: 'RAP', order: 11, sourceField: 'professional_tax', source: 'standard' },
+  { id: 'isr', label: 'ISR', order: 12, sourceField: 'income_tax', source: 'standard' },
+  { id: 'custom_deductions', label: 'Deducciones adicionales', order: 13, sourceField: 'custom_deductions', source: 'standard' },
+  { id: 'total_deductions', label: 'Total deducciones', order: 14, sourceField: 'total_deductions', source: 'standard' },
+  { id: 'net_salary', label: 'Total a recibir', order: 15, sourceField: 'net_salary', source: 'standard' },
+  { id: 'bank_name', label: 'Banco', order: 16, sourceField: 'bank_name', source: 'standard' },
+  { id: 'bank_account', label: 'Cuenta bancaria', order: 17, sourceField: 'bank_account', source: 'standard' },
+  { id: 'legal_notes', label: 'Notas legales', order: 18, sourceField: 'legal_notes', source: 'standard' },
+  { id: 'signatures', label: 'Firmas', order: 19, sourceField: 'signatures', source: 'standard' }
+]
+
 const STANDARD_COLUMNS: Record<ReportType, StandardColumnDef[]> = {
   attendance: ATTENDANCE_COLUMNS,
   payroll: PAYROLL_COLUMNS,
   employees: EMPLOYEES_COLUMNS,
   work_certificate: [],
-  severance: []
+  severance: [],
+  voucher: VOUCHER_COLUMNS
 }
 
 export function getStandardColumns(reportType: ReportType): StandardColumnDef[] {

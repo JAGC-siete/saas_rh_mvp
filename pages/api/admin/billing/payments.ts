@@ -3,6 +3,7 @@ import { createAdminClient } from '../../../../lib/supabase/server'
 import { logger } from '../../../../lib/logger'
 import { requireSuperAdmin } from '../../../../lib/auth/api-auth-fixed'
 import { createSecureErrorResponse } from '../../../../lib/security/error-handling'
+import { activateFromQuote } from '../../../../lib/billing/activate-from-quote'
 
 interface PaymentsResponse {
   success: boolean
@@ -81,6 +82,8 @@ async function getPayments(req: NextApiRequest, res: NextApiResponse<PaymentsRes
         reference,
         paid_at,
         created_by,
+        quote_id,
+        payment_kind,
         companies (
           id,
           name
@@ -185,7 +188,7 @@ async function createPayment(
 ) {
   try {
     const adminClient = createAdminClient()
-    const { company_id, amount_hnl, reference, paid_at } = req.body
+    const { company_id, amount_hnl, reference, paid_at, quote_id, payment_kind } = req.body
 
     // Validate required fields
     if (!company_id || !amount_hnl) {
@@ -221,37 +224,66 @@ async function createPayment(
       })
     }
 
-    // Create payment
+    const defaultReference =
+      reference ||
+      (quote_id
+        ? `Cotización ${String(quote_id).slice(0, 8)} — 50% anticipo`
+        : 'Payment by super admin')
+
+    let activation
+    try {
+      activation = await activateFromQuote(adminClient, {
+        companyId: company_id,
+        amountHnl: amount,
+        reference: defaultReference,
+        createdBy: userId,
+        quoteId: quote_id || null,
+        paidAt: paid_at || new Date().toISOString(),
+        paymentKind: payment_kind || 'deposit',
+      })
+    } catch (activationError: any) {
+      const msg = activationError?.message || 'ACTIVATION_FAILED'
+      if (msg === 'QUOTE_NOT_FOUND') {
+        return res.status(404).json({
+          success: false,
+          error: 'Quote not found',
+          message: 'No hay cotización enviada vinculada a esta empresa',
+        })
+      }
+      throw activationError
+    }
+
     const { data: payment, error: paymentError } = await adminClient
       .from('manual_payments')
-      .insert({
-        company_id,
-        amount_hnl: amount,
-        reference: reference || `Payment by super admin`,
-        paid_at: paid_at || new Date().toISOString(),
-        created_by: userId
-      })
-      .select()
+      .select('id, company_id, amount_hnl, reference, paid_at, created_by, quote_id, payment_kind')
+      .eq('id', activation.payment_id)
       .single()
 
     if (paymentError) {
       throw paymentError
     }
 
-    logger.info('Payment created', {
+    logger.info('Payment created via activate-from-quote', {
       paymentId: payment.id,
       companyId: company_id,
+      quoteId: activation.quote_id,
+      activated: activation.activated,
       amount,
-      userId
+      userId,
     })
+
+    const activationNote = activation.activated
+      ? ' Suscripción activada.'
+      : ' Depósito registrado (monto insuficiente para activar plan).'
 
     return res.status(201).json({
       success: true,
-      message: 'Payment created successfully',
+      message: `Payment created successfully.${activationNote}`,
       data: {
         ...payment,
-        company_name: company.name
-      }
+        company_name: company.name,
+        activation,
+      },
     })
   } catch (error) {
     logger.error('Error creating payment', error)

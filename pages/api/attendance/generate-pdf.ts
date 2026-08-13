@@ -3,7 +3,7 @@ import { requireCompanyAccess } from "../../../lib/auth/api-auth-fixed"
 import { getDateRange } from '../../../lib/attendance'
 import { createSecureQueryBuilder } from '../../../lib/security/secure-queries'
 import { generateAttendancePDF } from '../../../lib/pdf/attendance-pdf-generator'
-import { canExportReports, EXPORT_REPORTS_FORBIDDEN } from '../../../lib/security/permissions'
+import { canExportAttendanceReports, EXPORT_REPORTS_FORBIDDEN } from '../../../lib/security/permissions'
 
 /**
  * Divine PDF Generation Endpoint
@@ -35,7 +35,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })
     }
 
-    if (!canExportReports(userRole, userProfile)) {
+    if (!canExportAttendanceReports(userRole, userProfile)) {
       return res.status(EXPORT_REPORTS_FORBIDDEN.status).json(EXPORT_REPORTS_FORBIDDEN.body)
     }
 

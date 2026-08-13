@@ -1,6 +1,20 @@
 /**
- * Plantillas de email para reportes de prestaciones (Honduras)
+ * Plantillas de email para reportes de prestaciones (Honduras) — Infraestructura Líquida.
  */
+
+import {
+  liquidCta,
+  liquidCtaWhatsApp,
+  liquidEmphasis,
+  liquidInfoBox,
+  liquidKeyValueTable,
+  liquidParagraph,
+  liquidPanel,
+  wrapLiquidEmail,
+} from '../emails/liquid-layout'
+import { PUBLIC_PRESTACIONES_CONFIG } from '../public-calculator/prestaciones-config'
+
+export type PrestacionesEmailAudience = 'empleado' | 'empresa'
 
 export interface PrestacionesEmailData {
   totalPagar: number
@@ -9,6 +23,9 @@ export interface PrestacionesEmailData {
   salarioBaseMensual: number
   salarioPromedioMensual: number
   antiguedadTexto: string
+  audience?: PrestacionesEmailAudience
+  useGodfatherFunnel?: boolean
+  godfatherKeyword?: string
   rubros: {
     preaviso: number
     cesantiaBruta: number
@@ -17,96 +34,121 @@ export interface PrestacionesEmailData {
     vacaciones: number
     aguinaldo: number
     decimoCuarto: number
+    reservaLaboralEnTotal: number
   }
+  reservaLaboralDisclaimer?: string
 }
 
 export function generatePrestacionesEmailSubject(): string {
   return 'Tu cálculo de prestaciones (Honduras) — Humano SISU'
 }
 
+function fmt(n: number): string {
+  return `L. ${Number(n || 0).toLocaleString('es-HN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+}
+
 export function generatePrestacionesEmailHTML(data: PrestacionesEmailData): string {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://humanosisu.net'
+  const source = 'calculadora-prestaciones'
+  const activarUrl = `${siteUrl}/activar?country=HND&utm_source=${source}&utm_medium=email&utm_campaign=pdf-report`
+  const ventasUrl = `${siteUrl}/ventas?utm_source=${source}&utm_medium=email&utm_campaign=empresa-pdf`
   const supportWhatsAppUrl = `https://api.whatsapp.com/send/?phone=50432226773&text=${encodeURIComponent(
-    'Hola Jorge, revisé mi cálculo de prestaciones laborales y tengo una pregunta.'
+    'Hola, revisé mi cálculo de prestaciones laborales en Humano SISU y tengo una pregunta.'
   )}`
-  const fmt = (n: number) => `L. ${Number(n || 0).toLocaleString('es-HN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
-  return `
-    <div style="font-family: Arial, sans-serif; max-width: 640px; margin: 0 auto; padding: 20px;">
-      <div style="background: linear-gradient(135deg, #0b4fa1 0%, #1976d2 100%); padding: 26px; text-align: center; color: white; border-radius: 10px 10px 0 0;">
-        <h1 style="margin: 0; font-size: 22px;">Humano SISU</h1>
-        <p style="margin: 10px 0 0 0; font-size: 14px; opacity: 0.9;">Cálculo de prestaciones (Honduras)</p>
-      </div>
-      
-      <div style="background: #f8f9fa; padding: 24px; border-radius: 0 0 10px 10px;">
-        <p style="color: #333; margin-top: 0;">Aquí tienes tu estimación. Adjuntamos un PDF con el detalle.</p>
+  const summaryTable = liquidKeyValueTable([
+    { label: 'Total estimado', value: fmt(data.totalPagar), emphasize: true },
+    { label: 'Motivo', value: data.motivoSalida },
+    { label: 'Antigüedad (360)', value: data.antiguedadTexto },
+    { label: 'Salario base mensual', value: fmt(data.salarioBaseMensual) },
+    { label: 'Salario promedio mensual', value: fmt(data.salarioPromedioMensual) },
+  ])
 
-        <div style="background: white; padding: 16px; border-radius: 10px; margin: 16px 0; border-left: 4px solid #0b4fa1;">
-          <h3 style="color: #333; margin-top: 0;">Resumen</h3>
-          <table style="width: 100%; border-collapse: collapse;">
-            <tr>
-              <td style="padding: 6px 0; color: #666;">Total estimado:</td>
-              <td style="padding: 6px 0; text-align: right; font-weight: bold; color: #2e7d32;">${fmt(data.totalPagar)}</td>
-            </tr>
-            <tr>
-              <td style="padding: 6px 0; color: #666;">Motivo:</td>
-              <td style="padding: 6px 0; text-align: right; color: #333;">${data.motivoSalida}</td>
-            </tr>
-            <tr>
-              <td style="padding: 6px 0; color: #666;">Antigüedad (360):</td>
-              <td style="padding: 6px 0; text-align: right; color: #333;">${data.antiguedadTexto}</td>
-            </tr>
-            <tr>
-              <td style="padding: 6px 0; color: #666;">Salario base mensual:</td>
-              <td style="padding: 6px 0; text-align: right; color: #333;">${fmt(data.salarioBaseMensual)}</td>
-            </tr>
-            <tr>
-              <td style="padding: 6px 0; color: #666;">Salario promedio mensual:</td>
-              <td style="padding: 6px 0; text-align: right; color: #333;">${fmt(data.salarioPromedioMensual)}</td>
-            </tr>
-          </table>
-        </div>
+  const desgloseTable = liquidKeyValueTable([
+    { label: 'Preaviso', value: fmt(data.rubros.preaviso) },
+    { label: 'Cesantía (bruta)', value: fmt(data.rubros.cesantiaBruta) },
+    { label: 'RAP aplicado', value: fmt(data.rubros.rapAplicado) },
+    { label: 'Cesantía (neta)', value: fmt(data.rubros.cesantiaNeta) },
+    { label: 'Vacaciones', value: fmt(data.rubros.vacaciones) },
+    { label: '13vo proporcional', value: fmt(data.rubros.aguinaldo) },
+    { label: '14vo proporcional', value: fmt(data.rubros.decimoCuarto) },
+    { label: 'Reserva laboral', value: fmt(data.rubros.reservaLaboralEnTotal) },
+  ])
 
-        <div style="background: white; padding: 16px; border-radius: 10px; margin: 16px 0;">
-          <h3 style="color: #333; margin-top: 0;">Desglose</h3>
-          <table style="width: 100%; border-collapse: collapse;">
-            <tr><td style="padding: 6px 0; color: #666;">Preaviso:</td><td style="padding: 6px 0; text-align: right;">${fmt(data.rubros.preaviso)}</td></tr>
-            <tr><td style="padding: 6px 0; color: #666;">Cesantía (bruta):</td><td style="padding: 6px 0; text-align: right;">${fmt(data.rubros.cesantiaBruta)}</td></tr>
-            <tr><td style="padding: 6px 0; color: #666;">RAP aplicado:</td><td style="padding: 6px 0; text-align: right;">${fmt(data.rubros.rapAplicado)}</td></tr>
-            <tr><td style="padding: 6px 0; color: #666;">Cesantía (neta):</td><td style="padding: 6px 0; text-align: right;">${fmt(data.rubros.cesantiaNeta)}</td></tr>
-            <tr><td style="padding: 6px 0; color: #666;">Vacaciones:</td><td style="padding: 6px 0; text-align: right;">${fmt(data.rubros.vacaciones)}</td></tr>
-            <tr><td style="padding: 6px 0; color: #666;">13vo proporcional:</td><td style="padding: 6px 0; text-align: right;">${fmt(data.rubros.aguinaldo)}</td></tr>
-            <tr><td style="padding: 6px 0; color: #666;">14vo proporcional:</td><td style="padding: 6px 0; text-align: right;">${fmt(data.rubros.decimoCuarto)}</td></tr>
-          </table>
-        </div>
+  const isEmpresa = data.audience === 'empresa'
+  const keyword =
+    data.godfatherKeyword ?? PUBLIC_PRESTACIONES_CONFIG.funnel.godfatherKeyword
 
-        <div style="background: #fff3cd; padding: 14px; border-radius: 10px; margin: 16px 0; border-left: 4px solid #ffc107;">
-          <p style="margin: 0; color: #856404; font-size: 13px; line-height: 1.5;">
-            <strong>Nota:</strong> Esta es una estimación orientativa basada en normativa laboral de Honduras (año comercial 360 días).
-            Puede variar según salario promedio real, extras, políticas internas y condiciones específicas del caso.
-          </p>
-        </div>
+  const godfatherBlocks =
+    data.useGodfatherFunnel && !isEmpresa
+      ? [
+          liquidParagraph('Tu liquidación está adjunta. Pero aquí va la verdad:'),
+          liquidParagraph(
+            `Si me contestas este correo diciendo <strong>"${keyword}"</strong>, te envío un PDF de una sola página que puedes dejar "olvidado" en la impresora de tu oficina o enviárselo a tu jefe.`
+          ),
+          liquidParagraph(
+            'Es una comparativa de cuánto dinero pierde la empresa por liquidar finiquitos a mano. Tú no pides nada — solo "ayudas" a que la empresa sea más eficiente.'
+          ),
+          liquidParagraph('<strong>P.D.</strong> ¿Cuánto tardan en liquidarte cuando renuncias o te despiden?'),
+        ]
+      : []
 
-        <div style="text-align: center; margin: 22px 0;">
-          <p style="color: #666; font-size: 15px; margin-bottom: 12px;">
-            <strong>¿Automatizamos nómina y cálculos en tu empresa?</strong>
-          </p>
-          <a href="${siteUrl}/activar"
-             style="background: #0b4fa1; color: white; padding: 12px 26px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: bold;">
-            Activar gratis
-          </a>
-        </div>
+  const empresaPitch = isEmpresa
+    ? [
+        liquidParagraph(
+          `${liquidEmphasis('¿Liquidas a 1 empleado aquí, pero tienes toda una planilla?')}`
+        ),
+        liquidParagraph(
+          'Humano SISU automatiza cesantía, preaviso, vacaciones, 13vo y 14vo para todo tu equipo — desde asistencia biométrica hasta comprobantes.'
+        ),
+        liquidCta(ventasUrl, 'Agendar demo corta'),
+        liquidCta(activarUrl, 'Activar Humano SISU gratis'),
+      ]
+    : []
 
-        <p style="color: #666; font-size: 13px; margin-top: 18px;">
-          Humano SISU — RRHH y nómina regional (HN, SV, GT)
-        </p>
+  const employeeSharePitch =
+    data.useGodfatherFunnel && !isEmpresa
+      ? []
+      : !isEmpresa
+        ? [
+            liquidParagraph(`${liquidEmphasis('¿Tus compañeros también están saliendo de la empresa?')}`),
+            liquidCtaWhatsApp(supportWhatsAppUrl, 'Compartir calculadora por WhatsApp'),
+          ]
+        : []
 
-        <div style="text-align: center; margin: 20px 0;">
-          <a href="${supportWhatsAppUrl}" style="display: inline-block; padding: 12px 24px; background-color: #25D366; color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: bold; font-family: Arial, sans-serif;">
-            💬 Contactar vía WhatsApp
-          </a>
-        </div>
-      </div>
-    </div>
-  `
+  const standardPitch =
+    data.useGodfatherFunnel || isEmpresa
+      ? []
+      : [
+          liquidParagraph(
+            `${liquidEmphasis('Deja de calcular finiquitos en Excel.')} Humano SISU automatiza liquidaciones con el mismo motor que usaste aquí.`
+          ),
+          liquidCta(activarUrl, 'Activar gratis 30 días'),
+          liquidCtaWhatsApp(supportWhatsAppUrl, 'Agendar demo'),
+        ]
+
+  const bodyHtml = [
+    liquidParagraph('Aquí tienes tu estimación. Adjuntamos un PDF con el detalle.'),
+    liquidPanel(summaryTable, 'Resumen'),
+    liquidPanel(desgloseTable, 'Desglose'),
+    liquidInfoBox(
+      '<strong>Nota:</strong> Estimación orientativa según normativa laboral de Honduras (año comercial 360 días). Puede variar según salario promedio real, extras y condiciones del caso.',
+      'warning'
+    ),
+    data.reservaLaboralDisclaimer
+      ? liquidInfoBox(`<strong>Reserva laboral:</strong> ${data.reservaLaboralDisclaimer}`, 'warning')
+      : '',
+    ...godfatherBlocks,
+    ...empresaPitch,
+    ...employeeSharePitch,
+    ...standardPitch,
+    liquidParagraph('<strong>Humano SISU</strong> — RRHH y nómina regional (El Salvador, Guatemala y Honduras)'),
+  ].join('')
+
+  return wrapLiquidEmail({
+    title: 'Cálculo de prestaciones',
+    subtitle: 'Honduras — estimación orientativa',
+    badge: 'Calculadora',
+    bodyHtml,
+  })
 }

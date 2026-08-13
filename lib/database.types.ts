@@ -572,6 +572,102 @@ export type Database = {
           },
         ]
       }
+      cotizaciones: {
+        Row: {
+          company_id: string | null
+          contact_email: string
+          contact_name: string | null
+          company_name: string | null
+          coupon_applied: boolean
+          coupon_code_submitted: string | null
+          created_at: string
+          currency: string
+          discount_amount: number
+          discount_pct_applied: number
+          email_message_id: string | null
+          employees_count: number
+          expected_deposit_hnl: number | null
+          expected_total_hnl: number | null
+          id: string
+          meta: Json
+          payment_status: string
+          phone: string | null
+          pricing_tier_id: string | null
+          pricing_tier_snapshot: Json | null
+          status: string
+          subtotal: number
+          terminals_count: number | null
+          total: number
+        }
+        Insert: {
+          company_id?: string | null
+          contact_email: string
+          contact_name?: string | null
+          company_name?: string | null
+          coupon_applied?: boolean
+          coupon_code_submitted?: string | null
+          created_at?: string
+          currency?: string
+          discount_amount?: number
+          discount_pct_applied?: number
+          email_message_id?: string | null
+          employees_count: number
+          expected_deposit_hnl?: number | null
+          expected_total_hnl?: number | null
+          id?: string
+          meta?: Json
+          payment_status?: string
+          phone?: string | null
+          pricing_tier_id?: string | null
+          pricing_tier_snapshot?: Json | null
+          status?: string
+          subtotal: number
+          terminals_count?: number | null
+          total: number
+        }
+        Update: {
+          company_id?: string | null
+          contact_email?: string
+          contact_name?: string | null
+          company_name?: string | null
+          coupon_applied?: boolean
+          coupon_code_submitted?: string | null
+          created_at?: string
+          currency?: string
+          discount_amount?: number
+          discount_pct_applied?: number
+          email_message_id?: string | null
+          employees_count?: number
+          expected_deposit_hnl?: number | null
+          expected_total_hnl?: number | null
+          id?: string
+          meta?: Json
+          payment_status?: string
+          phone?: string | null
+          pricing_tier_id?: string | null
+          pricing_tier_snapshot?: Json | null
+          status?: string
+          subtotal?: number
+          terminals_count?: number | null
+          total?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cotizaciones_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cotizaciones_pricing_tier_id_fkey"
+            columns: ["pricing_tier_id"]
+            isOneToOne: false
+            referencedRelation: "config_ventas_pricing_tiers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       company_meters: {
         Row: {
           attendances_recorded: number
@@ -1233,6 +1329,58 @@ export type Database = {
           },
         ]
       }
+      employee_habits: {
+        Row: {
+          active: boolean
+          company_id: string
+          created_at: string
+          employee_id: string
+          habit_id: number
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          company_id: string
+          created_at?: string
+          employee_id: string
+          habit_id: number
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          company_id?: string
+          created_at?: string
+          employee_id?: string
+          habit_id?: number
+          id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_habits_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_habits_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_habits_habit_id_fkey"
+            columns: ["habit_id"]
+            isOneToOne: false
+            referencedRelation: "habit_definitions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employee_invitations: {
         Row: {
           accepted_at: string | null
@@ -1368,7 +1516,7 @@ export type Database = {
       }
       employees: {
         Row: {
-          address: Json | null
+          address: string | null
           bank_account: string | null
           bank_name: string | null
           base_salary: number
@@ -1388,6 +1536,7 @@ export type Database = {
           is_b2c: boolean
           metadata: Json | null
           name: string
+          pay_overtime: boolean
           phone: string | null
           role: string | null
           status: string | null
@@ -1399,7 +1548,7 @@ export type Database = {
           work_schedule_id: string | null
         }
         Insert: {
-          address?: Json | null
+          address?: string | null
           bank_account?: string | null
           bank_name?: string | null
           base_salary: number
@@ -1417,6 +1566,7 @@ export type Database = {
           is_b2c?: boolean
           metadata?: Json | null
           name: string
+          pay_overtime?: boolean
           phone?: string | null
           role?: string | null
           status?: string | null
@@ -1428,7 +1578,7 @@ export type Database = {
           work_schedule_id?: string | null
         }
         Update: {
-          address?: Json | null
+          address?: string | null
           bank_account?: string | null
           bank_name?: string | null
           base_salary?: number
@@ -1446,6 +1596,7 @@ export type Database = {
           is_b2c?: boolean
           metadata?: Json | null
           name?: string
+          pay_overtime?: boolean
           phone?: string | null
           role?: string | null
           status?: string | null
@@ -1476,6 +1627,91 @@ export type Database = {
             columns: ["work_schedule_id"]
             isOneToOne: false
             referencedRelation: "work_schedules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      habit_definitions: {
+        Row: {
+          area: string
+          created_at: string
+          description: string | null
+          icon: string
+          id: number
+          is_active: boolean
+          name: string
+          points_per_completion: number
+          sort_order: number
+        }
+        Insert: {
+          area: string
+          created_at?: string
+          description?: string | null
+          icon?: string
+          id?: number
+          is_active?: boolean
+          name: string
+          points_per_completion?: number
+          sort_order?: number
+        }
+        Update: {
+          area?: string
+          created_at?: string
+          description?: string | null
+          icon?: string
+          id?: number
+          is_active?: boolean
+          name?: string
+          points_per_completion?: number
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      habit_logs: {
+        Row: {
+          company_id: string
+          created_at: string
+          employee_id: string
+          habit_id: number
+          id: string
+          log_date: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          employee_id: string
+          habit_id: number
+          id?: string
+          log_date?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          employee_id?: string
+          habit_id?: number
+          id?: string
+          log_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "habit_logs_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "habit_logs_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "habit_logs_habit_id_fkey"
+            columns: ["habit_id"]
+            isOneToOne: false
+            referencedRelation: "habit_definitions"
             referencedColumns: ["id"]
           },
         ]
@@ -1675,6 +1911,8 @@ export type Database = {
           created_by: string | null
           id: string
           paid_at: string
+          payment_kind: string
+          quote_id: string | null
           reference: string | null
         }
         Insert: {
@@ -1683,6 +1921,8 @@ export type Database = {
           created_by?: string | null
           id?: string
           paid_at?: string
+          payment_kind?: string
+          quote_id?: string | null
           reference?: string | null
         }
         Update: {
@@ -1691,6 +1931,8 @@ export type Database = {
           created_by?: string | null
           id?: string
           paid_at?: string
+          payment_kind?: string
+          quote_id?: string | null
           reference?: string | null
         }
         Relationships: [
@@ -1699,6 +1941,13 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "manual_payments_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "cotizaciones"
             referencedColumns: ["id"]
           },
         ]
@@ -2438,6 +2687,8 @@ export type Database = {
           date_modified: string | null
           image: string | null
           author: string | null
+          status: string
+          category: string
           created_at: string
           updated_at: string
         }
@@ -2451,6 +2702,8 @@ export type Database = {
           date_modified?: string | null
           image?: string | null
           author?: string | null
+          status?: string
+          category?: string
           created_at?: string
           updated_at?: string
         }
@@ -2464,6 +2717,8 @@ export type Database = {
           date_modified?: string | null
           image?: string | null
           author?: string | null
+          status?: string
+          category?: string
           created_at?: string
           updated_at?: string
         }
@@ -3090,6 +3345,19 @@ export type Database = {
       }
     }
     Functions: {
+      activate_from_quote: {
+        Args: {
+          p_amount_hnl: number
+          p_company_id: string
+          p_created_by?: string
+          p_paid_at?: string
+          p_payment_kind?: string
+          p_plan_type?: string
+          p_quote_id?: string
+          p_reference: string
+        }
+        Returns: Json
+      }
       apply_payroll_adjustment: {
         Args: {
           p_company_id: string

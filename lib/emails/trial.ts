@@ -2,6 +2,7 @@ import { emailService } from '../email-service'
 import { notificationManager } from '../notification-providers'
 import {
   escapeHtml,
+  transactionalEmphasis,
   transactionalBulletList,
   transactionalCta,
   transactionalInfoBox,
@@ -27,7 +28,7 @@ export async function sendTrialStartedEmail(data: TrialStartedEmailData) {
 
   const bodyHtml = [
     transactionalParagraph(
-      `Tu periodo de prueba ha comenzado. Tienes <strong style="color: #1a1a1a;">${daysRemaining} días</strong> para explorar la plataforma.`
+      `Tu periodo de prueba ha comenzado. Tienes ${transactionalEmphasis(`${daysRemaining} días`)} para explorar la plataforma.`
     ),
     transactionalBulletList([
       'Gestión de empleados y departamentos',

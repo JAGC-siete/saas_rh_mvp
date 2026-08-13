@@ -1,3 +1,4 @@
+/** @deprecated OTP-only login superseded by EmployeePasswordLogin. Kept for reference if OTP flow is re-enabled. */
 import { useState } from 'react'
 import { Button } from '../ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card'
@@ -141,7 +142,7 @@ export default function EmployeeLogin({ onLoginSuccess }: EmployeeLoginProps) {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 p-4">
-      <Card className="w-full max-w-md glass-strong">
+      <Card variant="liquid" className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="mx-auto w-16 h-16 bg-brand-600 rounded-full flex items-center justify-center mb-4">
             <span className="text-2xl font-bold text-white">P</span>

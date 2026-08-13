@@ -2,15 +2,13 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import Head from 'next/head'
 import Link from 'next/link'
-import dynamic from 'next/dynamic'
-const CloudBackground = dynamic(() => import('../../components/CloudBackground'), { ssr: false })
+import PublicPageShell from '../../components/landing/PublicPageShell'
 import { Card, CardContent } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
 import { Mail, Phone, /* Facebook, */ Loader2 } from 'lucide-react'
 import Image from 'next/image'
 import { createClient as createSupabaseBrowserClient } from '../../lib/supabase/client'
-import MainHeader from '../../components/MainHeader'
 
 export default function AuthStart() {
   const [email, setEmail] = useState('')
@@ -254,15 +252,8 @@ export default function AuthStart() {
         <meta name="description" content="Accede a tu cuenta de forma segura" />
       </Head>
 
-      <div className="min-h-screen bg-app flex flex-col relative">
-        {/* Header */}
-        <MainHeader enableScrollEffect={false} fixed={true} />
-        
-        <div className="flex-grow flex items-center justify-center p-4 pt-24 relative">
-          <CloudBackground />
-          <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiMxZTI5M2IiIGZpbGwtb3BhY2l0eT0iMC4xIj48Y2lyY2xlIGN4PSIzMCIgY3k9IjMwIiByPSI0Ii8+PC9nPjwvZz48L3N2Zz4=')] opacity-20"></div>
-          
-          <div className="relative w-full max-w-md space-y-8 z-10">
+      <PublicPageShell centered showFooter={false}>
+        <div className="w-full max-w-md space-y-8 p-4">
           {/* Header */}
           <div className="text-center">
             {/* Badges */}
@@ -307,7 +298,7 @@ export default function AuthStart() {
           </div>
 
           {/* Auth Form */}
-          <Card variant="glass" className="shadow-xl">
+          <Card variant="liquid" className="shadow-xl">
             <CardContent className="p-8">
               {step === 'method' && (
                 <div className="space-y-4">
@@ -379,7 +370,7 @@ export default function AuthStart() {
                     </div>
 
                     {error && (
-                      <div className="text-red-200 text-sm glass-strong p-3 rounded-md">
+                      <div className="text-red-200 text-sm glass-modern p-3 rounded-md">
                         {error}
                       </div>
                     )}
@@ -417,7 +408,7 @@ export default function AuthStart() {
               {step === 'email' && (
                 <div className="space-y-4">
                   <div className="text-center">
-                    <div className="text-green-400 text-sm glass-strong p-3 rounded-md">
+                    <div className="text-green-400 text-sm glass-modern p-3 rounded-md">
                       <div className="font-semibold mb-2">¡Enlace enviado exitosamente!</div>
                       <div>Revisá tu bandeja de entrada (o carpeta de spam).</div>
                       <div className="mt-1 text-xs">Asunto: "Tu acceso a Humano SISU" - Válido por 1 hora</div>
@@ -444,7 +435,7 @@ export default function AuthStart() {
                     </div>
 
                     {error && (
-                      <div className="text-red-200 text-sm glass-strong p-3 rounded-md">
+                      <div className="text-red-200 text-sm glass-modern p-3 rounded-md">
                         {error}
                       </div>
                     )}
@@ -493,7 +484,7 @@ export default function AuthStart() {
                   </div>
 
                   {error && (
-                    <div className="text-red-200 text-sm glass-strong p-3 rounded-md">
+                    <div className="text-red-200 text-sm glass-modern p-3 rounded-md">
                       {error}
                     </div>
                   )}
@@ -525,9 +516,8 @@ export default function AuthStart() {
               Sesión segura. Podés desvincular el acceso cuando quieras.
             </p>
           </div>
-          </div>
         </div>
-      </div>
+      </PublicPageShell>
     </>
   )
 }

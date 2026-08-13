@@ -58,3 +58,38 @@ export function executiveBreakdownLabel(groupBy: PayrollPdfGroupBy): string {
   if (groupBy === 'position') return 'TOTALES POR POSICIÓN:'
   return 'TOTALES POR DEPARTAMENTO:'
 }
+
+export type ExecutiveBreakdownEntry = {
+  key: string
+  count: number
+  net: number
+}
+
+/**
+ * Lines for PDF page-1 executive breakdown.
+ * Stable alpha order; if entries exceed maxLines, last line is "+N más …".
+ */
+export function buildExecutiveBreakdownLines(
+  entries: ExecutiveBreakdownEntry[],
+  options: { maxLines: number; formatNet: (net: number) => string }
+): string[] {
+  const maxLines = Math.max(1, Math.floor(options.maxLines))
+  const sorted = [...entries].sort((a, b) => a.key.localeCompare(b.key, 'es'))
+  const fmt = (e: ExecutiveBreakdownEntry) =>
+    `${e.key}: ${e.count} emp. - ${options.formatNet(e.net)}`
+
+  if (sorted.length <= maxLines) {
+    return sorted.map(fmt)
+  }
+
+  const showCount = Math.max(1, maxLines - 1)
+  const shown = sorted.slice(0, showCount)
+  const rest = sorted.slice(showCount)
+  const restEmployees = rest.reduce((s, e) => s + e.count, 0)
+  const restNet = rest.reduce((s, e) => s + e.net, 0)
+  return [
+    ...shown.map(fmt),
+    `+${rest.length} más (${restEmployees} emp.) - ${options.formatNet(restNet)}`,
+  ]
+}
+

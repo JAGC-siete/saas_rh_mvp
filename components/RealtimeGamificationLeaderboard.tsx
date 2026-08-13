@@ -154,7 +154,7 @@ export default memo(function RealtimeGamificationLeaderboard({
 
   if (loading) {
     return (
-      <Card variant="glass">
+      <Card variant="liquid">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-white">
             <TrophyIcon className="h-6 w-6 text-yellow-500" />
@@ -173,7 +173,7 @@ export default memo(function RealtimeGamificationLeaderboard({
 
   if (error) {
     return (
-      <Card variant="glass">
+      <Card variant="liquid">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-white">
             <TrophyIcon className="h-6 w-6 text-yellow-500" />
@@ -197,7 +197,7 @@ export default memo(function RealtimeGamificationLeaderboard({
 
   if (leaderboard.length === 0) {
     return (
-      <Card variant="glass">
+      <Card variant="liquid">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-white">
             <TrophyIcon className="h-6 w-6 text-yellow-500" />
@@ -215,7 +215,7 @@ export default memo(function RealtimeGamificationLeaderboard({
   }
 
   return (
-    <Card variant="glass">
+    <Card variant="liquid">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-white">
           <TrophyIcon className="h-6 w-6 text-yellow-500" />

@@ -1,16 +1,21 @@
 import type { ReportType, ReportConfig, BrandingConfig } from './report-config-schema'
 import { getStandardColumns } from './standard-columns'
+import { parseReportsMetadata } from '../company-branding/storage'
 
 export interface ResolvedColumn {
   id: string
   label: string
   sourceField: string
   source: 'standard' | 'payroll_config'
+  /** Present when resolved from report config / standard catalog; optional on legacy fallbacks. */
+  order?: number
 }
 
 export interface ResolvedReportConfig {
   columns: ResolvedColumn[]
   branding: BrandingConfig
+  /** When true, payroll/voucher PDFs should only print custom_* columns present in `columns`. */
+  includeCustomPayrollFields: boolean
 }
 
 const DEFAULT_BRANDING: BrandingConfig = {
@@ -52,7 +57,25 @@ export async function resolveReportConfig(
   const standardColumns = getStandardColumns(reportType)
   const configColumns = dbConfig?.columns ?? []
   const includeCustomPayrollFields = dbConfig?.includeCustomPayrollFields ?? false
-  const branding = { ...DEFAULT_BRANDING, ...dbConfig?.branding }
+
+  let companyLogoBranding: Partial<BrandingConfig> = {}
+  try {
+    const { data: metaRow } = await supabase
+      .from('company_metadata')
+      .select('reports_metadata')
+      .eq('company_id', companyId)
+      .maybeSingle()
+    const companyReports = parseReportsMetadata(metaRow?.reports_metadata)
+    if (companyReports.branding?.logo_storage_path) {
+      companyLogoBranding = {
+        logoStoragePath: companyReports.branding.logo_storage_path,
+      }
+    }
+  } catch {
+    // Non-fatal: reports work without logo
+  }
+
+  const branding = { ...DEFAULT_BRANDING, ...companyLogoBranding, ...dbConfig?.branding }
 
   const columnMap = new Map<string, { label: string; visible: boolean; order: number; source?: 'standard' | 'payroll_config'; sourceField?: string }>()
   for (const sc of standardColumns) {
@@ -66,7 +89,7 @@ export async function resolveReportConfig(
     })
   }
 
-  if (reportType === 'payroll' && includeCustomPayrollFields) {
+  if ((reportType === 'payroll' || reportType === 'voucher') && includeCustomPayrollFields) {
     const { data: payrollConfig } = await supabase
       .from('company_payroll_configs')
       .select('custom_fields')
@@ -109,7 +132,8 @@ export async function resolveReportConfig(
       id,
       label: v.label,
       sourceField: v.sourceField ?? id,
-      source: (v.source ?? 'standard') as 'standard' | 'payroll_config'
+      source: (v.source ?? 'standard') as 'standard' | 'payroll_config',
+      order: v.order
     }))
 
   if (resolved.length === 0 && standardColumns.length > 0) {
@@ -118,11 +142,13 @@ export async function resolveReportConfig(
         id: sc.id,
         label: sc.label,
         sourceField: sc.sourceField,
-        source: 'standard' as const
+        source: 'standard' as const,
+        order: sc.order
       })),
-      branding
+      branding,
+      includeCustomPayrollFields
     }
   }
 
-  return { columns: resolved, branding }
+  return { columns: resolved, branding, includeCustomPayrollFields }
 }

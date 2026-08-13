@@ -3,6 +3,7 @@ import { useRouter } from 'next/router'
 import Link from 'next/link'
 import { useAuth } from '../lib/auth'
 import { Button } from './ui/button'
+import AppMeshShell from './landing/AppMeshShell'
 import { SessionExpiryWarning, useSessionExpiryMonitor } from './SessionExpiryWarning'
 import { SessionStatusIndicator } from './SessionStatusIndicator'
 import { 
@@ -18,14 +19,19 @@ import {
   GiftIcon,
   BanknotesIcon,
   CalculatorIcon,
-  ScaleIcon
+  ScaleIcon,
+  LifebuoyIcon
 } from '@heroicons/react/24/outline'
 import { TrophyIcon } from '@heroicons/react/24/solid'
 import { ClipboardList } from 'lucide-react'
 import { ClipboardCheck } from 'lucide-react'
 import NotificationBell from './ui/NotificationBell'
+import HelpButton from './support/HelpButton'
 import { normalizePermissionsToCanonical } from '../lib/security/canonical-permissions'
 import { canAccessPayrollNavigation } from '../lib/auth/role-access'
+import { canAccessReportsModule } from '../lib/security/report-access'
+import { canAccessDeduccionesModule } from '../lib/security/deducciones-access'
+import { companyRoleLabel } from '../lib/company/users'
 
 interface DashboardLayoutProps {
   children: React.ReactNode
@@ -38,6 +44,7 @@ interface UserPermissions {
   attendance?: boolean
   leave?: boolean
   payroll?: boolean
+  deducciones?: boolean
   reports?: boolean
   gamification?: boolean
   settings?: boolean
@@ -50,6 +57,7 @@ interface UserPermissions {
 /** Ocultarse mientras cargan permisos o si el estado quedara ambiguo (fail-safe). */
 const GUARD_WHILE_RESOLVING: (keyof UserPermissions)[] = [
   'payroll',
+  'deducciones',
   'reports',
   'mtp',
   'performance',
@@ -66,6 +74,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     attendance: true,
     leave: true,
     payroll: false,
+    deducciones: false,
     reports: false,
     gamification: true,
     settings: false,
@@ -130,19 +139,20 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           // #endregion agent log
 
           const permissions: UserPermissions = {
-            dashboard: true,
-            employees: !!(canonical.can_view_employees ?? canonical.can_view_own_profile),
+            dashboard: !!canonical.can_access_dashboard,
+            employees: !!canonical.can_view_employees,
             departments: !!canonical.can_view_departments,
             attendance: !!canonical.can_view_attendance,
             leave: !!canonical.can_request_leave,
             payroll: showPayrollSidebarGroup && !!(canonical.can_view_payroll || canonical.can_manage_payroll),
-            reports: showPayrollSidebarGroup && !!canonical.can_view_reports,
-            gamification: true,
+            deducciones: canAccessDeduccionesModule(normalizedRole, rawPermissions),
+            reports: canAccessReportsModule(normalizedRole, rawPermissions),
+            gamification: !!canonical.can_access_dashboard,
             settings: !!(canonical.can_view_settings || canonical.can_create_work_schedules),
-            admin: isAdmin,
-            affiliates: true, // Show affiliates link to all users
-            mtp: !!showPayrollSidebarGroup,
-            performance: !!showPayrollSidebarGroup,
+            admin: isAdmin && !!canonical.can_access_dashboard,
+            affiliates: !!canonical.can_access_dashboard,
+            mtp: !!showPayrollSidebarGroup && rawPermissions?.mtp !== false,
+            performance: !!showPayrollSidebarGroup && rawPermissions?.performance !== false,
           }
           // #region agent log
           fetch('/api/__debug/log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'25b418',runId:'pre-fix',hypothesisId:'H3',location:'components/DashboardLayout.tsx:userProfileBranch(setUserPermissions)',message:'Setting UI permissions (userProfile branch)',data:{settings:permissions.settings,reports:permissions.reports,admin:permissions.admin},timestamp:Date.now()})}).catch(()=>{});
@@ -167,6 +177,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             attendance: false,
             leave: false,
             payroll: false,
+            deducciones: false,
             reports: false,
             gamification: false,
             settings: false,
@@ -192,6 +203,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             attendance: false,
             leave: false,
             payroll: false,
+            deducciones: false,
             reports: false,
             gamification: false,
             settings: false,
@@ -239,19 +251,20 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
         // Construir objeto de permisos final - FORZAR settings y admin basado en rol
         const permissions: UserPermissions = {
-          dashboard: true,
-          employees: !!(canonical.can_view_employees ?? canonical.can_view_own_profile),
+          dashboard: !!canonical.can_access_dashboard,
+          employees: !!canonical.can_view_employees,
           departments: !!canonical.can_view_departments,
           attendance: !!canonical.can_view_attendance,
           leave: !!canonical.can_request_leave,
           payroll: showPayrollSidebarGroup && !!(canonical.can_view_payroll || canonical.can_manage_payroll),
-          reports: showPayrollSidebarGroup && !!canonical.can_view_reports,
-          gamification: true,
+          deducciones: canAccessDeduccionesModule(normalizedRole, rawPermissions),
+          reports: canAccessReportsModule(normalizedRole, rawPermissions),
+          gamification: !!canonical.can_access_dashboard,
           settings: !!(canonical.can_view_settings || canonical.can_create_work_schedules),
-          admin: isAdmin,
-          affiliates: true, // Show affiliates link to all users
-          mtp: !!showPayrollSidebarGroup,
-          performance: !!showPayrollSidebarGroup,
+          admin: isAdmin && !!canonical.can_access_dashboard,
+          affiliates: !!canonical.can_access_dashboard,
+          mtp: !!showPayrollSidebarGroup && rawPermissions?.mtp !== false,
+          performance: !!showPayrollSidebarGroup && rawPermissions?.performance !== false,
         }
         // #region agent log
         fetch('/api/__debug/log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'25b418',runId:'pre-fix',hypothesisId:'H5',location:'components/DashboardLayout.tsx:apiProfileBranch(setUserPermissions)',message:'Setting UI permissions (API profile branch)',data:{settings:permissions.settings,reports:permissions.reports,admin:permissions.admin},timestamp:Date.now()})}).catch(()=>{});
@@ -277,6 +290,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           attendance: false,
           leave: false,
           payroll: false,
+          deducciones: false,
           reports: false,
           gamification: false,
           settings: false,
@@ -341,7 +355,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     { name: 'Permisos',         href: '/app/leave',                icon: UserIcon,              permission: 'leave' },
     { name: 'Nómina',           href: '/app/payroll',              icon: CurrencyDollarIcon,    permission: 'payroll',     feature_key: 'payroll' },
     { name: 'Cesantías',        href: '/app/cesantias',            icon: ScaleIcon,             permission: 'payroll',     feature_key: 'cesantias' },
-    { name: 'Deducciones',      href: '/app/deducciones',          icon: BanknotesIcon,         permission: 'payroll',     feature_key: 'deducciones' },
+    { name: 'Deducciones',      href: '/app/deducciones',          icon: BanknotesIcon,         permission: 'deducciones', feature_key: 'deducciones' },
     { name: '13 & 14 Salario',  href: '/app/13-14-salario',        icon: GiftIcon,              permission: 'payroll',     feature_key: 'decimo_13_14' },
     { name: 'Reportes',         href: '/app/reports',              icon: DocumentChartBarIcon,  permission: 'reports',     feature_key: 'reports' },
     { name: 'MTP Puestos',      href: '/app/mtp',                  icon: ClipboardList,         permission: 'mtp',         feature_key: 'mtp_job_descriptions' },
@@ -350,6 +364,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     // { name: 'Gamificación',  href: '/app/gamification',         icon: TrophyIcon,            permission: 'gamification' },
     // { name: 'Programa de Afiliados', href: '/app/affiliates',   icon: CurrencyDollarIcon,    permission: 'affiliates' },
     { name: 'Parametros',       href: '/app/settings',             icon: Cog6ToothIcon,         permission: 'settings' },
+    { name: 'Soporte',          href: '/app/support',              icon: LifebuoyIcon,          permission: 'dashboard' },
   ]
 
   // Filtrar navegación basada en permisos (rol) + features (plan/overrides).
@@ -392,15 +407,15 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   }, [filteredNavigation, userPermissions, loadingPermissions])
 
   return (
-    <div className="h-screen flex overflow-hidden bg-app">
-      {/* Hot zone invisible para activar hover en desktop */}
+    <AppMeshShell className="h-screen min-h-0">
       <div className="sidebar-hover-zone" aria-hidden="true" />
-      
-      {/* Sidebar */}
-      <div className={`dashboard-sidebar ${sidebarOpen ? 'w-64' : 'w-16'} glass-strong border-r border-white/10 transition-all duration-300 ease-in-out`}>
+
+      <aside
+        className={`dashboard-sidebar ${sidebarOpen ? 'w-64' : 'w-16'} relative glass-modern border-r border-white/10 transition-all duration-300 ease-in-out shadow-glass z-20 shrink-0`}
+      >
         <div className="flex flex-col h-full">
           {/* Header (sin logo) */}
-          <div className="flex items-center justify-between h-16 px-4 border-b border-white/10">
+          <div className="flex items-center justify-between h-16 px-4 border-b border-white/10 bg-white/5 backdrop-blur-lg">
             <div className="text-sm font-semibold text-white/90">
               {sidebarOpen ? 'SISU' : 'S'}
             </div>
@@ -422,10 +437,10 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 <Link
                   key={`nav-${index}`}
                   href={item.href}
-                  className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors ${
+                  className={`group flex items-center px-2 py-2 text-sm font-medium rounded-lg transition-all duration-200 border ${
                     isActive
-                      ? 'bg-brand-900 text-white'
-                      : 'text-gray-200 hover:bg-white/10 hover:text-white'
+                      ? 'bg-brand-600/20 text-white border-brand-400/30 shadow-sm'
+                      : 'text-white/70 hover:bg-white/10 hover:text-white border-transparent'
                   }`}
                   onClick={(e) => {
                     // Add explicit handling to ensure clicks are properly processed
@@ -434,7 +449,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 >
                   <item.icon
                     className={`mr-3 h-5 w-5 flex-shrink-0 ${
-                      isActive ? 'text-brand-400' : 'text-gray-300 group-hover:text-brand-400'
+                      isActive ? 'text-brand-400' : 'text-white/50 group-hover:text-white'
                     }`}
                   />
                   <span className={`nav-text-hidden whitespace-nowrap ${!sidebarOpen ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'}`}>
@@ -460,7 +475,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                   </div>
                   <div className="ml-3 flex-1 min-w-0">
                     <p className="text-sm font-medium text-white truncate">{user?.email}</p>
-                    <p className="text-xs text-gray-300">Usuario</p>
+                    <p className="text-xs text-gray-300">{companyRoleLabel(userProfile?.role)}</p>
                   </div>
                 </div>
                 <SessionStatusIndicator />
@@ -495,20 +510,18 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             </div>
           </div>
         </div>
-      </div>
+      </aside>
 
-      {/* Main content */}
-      <div className="flex-1 overflow-auto">
-        <div className="sticky top-0 z-40 border-b border-white/10 bg-black/20 backdrop-blur-md">
+      <div className="flex-1 flex flex-col overflow-hidden relative z-10 min-w-0">
+        <header className="glass-modern border-b border-white/10 shadow-glass shrink-0 sticky top-0 z-40">
           <div className="h-16 px-4 flex items-center justify-end">
             <NotificationBell />
           </div>
-        </div>
-        <main className="h-full">
-          {children}
-        </main>
+        </header>
+        <main className="flex-1 overflow-auto">{children}</main>
       </div>
-      
-    </div>
+
+      <HelpButton />
+    </AppMeshShell>
   )
 } 

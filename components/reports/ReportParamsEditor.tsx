@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
 import { DocumentChartBarIcon } from '@heroicons/react/24/outline'
+import CompanyLogoUpload from '../settings/CompanyLogoUpload'
 import {
   REPORT_TYPE_OPTIONS,
   type ReportConfig,
@@ -23,6 +24,7 @@ export default function ReportParamsEditor({ companyId, onSave }: ReportParamsEd
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+  const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null)
 
   const loadConfig = useCallback(async () => {
     if (!companyId) return
@@ -102,7 +104,9 @@ export default function ReportParamsEditor({ companyId, onSave }: ReportParamsEd
       const payload = {
         ...config,
         columns: columnsToSave,
-        ...(reportType === 'payroll' && { includeCustomPayrollFields: config.includeCustomPayrollFields ?? false })
+        ...((reportType === 'payroll' || reportType === 'voucher') && {
+          includeCustomPayrollFields: config.includeCustomPayrollFields ?? false
+        })
       }
       const res = await fetch(`/api/companies/${companyId}/report-configs`, {
         method: 'PUT',
@@ -126,7 +130,7 @@ export default function ReportParamsEditor({ companyId, onSave }: ReportParamsEd
 
   if (loading) {
     return (
-      <Card variant="glass" className="p-6">
+      <Card variant="liquid" className="p-6">
         <div className="flex items-center justify-center py-8">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-400" />
         </div>
@@ -136,7 +140,7 @@ export default function ReportParamsEditor({ companyId, onSave }: ReportParamsEd
 
   return (
     <div className="space-y-6">
-      <Card variant="glass" className="border border-white/10">
+      <Card variant="liquid" className="border border-white/10">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-white">
             <DocumentChartBarIcon className="h-5 w-5" />
@@ -173,8 +177,16 @@ export default function ReportParamsEditor({ companyId, onSave }: ReportParamsEd
             </select>
           </div>
 
+          <div className="rounded-lg border border-white/10 bg-white/5 p-4">
+            <h4 className="text-sm font-medium text-white mb-3">Identidad visual (empresa)</h4>
+            <p className="text-xs text-gray-400 mb-4">
+              El logo se aplica a todos los reportes y recibos PDF. Almacenado de forma privada en la plataforma.
+            </p>
+            <CompanyLogoUpload companyId={companyId} onLogoChange={setLogoPreviewUrl} />
+          </div>
+
           <div>
-            <h4 className="text-sm font-medium text-white mb-3">Branding</h4>
+            <h4 className="text-sm font-medium text-white mb-3">Branding del reporte</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs text-gray-400 mb-1">Color primario</label>
@@ -193,15 +205,6 @@ export default function ReportParamsEditor({ companyId, onSave }: ReportParamsEd
                 </div>
               </div>
               <div>
-                <label className="block text-xs text-gray-400 mb-1">URL del logo (opcional)</label>
-                <Input
-                  value={config.branding?.logoUrl ?? ''}
-                  onChange={(e) => handleBrandingChange('logoUrl', e.target.value || undefined)}
-                  placeholder="https://..."
-                  className="bg-white/5 border-white/20 text-white"
-                />
-              </div>
-              <div>
                 <label className="block text-xs text-gray-400 mb-1">Nombre legal (opcional)</label>
                 <Input
                   value={config.branding?.legalName ?? ''}
@@ -210,7 +213,7 @@ export default function ReportParamsEditor({ companyId, onSave }: ReportParamsEd
                   className="bg-white/5 border-white/20 text-white"
                 />
               </div>
-              <div className="flex items-center gap-2 pt-6">
+              <div className="flex items-center gap-2 md:col-span-2">
                 <input
                   type="checkbox"
                   id="useLegalSuffix"
@@ -229,8 +232,8 @@ export default function ReportParamsEditor({ companyId, onSave }: ReportParamsEd
                 className="h-12 rounded flex items-center justify-center text-white font-medium"
                 style={{ backgroundColor: config.branding?.primaryColor ?? '#0b4fa1' }}
               >
-                {config.branding?.logoUrl ? (
-                  <img src={config.branding.logoUrl} alt="Logo" className="h-8 object-contain" />
+                {logoPreviewUrl ? (
+                  <img src={logoPreviewUrl} alt="Logo" className="h-8 object-contain" />
                 ) : (
                   <span>{(config.branding?.legalName || 'Empresa').toUpperCase()}</span>
                 )}
@@ -240,7 +243,16 @@ export default function ReportParamsEditor({ companyId, onSave }: ReportParamsEd
 
           <div>
             <h4 className="text-sm font-medium text-white mb-3">Columnas</h4>
-            {reportType === 'payroll' && availableCustomFields.length > 0 && (
+            {reportType === 'payroll' && (
+              <p className="text-xs text-gray-400 mb-3">
+                Visibilidad y etiquetas se aplican al PDF de planilla. El orden del PDF es fijo:
+                identificación → ingresos (mensual, quincenal, pago HE, total) → deducciones → neto.
+                Horas / Tarifa / Séptimo día solo en tablas por hora. Período y Estado afectan
+                listados/export, no la tabla del PDF. Campos custom: activar “Incluir campos custom”.
+                Resumen ejecutivo e información bancaria del PDF no son configurables aquí.
+              </p>
+            )}
+            {(reportType === 'payroll' || reportType === 'voucher') && availableCustomFields.length > 0 && (
               <div className="mb-4 flex items-center gap-2">
                 <input
                   type="checkbox"

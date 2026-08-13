@@ -36,6 +36,14 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
       NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 
         `${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY.substring(0, 20)}...` : 'Missing',
     },
+
+    // Optional Redis (BullMQ) — prefer REDIS_PRIVATE_URL on Railway
+    redis: {
+      configured: Boolean(
+        process.env.REDIS_PRIVATE_URL?.trim() || process.env.REDIS_URL?.trim()
+      ),
+      prefersPrivate: Boolean(process.env.REDIS_PRIVATE_URL?.trim()),
+    },
     
     // Build-time vs Runtime check
     buildTime: {

@@ -52,7 +52,7 @@ export default function ReportPreview({ data, loading, reportType }: ReportPrevi
 
   if (loading) {
     return (
-      <Card variant="glass" className="border border-white/10">
+      <Card variant="liquid" className="border border-white/10">
         <div className="p-12 text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-400 mx-auto mb-4"></div>
           <p className="text-gray-400">Generando vista previa...</p>
@@ -63,7 +63,7 @@ export default function ReportPreview({ data, loading, reportType }: ReportPrevi
 
   if (!data || data.rows.length === 0) {
     return (
-      <Card variant="glass" className="border border-white/10">
+      <Card variant="liquid" className="border border-white/10">
         <div className="p-12 text-center">
           <AlertCircle className="h-16 w-16 text-gray-600 mx-auto mb-4" />
           <h3 className="text-xl font-semibold text-white mb-2">
@@ -99,7 +99,7 @@ export default function ReportPreview({ data, loading, reportType }: ReportPrevi
       </div>
 
       {/* Data Table */}
-      <Card variant="glass" className="border border-white/10 overflow-hidden">
+      <Card variant="liquid" className="border border-white/10 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-white/5 border-b border-white/10">

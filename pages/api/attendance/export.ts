@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { requireCompanyAccess } from "../../../lib/auth/api-auth-fixed"
-import { canExportReports, EXPORT_REPORTS_FORBIDDEN } from '../../../lib/security/permissions'
+import { canExportAttendanceReports, EXPORT_REPORTS_FORBIDDEN } from '../../../lib/security/permissions'
 import { validateAttendanceExport } from '../../../lib/security/schema-validation'
 import { createSecureQueryBuilder } from '../../../lib/security/secure-queries'
 import { withExportRateLimit } from '../../../lib/security/rate-limiting'
@@ -19,7 +19,7 @@ async function attendanceExportHandler(req: NextApiRequest, res: NextApiResponse
     // AUTENTICACIÓN ESTANDARIZADA - Usar requireCompanyAccess (como payroll)
     const { supabase, companyId, role, user, userProfile } = await requireCompanyAccess(req, res)
 
-    if (!canExportReports(role, userProfile)) {
+    if (!canExportAttendanceReports(role, userProfile)) {
       return res.status(EXPORT_REPORTS_FORBIDDEN.status).json(EXPORT_REPORTS_FORBIDDEN.body)
     }
 

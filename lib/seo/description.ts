@@ -38,14 +38,16 @@ export function generateDescription(options: DescriptionOptions = {}): string {
  * Predefined descriptions for common pages
  */
 export const pageDescriptions = {
-  home: 'Control de asistencia y nómina en un solo lugar. Integra biométricos con software regional (SV, GT, HN). Automatiza deducciones locales. Activar gratis hoy, sin tarjeta.',
-  activate: 'Activa tu cuenta en Humano SISU y comienza a automatizar tu nómina. Configuración en minutos, sin complicaciones.',
+  home: 'Sistema de RRHH con control de asistencia (huella/facial) y planillas en Honduras, El Salvador y Guatemala. Prueba gratis.',
+  activate: 'Activa SISU y toca el cielo: entorno de prueba con nómina local en minutos. Sin tarjeta. Alcanzá la paz contable.',
+  activarGracias:
+    'Confirmación de trial Humano SISU. Revisá tu correo para las credenciales del entorno de prueba.',
   affiliates: 'Únete al programa de afiliados de Humano SISU. Gana comisiones recomendando la mejor solución de nómina para MIPYMES en la región.',
   calculator: 'Calculadora ISR Honduras y calculadora RAP gratis. IHSS, deducciones y sueldo neto con el motor de nómina Humano SISU.',
   calculatorSlv: 'Calculadora ISR El Salvador: ISSS, AFP y sueldo neto en USD. Motor de nómina Humano SISU. Automatiza planilla en El Salvador.',
   calculatorGtm: 'Calculadora sueldo neto Guatemala: IGSS e ISR en quetzales. Mismo motor de nómina Humano SISU. Prueba gratis.',
   privacy: 'Política de privacidad de Humano SISU. Conoce cómo protegemos y manejamos tus datos personales y de tus empleados.',
-  subscription: 'Elige el plan perfecto para tu empresa. Desde startups hasta empresas establecidas, tenemos el plan ideal para ti.',
+  subscription: 'Alertas gratis de aguinaldo, catorceavo y cambios en deducciones para quien revisa su recibo en Honduras, El Salvador y Guatemala.',
   login: 'Inicia sesión en tu cuenta de Humano SISU. Accede a tu dashboard, gestiona empleados, nómina y más.',
   dashboard: 'Dashboard principal de Humano SISU. Visualiza estadísticas, empleados, asistencia y nómina en un solo lugar.',
   employees: 'Gestiona tus empleados de forma eficiente. Agrega, edita y organiza la información de tu equipo.',
@@ -55,9 +57,17 @@ export const pageDescriptions = {
   // New strategic pages (aligned with Google Ads hero messaging)
   alternativaOdoo: 'Olvida las hojas de cálculo. Deducciones de ley (IHSS, RAP, INFOP) con activación inmediata y soporte en tu país. Prueba gratis ahora.',
   biometricoNomina: 'Integra tus biométricos con software regional. Automatiza deducciones y nómina local. Sin cálculos manuales, sin errores. Activar gratis hoy.',
-  implementacion48h: 'Del biométrico al comprobante en segundos. Ahorra horas administrativas. Plataforma intuitiva. Solicitar cotización.',
+  implementacion48h: 'Activación inmediata y biométrico en 72 h. Migración, capacitación y garantía de 30 días incluidas. Humano SISU.',
   deduccionesHonduras: 'Integra biométricos con Humano SISU. Automatiza IHSS, RAP, ISR en Honduras. Sin cálculos manuales. Activar gratis hoy, sin tarjeta.',
   recursos: 'Artículos sobre automatización de RH y nómina local. Guías, mejores prácticas y tendencias para MIPYMES.',
+  ventas: 'Cotización sin costo para nómina y asistencia biométrica en Honduras, El Salvador y Guatemala. Recibe propuesta en PDF al instante.',
+  ventasGracias:
+    'Confirmación de cotización Humano SISU. Revisá tu correo para el PDF y las credenciales de acceso.',
+  gracias: 'Confirmación de pago recibida. Tu sistema Humano SISU se activará en las próximas horas.',
+  info: '¿Perdés la paz al cerrar planilla? Recuperála automatizando asistencia, nómina y deducciones (IHSS, RAP, ISR) en HN, SV y GT. Sin compromiso.',
+  paz: '¿Perdiste un domingo haciendo Excel? No sos una máquina de errores de deducción. Encontrá tu paz con Humano SISU.',
+  viernes:
+    '¿El drama de la planilla te quitó la paz? Descargá las claves para digitalizar y automatizar la gestión de RR.HH. en tu MiPyMe sin apagar la operación.',
 }
 
 /**

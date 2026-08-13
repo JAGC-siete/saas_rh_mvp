@@ -159,7 +159,7 @@ export default function RoleFieldPermissionsAdminPage() {
               </p>
             </div>
 
-            <Card variant="glass">
+            <Card variant="liquid">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Info className="h-5 w-5 text-amber-300" />
@@ -214,7 +214,7 @@ export default function RoleFieldPermissionsAdminPage() {
                                       onChange={(e) =>
                                         setCell(role, field.field_key, { access_level: e.target.value })
                                       }
-                                      className="w-full rounded-md border border-white/20 bg-white/10 px-2 py-1.5 text-white text-xs"
+                                      className="input-glass w-full text-white"
                                     >
                                       {ACCESS_OPTIONS.map((o) => (
                                         <option key={o.value} value={o.value} className="text-black">
@@ -228,7 +228,7 @@ export default function RoleFieldPermissionsAdminPage() {
                                         onChange={(e) =>
                                           setCell(role, field.field_key, { display_mode: e.target.value })
                                         }
-                                        className="w-full rounded-md border border-white/20 bg-white/10 px-2 py-1.5 text-white text-xs"
+                                        className="input-glass w-full text-white"
                                       >
                                         {DISPLAY_OPTIONS.map((o) => (
                                           <option key={o.value} value={o.value} className="text-black">
@@ -242,7 +242,7 @@ export default function RoleFieldPermissionsAdminPage() {
                                       variant="outline"
                                       disabled={!dirty || saving}
                                       onClick={() => saveCell(role, field.field_key)}
-                                      className="w-full h-8 text-xs border-white/20 bg-white/5 hover:bg-white/10"
+                                      className="input-glass w-full text-white"
                                     >
                                       {saving ? (
                                         <Loader2 className="h-3 w-3 animate-spin" />

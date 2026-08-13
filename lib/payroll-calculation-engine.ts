@@ -5,6 +5,8 @@
  * Permite escalar a 100+ empresas sin necesidad de código específico por cliente.
  */
 
+import { isStatutoryReservedCustomKey } from './payroll/statutory-reserved-custom-keys'
+
 interface CalculationConfig {
   earnings_formula?: string
   deductions_formula?: string
@@ -446,11 +448,23 @@ function applyCustomFields(
   const context: CalculationContext = { baseSalary, metadata, calculatedFields }
 
   // Iterar sobre todos los campos personalizados definidos
+  const enginePaysOvertime =
+    metadata?.overtime_pay != null && Number.isFinite(Number(metadata.overtime_pay))
+
   for (const [fieldName, fieldDef] of Object.entries(customFieldsDefinitions)) {
     // Solo procesar campos con categoría earnings o deductions
     if (fieldDef.category !== 'earnings' && fieldDef.category !== 'deductions') {
       continue
     }
+
+    // Motor fixed ya suma HE en bruto: no doble-contar custom horas_extras
+    if (enginePaysOvertime && fieldName === 'horas_extras' && fieldDef.category === 'earnings') {
+      continue
+    }
+
+    // ihss/rap/isr viven en eff_*; no sumar como deducción adicional (espejo Enlace)
+    const reservedStatutory =
+      fieldDef.category === 'deductions' && isStatutoryReservedCustomKey(fieldName)
 
     let numericValue = 0
 
@@ -477,6 +491,10 @@ function applyCustomFields(
     }
 
     calculatedFields[fieldName] = numericValue
+
+    if (reservedStatutory) {
+      continue
+    }
 
     if (fieldDef.category === 'earnings') {
       totalIngresosAdicionales += numericValue

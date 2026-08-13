@@ -1,6 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { requireCompanyAccess } from "../../../lib/auth/api-auth-fixed"
 import { generateEmployeeReceiptPDF } from '../../../lib/payroll/receipt'
+import { buildVoucherPdfOptions } from '../../../lib/payroll/voucher-pdf-options'
+import { resolveReportConfig } from '../../../lib/reports/column-resolver'
 import { getHondurasTimestamp } from '../../../lib/timezone'
 import { 
   getTaxBracketsForYear, 
@@ -230,7 +232,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Si es generar PDF, crear el voucher definitivo
     if (req.body.action === 'generate') {
-      // Generar PDF del voucher
+      const resolvedConfig = await resolveReportConfig(companyId, 'voucher', supabase)
+      const pdfOptions = buildVoucherPdfOptions(resolvedConfig)
+      const { data: company } = await supabase
+        .from('companies')
+        .select('name')
+        .eq('id', companyId)
+        .single()
+
       const pdf = await generateEmployeeReceiptPDF({
         employee_code: voucherPreview.employee_code,
         employee_name: voucherPreview.name,
@@ -247,7 +256,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         net_salary: voucherPreview.final_net,
         bank_name: employee.bank_name,
         bank_account: employee.bank_account
-      }, periodo, quincena)
+      }, periodo, quincena, companyId, company?.name, `Quincena ${quincena}`, pdfOptions)
 
       // Guardar registro del voucher generado
       const { error: saveError } = await supabase

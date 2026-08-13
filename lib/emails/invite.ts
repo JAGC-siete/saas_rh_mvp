@@ -2,6 +2,7 @@ import { emailService } from '../email-service'
 import { notificationManager } from '../notification-providers'
 import {
   escapeHtml,
+  transactionalEmphasis,
   transactionalBulletList,
   transactionalCta,
   transactionalInfoBox,
@@ -33,7 +34,7 @@ export async function sendInviteEmail(data: InviteEmailData) {
 
   const bodyHtml = [
     transactionalParagraph(
-      `Has sido invitado a unirte a <strong style="color: #1a1a1a;">${escapeHtml(data.companyName)}</strong> como <strong style="color: #1a1a1a;">${escapeHtml(roleLabel)}</strong>.`
+      `Has sido invitado a unirte a ${transactionalEmphasis(escapeHtml(data.companyName))} como ${transactionalEmphasis(escapeHtml(roleLabel))}.`
     ),
     transactionalParagraph('Humano SISU centraliza empleados, asistencia y nómina para empresas en Honduras, El Salvador y Guatemala.'),
     transactionalBulletList([

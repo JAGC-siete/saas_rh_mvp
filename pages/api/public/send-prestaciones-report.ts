@@ -9,9 +9,18 @@ import { generatePrestacionesReportPDF } from '../../../lib/prestaciones-public/
 import { createAdminClient } from '../../../lib/supabase/server'
 import { maskEmail, normalizeSoftPhone } from '../../../lib/privacy'
 import {
+  enrollPublicToolLeadNonBlocking,
+  marketingSourceForPrestacionesCalculator,
+} from '../../../lib/marketing/enroll-public-tool-lead'
+import {
   generatePrestacionesEmailHTML,
   generatePrestacionesEmailSubject,
 } from '../../../lib/prestaciones-public/email-template'
+import { PUBLIC_PRESTACIONES_CONFIG } from '../../../lib/public-calculator/prestaciones-config'
+import {
+  parseMetaTrackingPayload,
+  sendMetaWebsiteConversionFireAndForget,
+} from '../../../lib/analytics/metaCapiServer'
 
 interface SendPrestacionesReportRequest {
   email: string
@@ -19,6 +28,7 @@ interface SendPrestacionesReportRequest {
   company?: string
   phone?: string
   consentNewsletter?: boolean
+  audience?: 'empleado' | 'empresa'
   datosManuales: {
     salarioBaseMensual: number
     salarioPromedioMensual: number
@@ -38,8 +48,11 @@ interface SendPrestacionesReportRequest {
     vacaciones: number
     aguinaldo: number
     decimoCuarto: number
+    reservaLaboralEstimada?: number
+    reservaLaboralEnTotal: number
     totalPagar: number
   }
+  reservaLaboralDisclaimer?: string
 }
 
 async function sendEmailWithResend(
@@ -99,6 +112,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       })
     }
 
+    const calcAudience =
+      body.audience === 'empresa' || body.audience === 'empleado' ? body.audience : null
+    const useGodfatherFunnel = calcAudience !== 'empresa'
+    const godfatherKeyword = PUBLIC_PRESTACIONES_CONFIG.funnel.godfatherKeyword
+
     logger.info('Envío de prestaciones por email iniciado', {
       email: maskEmail(sanitizedEmail),
     })
@@ -117,6 +135,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
             company: typeof body.company === 'string' ? body.company.trim() || null : null,
             phone: phoneNorm,
             source: 'prestaciones',
+            calc_audience: calcAudience,
             consent_newsletter: true,
             consented_at: new Date().toISOString(),
             last_seen_at: new Date().toISOString(),
@@ -131,6 +150,19 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       // No bloqueamos envío de PDF si falla el guardado
     }
 
+    if (calcAudience === 'empresa') {
+      logger.info('Lead B2B prioritaria — calculadora prestaciones', {
+        email: maskEmail(sanitizedEmail),
+        company: typeof body.company === 'string' ? body.company.trim() || null : null,
+      })
+    }
+
+    const reservaLaboralEnTotal = Number(body.rubros.reservaLaboralEnTotal) || 0
+    const reservaLaboralDisclaimer =
+      typeof body.reservaLaboralDisclaimer === 'string' && body.reservaLaboralDisclaimer.trim()
+        ? body.reservaLaboralDisclaimer.trim()
+        : undefined
+
     const pdfBuffer = await generatePrestacionesReportPDF({
       salarioBaseMensual: body.datosManuales.salarioBaseMensual,
       salarioPromedioMensual: body.datosManuales.salarioPromedioMensual,
@@ -139,7 +171,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       antiguedadTexto: body.datosManuales.antiguedadTexto,
       motivoSalida: body.parametros.motivoSalida,
       preavisoGozado: body.parametros.preavisoGozado,
-      rubros: body.rubros,
+      reservaLaboralDisclaimer,
+      rubros: {
+        ...body.rubros,
+        reservaLaboralEnTotal,
+      },
     })
 
     const html = generatePrestacionesEmailHTML({
@@ -149,6 +185,10 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       salarioBaseMensual: body.datosManuales.salarioBaseMensual,
       salarioPromedioMensual: body.datosManuales.salarioPromedioMensual,
       antiguedadTexto: body.datosManuales.antiguedadTexto,
+      audience: calcAudience ?? undefined,
+      useGodfatherFunnel,
+      godfatherKeyword,
+      reservaLaboralDisclaimer,
       rubros: {
         preaviso: body.rubros.preaviso,
         cesantiaBruta: body.rubros.cesantiaBruta,
@@ -157,6 +197,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         vacaciones: body.rubros.vacaciones,
         aguinaldo: body.rubros.aguinaldo,
         decimoCuarto: body.rubros.decimoCuarto,
+        reservaLaboralEnTotal,
       },
     })
 
@@ -199,6 +240,30 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       email: maskEmail(sanitizedEmail),
       messageId: (result as any)?.id,
       duration,
+    })
+
+    enrollPublicToolLeadNonBlocking(
+      sanitizedEmail,
+      marketingSourceForPrestacionesCalculator()
+    )
+
+    const metaTracking = parseMetaTrackingPayload(req.body)
+    sendMetaWebsiteConversionFireAndForget({
+      req,
+      eventName: 'CompleteRegistration',
+      tracking: metaTracking,
+      userData: {
+        email: sanitizedEmail,
+        phone: typeof body.phone === 'string' ? body.phone : undefined,
+        firstName: name || undefined,
+      },
+      customData: {
+        content_name: marketingSourceForPrestacionesCalculator(),
+        content_category: 'calculator',
+        value: 1,
+        currency: 'USD',
+        status: true,
+      },
     })
 
     return res.status(200).json({

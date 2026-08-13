@@ -230,7 +230,12 @@ export function calculateProhalcaPayroll(baseSalary: number, metadata: any): {
   totalDeduccionesAdicionales: number
 } {
   // Extract earnings from metadata
-  const horasExtras = parseFloat(metadata?.horas_extras || '0')
+  // If engine already paid OT (overtime_pay), horas_extras is hours display — do not add as money
+  const enginePaysOvertime =
+    metadata?.overtime_pay != null && Number.isFinite(Number(metadata.overtime_pay))
+  const horasExtras = enginePaysOvertime
+    ? 0
+    : parseFloat(metadata?.horas_extras || '0')
   const feriadoTrabajado = parseFloat(metadata?.feriado_trabajado || '0')
   const estipendioTransporte = parseFloat(metadata?.estipendio_transporte || '0')
   

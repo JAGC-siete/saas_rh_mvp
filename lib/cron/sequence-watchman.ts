@@ -9,6 +9,10 @@ import {
   WATCHMAN_LAST_STEP,
 } from '../marketing/email-sequence-ledger'
 import { sendSequenceEmail } from '../marketing/send-sequence-email'
+import { isInfoAcceleratedLead } from '../marketing/info-sequence-timing'
+import { isSuscripcionAcceleratedLead } from '../marketing/suscripcion-sequence-timing'
+import { isActivarAcceleratedLead } from '../marketing/activar-sequence-timing'
+import { isVentasAcceleratedLead } from '../marketing/ventas-sequence-timing'
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -82,7 +86,7 @@ export async function runSequenceWatchman(now: Date = new Date()): Promise<Seque
 
   const { data: leads, error } = await supabaseAdmin
     .from('marketing_leads')
-    .select('id, email, current_step, unsubscribe_token')
+    .select('id, email, current_step, unsubscribe_token, full_name, source')
     .eq('status', 'active')
     .gte('current_step', WATCHMAN_FIRST_STEP)
     .lt('current_step', SEQUENCE_COMPLETE_STEP)
@@ -103,6 +107,16 @@ export async function runSequenceWatchman(now: Date = new Date()): Promise<Seque
       continue
     }
 
+    // Accelerated leads use fixed 48h cadence via daily cron jobs.
+    if (
+      isInfoAcceleratedLead(lead.source) ||
+      isSuscripcionAcceleratedLead(lead.source) ||
+      isActivarAcceleratedLead(lead.source) ||
+      isVentasAcceleratedLead(lead.source)
+    ) {
+      continue
+    }
+
     if (!lead.unsubscribe_token) {
       logger.warn('Lead missing unsubscribe_token; skipping', { leadId: lead.id })
       continue
@@ -118,6 +132,8 @@ export async function runSequenceWatchman(now: Date = new Date()): Promise<Seque
         to: lead.email,
         step,
         unsubscribeToken: lead.unsubscribe_token,
+        source: lead.source ?? undefined,
+        recipientName: lead.full_name,
         dryRun,
       })
 

@@ -4,8 +4,10 @@ import { useAuth } from '../lib/auth'
 import type { RoleId } from '../lib/auth/role-access'
 
 interface AppRoleGateProps {
-  /** Si el perfil existe y el rol no está en esta lista → redirect. */
+  /** Si el perfil existe y el rol no está en esta lista → redirect (salvo allowWhen). */
   allowRoles: readonly RoleId[]
+  /** Permite acceso aunque el rol no esté en allowRoles (p. ej. manager con permiso granular). */
+  allowWhen?: (userProfile: NonNullable<ReturnType<typeof useAuth>['userProfile']>) => boolean
   children: React.ReactNode
   /** Ruta cliente al redirigir (default: dashboard APP). */
   redirectTo?: string
@@ -13,21 +15,26 @@ interface AppRoleGateProps {
 
 export default function AppRoleGate({
   allowRoles,
+  allowWhen,
   children,
   redirectTo = '/app/dashboard',
 }: AppRoleGateProps) {
   const { userProfile, loading } = useAuth()
   const router = useRouter()
 
+  const isAllowed = (profile: NonNullable<typeof userProfile>) => {
+    const raw = typeof profile.role === 'string' ? profile.role.trim().toLowerCase() : ''
+    const roleOk = !!(raw && (allowRoles as readonly string[]).includes(raw))
+    if (roleOk) return true
+    return allowWhen ? allowWhen(profile) : false
+  }
+
   useEffect(() => {
     if (loading) return
-    const raw = userProfile?.role
-    const r = typeof raw === 'string' ? (raw.trim().toLowerCase() as RoleId | string) : ''
-    const ok = !!(r && (allowRoles as readonly string[]).includes(r))
-    if (userProfile && !ok) {
+    if (userProfile && !isAllowed(userProfile)) {
       router.replace(redirectTo)
     }
-  }, [loading, userProfile, router, redirectTo, allowRoles])
+  }, [loading, userProfile, router, redirectTo, allowRoles, allowWhen])
 
   if (loading || !userProfile) {
     return (
@@ -37,8 +44,7 @@ export default function AppRoleGate({
     )
   }
 
-  const r = typeof userProfile.role === 'string' ? userProfile.role.trim().toLowerCase() : ''
-  if (!(r && (allowRoles as readonly string[]).includes(r))) {
+  if (!isAllowed(userProfile)) {
     return (
       <div className="min-h-[240px] flex items-center justify-center text-gray-300 text-sm">
         Redirigiendo...

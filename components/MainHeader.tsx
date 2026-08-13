@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
+import { deductionCalculatorPublicPath } from '../lib/marketing/calculator-public-paths'
 
 interface MainHeaderProps {
   /** Si es true, el header tendrá efecto de scroll (transparente -> sólido) */
@@ -84,11 +85,11 @@ export default function MainHeader({ enableScrollEffect = false, fixed = true }:
               <div className="flex items-center cursor-pointer">
                 <div className="bg-white/10 px-2 py-1 rounded-lg border border-white/20 backdrop-blur-sm transition-all">
                   <Image
-                    src="/logo-humano-sisu.png"
+                    src="/brand/logo-humano-sisu-sm.png"
                     alt="Humano SISU Logo"
-                    width={40}
-                    height={40}
-                    className="rounded-lg w-10 h-10"
+                    width={64}
+                    height={36}
+                    className="rounded-md h-10 w-auto"
                   />
                 </div>
               </div>
@@ -103,17 +104,18 @@ export default function MainHeader({ enableScrollEffect = false, fixed = true }:
                 >
                   Cómo funciona
                 </Link>
-                <Link
+                {/* Servicios oculto: sección #servicios comentada en landing */}
+                {/* <Link
                   href="/#servicios"
                   className="text-brand-200 hover:text-white px-3 py-2 rounded-full text-sm font-medium transition-all duration-300 hover:bg-white/10 hover:-translate-y-0.5 active:translate-y-0 whitespace-nowrap"
                 >
                   Servicios
-                </Link>
+                </Link> */}
                 <Link
                   href="/suscripcion"
                   className="text-brand-200 hover:text-white px-3 py-2 rounded-full text-sm font-medium transition-all duration-300 hover:bg-white/10 hover:-translate-y-0.5 active:translate-y-0 whitespace-nowrap"
                 >
-                  Suscríbete
+                  Alertas de sueldo
                 </Link>
                 <Link
                   href="/afiliados"
@@ -158,7 +160,7 @@ export default function MainHeader({ enableScrollEffect = false, fixed = true }:
                       </Link>
                       <div className="h-px bg-white/10" />
                       <Link
-                        href="/calculadora-deducciones"
+                        href={deductionCalculatorPublicPath('HND')}
                         role="menuitem"
                         className="block px-4 py-3 text-sm text-brand-100 hover:bg-white/10 transition-colors"
                         onClick={() => setIsCalculatorMenuOpen(false)}
@@ -170,27 +172,27 @@ export default function MainHeader({ enableScrollEffect = false, fixed = true }:
                             </svg>
                           </span>
                           <div>
-                            <div className="font-semibold text-white">Honduras · IHSS · RAP · ISR</div>
+                            <div className="font-semibold text-white">Honduras · Seguro Social · RAP · ISR</div>
                             <div className="text-xs text-brand-200/80 mt-0.5">Calculadora deducciones (HNL)</div>
                           </div>
                         </div>
                       </Link>
                       <Link
-                        href="/calculadora-deducciones-el-salvador"
+                        href={deductionCalculatorPublicPath('SLV')}
                         role="menuitem"
                         className="block px-4 py-3 text-sm text-brand-100 hover:bg-white/10 transition-colors"
                         onClick={() => setIsCalculatorMenuOpen(false)}
                       >
-                        <div className="font-semibold text-white">El Salvador · ISSS · AFP · ISR</div>
+                        <div className="font-semibold text-white">El Salvador · Seguro Social · AFP · ISR</div>
                         <div className="text-xs text-brand-200/80 mt-0.5">Calculadora sueldo neto (USD)</div>
                       </Link>
                       <Link
-                        href="/calculadora-deducciones-guatemala"
+                        href={deductionCalculatorPublicPath('GTM')}
                         role="menuitem"
                         className="block px-4 py-3 text-sm text-brand-100 hover:bg-white/10 transition-colors"
                         onClick={() => setIsCalculatorMenuOpen(false)}
                       >
-                        <div className="font-semibold text-white">Guatemala · IGSS · ISR</div>
+                        <div className="font-semibold text-white">Guatemala · Seguro Social · ISR</div>
                         <div className="text-xs text-brand-200/80 mt-0.5">Calculadora sueldo neto (GTQ)</div>
                       </Link>
                       <Link
@@ -214,18 +216,16 @@ export default function MainHeader({ enableScrollEffect = false, fixed = true }:
                     </div>
                   )}
                 </div>
-                <button
-                  onClick={() => {
-                    window.location.href = '/activar'
-                    setIsMobileMenuOpen(false)
-                  }}
-                  className="bg-green-600 hover:bg-green-700 text-white px-6 py-2.5 rounded-lg text-sm font-medium transition-all duration-300 shadow-lg shadow-black/20 hover:-translate-y-0.5 active:translate-y-0 whitespace-nowrap min-w-[160px] text-center"
+                <Link
+                  href="/activar"
+                  className="bg-green-600 hover:bg-green-700 text-white px-6 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 shadow-[0_8px_30px_rgb(0,0,0,0.12)] hover:-translate-y-0.5 active:translate-y-0 whitespace-nowrap min-w-[160px] text-center min-h-[48px] inline-flex items-center justify-center"
+                  onClick={() => setIsMobileMenuOpen(false)}
                 >
                   Activación inmediata
-                </button>
+                </Link>
                 <Link
                   href="/app/login"
-                  className="bg-brand-600 hover:bg-brand-700 text-white px-6 py-2.5 rounded-lg text-sm font-medium transition-all duration-300 shadow-lg shadow-black/20 hover:-translate-y-0.5 active:translate-y-0 whitespace-nowrap min-w-[140px] text-center"
+                  className="bg-brand-600 hover:bg-brand-700 text-white px-6 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 shadow-[0_8px_30px_rgb(0,0,0,0.12)] hover:-translate-y-0.5 active:translate-y-0 whitespace-nowrap min-w-[140px] text-center min-h-[48px] inline-flex items-center justify-center"
                 >
                   Iniciar sesión
                 </Link>
@@ -266,19 +266,20 @@ export default function MainHeader({ enableScrollEffect = false, fixed = true }:
               >
                 Cómo funciona
               </Link>
-              <Link
+              {/* Servicios oculto: sección #servicios comentada en landing */}
+              {/* <Link
                 href="/#servicios"
                 className="block px-3 py-2 text-base font-medium text-brand-200/90 hover:text-white hover:bg-brand-800/20 rounded-md transition-colors"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 Servicios
-              </Link>
+              </Link> */}
               <Link
                 href="/suscripcion"
                 className="block px-3 py-2 text-base font-medium text-brand-200/90 hover:text-white hover:bg-brand-800/20 rounded-md transition-colors"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
-                Suscríbete
+                Alertas de sueldo
               </Link>
               <Link
                 href="/afiliados"
@@ -314,34 +315,34 @@ export default function MainHeader({ enableScrollEffect = false, fixed = true }:
               {isCalculatorMobileOpen && (
                 <div className="pl-3 pr-2 pb-2 space-y-1">
                   <Link
-                    href="/calculadora-deducciones"
+                    href={deductionCalculatorPublicPath('HND')}
                     className="block px-3 py-2 text-sm font-medium text-brand-200/90 hover:text-white hover:bg-brand-800/20 rounded-md transition-colors"
                     onClick={() => {
                       setIsCalculatorMobileOpen(false)
                       setIsMobileMenuOpen(false)
                     }}
                   >
-                    Honduras · IHSS / RAP / ISR
+                    Honduras · Seguro Social / RAP / ISR
                   </Link>
                   <Link
-                    href="/calculadora-deducciones-el-salvador"
+                    href={deductionCalculatorPublicPath('SLV')}
                     className="block px-3 py-2 text-sm font-medium text-brand-200/90 hover:text-white hover:bg-brand-800/20 rounded-md transition-colors"
                     onClick={() => {
                       setIsCalculatorMobileOpen(false)
                       setIsMobileMenuOpen(false)
                     }}
                   >
-                    El Salvador · ISSS / AFP / ISR
+                    El Salvador · Seguro Social / AFP / ISR
                   </Link>
                   <Link
-                    href="/calculadora-deducciones-guatemala"
+                    href={deductionCalculatorPublicPath('GTM')}
                     className="block px-3 py-2 text-sm font-medium text-brand-200/90 hover:text-white hover:bg-brand-800/20 rounded-md transition-colors"
                     onClick={() => {
                       setIsCalculatorMobileOpen(false)
                       setIsMobileMenuOpen(false)
                     }}
                   >
-                    Guatemala · IGSS / ISR
+                    Guatemala · Seguro Social / ISR
                   </Link>
                   <Link
                     href="/calculadora-prestaciones"
@@ -355,15 +356,13 @@ export default function MainHeader({ enableScrollEffect = false, fixed = true }:
                   </Link>
                 </div>
               )}
-              <button
-                onClick={() => {
-                  setIsMobileMenuOpen(false)
-                  window.location.href = '/activar'
-                }}
-                className="bg-green-600 hover:bg-green-700 text-white w-full text-center block py-2 px-4 rounded-lg transition-colors mb-2"
+              <Link
+                href="/activar"
+                className="bg-green-600 hover:bg-green-700 text-white w-full text-center block py-3 px-4 rounded-xl transition-colors mb-2 min-h-[48px]"
+                onClick={() => setIsMobileMenuOpen(false)}
               >
                 Activación inmediata
-              </button>
+              </Link>
               <Link
                 href="/app/login"
                 className="bg-brand-900 hover:bg-brand-800 text-white w-full text-center block py-2 px-4 rounded-lg transition-colors"

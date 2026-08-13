@@ -1,204 +1,209 @@
 import Head from 'next/head'
-import { useEffect } from 'react'
-import DemoFooter from '../components/DemoFooter'
-import ServicesSection from '../components/ServicesSection'
-import HowItWorks from '../components/HowItWorks'
-import FreeToolsSection from '../components/FreeToolsSection'
-import AWSCertificationsSection from '../components/AWSCertificationsSection'
-import LandingHero from '../components/LandingHero'
-import MainHeader from '../components/MainHeader'
+import Image from 'next/image'
+import { useCallback, useEffect, useState } from 'react'
 import dynamic from 'next/dynamic'
-import MailListSection from '../components/MailListSection'
+import DemoFooter from '../components/DemoFooter'
 import SchemaMarkup from '../components/SEO/SchemaMarkup'
+import DockNavbar from '../components/landing/DockNavbar'
+import HomeAnnouncementBanner from '../components/landing/HomeAnnouncementBanner'
+import MagneticHero from '../components/landing/MagneticHero'
+import TrustBar from '../components/landing/TrustBar'
+import MeshBackground from '../components/landing/MeshBackground'
+import MarketingStyles from '../components/marketing/MarketingStyles'
+import LandingHreflang from '../components/landing/LandingHreflang'
+import { useLandingPreferences } from '../components/landing/LandingPreferencesProvider'
+import { getHomeCopy } from '../lib/i18n/landings/home'
 import { getPageTitle } from '../lib/seo/title'
 import { getPageDescription } from '../lib/seo/description'
-import { generateOrganizationSchema, generateWebSiteSchema, generateWebPageSchema, generateReviewSchema } from '../lib/seo/schema'
+import { SEO_DEFAULT_OG_IMAGE_PATH, seoAbsoluteUrl } from '../lib/seo/assets'
+import {
+  generateOrganizationSchema,
+  generateWebSiteSchema,
+  generateWebPageSchema,
+  generateReviewSchema,
+} from '../lib/seo/schema'
 import { initGoogleAdsTracking } from '../lib/analytics/googleAds'
+import { LOCALE_SCHEMA_LANG } from '../lib/i18n/locale'
 
-const CloudBackground = dynamic(() => import('../components/CloudBackground'), { ssr: false })
+const CursorSpotlight = dynamic(() => import('../components/landing/CursorSpotlight'), { ssr: false })
+const ScrollReveal = dynamic(() => import('../components/landing/ScrollReveal'))
+const HowItWorksBento = dynamic(() => import('../components/landing/HowItWorksBento'))
+const FreeToolsSection = dynamic(() => import('../components/FreeToolsSection'))
+const AWSCertificationsSection = dynamic(() => import('../components/AWSCertificationsSection'))
+
+/** Approx banner height — keeps dock + page padding clear of the stripe. */
+const HOME_BANNER_OFFSET_PX = 36
 
 export default function LandingPage() {
+  const [bannerVisible, setBannerVisible] = useState(false)
+  const { tone, locale } = useLandingPreferences()
+  const home = getHomeCopy(locale)
+  const isLight = tone === 'light'
+  const onBannerVisibilityChange = useCallback((visible: boolean) => {
+    setBannerVisible(visible)
+  }, [])
+
   useEffect(() => {
-    // Initialize Google Ads tracking (UTM parameters)
     initGoogleAdsTracking()
 
-    // Manejar scroll automático cuando se navega con hash
     const handleHashScroll = () => {
       if (window.location.hash) {
-        const hash = window.location.hash
-        const element = document.querySelector(hash)
+        const element = document.querySelector(window.location.hash)
         if (element) {
-          setTimeout(() => {
-            element.scrollIntoView({ behavior: 'smooth', block: 'start' })
-          }, 100)
+          setTimeout(() => element.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100)
         }
       }
     }
 
-    // Ejecutar al montar el componente
     handleHashScroll()
-
-    // También escuchar cambios en el hash
     window.addEventListener('hashchange', handleHashScroll)
     return () => window.removeEventListener('hashchange', handleHashScroll)
   }, [])
 
-  const pageTitle = getPageTitle('home')
-  const pageDescription = getPageDescription('home')
-  // TODO: Replace with optimized 1200x630px image when available
-  const ogImage = '/og-image.png' // Fallback to logo if og-image.png doesn't exist yet
+  const pageTitle =
+    locale === 'en'
+      ? 'Human resources software (HR) | Biometric attendance + payroll | Humano SISU'
+      : getPageTitle('home')
+  const pageDescription =
+    locale === 'en'
+      ? 'HR system with attendance control (fingerprint/facial) and local payroll in Honduras, El Salvador, and Guatemala. Try free.'
+      : getPageDescription('home')
+  const ogImage = SEO_DEFAULT_OG_IMAGE_PATH
+  const ogImageUrl = seoAbsoluteUrl(ogImage)
+  const canonicalPath = locale === 'en' ? '/en' : '/'
 
-  // Generate Schema.org JSON-LD
   const organizationSchema = generateOrganizationSchema()
   const webSiteSchema = generateWebSiteSchema()
   const webPageSchema = generateWebPageSchema({
-    url: '/',
+    url: canonicalPath,
     title: pageTitle,
     description: pageDescription,
-    image: ogImage
+    image: ogImage,
+    inLanguage: LOCALE_SCHEMA_LANG[locale],
   })
 
   return (
-    <div className="min-h-screen bg-app pt-16 sm:pt-20 md:pt-24 relative">
+    <div
+      className={`landing-shell landing-tone-surface min-h-screen relative ${
+        isLight ? 'bg-white text-slate-900' : 'bg-mesh text-white'
+      } ${bannerVisible ? 'pt-28 sm:pt-32' : 'pt-20 sm:pt-24'}`}
+    >
+      <MarketingStyles sheets={['landing', 'landing-liquid']} />
+      <LandingHreflang />
       <Head>
         <title>{pageTitle}</title>
-        <link rel="icon" href="/logo-humano-sisu.png" />
+        <link rel="icon" href="/brand/favicon-humano-sisu.png" />
         <meta name="description" content={pageDescription} />
-        <meta name="keywords" content="planilla El Salvador Guatemala Honduras, IHSS, RAP, ISR, automatización RH, STSS, Humano SISU, nómina automatizada" />
+        <meta name="keywords" content={home.metaKeywords} />
         <meta name="author" content="Humano SISU" />
         <meta name="robots" content="index, follow" />
         <meta property="og:title" content={pageTitle} />
         <meta property="og:description" content={pageDescription} />
         <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://humanosisu.net" />
-        <meta property="og:image" content={`https://humanosisu.net${ogImage}`} />
+        <meta property="og:image" content={ogImageUrl} />
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content={pageTitle} />
         <meta name="twitter:description" content={pageDescription} />
-        <meta name="twitter:image" content={`https://humanosisu.net${ogImage}`} />
-        <link rel="canonical" href="https://humanosisu.net" />
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
+        <meta name="twitter:image" content={ogImageUrl} />
       </Head>
-      
-      {/* Schema.org JSON-LD */}
+
       <SchemaMarkup schema={[organizationSchema, webSiteSchema, webPageSchema]} />
 
-      {/* Header */}
-      <MainHeader enableScrollEffect={true} fixed={true} />
+      {!isLight && <MeshBackground />}
+      {!isLight && <CursorSpotlight />}
+      <HomeAnnouncementBanner onVisibilityChange={onBannerVisibilityChange} />
+      <DockNavbar topOffsetPx={bannerVisible ? HOME_BANNER_OFFSET_PX : 0} tone={tone} />
 
-      {/* Main Hero - LandingHero enfocado en conversión */}
-      <section className="py-4 sm:py-6 md:py-8 relative overflow-hidden">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {/* Trust badges */}
-          <div className="flex flex-wrap justify-center gap-2 sm:gap-3 md:gap-6 mb-6 sm:mb-8 animate-fade-up-subtle">
-            <span className="px-3 py-1 bg-green-500/20 text-green-300 text-xs rounded-full border border-green-500/30">
-              ✅ Adaptado a leyes de CA (HN, SV, GT)
-            </span>
-            <span className="px-3 py-1 bg-blue-500/20 text-blue-300 text-xs rounded-full border border-blue-500/30">
-              ⚡ Implementación rápida
-            </span>
-            <span className="px-3 py-1 bg-purple-500/20 text-purple-300 text-xs rounded-full border border-purple-500/30">
-              🤝 Soporte local
-            </span>
-          </div>
+      <MagneticHero />
 
-          {/* Hero Title - Opción A (Paz Mental) */}
-          <div className="text-center mb-6 sm:mb-8 px-2">
-            <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-white leading-tight sm:leading-tight">
-              <span className="text-white block sm:inline">Gestión de Capital Humano 100% Automatizada:</span>
-              <span className="text-brand-300 block text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl mt-2 sm:mt-1">Dejá el Excel y eliminá los errores en tu nómina.</span>
-            </h1>
-            <p className="text-lg sm:text-xl text-brand-200/90 max-w-3xl mx-auto mt-4 sm:mt-6">
-              El cerebro digital que integra biometría y software. Detén la fuga silenciosa de tiempo y automatiza tus deducciones legales, para que tu equipo deje de hacer trabajo manual y se enfoque en hacer crecer la empresa.
-            </p>
-          </div>
-
-          {/* LandingHero Section - Reemplaza completamente al carrusel */}
-          <div className="text-center max-w-6xl mx-auto mb-6">
-            <LandingHero />
-          </div>
-        </div>
-      </section>
-
-      {/* Social Proof Section */}
-      <section id="prueba-social" className="py-12 sm:py-16 md:py-20 px-4 sm:px-6 max-w-7xl mx-auto">
-        <div className="max-w-6xl mx-auto">
-          <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-center text-white leading-tight sm:leading-tight mb-6 sm:mb-8 px-2 max-w-5xl mx-auto">
-            <span className="text-white block sm:inline">Lo dicen nuestros clientes: </span>
-            <span className="text-brand-300 block sm:inline mt-1 sm:mt-0">la verdadera ventaja es conectar la biometría directamente con la nómina</span>
+      <section
+        id="prueba-social"
+        className="relative py-12 sm:py-16 md:py-20 overflow-hidden"
+        aria-label={home.socialProof.aria}
+      >
+        <ScrollReveal>
+          <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-center landing-ink leading-tight mb-8 sm:mb-10 px-4 sm:px-6 max-w-5xl mx-auto">
+            <span className="landing-ink block sm:inline">{home.socialProof.titleLead}</span>
+            <span className="landing-brand-soft block sm:inline mt-1 sm:mt-0">{home.socialProof.titleAccent}</span>
           </h2>
+        </ScrollReveal>
 
-          <div className="grid md:grid-cols-3 gap-6 sm:gap-8">
-            {[
-              { name: 'Felix Garcia', company: 'Tony\'s Mar Restaurant', employees: '40 empleados', quote: 'Ya no pierdo domingos haciendo planilla. 4 horas ahora son 4 minutos.', rating: 5 },
-              { name: 'Nancy Urrutia', company: 'PROHALCA', employees: '37 empleados', quote: 'Habiamos contratado un sistema de asistencia que no hacia planilla, ahora tenemos dashboard interactivo.', rating: 5 },
-              { name: 'Abogado Marcio Moya', company: '', employees: '15 empleados', quote: 'Cero errores en deducciones desde que lo uso. Mis clientes están felices.', rating: 5 }
-            ].map((testimonial, i) => {
-              const reviewSchema = generateReviewSchema({
-                productName: 'Humano SISU',
-                authorName: testimonial.name,
-                rating: testimonial.rating,
-                reviewText: testimonial.quote
-              })
+        {home.testimonials.map((testimonial, i) => (
+          <SchemaMarkup
+            key={`review-schema-${i}`}
+            schema={generateReviewSchema({
+              productName: 'Humano SISU',
+              authorName: testimonial.name,
+              rating: testimonial.rating,
+              reviewText: testimonial.quote,
+            })}
+          />
+        ))}
+
+        <div className="testimonials-marquee-viewport relative">
+          <div className="testimonials-marquee">
+            {[...home.testimonials, ...home.testimonials].map((testimonial, i) => {
+              const isDuplicate = i >= home.testimonials.length
               return (
-                <div key={`testimonial-${i}`}>
-                  <SchemaMarkup schema={reviewSchema} />
-                  <div className="bg-white/5 border border-white/10 rounded-xl p-6">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="w-12 h-12 bg-brand-500 rounded-full flex items-center justify-center text-white font-bold">
-                        {testimonial.name[0]}
-                      </div>
-                      <div>
-                        <p className="text-white font-medium">{testimonial.name}</p>
-                        <p className="text-brand-200/80 text-sm">{testimonial.company}</p>
-                      </div>
+                <article
+                  key={`${testimonial.name}-${i}`}
+                  className="glass-modern rounded-2xl p-5 sm:p-6 w-[min(22rem,85vw)] sm:w-[24rem] shrink-0"
+                  aria-hidden={isDuplicate}
+                >
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="relative w-12 h-12 sm:w-14 sm:h-14 shrink-0 rounded-full overflow-hidden ring-2 ring-white/15 bg-brand-500/40">
+                      <Image
+                        src={testimonial.image}
+                        alt={isDuplicate ? '' : testimonial.name}
+                        fill
+                        className={`object-cover ${testimonial.imagePosition}`}
+                        sizes="56px"
+                      />
                     </div>
-                    <div className="mb-2">
-                      {[...Array(5)].map((_, idx) => (
-                        <span
-                          key={idx}
-                          className={`text-lg ${idx < testimonial.rating ? 'text-yellow-400' : 'text-gray-600'}`}
-                        >
-                          ★
-                        </span>
-                      ))}
-                    </div>
-                    <blockquote className="text-brand-200/90 italic mb-4">&ldquo;{testimonial.quote}&rdquo;</blockquote>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-brand-400">{testimonial.employees}</span>
+                    <div className="min-w-0">
+                      <p className="landing-ink font-medium truncate">{testimonial.name}</p>
+                      {testimonial.company ? (
+                        <p className="landing-muted text-sm font-medium opacity-50 grayscale truncate">
+                          {testimonial.company}
+                        </p>
+                      ) : (
+                        <p className="landing-muted text-sm font-medium truncate">{testimonial.role}</p>
+                      )}
                     </div>
                   </div>
-                </div>
+                  <div className="mb-2" aria-hidden="true">
+                    {[...Array(5)].map((_, idx) => (
+                      <span
+                        key={idx}
+                        className={`text-lg ${idx < testimonial.rating ? 'text-yellow-400' : 'text-slate-600'}`}
+                      >
+                        ★
+                      </span>
+                    ))}
+                  </div>
+                  <blockquote className="landing-muted italic text-sm sm:text-base font-medium landing-dark-text line-clamp-5">
+                    &ldquo;{testimonial.quote}&rdquo;
+                  </blockquote>
+                  {testimonial.company && (
+                    <span className="mt-3 inline-block landing-brand-soft text-sm font-medium">{testimonial.role}</span>
+                  )}
+                </article>
               )
             })}
           </div>
         </div>
       </section>
 
-      {/* How It Works Section */}
-      <HowItWorks />
-
-      {/* Organic funnel: landing ↔ calculadoras (cluster que ya rankea) */}
+      <HowItWorksBento />
       <FreeToolsSection />
-
-      {/* Services Section - Rediseñada */}
-      <div className="mt-4">
-        <ServicesSection />
-      </div>
-
-      {/* AWS Certifications Section */}
       <AWSCertificationsSection />
+      <TrustBar />
 
-      {/* Mail List Subscription Section */}
-      <MailListSection />
-
-      {/* Shared Cloud Background */}
-      <CloudBackground />
-
-      <DemoFooter />
+      <div className="landing-footer-bridge pt-8">
+        <DemoFooter variant="minimal" />
+      </div>
     </div>
   )
 }

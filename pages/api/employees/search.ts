@@ -2,7 +2,8 @@ import { NextApiRequest, NextApiResponse } from 'next'
 import { requireCompanyAccess } from "../../../lib/auth/api-auth-fixed"
 import { createAdminClient } from '../../../lib/supabase/server'
 import { getHondurasTimestamp } from '../../../lib/timezone'
-import { resolveFieldAccessContext, userHasPermission } from '../../../lib/security/field-access'
+import { resolveFieldAccessContext } from '../../../lib/security/field-access'
+import { canSearchEmployeesForDeducciones } from '../../../lib/security/deducciones-access'
 import { shapeEmployees } from '../../../lib/security/shape-employee'
 import { createEmployeeSalaryClient } from '../../../lib/security/employee-data-access'
 
@@ -21,7 +22,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'Company ID is required' })
     }
 
-    if (!userHasPermission(userProfile, 'can_view_employees')) {
+    if (!canSearchEmployeesForDeducciones(userProfile?.role, userProfile?.permissions)) {
       return res.status(403).json({ error: 'Insufficient permissions to view employees' })
     }
 

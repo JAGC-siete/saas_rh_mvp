@@ -293,7 +293,7 @@ export default function ManageAffiliatesPage() {
 
           {/* Requests Tab */}
           {activeTab === 'requests' && (
-            <Card variant="glass" className="border-white/10">
+            <Card variant="liquid" className="border-white/10">
               <CardHeader>
                 <CardTitle className="text-white">Solicitudes de Afiliación</CardTitle>
                 <CardDescription className="text-white/70">
@@ -408,7 +408,7 @@ export default function ManageAffiliatesPage() {
 
           {/* Affiliates Tab */}
           {activeTab === 'affiliates' && (
-            <Card variant="glass" className="border-white/10">
+            <Card variant="liquid" className="border-white/10">
               <CardHeader>
                 <CardTitle className="text-white">Lista de Afiliados</CardTitle>
                 <CardDescription className="text-white/70">
@@ -461,7 +461,7 @@ export default function ManageAffiliatesPage() {
                       </thead>
                       <tbody className="bg-white/5 divide-y divide-white/10">
                         {affiliates.map(aff => (
-                          <tr key={aff.id} className="hover:bg-white/10 transition-colors">
+                          <tr key={aff.id} className="input-glass text-white">
                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-white/90">
                               {aff.user_name}
                             </td>
@@ -544,7 +544,7 @@ export default function ManageAffiliatesPage() {
 
           {/* Commissions Tab */}
           {activeTab === 'commissions' && (
-            <Card variant="glass" className="border-white/10">
+            <Card variant="liquid" className="border-white/10">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
@@ -605,7 +605,7 @@ export default function ManageAffiliatesPage() {
                     </thead>
                     <tbody className="bg-white/5 divide-y divide-white/10">
                       {filteredCommissions.map(comm => (
-                        <tr key={comm.id} className="hover:bg-white/10 transition-colors">
+                        <tr key={comm.id} className="input-glass text-white">
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-white/90">
                             {comm.affiliate_name || 'N/A'}
                           </td>

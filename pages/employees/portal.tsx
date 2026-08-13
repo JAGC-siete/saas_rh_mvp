@@ -24,13 +24,16 @@ import {
   ArrowRightOnRectangleIcon,
   CalendarDaysIcon,
   ChartBarIcon,
-  DocumentTextIcon
+  DocumentTextIcon,
+  SparklesIcon
 } from '@heroicons/react/24/outline'
+import HabitTracker from '../../components/employee-portal/HabitTracker'
 import { clientLogger } from '../../lib/logger-client'
 import EmployeePermissionForm from '../../components/employee-portal/EmployeePermissionForm'
 import EmployeePermissionHistory from '../../components/employee-portal/EmployeePermissionHistory'
 import { formatTimeDisplay, parseDateOnlyAsHonduras, formatDateOnlyForHonduras, HONDURAS_TIMEZONE } from '../../lib/timezone'
 import NotificationBell from '../../components/ui/NotificationBell'
+import EmployeePortalShell from '../../components/employee-portal/EmployeePortalShell'
 
 // Component for attendance records list
 function AttendanceRecordsList({ employeeId }: { employeeId?: string }) {
@@ -607,7 +610,7 @@ export default function EmployeePortal() {
   const [vacationSummary, setVacationSummary] = useState<VacationSummary | null>(null)
   const [performanceEvaluations, setPerformanceEvaluations] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<'profile' | 'attendance' | 'permissions' | 'payroll' | 'performance'>('profile')
+  const [activeTab, setActiveTab] = useState<'profile' | 'attendance' | 'permissions' | 'payroll' | 'performance' | 'habits'>('profile')
   const [showPermissionForm, setShowPermissionForm] = useState(false)
   const [isSubmittingPermission, setIsSubmittingPermission] = useState(false)
   const [fabMenuOpen, setFabMenuOpen] = useState(false)
@@ -981,20 +984,24 @@ export default function EmployeePortal() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900">
+      <EmployeePortalShell centered>
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-400"></div>
-      </div>
+      </EmployeePortalShell>
     )
   }
 
   if (!session) {
-    return <EmployeePasswordLogin onLoginSuccess={handleLoginSuccess} />
+    return (
+      <EmployeePortalShell centered>
+        <EmployeePasswordLogin onLoginSuccess={handleLoginSuccess} />
+      </EmployeePortalShell>
+    )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900">
+    <EmployeePortalShell showAppBar={false}>
       {/* Header */}
-      <div className="bg-black/20 border-b border-white/10">
+      <div className="glass-modern border-b border-white/10 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-4">
@@ -1003,15 +1010,15 @@ export default function EmployeePortal() {
               </div>
               <div>
                 <h1 className="text-lg font-semibold text-white">Portal de Empleados</h1>
-                <p className="text-sm text-gray-300">Humano SISU</p>
+                <p className="text-sm text-white/70">Humano SISU</p>
               </div>
             </div>
-            
+
             <div className="flex items-center space-x-4">
               <NotificationBell className="hidden sm:block" />
               <div className="text-right">
                 <p className="text-sm font-medium text-white">{user?.user_metadata?.full_name || 'Empleado'}</p>
-                <p className="text-xs text-gray-300">{user?.user_metadata?.role || 'employee'}</p>
+                <p className="text-xs text-white/70">{user?.user_metadata?.role || 'employee'}</p>
               </div>
               <Button
                 onClick={handleLogout}
@@ -1034,14 +1041,14 @@ export default function EmployeePortal() {
           <h2 className="text-2xl font-bold text-white mb-2">
             Bienvenido, {user?.user_metadata?.full_name?.split(' ')[0] || 'Empleado'}
           </h2>
-          <p className="text-gray-300">
+          <p className="text-white/70">
             Acceda a su información personal, asistencia y más.
           </p>
         </div>
 
         {/* Quick Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <Card className="glass-strong">
+          <Card variant="liquid">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -1057,7 +1064,7 @@ export default function EmployeePortal() {
             </CardContent>
           </Card>
 
-          <Card className="glass-strong">
+          <Card variant="liquid">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -1073,7 +1080,7 @@ export default function EmployeePortal() {
             </CardContent>
           </Card>
 
-          <Card className="glass-strong">
+          <Card variant="liquid">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -1089,7 +1096,7 @@ export default function EmployeePortal() {
             </CardContent>
           </Card>
 
-          <Card className="glass-strong">
+          <Card variant="liquid">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -1108,7 +1115,7 @@ export default function EmployeePortal() {
 
         {/* === MEJORA 4: MINI GRÁFICOS RECHARTS === */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          <Card className="glass-strong">
+          <Card variant="liquid">
             <CardHeader>
               <CardTitle className="text-lg">Distribución de Asistencia (mes)</CardTitle>
             </CardHeader>
@@ -1134,7 +1141,7 @@ export default function EmployeePortal() {
             </CardContent>
           </Card>
 
-          <Card className="glass-strong">
+          <Card variant="liquid">
             <CardHeader>
               <CardTitle className="text-lg">Horas trabajadas (días recientes)</CardTitle>
               <CardDescription className="text-gray-400">
@@ -1163,7 +1170,7 @@ export default function EmployeePortal() {
 
         {/* === MEJORA 1: BALANCES GRANDES (datos del dashboard) === */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
-          <Card className="glass-strong border-emerald-400/30">
+          <Card variant="liquid" className="border-emerald-400/30">
             <CardContent className="p-6 text-center">
               <div className="flex justify-between items-start">
                 <div className="text-left flex-1 min-w-0">
@@ -1191,7 +1198,7 @@ export default function EmployeePortal() {
             </CardContent>
           </Card>
 
-          <Card className="glass-strong border-orange-400/30">
+          <Card variant="liquid" className="border-orange-400/30">
             <CardContent className="p-6 text-center">
               <div className="flex justify-between items-start">
                 <div>
@@ -1205,7 +1212,7 @@ export default function EmployeePortal() {
             </CardContent>
           </Card>
 
-          <Card className="glass-strong border-blue-400/30">
+          <Card variant="liquid" className="border-blue-400/30">
             <CardContent className="p-6 text-center">
               <div className="flex justify-between items-start">
                 <div>
@@ -1219,7 +1226,7 @@ export default function EmployeePortal() {
             </CardContent>
           </Card>
 
-          <Card className="glass-strong border-purple-400/30">
+          <Card variant="liquid" className="border-purple-400/30">
             <CardContent className="p-6 text-center">
               <div className="flex justify-between items-start">
                 <div>
@@ -1239,7 +1246,8 @@ export default function EmployeePortal() {
             { id: 'attendance', label: 'Asistencia', icon: ClockIcon },
             { id: 'permissions', label: 'Permisos', icon: DocumentTextIcon },
             { id: 'payroll', label: 'Recibos de pago', icon: CurrencyDollarIcon },
-            { id: 'performance', label: 'Desempeño', icon: ChartBarIcon }
+            { id: 'performance', label: 'Desempeño', icon: ChartBarIcon },
+            { id: 'habits', label: 'Hábitos', icon: SparklesIcon }
           ].map((tab) => (
             <button
               key={tab.id}
@@ -1259,7 +1267,7 @@ export default function EmployeePortal() {
         {/* Tab Content */}
         <div className="space-y-6">
           {activeTab === 'profile' && (
-            <Card className="glass-strong">
+            <Card variant="liquid">
               <CardHeader>
                 <CardTitle className="text-white">Información Personal</CardTitle>
                 <CardDescription className="text-gray-300">
@@ -1348,7 +1356,7 @@ export default function EmployeePortal() {
           )}
 
           {activeTab === 'attendance' && (
-            <Card className="glass-strong">
+            <Card variant="liquid">
               <CardHeader>
                 <CardTitle className="text-white">Asistencia</CardTitle>
                 <CardDescription className="text-gray-300">
@@ -1405,7 +1413,7 @@ export default function EmployeePortal() {
           )}
 
           {activeTab === 'permissions' && (
-            <Card className="glass-strong">
+            <Card variant="liquid">
               <CardHeader>
                 <div className="flex justify-between items-center">
                   <div>
@@ -1474,7 +1482,7 @@ export default function EmployeePortal() {
           )}
 
           {activeTab === 'payroll' && (
-            <Card className="glass-strong">
+            <Card variant="liquid">
               <CardHeader>
                 <CardTitle className="text-white">Recibos de pago</CardTitle>
                 <CardDescription className="text-gray-300">
@@ -1491,7 +1499,7 @@ export default function EmployeePortal() {
           )}
 
           {activeTab === 'performance' && (
-            <Card className="glass-strong">
+            <Card variant="liquid">
               <CardHeader>
                 <CardTitle className="text-white">Desempeño</CardTitle>
                 <CardDescription className="text-gray-300">
@@ -1517,7 +1525,7 @@ export default function EmployeePortal() {
                         </div>
                         <div className="mt-3 space-y-2">
                           {(ev.items || []).slice(0, 10).map((it: any) => (
-                            <div key={it.id} className="rounded-md bg-black/20 p-3">
+                            <div key={it.id} className="rounded-md bg-white/5 border border-white/10 p-3">
                               <div className="text-sm text-white">{it.function || '—'}</div>
                               <div className="mt-1 text-xs text-gray-300">KR: {it.indicator || '—'}</div>
                               <div className="mt-1 text-xs text-gray-300">
@@ -1533,6 +1541,21 @@ export default function EmployeePortal() {
                     ))}
                   </div>
                 )}
+              </CardContent>
+            </Card>
+          )}
+
+          {activeTab === 'habits' && (
+            <Card variant="liquid">
+              <CardHeader>
+                <CardTitle className="text-white">Hábitos</CardTitle>
+                <CardDescription className="text-gray-300">
+                  Construye hábitos en inteligencia emocional, finanzas, aprendizaje y nutrición.
+                  Marca tu progreso diario y gana puntos por tu constancia.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <HabitTracker />
               </CardContent>
             </Card>
           )}
@@ -1593,6 +1616,6 @@ export default function EmployeePortal() {
           </Button>
         </div>
       </div>
-    </div>
+    </EmployeePortalShell>
   )
 }

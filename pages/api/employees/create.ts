@@ -12,6 +12,11 @@ import {
 import { resolveFieldAccessContext } from '../../../lib/security/field-access'
 import { shapeEmployee, validateCreateSalaryRequirement } from '../../../lib/security/shape-employee'
 import { parseAttendanceRequiredInput } from '../../../lib/payroll/payroll-attendance-inclusion'
+import { parseEmployeePayOvertimeInput } from '../../../lib/payroll/overtime-pay'
+import {
+  isEnlaceCompany,
+  resolveEnlaceEmployeeCode,
+} from '../../../lib/employees/enlace-employee-code'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -52,7 +57,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Validate required fields
     const {
-      employee_code,
+      employee_code: rawEmployeeCode,
       dni,
       name,
       email,
@@ -65,6 +70,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       payment_frequency,
       pay_type,
       attendance_required,
+      pay_overtime,
       hire_date,
       termination_date,
       termination_reason_code,
@@ -78,7 +84,43 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       metadata
     } = body
 
-    if (!employee_code || !dni || !name) {
+    if (!dni || !name) {
+      return res.status(400).json({
+        error: 'Missing required fields: dni and name are required',
+      })
+    }
+
+    let employee_code =
+      typeof rawEmployeeCode === 'string' ? rawEmployeeCode.trim() : rawEmployeeCode
+
+    // Enlace: formato fijo = inicial(es) del nombre + últimos 5 del DNI
+    if (isEnlaceCompany(companyId)) {
+      const { data: existingCodes, error: codesErr } = await adminSupabase
+        .from('employees')
+        .select('employee_code')
+        .eq('company_id', companyId)
+
+      if (codesErr) {
+        return res.status(500).json({ error: 'Error checking existing employee codes' })
+      }
+
+      const generated = resolveEnlaceEmployeeCode(
+        String(name),
+        String(dni),
+        (existingCodes || []).map((r: { employee_code: string | null }) => r.employee_code || '')
+      )
+
+      if (!generated) {
+        return res.status(400).json({
+          error: 'No se pudo generar el código de empleado',
+          message:
+            'Para Enlace el código requiere un nombre con letras y un DNI con al menos 5 dígitos.',
+        })
+      }
+      employee_code = generated
+    }
+
+    if (!employee_code) {
       return res.status(400).json({
         error: 'Missing required fields: employee_code, dni, and name are required',
       })
@@ -123,11 +165,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       work_schedule_id: work_schedule_id || null,
       base_salary: typeof base_salary === 'string' ? parseFloat(base_salary) : base_salary,
       payment_frequency: (payment_frequency === 'quincenal' || payment_frequency === 'mensual' || payment_frequency === 'semanal') ? payment_frequency : null,
-      pay_type: pay_type === 'fixed' || pay_type === 'hourly' ? pay_type : null,
+      pay_type: pay_type === 'fixed' || pay_type === 'hourly' || pay_type === 'admin_floor' ? pay_type : null,
       attendance_required:
-        pay_type === 'hourly'
+        pay_type === 'hourly' || pay_type === 'admin_floor'
           ? true
           : parseAttendanceRequiredInput(attendance_required),
+      pay_overtime: parseEmployeePayOvertimeInput(pay_overtime),
       hire_date: hire_date || null,
       termination_date: termination_date || null,
       termination_reason_code:

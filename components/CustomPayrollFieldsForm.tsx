@@ -174,10 +174,15 @@ export default function CustomPayrollFieldsForm({
             setFormData((prev) => {
               const next = { ...prev }
               const planIds: string[] = [...((prev._deduction_plan_ids as string[]) || [])]
+              const sums: Record<string, number> = {}
               for (const p of plans) {
-                if (p.activo && p.plazos_aplicados < p.plazos_totales && (prev[p.field_key] === undefined || prev[p.field_key] === '' || prev[p.field_key] === null)) {
-                  next[p.field_key] = p.monto_por_plazo
-                  if (!planIds.includes(p.id)) planIds.push(p.id)
+                if (!p.activo || p.plazos_aplicados >= p.plazos_totales) continue
+                sums[p.field_key] = (sums[p.field_key] || 0) + (Number(p.monto_por_plazo) || 0)
+                if (!planIds.includes(p.id)) planIds.push(p.id)
+              }
+              for (const [fieldKey, total] of Object.entries(sums)) {
+                if (prev[fieldKey] === undefined || prev[fieldKey] === '' || prev[fieldKey] === null) {
+                  next[fieldKey] = Math.round(total * 100) / 100
                 }
               }
               if (planIds.length > 0) next._deduction_plan_ids = planIds
@@ -267,10 +272,12 @@ export default function CustomPayrollFieldsForm({
       setDeductionPlans((prev) => [...prev, plan])
       setFormData((prev) => {
         const existing = (prev._deduction_plan_ids as string[]) || []
+        const prevAmount = Number(prev[fieldKey]) || 0
+        const add = Number(plan.monto_por_plazo) || 0
         return {
           ...prev,
-          [fieldKey]: plan.monto_por_plazo,
-          _deduction_plan_ids: [...existing, plan.id]
+          [fieldKey]: Math.round((prevAmount + add) * 100) / 100,
+          _deduction_plan_ids: existing.includes(plan.id) ? existing : [...existing, plan.id]
         }
       })
       setCreatePlanModal(null)
@@ -289,7 +296,7 @@ export default function CustomPayrollFieldsForm({
       const planIds = new Set<string>((formData._deduction_plan_ids as string[]) || [])
 
       for (const key in formData) {
-        if (key === '_deduction_plan_ids') continue
+        if (key === '_deduction_plan_ids' || key === '_deduction_plan_breakdown') continue
         const value = formData[key]
         if (value === '' || value === null || value === undefined) {
           converted[key] = 0
@@ -298,14 +305,12 @@ export default function CustomPayrollFieldsForm({
         }
       }
 
+      // Include every active incomplete plan; field scalar may be the sum of several same-key plans.
       for (const plan of deductionPlans) {
         if (!plan.activo || plan.plazos_aplicados >= plan.plazos_totales) continue
         const fieldDef = config?.custom_fields?.[plan.field_key]
         if (!fieldDef?.track_plazos) continue
-        const savedVal = Number(converted[plan.field_key]) || 0
-        if (savedVal > 0 && Math.abs(savedVal - plan.monto_por_plazo) < 0.01) {
-          planIds.add(plan.id)
-        }
+        planIds.add(plan.id)
       }
       converted._deduction_plan_ids = Array.from(planIds)
 
@@ -365,11 +370,17 @@ export default function CustomPayrollFieldsForm({
   }, 0)
   const totalDeducciones = deductionsFields.reduce((sum, key) => {
     const fieldDef = config.custom_fields[key]
-    const plan = deductionPlans.find((p) => p.field_key === key && p.activo)
+    const activePlans = deductionPlans.filter(
+      (p) => p.field_key === key && p.activo && p.plazos_aplicados < p.plazos_totales
+    )
     let val: number
-    if (plan && plan.plazos_aplicados < plan.plazos_totales) {
+    if (activePlans.length > 0) {
       const override = formData[key]
-      val = override !== undefined && override !== null && override !== '' ? (typeof override === 'number' ? override : parseFloat(String(override)) || 0) : plan.monto_por_plazo
+      if (override !== undefined && override !== null && override !== '') {
+        val = typeof override === 'number' ? override : parseFloat(String(override)) || 0
+      } else {
+        val = activePlans.reduce((s, p) => s + (Number(p.monto_por_plazo) || 0), 0)
+      }
     } else {
       val = getFieldValue(key, fieldDef)
     }
@@ -411,33 +422,36 @@ export default function CustomPayrollFieldsForm({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {deductionsFields.map((fieldName) => {
                 const fieldDef = config.custom_fields[fieldName]
-                const plan = deductionPlans.find((p) => p.field_key === fieldName && p.activo)
+                const fieldPlans = deductionPlans.filter(
+                  (p) => p.field_key === fieldName && p.activo && p.plazos_aplicados < p.plazos_totales
+                )
                 const hasTrackPlazos = fieldDef?.track_plazos === true
 
                 return (
                   <div key={fieldName} className="space-y-2">
                     {renderFieldInput(fieldName, fieldDef, formData, handleInputChange, customFields, false, baseSalary)}
                     {hasTrackPlazos && (
-                      <div className="mt-2 p-2 bg-white/5 rounded-lg border border-white/10">
-                        {plan ? (
-                          <div className="text-sm text-gray-300">
+                      <div className="mt-2 p-2 bg-white/5 rounded-lg border border-white/10 space-y-2">
+                        {fieldPlans.map((plan) => (
+                          <div key={plan.id} className="text-sm text-gray-300">
                             <span className="flex items-center gap-1">
                               <Calendar className="h-3.5 w-3.5" />
-                              {plan.plazos_aplicados}/{plan.plazos_totales} aplicadas, {plan.plazos_totales - plan.plazos_aplicados} restantes · {formatCurrency(plan.monto_por_plazo)}/plazo
+                              {plan.plazos_aplicados}/{plan.plazos_totales} aplicadas,{' '}
+                              {plan.plazos_totales - plan.plazos_aplicados} restantes ·{' '}
+                              {formatCurrency(plan.monto_por_plazo)}/plazo
                             </span>
                           </div>
-                        ) : (
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className="text-xs bg-white/10 border-white/20 text-white hover:bg-white/20"
-                            onClick={() => setCreatePlanModal({ fieldKey: fieldName, montoTotal: '', plazosTotales: '' })}
-                          >
-                            <Plus className="h-3 w-3 mr-1" />
-                            Crear plan
-                          </Button>
-                        )}
+                        ))}
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="text-xs bg-white/10 border-white/20 text-white hover:bg-white/20"
+                          onClick={() => setCreatePlanModal({ fieldKey: fieldName, montoTotal: '', plazosTotales: '' })}
+                        >
+                          <Plus className="h-3 w-3 mr-1" />
+                          {fieldPlans.length > 0 ? 'Agregar otro plan' : 'Crear plan'}
+                        </Button>
                       </div>
                     )}
                   </div>

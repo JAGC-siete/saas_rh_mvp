@@ -1,6 +1,9 @@
 import type { CountryCode } from '../country/supported'
+import type { VentasBusinessRules, VentasHardwareMode } from './business-rules'
 
 export type CurrencyCode = 'HNL' | 'USD' | 'GTQ'
+
+export type VentasAnnualTerminalMode = 'auto' | 'included' | 'sale'
 
 export interface VentasPricingTier {
   id?: string
@@ -9,6 +12,10 @@ export interface VentasPricingTier {
   price: number
   is_active?: boolean
   sort_order?: number
+  /** Override de terminales en plan anual; auto = umbral global. */
+  annual_terminal_mode?: VentasAnnualTerminalMode
+  /** Tope de terminales incluidas (null = tope global). */
+  included_terminals_max?: number | null
 }
 
 export interface VentasConfig {
@@ -16,9 +23,19 @@ export interface VentasConfig {
   is_active: boolean
   currency: CurrencyCode
   coupon_code: string | null
-  /** 0.45 means 45% */
+  /** 0.45 means 45% — legacy; prefer promo_codes */
   coupon_discount_pct: number | null
+  promo_codes?: VentasPromoCodeRef[]
   tiers: VentasPricingTier[]
+}
+
+export interface VentasPromoCodeRef {
+  id?: string
+  code: string
+  discount_pct: number
+  label?: string | null
+  is_active?: boolean
+  sort_order?: number
 }
 
 export interface QuotationRequest {
@@ -46,23 +63,55 @@ export interface QuotationQuote {
   annual_total: number
   /** Total mensual del software (= annual_total/12) */
   monthly_software_total: number
-  /** Fee mensual por continuidad de hardware (solo mensual) */
+  /**
+   * Fee mensual por Continuidad de Hardware (solo modalidad mensual).
+   */
   monthly_hardware_fee: number
   /** Total mensual final (= monthly_software_total + monthly_hardware_fee) */
   monthly_total: number
+  /**
+   * Venta one-shot de terminales (plan anual en modo sale).
+   * 0 cuando están incluidas o aplica Continuidad.
+   */
+  hardware_sale_total: number
+  /** Precio lista unitario de venta (si aplica). */
+  hardware_sale_unit_price?: number
+  /** Descuento aplicado a la venta (volumen o extras −20%). */
+  hardware_sale_discount_pct?: number
   coupon_applied: boolean
   discount_pct_applied: number
-  tier: { min_employees: number; max_employees: number }
+  /** Código normalizado del cupón aplicado (si coupon_applied). */
+  coupon_code_applied?: string | null
+  tier: {
+    min_employees: number
+    max_employees: number
+    annual_terminal_mode?: VentasAnnualTerminalMode
+    included_terminals_max?: number | null
+  }
+  /** Modo de hardware resuelto al cotizar (evita recomputar con defaults). */
+  hardware_mode?: VentasHardwareMode
+  /** Snapshot de reglas de negocio usadas al cotizar. */
+  business_rules?: VentasBusinessRules
   billing_modality: 'annual' | 'monthly'
   terminals_count: number
+  /** Terminales cubiertas sin cargo (plan anual included). */
+  terminals_included_count?: number
+  /** Terminales de más que se cobran (venta). */
+  terminals_extra_count?: number
+  /** Conteo de empleados usado para umbrales de modalidad e inclusión de hardware. */
+  employees_count: number
 }
 
 export interface QuotationUrgencyOffer {
   is_active: boolean
   quoted_total: number
+  /** 20% sobre software (no aplica a hardware mensual). */
   discount_amount: number
   discounted_total: number
   expires_at: string
+  software_list_total?: number
+  hardware_total?: number
+  software_discount_amount?: number
 }
 
 export interface QuotationResponse {

@@ -8,6 +8,7 @@ import {
   type PreviewPaymentFrequency,
   type PaymentCutDatesInput,
 } from '../../../lib/payroll/fixed-line-recalc'
+import { resolvePayrollDeductionMode } from '../../../lib/payroll/deduction-mode'
 
 function mapFreq(v: string): PreviewPaymentFrequency {
   const x = (v || '').toLowerCase()
@@ -38,7 +39,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const year = typeof req.query.year === 'string' ? parseInt(req.query.year, 10) : NaN
     const month = typeof req.query.month === 'string' ? parseInt(req.query.month, 10) : NaN
     const quincena = typeof req.query.quincena === 'string' ? parseInt(req.query.quincena, 10) : NaN
-    const tipo = typeof req.query.tipo === 'string' ? req.query.tipo : 'CON'
 
     if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(quincena)) {
       return res.status(400).json({ error: 'year, month y quincena son requeridos' })
@@ -64,6 +64,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const metaCutDates = (payrollMetadata as any)?.payment_cut_dates || {}
 
     const paymentFrequency = mapFreq((payrollConfig?.payment_frequency || (payrollMetadata as any)?.payment_frequency || 'quincenal') as string)
+    const tipo = resolvePayrollDeductionMode(payrollMetadata as Record<string, unknown>, paymentFrequency)
     const hasCustomQuincena = !!(qcCol && (qcCol.first_start != null || qcCol.first_end != null || qcCol.second_start != null || qcCol.second_end != null))
 
     const paymentCutDates: PaymentCutDatesInput = qcCol

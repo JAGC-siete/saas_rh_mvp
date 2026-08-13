@@ -16,7 +16,6 @@ import { createClient } from '../lib/supabase/client'
 import { Pagination } from './ui/pagination'
 import PayrollFixedTable from './PayrollFixedTable'
 import PayrollHourlyTable from './PayrollHourlyTable'
-import type { PayrollPdfGroupBy } from '../lib/payroll/pdf-layout'
 
 export type IncompleteRecordAlert = { employee_id: string; employee_name: string; dates: string[] }
 
@@ -25,11 +24,12 @@ interface UnifiedPayrollTableProps {
   resumen: UnifiedResumen
   incompleteRecordsAlert?: IncompleteRecordAlert[]
   // eslint-disable-next-line no-unused-vars
+  onPreviewVoucher: (_lineId: string) => void
+  // eslint-disable-next-line no-unused-vars
   onGenerateVoucher: (_lineId: string) => void
   onPreAuthorize?: () => void
   onAuthorize: () => void
-  // eslint-disable-next-line no-unused-vars
-  onGeneratePDF: (_groupBy: PayrollPdfGroupBy) => void | Promise<void>
+  onOpenPlanillaPreview?: () => void
   onSendEmail: () => void
   // eslint-disable-next-line no-unused-vars
   onEditCustomFields?: (_lineId: string, _metadata: any, _baseSalary: number, _employeeId?: string) => void
@@ -40,6 +40,30 @@ interface UnifiedPayrollTableProps {
     run_line_id: string
     days_worked: number
     reason?: string
+  }) => Promise<void>
+  // eslint-disable-next-line no-unused-vars
+  onAdjustFixedOvertime?: (_payload: {
+    run_line_id: string
+    overtime: {
+      evening_25: number
+      night_50: number
+      late_75: number
+      morning_25: number
+      holiday_100: number
+    }
+    reason?: string
+  }) => Promise<void>
+  companyPayOvertime?: boolean
+  onResetLineRecalc?: (_runLineId: string) => Promise<void>
+  canResetLineRecalc?: boolean
+  canZeroStatutory?: boolean
+  // eslint-disable-next-line no-unused-vars
+  onZeroStatutory?: (_payload: {
+    run_line_id: string
+    reason: string
+    ihss?: number
+    rap?: number
+    isr?: number
   }) => Promise<void>
   loading?: boolean
   canAuthorize?: boolean
@@ -53,10 +77,12 @@ interface UnifiedPayrollTableProps {
     month: number
     quincena: number
   }
+  paymentFrequency?: 'monthly' | 'biweekly' | 'weekly'
   companyId?: string
   payrollApiConfig?: {
     legal_deductions?: { ihss?: boolean; rap?: boolean; isr?: boolean }
     custom_fields?: Record<string, unknown>
+    pay_overtime?: boolean
   } | null
 }
 
@@ -64,15 +90,22 @@ export default function UnifiedPayrollTable({
   rows,
   resumen,
   incompleteRecordsAlert = [],
+  onPreviewVoucher,
   onGenerateVoucher,
   onPreAuthorize,
   onAuthorize,
-  onGeneratePDF,
+  onOpenPlanillaPreview,
   onSendEmail,
   onEditCustomFields,
   canAdjustFixedDays = false,
   payrollRunStatus,
   onAdjustFixedDays,
+  onAdjustFixedOvertime,
+  companyPayOvertime = true,
+  onResetLineRecalc,
+  canResetLineRecalc = false,
+  canZeroStatutory = false,
+  onZeroStatutory,
   loading = false,
   // eslint-disable-next-line no-unused-vars
   canAuthorize: _canAuthorize = false,
@@ -82,6 +115,7 @@ export default function UnifiedPayrollTable({
   runId,
   status,
   period,
+  paymentFrequency = 'biweekly',
   companyId,
   payrollApiConfig = null
 }: UnifiedPayrollTableProps) {
@@ -93,9 +127,6 @@ export default function UnifiedPayrollTable({
   const [sortBy, setSortBy] = useState<'name' | 'department'>('name')
   const [departmentFilter, setDepartmentFilter] = useState<string>('all')
   const [hasCustom, setHasCustom] = useState(false)
-  const [pdfModalOpen, setPdfModalOpen] = useState(false)
-  const [pdfGroupBy, setPdfGroupBy] = useState<PayrollPdfGroupBy>('none')
-  const [pdfDownloading, setPdfDownloading] = useState(false)
   // eslint-disable-next-line no-unused-vars
   const [_payrollConfig, setPayrollConfig] = useState<any>(null)
   
@@ -161,7 +192,9 @@ export default function UnifiedPayrollTable({
     return Array.from(depts).sort()
   }, [rows])
 
-  // Separate rows by pay_type
+  // Split UI:
+  // - fixed + admin_floor → same detail table (product: one cuadro for daily + HE cotizantes)
+  // - hourly (exact hours) → separate table only when present
   const { fixedRows, hourlyRows } = useMemo(() => {
     const fixed: typeof rows = []
     const hourly: typeof rows = []
@@ -171,6 +204,7 @@ export default function UnifiedPayrollTable({
       if (payType === 'hourly') {
         hourly.push(row)
       } else {
+        // fixed | admin_floor | unknown → main detail
         fixed.push(row)
       }
     })
@@ -349,6 +383,12 @@ export default function UnifiedPayrollTable({
   const buttonState = getAuthorizationButtonState()
 
   const monthName = new Date(period.year, period.month - 1).toLocaleDateString('es-HN', { month: 'long' })
+  const periodLabel =
+    paymentFrequency === 'monthly'
+      ? `${monthName} ${period.year} · Mensual`
+      : paymentFrequency === 'weekly'
+        ? `${monthName} ${period.year} · Semana ${period.quincena}`
+        : `${monthName} ${period.year} Q${period.quincena}`
 
   return (
     <Card className="backdrop-blur-md bg-white/10 border border-white/20">
@@ -360,7 +400,7 @@ export default function UnifiedPayrollTable({
           {fixedRows.length} empleados fijos • {hourlyRows.length} empleados por hora • 
           Total Bruto: {formatCurrency(resumen.total_bruto)} • 
           Total Neto: {formatCurrency(resumen.total_neto)} • 
-          Período: {monthName} {period.year} Q{period.quincena}
+          Período: {periodLabel}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -465,7 +505,8 @@ export default function UnifiedPayrollTable({
 
           {/* Results count */}
           <div className="flex items-center text-sm text-gray-300 sm:ml-auto">
-            {fixedRows.length} fijos • {hourlyRows.length} por hora
+            {fixedRows.length} en detalle
+            {hourlyRows.length > 0 ? ` • ${hourlyRows.length} por hora exacta` : ''}
           </div>
         </div>
 
@@ -474,11 +515,18 @@ export default function UnifiedPayrollTable({
           <>
           <PayrollFixedTable
             rows={paginatedFixedRows}
+            onPreviewVoucher={onPreviewVoucher}
             onGenerateVoucher={onGenerateVoucher}
             onEditCustomFields={onEditCustomFields}
             canAdjustFixedDays={canAdjustFixedDays}
             payrollRunStatus={status}
             onAdjustFixedDays={onAdjustFixedDays}
+            onAdjustFixedOvertime={onAdjustFixedOvertime}
+            companyPayOvertime={companyPayOvertime}
+            onResetLineRecalc={onResetLineRecalc}
+            canResetLineRecalc={canResetLineRecalc}
+            canZeroStatutory={canZeroStatutory}
+            onZeroStatutory={onZeroStatutory}
             loading={loading}
             hasCustom={hasCustom}
             statutoryDeductions={statutoryDeductionColumns}
@@ -503,8 +551,11 @@ export default function UnifiedPayrollTable({
           <>
           <PayrollHourlyTable
             rows={paginatedHourlyRows}
+            onPreviewVoucher={onPreviewVoucher}
             onGenerateVoucher={onGenerateVoucher}
             onEditCustomFields={onEditCustomFields}
+            onResetLineRecalc={onResetLineRecalc}
+            canResetLineRecalc={canResetLineRecalc}
             loading={loading}
             hasCustom={hasCustom}
             statutoryDeductions={statutoryDeductionColumns}
@@ -562,20 +613,16 @@ export default function UnifiedPayrollTable({
             )}
           </Button>
 
-          {/* Generate PDF - Only enabled after authorization */}
+          {/* Vista previa planilla — disponible con corrida activa (borrador o autorizada) */}
           <Button
-            onClick={() => setPdfModalOpen(true)}
-            disabled={!runId || loading || (status !== 'authorized' && status !== 'distributed')}
+            onClick={onOpenPlanillaPreview}
+            disabled={!runId || loading || !onOpenPlanillaPreview}
             variant="outline"
             className="flex items-center gap-2 bg-white/10 border-white/30 text-white hover:bg-white/20 disabled:opacity-50"
-            title={
-              status !== 'authorized' && status !== 'distributed'
-                ? 'Autorice la nómina primero para generar PDF'
-                : 'Generar PDF consolidado'
-            }
+            title="Revisar planilla en pantalla y descargar PDF"
           >
             <Icon name="document" className="h-4 w-4" />
-            Generar PDF
+            Vista previa planilla
           </Button>
 
           {/* Send Email - Only enabled after PDF generation (tracked separately) */}
@@ -597,57 +644,6 @@ export default function UnifiedPayrollTable({
           </Button>
         </div>
       </CardContent>
-
-      {pdfModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-md rounded-lg border border-white/20 bg-gray-900 p-6 text-white shadow-xl">
-            <h3 className="text-lg font-semibold">Descargar planilla en PDF</h3>
-            <p className="mt-2 text-sm text-gray-300">
-              Elija cómo organizar las tablas de empleados fijos y por hora en el documento.
-            </p>
-            <label htmlFor="pdf-group-by" className="mt-4 block text-sm font-medium text-gray-200">
-              Agrupar por
-            </label>
-            <select
-              id="pdf-group-by"
-              value={pdfGroupBy}
-              onChange={(e) => setPdfGroupBy(e.target.value as PayrollPdfGroupBy)}
-              className="mt-2 w-full rounded-md border border-white/20 bg-white/10 px-3 py-2 text-sm text-white"
-            >
-              <option value="none">Una sola tabla (todos los empleados)</option>
-              <option value="department">Departamento</option>
-              <option value="team">Equipo</option>
-              <option value="position">Posición</option>
-            </select>
-            <div className="mt-6 flex justify-end gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setPdfModalOpen(false)}
-                disabled={pdfDownloading}
-                className="border-white/30 bg-white/10 text-white hover:bg-white/20"
-              >
-                Cancelar
-              </Button>
-              <Button
-                type="button"
-                onClick={async () => {
-                  setPdfDownloading(true)
-                  try {
-                    await onGeneratePDF(pdfGroupBy)
-                    setPdfModalOpen(false)
-                  } finally {
-                    setPdfDownloading(false)
-                  }
-                }}
-                disabled={pdfDownloading}
-              >
-                {pdfDownloading ? 'Descargando…' : 'Descargar'}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
     </Card>
   )
 }

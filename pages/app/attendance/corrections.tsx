@@ -3,6 +3,7 @@ import ProtectedRoute from '../../../components/ProtectedRoute'
 import DashboardLayout from '../../../components/DashboardLayout'
 import { Card } from '../../../components/ui/card'
 import { useAuth } from '../../../lib/auth'
+import { getAttendanceMarksValidationError } from '../../../lib/attendance/validate-marks'
 import { getTodayInHonduras } from '../../../lib/timezone'
 import { useNotificationContext } from '../../../components/NotificationProvider'
 
@@ -102,6 +103,18 @@ export default function AttendanceCorrectionsPage() {
 
   const submit = async () => {
     if (!canCreate) return
+
+    const marksErr = getAttendanceMarksValidationError({
+      check_in: datetimeLocalToIso(checkIn),
+      check_out: datetimeLocalToIso(checkOut),
+      lunch_start: datetimeLocalToIso(lunchStart),
+      lunch_end: datetimeLocalToIso(lunchEnd),
+    })
+    if (marksErr) {
+      addNotification({ type: 'error', title: 'Correcciones', message: marksErr })
+      return
+    }
+
     setCreating(true)
     try {
       const payload: any = {
@@ -187,7 +200,7 @@ export default function AttendanceCorrectionsPage() {
             </div>
           </div>
 
-          <Card variant="glass" className="border border-white/10">
+          <Card variant="liquid" className="border border-white/10">
             <div className="p-5 space-y-4">
               <h2 className="text-lg font-semibold text-white">Nueva solicitud</h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -269,6 +282,10 @@ export default function AttendanceCorrectionsPage() {
                 </label>
               </div>
 
+              <p className="text-xs text-gray-400">
+                Si hay almuerzo: Entrada &lt; Inicio almuerzo &lt; Fin almuerzo &lt; Salida.
+              </p>
+
               <div className="flex justify-end">
                 <button
                   type="button"
@@ -282,7 +299,7 @@ export default function AttendanceCorrectionsPage() {
             </div>
           </Card>
 
-          <Card variant="glass" className="border border-white/10">
+          <Card variant="liquid" className="border border-white/10">
             <div className="p-5">
               <h2 className="text-lg font-semibold text-white mb-3">
                 {status === 'pending' ? 'Pendientes' : status === 'approved' ? 'Aprobadas' : 'Rechazadas'}
@@ -294,7 +311,14 @@ export default function AttendanceCorrectionsPage() {
                 <p className="text-gray-400">Sin solicitudes.</p>
               ) : (
                 <div className="space-y-3">
-                  {rows.map((r) => (
+                  {rows.map((r) => {
+                    const marksWarning = getAttendanceMarksValidationError({
+                      check_in: r.proposed_check_in,
+                      check_out: r.proposed_check_out,
+                      lunch_start: r.proposed_lunch_start,
+                      lunch_end: r.proposed_lunch_end,
+                    })
+                    return (
                     <div key={r.id} className="rounded-xl border border-white/10 bg-white/5 p-4">
                       <div className="flex flex-wrap items-start justify-between gap-2">
                         <div>
@@ -308,6 +332,9 @@ export default function AttendanceCorrectionsPage() {
                             {r.proposed_lunch_start && <span>Almuerzo ini: {isoForDatetimeLocal(r.proposed_lunch_start)}</span>}
                             {r.proposed_lunch_end && <span>Almuerzo fin: {isoForDatetimeLocal(r.proposed_lunch_end)}</span>}
                           </div>
+                          {marksWarning && status === 'pending' && (
+                            <div className="text-xs text-amber-300 mt-2">{marksWarning}</div>
+                          )}
                           {r.reviewer_note && <div className="text-xs text-gray-400 mt-2">Nota: {r.reviewer_note}</div>}
                         </div>
 
@@ -323,7 +350,9 @@ export default function AttendanceCorrectionsPage() {
                             <button
                               type="button"
                               onClick={() => review(r.id, 'approve')}
-                              className="px-3 py-2 rounded-lg text-sm bg-emerald-600 hover:bg-emerald-700 text-white"
+                              title={marksWarning ?? undefined}
+                              disabled={!!marksWarning}
+                              className="px-3 py-2 rounded-lg text-sm bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                               Aprobar y aplicar
                             </button>
@@ -331,7 +360,8 @@ export default function AttendanceCorrectionsPage() {
                         )}
                       </div>
                     </div>
-                  ))}
+                    )
+                  })}
                 </div>
               )}
             </div>

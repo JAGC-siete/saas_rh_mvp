@@ -11,6 +11,16 @@ import {
 } from '../../lib/country/supported'
 import { normalizeSoftPhone } from '../../lib/privacy'
 import { getResendFromContact } from '../../lib/resend-from'
+import {
+  parseMetaTrackingPayload,
+  sendMetaWebsiteConversionFireAndForget,
+} from '../../lib/analytics/metaCapiServer'
+import { enrollMarketingLead } from '../../lib/marketing/enroll-lead'
+import { sendLeadRegistroNotification } from '../../lib/leads/registro-notification'
+import {
+  buildSisuTrialAccessEmailHtml,
+  getSisuTrialAccessEmailSubject,
+} from '../../lib/emails/sisu-trial-access-html'
 
 export const config = {
   api: {
@@ -180,6 +190,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     console.log('✅ Datos guardados exitosamente en activaciones')
 
+    void enrollMarketingLead({
+      email: contactoEmail.trim().toLowerCase(),
+      source: 'activar',
+      fullName: typeof nombre === 'string' ? nombre.trim() : undefined,
+      phone: typeof contactoWhatsApp === 'string' && contactoWhatsApp.trim() ? contactoWhatsApp.trim() : undefined,
+    }).catch((err: unknown) => {
+      const message = err instanceof Error ? err.message : 'Unknown error'
+      console.warn('⚠️ Marketing enroll failed after activar (non-blocking):', message)
+    })
+
     // Crear entorno de trial (Company + Owner + Demo data)
     console.log('🏗️ Creando entorno de trial...')
     const trialEnvironment = await crearEntornoTrial(supabase, {
@@ -215,7 +235,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Enviar email de resumen con vCard
     console.log('📧 Enviando email de resumen con vCard...')
-    await enviarEmailResumenRegistro({
+    await sendLeadRegistroNotification({
+      source: 'activar',
       nombre: nombre || 'Contacto no especificado',
       empresa: empresa || 'Empresa no especificada',
       email: contactoEmail,
@@ -227,7 +248,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     console.log('🎉 Activación completada exitosamente')
 
-    return res.status(200).json({ 
+    const metaTracking = parseMetaTrackingPayload(req.body)
+    sendMetaWebsiteConversionFireAndForget({
+      req,
+      eventName: 'StartTrial',
+      tracking: metaTracking,
+      userData: {
+        email: contactoEmail,
+        phone: contactoWhatsApp || undefined,
+        firstName: nombre || undefined,
+      },
+      customData: {
+        content_name: 'activar',
+        content_category: countryCode,
+        value: 0,
+        currency: 'USD',
+        status: true,
+      },
+    })
+
+    return res.status(200).json({
       message: 'Trial activado exitosamente',
       data: {
         // ...activacion[0],
@@ -697,260 +737,22 @@ async function enviarCorreoBienvenida(data: {
       return
     }
 
-        const { Resend } = await import('resend')
-        const resend = new Resend(apiKey)
-        const whatsappContratarUrl = `https://wa.me/50432226773?text=${encodeURIComponent('deseo contratar')}`
+    const { Resend } = await import('resend')
+    const resend = new Resend(apiKey)
 
-    const emailHtml = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <meta charset="utf-8" />
-          <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-          <title>Acceso Exclusivo a SISU</title>
-          <style>
-            :root {
-              color-scheme: light;
-            }
-            body {
-              margin: 0;
-              font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-              background: #0b1020;
-              color: #e2e8f0;
-            }
-            .outer {
-              width: 100%;
-              padding: 32px 16px;
-              background: linear-gradient(135deg, #04070f 0%, #111a33 60%, #102040 100%);
-            }
-            .card {
-              max-width: 640px;
-              margin: 0 auto;
-              background: rgba(11, 17, 31, 0.92);
-              border-radius: 28px;
-              border: 1px solid rgba(96, 165, 250, 0.25);
-              box-shadow: 0 20px 60px rgba(15, 23, 42, 0.45), inset 0 0 0 1px rgba(255, 255, 255, 0.03);
-              overflow: hidden;
-            }
-            .hero {
-              padding: 40px 40px 28px 40px;
-              background: radial-gradient(circle at 20% 20%, rgba(37, 99, 235, 0.45), transparent 60%),
-                radial-gradient(circle at 80% 0%, rgba(236, 72, 153, 0.3), transparent 55%),
-                linear-gradient(135deg, #111a33 0%, #1f2b4a 100%);
-              text-align: center;
-            }
-            .hero h1 {
-              margin: 0;
-              font-size: 28px;
-              color: #ffffff;
-              letter-spacing: -0.5px;
-            }
-            .hero p {
-              margin: 12px 0 0 0;
-              font-size: 15px;
-              color: #cbd5f5;
-            }
-            .hero .badge {
-              display: inline-block;
-              margin-bottom: 18px;
-              padding: 6px 14px;
-              border-radius: 999px;
-              font-size: 13px;
-              text-transform: uppercase;
-              letter-spacing: 0.08em;
-              background: rgba(15, 118, 110, 0.15);
-              color: #5eead4;
-              border: 1px solid rgba(94, 234, 212, 0.3);
-            }
-            .content {
-              padding: 32px 40px 40px 40px;
-            }
-            .pill {
-              background: rgba(15, 118, 110, 0.12);
-              border: 1px solid rgba(34, 197, 94, 0.2);
-              border-radius: 16px;
-              padding: 18px 20px;
-              font-size: 15px;
-              color: #bbf7d0;
-              margin-bottom: 24px;
-            }
-            .section-title {
-              font-size: 16px;
-              text-transform: uppercase;
-              letter-spacing: 0.12em;
-              color: #93c5fd;
-              margin: 24px 0 12px 0;
-            }
-            .credentials {
-              background: rgba(15, 23, 42, 0.75);
-              border: 1px solid rgba(96, 165, 250, 0.3);
-              border-radius: 18px;
-              padding: 24px;
-              margin-bottom: 24px;
-            }
-            .credential-row + .credential-row {
-              margin-top: 16px;
-            }
-            .label {
-              font-size: 13px;
-              letter-spacing: 0.08em;
-              color: #94a3b8;
-              text-transform: uppercase;
-            }
-            .value {
-              margin-top: 8px;
-              font-family: 'JetBrains Mono', 'SFMono-Regular', Consolas, monospace;
-              background: rgba(15, 118, 110, 0.12);
-              border-radius: 10px;
-              padding: 12px 14px;
-              display: inline-block;
-              color: #f8fafc;
-            }
-            .cta {
-              text-align: center;
-              margin: 32px 0 12px 0;
-            }
-            .cta a {
-              display: inline-block;
-              padding: 14px 32px;
-              border-radius: 999px;
-              font-weight: 600;
-              text-decoration: none;
-              background: linear-gradient(135deg, #22d3ee, #0ea5e9 60%, #6366f1);
-              color: #0b1120;
-              box-shadow: 0 15px 35px rgba(14, 165, 233, 0.35);
-            }
-            .cta p {
-              margin-top: 12px;
-              font-size: 13px;
-              color: #94a3b8;
-            }
-            .grid {
-              display: flex;
-              flex-wrap: wrap;
-              gap: 16px;
-            }
-            .grid > div {
-              flex: 1 1 180px;
-              background: rgba(15, 23, 42, 0.6);
-              border: 1px solid rgba(99, 102, 241, 0.25);
-              border-radius: 16px;
-              padding: 16px;
-            }
-            .grid h4 {
-              margin: 0 0 6px 0;
-              font-size: 15px;
-              color: #f8fafc;
-            }
-            .grid p {
-              margin: 0;
-              font-size: 13px;
-              color: #cbd5f5;
-              line-height: 1.5;
-            }
-            .warning {
-              background: rgba(251, 191, 36, 0.12);
-              border: 1px solid rgba(245, 158, 11, 0.3);
-              border-radius: 16px;
-              padding: 18px 20px;
-              color: #fde68a;
-              font-size: 14px;
-              margin: 24px 0;
-            }
-            .footer {
-              text-align: center;
-              padding: 28px 24px 36px 24px;
-              font-size: 12px;
-              color: #94a3b8;
-            }
-            .footer hr {
-              border: 0;
-              border-top: 1px solid rgba(148, 163, 184, 0.2);
-              margin-bottom: 18px;
-            }
-            @media (max-width: 520px) {
-              .hero, .content {
-                padding: 24px;
-              }
-              .grid {
-                flex-direction: column;
-              }
-              .cta a {
-                width: 100%;
-              }
-            }
-          </style>
-        </head>
-        <body>
-          <div class="outer">
-            <div class="card">
-              <div class="hero">
-                <div class="badge">Acceso Exclusivo</div>
-                <h1>${data.nombre || 'Equipo'}, te damos la bienvenida a SISU</h1>
-                <p>El sistema regional de recursos humanos para El Salvador, Guatemala y Honduras, diseñado para transformar la forma en que gestionás tu equipo. Acceso exclusivo ilimitado gratuito por 7 días.</p>
-              </div>
-              <div class="content">
-
-                <div class="section-title">Credenciales seguras</div>
-                <div class="credentials">
-                  <div class="credential-row">
-                    <div class="label">Email</div>
-                    <div class="value">${data.email}</div>
-                  </div>
-                  <div class="credential-row">
-                    <div class="label">Contraseña temporal</div>
-                    <div class="value">${data.password}</div>
-                  </div>
-                </div>
-
-                <div class="cta">
-                  <a href="${data.loginUrl}">Entrar al panel</a>
-                  <p>Si el botón no funciona, copia este enlace en tu navegador: ${data.loginUrl}</p>
-                </div>
-
-                <div class="section-title">Explora SISU: Tu entorno exclusivo ya está listo</div>
-                <div class="grid">
-                  <div>
-                    <h4>Asistencia Digitalizada</h4>
-                    <p>Registro por DNI, huella, rostro o tarjeta. Detecta retrasos y genera reportes automáticos.</p>
-                  </div>
-                  <div>
-                    <h4>Operación Automatizada</h4>
-                    <p>Fichas completas, cálculos IHSS/RAP/ISR exactos, ajustes y envíos automáticos de comprobantes.</p>
-                  </div>
-                  <div>
-                    <h4>📊 Portal y Productividad</h4>
-                    <p>Acceso self-service para empleados, dashboards ejecutivos y exportaciones precisas para decisiones rápidas.</p>
-                  </div>
-                </div>
-
-                <div class="warning">
-                  ⚠️ Este es un acceso exclusivo y limitado: tu prueba gratuita dura 7 días. Por seguridad, cambia la contraseña al ingresar. Explora cómo SISU reduce errores legales, da transparencia en tiempo real y libera a tu equipo para enfocarse en lo que mueve tu empresa.
-                </div>
-
-                <div class="section-title">Para contratar</div>
-                <div class="grid">
-                  <div>
-                    <h4>📱 WhatsApp</h4>
-                    <p><a href="${whatsappContratarUrl}" style="color: #5eead4; text-decoration: underline;">+504 3222-6773</a> · Respuesta en horario laboral. Tocá el número para enviar: «deseo contratar».</p>
-                  </div>
-                </div>
-              </div>
-              <div class="footer">
-                <hr />
-                SISU · Plataforma de Recursos Humanos (El Salvador, Guatemala y Honduras). Si tú no solicitaste este acceso, podés ignorar el correo.
-              </div>
-            </div>
-          </div>
-        </body>
-      </html>
-    `
+    const emailHtml = buildSisuTrialAccessEmailHtml({
+      variant: 'trial_welcome',
+      nombre: data.nombre,
+      email: data.email,
+      password: data.password,
+      loginUrl: data.loginUrl,
+    })
 
     const result = await resend.emails.send({
       from: getResendFromContact(),
       to: data.email,
-      subject: `🎉 ¡Bienvenido a SISU! - ${data.empresa}`,
-      html: emailHtml
+      subject: getSisuTrialAccessEmailSubject({ variant: 'trial_welcome', empresa: data.empresa }),
+      html: emailHtml,
     })
 
     console.log('✅ Correo de bienvenida enviado exitosamente:', result)
@@ -1033,222 +835,3 @@ async function dispararWebhookActivaciones(data: {
   }
 }
 
-function getWhatsAppCallingCode(countryCode: CountryCode): string {
-  if (countryCode === 'SLV') return '503'
-  if (countryCode === 'GTM') return '502'
-  return '504'
-}
-
-function normalizeWhatsAppForWaMe(
-  whatsapp: string,
-  countryCode: CountryCode
-): string {
-  const digits = whatsapp.replace(/\D/g, '')
-  const calling = getWhatsAppCallingCode(countryCode)
-  if (digits.startsWith(calling)) return digits
-  return `${calling}${digits}`
-}
-
-const REGISTRO_FOLLOW_UP_WHATSAPP_MESSAGE =
-  'Ya hiciste lo más difícil. En serio. Tu sistema SISU ya está activo. El 90% de las empresas se traban ahí. El siguiente paso para completar la automatización: digitalizar la asistencia. Hagámoslo hoy.'
-
-// Función para generar vCard (formato de contacto)
-function generarVCard(data: {
-  nombre: string
-  empresa: string
-  email: string
-  whatsapp: string | null
-  countryCode?: CountryCode
-}): string {
-  const vcard = [
-    'BEGIN:VCARD',
-    'VERSION:3.0',
-    `FN:${data.nombre}`,
-    `ORG:${data.empresa}`,
-    `EMAIL;TYPE=INTERNET:${data.email}`,
-  ]
-
-  if (data.whatsapp) {
-    const phone = data.whatsapp.replace(/[-\s]/g, '')
-    const cc = data.countryCode || 'HND'
-    const calling =
-      cc === 'SLV' ? '503' : cc === 'GTM' ? '502' : '504'
-    const formattedPhone = phone.startsWith('+')
-      ? phone
-      : phone.startsWith(calling)
-        ? `+${phone}`
-        : `+${calling}${phone}`
-    vcard.push(`TEL;TYPE=CELL:${formattedPhone}`)
-  }
-
-  vcard.push('END:VCARD')
-  return vcard.join('\n')
-}
-
-// Función para enviar email de resumen con vCard adjunto
-async function enviarEmailResumenRegistro(data: {
-  nombre: string
-  empresa: string
-  email: string
-  whatsapp: string | null
-  empleados: number
-  tenant_id: string
-  country_code: CountryCode
-}) {
-  try {
-    const apiKey = process.env.RESEND_API_KEY
-    const emailDestino = process.env.REGISTRO_NOTIFICATION_EMAIL || 'jorge7gomez@gmail.com'
-    
-    if (!apiKey) {
-      console.log('⚠️ RESEND_API_KEY no configurado, saltando envío de email de resumen')
-      return
-    }
-
-    const { Resend } = await import('resend')
-    const resend = new Resend(apiKey)
-
-    // Generar vCard
-    const vcardContent = generarVCard({
-      nombre: data.nombre,
-      empresa: data.empresa,
-      email: data.email,
-      whatsapp: data.whatsapp,
-      countryCode: data.country_code,
-    })
-
-    // Convertir vCard a buffer para adjuntarlo
-    const vcardBuffer = Buffer.from(vcardContent, 'utf-8')
-
-    const whatsappContactUrl = data.whatsapp
-      ? `https://wa.me/${normalizeWhatsAppForWaMe(data.whatsapp, data.country_code)}?text=${encodeURIComponent(REGISTRO_FOLLOW_UP_WHATSAPP_MESSAGE)}`
-      : null
-
-    const emailHtml = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <meta charset="utf-8" />
-          <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-          <title>Nuevo Registro - SISU</title>
-          <style>
-            body {
-              font-family: Arial, sans-serif;
-              line-height: 1.6;
-              color: #333;
-              max-width: 600px;
-              margin: 0 auto;
-              padding: 20px;
-            }
-            .header {
-              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-              color: white;
-              padding: 30px;
-              text-align: center;
-              border-radius: 8px 8px 0 0;
-            }
-            .content {
-              background: #f8f9fa;
-              padding: 30px;
-              border-radius: 0 0 8px 8px;
-            }
-            .info-box {
-              background: white;
-              border-left: 4px solid #667eea;
-              padding: 20px;
-              margin: 20px 0;
-              border-radius: 4px;
-            }
-            .info-row {
-              margin: 10px 0;
-            }
-            .label {
-              font-weight: bold;
-              color: #555;
-            }
-            .value {
-              color: #333;
-            }
-            .vcard-note {
-              background: #fff3cd;
-              border-left: 4px solid #ffc107;
-              padding: 15px;
-              margin: 20px 0;
-              border-radius: 4px;
-            }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <h1>📋 Nuevo Registro en SISU</h1>
-            <p>Se ha registrado un nuevo usuario para trial</p>
-          </div>
-          <div class="content">
-            <div class="info-box">
-              <div class="info-row">
-                <span class="label">👤 Nombre:</span>
-                <span class="value">${data.nombre}</span>
-              </div>
-              <div class="info-row">
-                <span class="label">🏢 Empresa:</span>
-                <span class="value">${data.empresa}</span>
-              </div>
-              <div class="info-row">
-                <span class="label">📧 Email:</span>
-                <span class="value">${data.email}</span>
-              </div>
-              ${data.whatsapp ? `
-              <div class="info-row">
-                <span class="label">📱 WhatsApp:</span>
-                <span class="value">${data.whatsapp}</span>
-              </div>
-              ` : ''}
-              <div class="info-row">
-                <span class="label">👥 Empleados:</span>
-                <span class="value">${data.empleados}</span>
-              </div>
-              <div class="info-row">
-                <span class="label">🌎 País (nómina):</span>
-                <span class="value">${data.country_code}</span>
-              </div>
-              <div class="info-row">
-                <span class="label">🆔 Tenant ID:</span>
-                <span class="value">${data.tenant_id}</span>
-              </div>
-            </div>
-            <div class="vcard-note">
-              <strong>📎 Archivo vCard adjunto</strong>
-              <p>Se ha adjuntado un archivo de contacto (.vcf) que puedes descargar e importar directamente a tu libreta de contactos en el celular.</p>
-              <p><strong>Para importar en iPhone:</strong> Abre el archivo adjunto y toca "Agregar a contactos"</p>
-              <p><strong>Para importar en Android:</strong> Descarga el archivo y ábrelo con la app de Contactos</p>
-            </div>
-          ${whatsappContactUrl ? `<div style="text-align: center; margin: 20px 0;"><a href="${whatsappContactUrl}" style="display: inline-block; padding: 12px 24px; background-color: #25D366; color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: bold; font-family: Arial, sans-serif;">💬 Contactar vía WhatsApp</a></div>` : ''}
-</div>
-        </body>
-      </html>
-    `
-
-    const result = await resend.emails.send({
-      from: getResendFromContact(),
-      to: emailDestino,
-      subject: `📋 Nuevo Registro: ${data.empresa} - ${data.nombre}`,
-      html: emailHtml,
-      attachments: [
-        {
-          filename: `${data.nombre.replace(/[^a-z0-9]/gi, '_')}_${data.empresa.replace(/[^a-z0-9]/gi, '_')}.vcf`,
-          content: vcardBuffer.toString('base64'),
-        }
-      ]
-    })
-
-    if ((result as any)?.error) {
-      console.error('❌ Error enviando email de resumen:', (result as any).error)
-      return
-    }
-
-    console.log('✅ Email de resumen con vCard enviado exitosamente:', (result as any)?.id)
-
-  } catch (error) {
-    console.error('❌ Error enviando email de resumen:', error)
-    // No fallar todo el proceso si el email falla
-  }
-}

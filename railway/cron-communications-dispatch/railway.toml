@@ -1,0 +1,9 @@
+# Triggers POST /api/cron/communications-dispatch at 07:00 America/Tegucigalpa (13:00 UTC)
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+cronSchedule = "0 13 * * *"
+restartPolicyType = "NEVER"
+startCommand = "bun run index.ts"

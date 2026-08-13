@@ -1,48 +1,102 @@
 import Link from 'next/link'
 import { CALCULATOR_HUB_LINKS } from '../lib/public-calculator/hub-links'
+import { GUIDE_LINKS } from '../lib/seo/internal-links'
+import ScrollReveal from './landing/ScrollReveal'
+import BorderBeam from './landing/BorderBeam'
+import { getHomeCopy } from '../lib/i18n/landings/home'
+import { useLandingPreferences } from './landing/LandingPreferencesProvider'
+
+const RELATED_GUIDE_CARDS = [GUIDE_LINKS.deduccionesHonduras, GUIDE_LINKS.recursos]
 
 export default function FreeToolsSection() {
-  return (
-    <section id="herramientas-gratuitas" className="py-12 sm:py-16 md:py-20 px-4 sm:px-6 max-w-7xl mx-auto relative z-10">
-      <div className="max-w-6xl mx-auto">
-        <div className="text-center mb-8 sm:mb-10">
-          <span className="inline-block px-3 py-1 mb-4 text-xs rounded-full bg-cyan-500/20 text-cyan-200 border border-cyan-500/30">
-            Herramientas gratuitas
-          </span>
-          <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-4">
-            Valida deducciones antes de automatizar tu planilla
-          </h2>
-          <p className="text-brand-200/90 max-w-3xl mx-auto">
-            Miles de búsquedas empiezan preguntando cuánto descuentan de sueldo. Usa nuestras calculadoras
-            gratuitas — las mismas reglas legales que Humano SISU — y cuando estés listo, activa la nómina completa.
-          </p>
-        </div>
+  const { locale, href } = useLandingPreferences()
+  const copy = getHomeCopy(locale).freeTools
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 mb-6">
-          {CALCULATOR_HUB_LINKS.deductions.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="glass-strong rounded-xl p-5 border border-white/15 hover:border-cyan-400/40 transition-all hover:-translate-y-0.5 text-left group"
-            >
-              <div className="text-xs text-brand-300 mb-1">{item.country}</div>
-              <div className="text-lg font-semibold text-white group-hover:text-brand-200">{item.title}</div>
-              <div className="text-sm text-brand-200/80 mt-1">{item.subtitle}</div>
-              {'badge' in item && typeof item.badge === 'string' && (
-                <div className="mt-3 text-xs text-cyan-300">{item.badge}</div>
-              )}
-            </Link>
+  return (
+    <section id="herramientas-gratuitas" className="relative py-12 sm:py-16 md:py-20 px-4 sm:px-6 max-w-7xl mx-auto z-10">
+      <div className="max-w-6xl mx-auto">
+        <ScrollReveal>
+          <div className="text-center mb-8 sm:mb-10">
+            <span className="inline-block px-3 py-1 mb-4 text-xs rounded-full bg-cyan-500/15 text-cyan-300 border border-cyan-500/25 uppercase tracking-widest">
+              {copy.eyebrow}
+            </span>
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold landing-ink mb-4">{copy.title}</h2>
+            <p className="landing-muted max-w-3xl mx-auto font-medium landing-dark-text">{copy.lead}</p>
+          </div>
+        </ScrollReveal>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4 mb-6">
+          {CALCULATOR_HUB_LINKS.deductions.map((item, i) => (
+            <ScrollReveal key={item.href} delay={i * 0.06}>
+              <BorderBeam>
+                <Link
+                  href={href(item.href)}
+                  className="glass-modern rounded-2xl p-5 min-h-[120px] hover:scale-[1.01] transition-all hover:shadow-[0_12px_40px_rgb(0,0,0,0.25)] text-left group block h-full"
+                >
+                  <div className="text-xs landing-brand-soft mb-1">{item.country}</div>
+                  <div className="text-lg font-semibold landing-ink group-hover:opacity-90">{item.title}</div>
+                  <div className="text-sm landing-muted mt-1">{item.subtitle}</div>
+                  {'badge' in item && typeof item.badge === 'string' && (
+                    <div className="mt-3 text-xs text-cyan-400">{item.badge}</div>
+                  )}
+                </Link>
+              </BorderBeam>
+            </ScrollReveal>
           ))}
         </div>
 
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 text-sm">
-          <Link href={CALCULATOR_HUB_LINKS.hub.href} className="text-brand-300 hover:text-white underline">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 mb-6">
+          {CALCULATOR_HUB_LINKS.benefits.map((item, i) => (
+            <ScrollReveal key={item.href} delay={i * 0.06}>
+              <BorderBeam>
+                <Link
+                  href={href(item.href)}
+                  className="glass-modern rounded-2xl p-5 min-h-[100px] hover:scale-[1.01] transition-all text-left group block h-full"
+                >
+                  <div className="text-xs landing-brand-soft mb-1">{item.country}</div>
+                  <div className="text-lg font-semibold landing-ink group-hover:opacity-90">{item.title}</div>
+                  <div className="text-sm landing-muted mt-1">{item.subtitle}</div>
+                </Link>
+              </BorderBeam>
+            </ScrollReveal>
+          ))}
+        </div>
+
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 text-sm flex-wrap">
+          <Link href={href(CALCULATOR_HUB_LINKS.hub.href)} className="landing-brand-soft hover:opacity-80 underline">
             {CALCULATOR_HUB_LINKS.hub.label}
           </Link>
-          <span className="hidden sm:inline text-brand-400">·</span>
-          <Link href={CALCULATOR_HUB_LINKS.prestaciones.href} className="text-brand-300 hover:text-white underline">
+          <span className="hidden sm:inline landing-brand-soft">·</span>
+          <Link href={href(CALCULATOR_HUB_LINKS.prestaciones.href)} className="landing-brand-soft hover:opacity-80 underline">
             {CALCULATOR_HUB_LINKS.prestaciones.title}
           </Link>
+          <span className="hidden sm:inline landing-brand-soft">·</span>
+          <Link href={href(CALCULATOR_HUB_LINKS.suscripcion.href)} className="landing-brand-soft hover:opacity-80 underline">
+            {CALCULATOR_HUB_LINKS.suscripcion.label}
+          </Link>
+        </div>
+
+        <div className="mt-10 sm:mt-12">
+          <h3 className="text-center text-xs uppercase tracking-widest landing-muted mb-4">
+            {locale === 'en' ? 'Related guides' : 'Guías relacionadas'}
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+            {RELATED_GUIDE_CARDS.map((guide, i) => (
+              <ScrollReveal key={guide.href} delay={i * 0.08}>
+                <BorderBeam>
+                  <Link
+                    href={href(guide.href)}
+                    className="glass-modern rounded-2xl p-5 min-h-[88px] hover:scale-[1.01] transition-all text-left group block h-full"
+                  >
+                    <div className="text-lg font-semibold landing-ink group-hover:opacity-90">{guide.label}</div>
+                    {guide.description && (
+                      <div className="text-sm landing-muted mt-1">{guide.description}</div>
+                    )}
+                  </Link>
+                </BorderBeam>
+              </ScrollReveal>
+            ))}
+          </div>
         </div>
       </div>
     </section>

@@ -71,7 +71,7 @@ export interface UpdateLeaveRequestData {
 /** Resumen diario de asistencia en el rango de un permiso (GET /api/leave/[id]?attendance_summary=1) */
 export interface LeaveAttendanceDaySummary {
   date: string
-  summary: 'sin_datos' | 'presente' | 'ausente'
+  summary: 'sin_datos' | 'presente' | 'ausente' | 'permiso_pagado'
   has_check_in: boolean
   record_status: string | null
 }

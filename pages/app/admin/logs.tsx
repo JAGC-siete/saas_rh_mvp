@@ -144,13 +144,13 @@ export default function AdminLogs() {
           {/* Statistics */}
           {logs && (
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <Card variant="glass" className="border-white/10">
+              <Card variant="liquid" className="border-white/10">
                 <CardContent className="p-4">
                   <div className="text-2xl font-bold text-white">{logs.statistics.total}</div>
                   <div className="text-sm text-white/70">Total de logs</div>
                 </CardContent>
               </Card>
-              <Card variant="glass" className="border-white/10">
+              <Card variant="liquid" className="border-white/10">
                 <CardContent className="p-4">
                   <div className="text-2xl font-bold text-red-300">
                     {logs.statistics.last24Hours?.error || 0}
@@ -158,7 +158,7 @@ export default function AdminLogs() {
                   <div className="text-sm text-white/70">Errores (24h)</div>
                 </CardContent>
               </Card>
-              <Card variant="glass" className="border-white/10">
+              <Card variant="liquid" className="border-white/10">
                 <CardContent className="p-4">
                   <div className="text-2xl font-bold text-yellow-300">
                     {logs.statistics.last24Hours?.warn || 0}
@@ -166,7 +166,7 @@ export default function AdminLogs() {
                   <div className="text-sm text-white/70">Advertencias (24h)</div>
                 </CardContent>
               </Card>
-              <Card variant="glass" className="border-white/10">
+              <Card variant="liquid" className="border-white/10">
                 <CardContent className="p-4">
                   <div className="text-2xl font-bold text-blue-300">
                     {logs.statistics.last24Hours?.info || 0}
@@ -178,7 +178,7 @@ export default function AdminLogs() {
           )}
 
           {/* Filters */}
-          <Card variant="glass" className="border-white/10">
+          <Card variant="liquid" className="border-white/10">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-white">
                 <Filter className="h-5 w-5" />
@@ -190,7 +190,7 @@ export default function AdminLogs() {
                 <div>
                   <label className="text-sm font-medium text-white/80 mb-1 block">Nivel</label>
                   <select 
-                    className="w-full mt-1 p-2 border border-white/20 rounded-md bg-white/10 text-white backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-amber-300/50 focus:border-amber-300/50"
+                    className="input-glass w-full text-white focus:ring-amber-300/50"
                     value={filters.level}
                     onChange={(e) => setFilters(prev => ({ ...prev, level: e.target.value }))}
                   >
@@ -204,7 +204,7 @@ export default function AdminLogs() {
                 <div>
                   <label className="text-sm font-medium text-white/80 mb-1 block">Límite</label>
                   <select 
-                    className="w-full mt-1 p-2 border border-white/20 rounded-md bg-white/10 text-white backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-amber-300/50 focus:border-amber-300/50"
+                    className="input-glass w-full text-white focus:ring-amber-300/50"
                     value={filters.limit}
                     onChange={(e) => setFilters(prev => ({ ...prev, limit: parseInt(e.target.value) }))}
                   >
@@ -218,7 +218,7 @@ export default function AdminLogs() {
                   <label className="text-sm font-medium text-white/80 mb-1 block">Fecha Inicio</label>
                   <input 
                     type="datetime-local"
-                    className="w-full mt-1 p-2 border border-white/20 rounded-md bg-white/10 text-white backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-amber-300/50 focus:border-amber-300/50"
+                    className="input-glass w-full text-white focus:ring-amber-300/50"
                     value={filters.startDate}
                     onChange={(e) => setFilters(prev => ({ ...prev, startDate: e.target.value }))}
                   />
@@ -227,7 +227,7 @@ export default function AdminLogs() {
                   <label className="text-sm font-medium text-white/80 mb-1 block">Fecha Fin</label>
                   <input 
                     type="datetime-local"
-                    className="w-full mt-1 p-2 border border-white/20 rounded-md bg-white/10 text-white backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-amber-300/50 focus:border-amber-300/50"
+                    className="input-glass w-full text-white focus:ring-amber-300/50"
                     value={filters.endDate}
                     onChange={(e) => setFilters(prev => ({ ...prev, endDate: e.target.value }))}
                   />
@@ -243,7 +243,7 @@ export default function AdminLogs() {
 
           {/* Error State */}
           {error && (
-            <Card variant="glass" className="border-red-400/40 bg-red-500/10">
+            <Card variant="liquid" className="border-red-400/40 bg-red-500/10">
               <CardContent className="p-4">
                 <div className="flex items-center gap-2 text-red-100">
                   <AlertCircle className="h-5 w-5" />
@@ -255,7 +255,7 @@ export default function AdminLogs() {
           )}
 
           {/* Logs */}
-          <Card variant="glass" className="border-white/10">
+          <Card variant="liquid" className="border-white/10">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-white">
                 <FileText className="h-5 w-5" />

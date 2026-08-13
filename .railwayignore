@@ -132,10 +132,9 @@ temp/
 *.rar
 *.7z
 
-# Media files (if any)
+# Media files (keep public/images/ — landing, paz, secreto-chest ship in deploy)
 **/uploads/**
 **/public/media/**
-**/public/images/**
 **/public/videos/**
 
 # Python (if any Python scripts)

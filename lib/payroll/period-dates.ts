@@ -388,3 +388,25 @@ export function getUpcomingPeriods(
 
   return periods
 }
+
+/** YYYY-MM-DD for a calendar day in an IANA timezone. */
+export function getDateStringInTimezone(date: Date, timezone: string): string {
+  return date.toLocaleDateString('en-CA', { timeZone: timezone })
+}
+
+/** Yesterday's date (YYYY-MM-DD) in the given timezone. */
+export function getYesterdayInTimezone(timezone: string, referenceDate: Date = new Date()): string {
+  const today = getDateStringInTimezone(referenceDate, timezone)
+  const [y, m, d] = today.split('-').map(Number)
+  const noon = new Date(Date.UTC(y, m - 1, d, 12, 0, 0))
+  noon.setUTCDate(noon.getUTCDate() - 1)
+  return noon.toISOString().slice(0, 10)
+}
+
+/** True when dateStr is the last day of the pay period that contains it. */
+export function isPeriodEndDate(config: PayrollPeriodConfig, dateStr: string): boolean {
+  const [y, m, d] = dateStr.split('-').map(Number)
+  const ref = new Date(y, m - 1, d, 12, 0, 0)
+  const period = getCurrentPeriod(config, ref)
+  return period.fechaFin === dateStr
+}

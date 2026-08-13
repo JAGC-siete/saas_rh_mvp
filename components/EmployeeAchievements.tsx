@@ -78,7 +78,7 @@ export default memo(function EmployeeAchievements({ companyId: propCompanyId, em
 
   if (loading) {
     return (
-      <Card variant="glass">
+      <Card variant="liquid">
         <CardHeader>
           <CardTitle className="text-white">Employee Achievements</CardTitle>
           <CardDescription className="text-gray-300">Loading achievements...</CardDescription>
@@ -94,7 +94,7 @@ export default memo(function EmployeeAchievements({ companyId: propCompanyId, em
 
   if (error) {
     return (
-      <Card variant="glass">
+      <Card variant="liquid">
         <CardHeader>
           <CardTitle className="text-white">Employee Achievements</CardTitle>
         </CardHeader>
@@ -115,7 +115,7 @@ export default memo(function EmployeeAchievements({ companyId: propCompanyId, em
 
   if (achievements.length === 0) {
     return (
-      <Card variant="glass">
+      <Card variant="liquid">
         <CardHeader>
           <CardTitle className="text-white">Employee Achievements</CardTitle>
           <CardDescription className="text-gray-300">No achievements earned yet</CardDescription>
@@ -130,7 +130,7 @@ export default memo(function EmployeeAchievements({ companyId: propCompanyId, em
   }
 
   return (
-    <Card variant="glass">
+    <Card variant="liquid">
       <CardHeader>
         <CardTitle className="text-white">Employee Achievements</CardTitle>
         <CardDescription className="text-gray-300">

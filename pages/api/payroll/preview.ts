@@ -18,6 +18,7 @@ import {
   resolvePayrollPeriodContext,
   computeFixedGrossFromDays,
   computeFixedLineDeductionsAndNet,
+  applyDeductionPlansToMetadata,
   buildFixedLinePlanMetadata,
   type PreviewPaymentFrequency
 } from '../../../lib/payroll/fixed-line-recalc'
@@ -25,7 +26,7 @@ import { calculateSeptimoDia } from '../../../lib/payroll/septimo-dia'
 import { HONDURAS_LABOR_FACTOR, HORAS_PERIODO_MENSUAL, HORAS_PERIODO_QUINCENAL } from '../../../lib/payroll/constants'
 import { buildAuthorizedPayrollPreviewPayload } from '../../../lib/payroll/preview-authorized-readonly'
 import { calculateEmployerContributions } from '../../../lib/payroll/employer-contributions'
-import { resolveEffectivePayType } from '../../../lib/payroll/resolve-effective-pay-type'
+import { resolveEffectivePayType, parseCompanyCalculationMode, isHourBasedPayType } from '../../../lib/payroll/resolve-effective-pay-type'
 import {
   hasValidPayrollAttendanceRecords,
   resolveFixedDaysWorkedForPayroll,
@@ -33,8 +34,21 @@ import {
 } from '../../../lib/payroll/payroll-attendance-inclusion'
 import {
   resolveCompanyPayOvertime,
-  shouldPayOvertimeToEmployee
+  shouldPayOvertimeToEmployee,
+  resolveFixedOvertimePay,
+  readOvertimeOverrideFromMetadata,
+  emptyOvertimeBreakdown,
+  overtimeBreakdownToMetadata,
+  overtimeHoursTotal,
+  type OvertimeHoursBreakdown,
 } from '../../../lib/payroll/overtime-pay'
+import { ahcRowToOvertimeBreakdown } from '../../../lib/attendance/overtime-bands'
+import {
+  resolveOrdinaryHoursCap,
+  sumAdminFloorPeriodHours,
+} from '../../../lib/payroll/admin-floor-hours'
+import { parseOrdinaryHoursOverrideInput } from '../../../lib/payroll/ordinary-hours-override'
+import { ensurePeriodAhcFresh } from '../../../lib/payroll/ensure-period-ahc'
 import { createEmployeeSalaryClient } from '../../../lib/security/employee-data-access'
 import {
   loadEmployeeScheduleAssignments,
@@ -42,6 +56,14 @@ import {
 } from '../../../lib/attendance/resolve-schedule-batch'
 import { isRestDayForDate } from '../../../lib/attendance/schedule-times'
 import type { LegacyScheduleColumns } from '../../../lib/attendance/shift-config'
+import { fetchPaidLeaveCreditsByEmployee } from '../../../lib/leave/paid-leave-days'
+import {
+  shouldPreservePayrollLineOnPreview,
+  buildFixedPlanillaRowFromPersistedLine,
+  buildHourlyPlanillaRowFromPersistedLine,
+} from '../../../lib/payroll/preview-preserve-line'
+import { findOrphanPayrollLineIds } from '../../../lib/payroll/preview-orphan-lines'
+import { resolvePayrollDeductionMode } from '../../../lib/payroll/deduction-mode'
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -69,28 +91,26 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       companyId: companyId 
     })
 
-    const { year, month, quincena, tipo } = req.query
+    const { year, month, quincena } = req.query
     
     secureLog('Parámetros recibidos para preview', { 
       hasYear: !!year, 
       hasMonth: !!month, 
-      hasQuincena: !!quincena, 
-      tipo: tipo 
+      hasQuincena: !!quincena,
     })
     
     // Validaciones
     if (!year || !month || !quincena) {
-      console.error('❌ ERROR - Parámetros faltantes:', { year, month, quincena, tipo })
+      console.error('❌ ERROR - Parámetros faltantes:', { year, month, quincena })
       return res.status(400).json({ 
         error: 'year, month, y quincena son requeridos',
-        received: { year, month, quincena, tipo }
+        received: { year, month, quincena }
       })
     }
     
     const yearNum = parseInt(year as string)
     const monthNum = parseInt(month as string)
     const quincenaNum = parseInt(quincena as string)
-    const tipoParam = tipo as string || 'CON'
     
     if (isNaN(yearNum) || isNaN(monthNum) || isNaN(quincenaNum)) {
       console.error('❌ ERROR - Parámetros inválidos (NaN):', { yearNum, monthNum, quincenaNum })
@@ -98,14 +118,6 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         error: 'Parámetros numéricos inválidos',
         received: { year, month, quincena },
         parsed: { yearNum, monthNum, quincenaNum }
-      })
-    }
-    
-    if (!['CON', 'SIN', '2PAGOS'].includes(tipoParam)) {
-      console.error('❌ ERROR - Tipo inválido:', tipoParam)
-      return res.status(400).json({ 
-        error: 'Tipo inválido (debe ser CON, SIN o 2PAGOS)',
-        received: tipoParam
       })
     }
 
@@ -140,6 +152,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       return 'biweekly'
     }
     const paymentFrequency = mapFreq(payrollConfig?.payment_frequency || payrollMetadata.payment_frequency || 'quincenal')
+    const tipoParam = resolvePayrollDeductionMode(payrollMetadata, paymentFrequency)
     const hasCustomQuincena = !!(qcCol && (qcCol.first_start != null || qcCol.first_end != null || qcCol.second_start != null || qcCol.second_end != null))
     const paymentCutDates = qcCol
       ? {
@@ -169,8 +182,13 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       infop: false
     }
     const calculationMode = (payrollConfig as any)?.calculation_mode ?? payrollMetadata?.calculation_mode ?? 'daily'
-    const companyCalculationMode = calculationMode === 'hourly' ? 'hourly' : 'daily'
+    const companyCalculationMode = parseCompanyCalculationMode(calculationMode)
     const companyPayOvertime = resolveCompanyPayOvertime(payrollMetadata as Record<string, unknown>)
+    const ordinaryHoursCap = resolveOrdinaryHoursCap(
+      parseOrdinaryHoursOverrideInput(
+        (payrollMetadata as Record<string, unknown>)?.ordinary_hours_override
+      )
+    )
     const incompleteRecordDefaultHours = (payrollConfig as any)?.incomplete_record_default_hours ?? payrollMetadata?.incomplete_record_default_hours ?? null
     const semanalProration = (payrollMetadata?.semanal_proration || 'proportional') as 'proportional' | 'fixed'
 
@@ -318,7 +336,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     const { data: employees, error: empError } = await salaryClient
       .from('employees')
       .select(`
-        id, name, dni, base_salary, bank_name, bank_account, status, department_id, pay_type, attendance_required, work_schedule_id, position, role,
+        id, name, dni, employee_code, base_salary, bank_name, bank_account, status, department_id, pay_type, attendance_required, pay_overtime, work_schedule_id, position, role,
         departments:department_id(name),
         work_schedules:work_schedule_id(monday_start, tuesday_start, wednesday_start, thursday_start, friday_start, saturday_start, sunday_start)
       `)
@@ -372,7 +390,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     if (employeeIds.length > 0) {
       const { data: attData, error: attError } = await supabase
         .from('attendance_records')
-        .select('employee_id, date, check_in, check_out, status, flags')
+        .select('id, employee_id, date, check_in, check_out, status, flags, updated_at')
         .in('employee_id', employeeIds)
         .gte('date', fechaInicio)
         .lte('date', fechaFin)
@@ -409,16 +427,56 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       }
     }
 
+    let paidLeaveCreditsByEmployee = new Map<string, number>()
+    if (employeeIds.length > 0) {
+      try {
+        paidLeaveCreditsByEmployee = await fetchPaidLeaveCreditsByEmployee(
+          supabase,
+          companyId,
+          fechaInicio,
+          fechaFin,
+          employeeIds
+        )
+      } catch (paidLeaveErr) {
+        console.error('Error obteniendo créditos de permisos pagados:', paidLeaveErr)
+        return res.status(500).json({
+          error: 'Error obteniendo permisos pagados para nómina',
+          details: paidLeaveErr instanceof Error ? paidLeaveErr.message : String(paidLeaveErr),
+        })
+      }
+    }
+
     // attendance_hours_calculation:
     // (1) Tracking overtime hours — ALL employees (columna Horas extra AHC); independent of calculation_mode.
-    // (2) Hour aggregates for bruto — only effectivePayType === 'hourly' (inherits pay_type null from company).
-    const effectivePayTypeByEmployee: Record<string, 'fixed' | 'hourly'> = {}
+    // (2) Hour aggregates for bruto — hour-based effective types (hourly + admin_floor).
+    const effectivePayTypeByEmployee: Record<string, 'fixed' | 'hourly' | 'admin_floor'> = {}
     for (const emp of employees || []) {
       effectivePayTypeByEmployee[emp.id] = resolveEffectivePayType(emp.pay_type, companyCalculationMode)
     }
 
+    const completeAttendanceForAhc = (attendanceRecords || []).filter(
+      (r: any) => r?.id && r.check_in && r.check_out
+    )
+    const ahcRefresh = await ensurePeriodAhcFresh({
+      supabase,
+      completeRecords: completeAttendanceForAhc.map((r: any) => ({
+        id: r.id as string,
+        updated_at: r.updated_at ?? null,
+      })),
+      lawYear: yearNum,
+    })
+    if (ahcRefresh.error) {
+      console.warn('Preview AHC refresh warning:', ahcRefresh.error)
+    } else if (ahcRefresh.refreshed > 0) {
+      console.log(
+        `Preview AHC refresh: missing=${ahcRefresh.missing} stale=${ahcRefresh.stale} refreshed=${ahcRefresh.refreshed}`
+      )
+    }
+
     let ahcByEmployee: Record<string, { total_hours: number; normal_hours: number; by_record: Record<string, number> }> = {}
     const ahcOvertimeByEmployee: Record<string, number> = {}
+    const ahcOvertimeBreakdownByEmployee: Record<string, OvertimeHoursBreakdown> = {}
+    const rawClockFallbackEmployeeIds: string[] = []
     if (employeeIds.length > 0) {
       const { data: ahcData } = await supabase
         .from('attendance_hours_calculation')
@@ -429,7 +487,12 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           normal_hours,
           overtime_diurno_hours,
           overtime_nocturno_hours,
-          overtime_feriado_hours
+          overtime_feriado_hours,
+          overtime_evening_25_hours,
+          overtime_night_50_hours,
+          overtime_late_75_hours,
+          overtime_morning_25_hours,
+          overtime_holiday_100_hours
         `)
         .in('employee_id', employeeIds)
       if (ahcData && ahcData.length > 0) {
@@ -443,13 +506,19 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         const validArIds = new Set((arDates || []).map((r: any) => r.id))
         for (const row of ahcData) {
           if (!validArIds.has(row.attendance_record_id)) continue
-          const ot =
-            Number(row.overtime_diurno_hours || 0) +
-            Number(row.overtime_nocturno_hours || 0) +
-            Number(row.overtime_feriado_hours || 0)
+          const mapped = ahcRowToOvertimeBreakdown(row)
+          const ot = overtimeHoursTotal(mapped)
           const eid = row.employee_id as string
           ahcOvertimeByEmployee[eid] = (ahcOvertimeByEmployee[eid] || 0) + ot
-          if (effectivePayTypeByEmployee[eid] !== 'hourly') continue
+          if (!ahcOvertimeBreakdownByEmployee[eid]) {
+            ahcOvertimeBreakdownByEmployee[eid] = emptyOvertimeBreakdown()
+          }
+          ahcOvertimeBreakdownByEmployee[eid].evening_25 += mapped.evening_25
+          ahcOvertimeBreakdownByEmployee[eid].night_50 += mapped.night_50
+          ahcOvertimeBreakdownByEmployee[eid].late_75 += mapped.late_75
+          ahcOvertimeBreakdownByEmployee[eid].morning_25 += mapped.morning_25
+          ahcOvertimeBreakdownByEmployee[eid].holiday_100 += mapped.holiday_100
+          if (!isHourBasedPayType(effectivePayTypeByEmployee[eid])) continue
           if (!ahcByEmployee[eid]) {
             ahcByEmployee[eid] = { total_hours: 0, normal_hours: 0, by_record: {} }
           }
@@ -594,6 +663,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     // Separar en dos arrays: fixed y hourly
     const planilla_fixed: any[] = []
     const planilla_hourly: any[] = []
+    let preservedEditedLines = 0
     
     // Función auxiliar para calcular horas trabajadas desde registros
     const calculateHoursWorked = (registros: any[]): number => {
@@ -615,7 +685,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     const { data: existingRunLinesForSkip } = await supabase
       .from('payroll_run_lines')
       .select(
-        'id, employee_id, metadata, eff_hours, eff_bruto, eff_ihss, eff_rap, eff_isr, eff_neto'
+        'id, employee_id, edited, metadata, eff_hours, eff_bruto, eff_ihss, eff_rap, eff_isr, eff_neto'
       )
       .eq('run_id', runId)
       .eq('company_id', companyId)
@@ -688,47 +758,39 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       if (effectivePayType === 'fixed') {
         // ========== EMPLEADOS FIJOS (FIXED) ==========
         const prevLine = existingLineByEmployee[emp.id]
-        const prevMeta = prevLine?.metadata as Record<string, unknown> | null | undefined
-        if (prevMeta != null && prevMeta.days_adjusted_at != null && prevLine) {
-          const effH = Number(prevLine.eff_hours) || 0
-          const effBruto = Number(prevLine.eff_bruto) || 0
-          const effIhss = Number(prevLine.eff_ihss) || 0
-          const effRap = Number(prevLine.eff_rap) || 0
-          const effIsr = Number(prevLine.eff_isr) || 0
-          const effNeto = Number(prevLine.eff_neto) || 0
-          const totalDed = effBruto - effNeto
-          planilla_fixed.push({
-            employee_id: emp.id,
-            id: emp.dni || emp.id,
-            name: emp?.name || 'Sin nombre',
-            bank: emp.bank_name || 'No especificado',
-            bank_account: emp.bank_account || 'No especificado',
-            department: departmentName,
-            base_salary: base_salary,
-            monthly_salary: base_salary,
-            days_worked: effH,
-            days_absent: Math.max(0, diasPeriodo - effH),
-            horas_extras: Math.round((ahcOvertimeByEmployee[emp.id] || 0) * 100) / 100,
-            total_earnings: Math.round(effBruto * 100) / 100,
-            IHSS: Math.round(effIhss * 100) / 100,
-            RAP: Math.round(effRap * 100) / 100,
-            ISR: Math.round(effIsr * 100) / 100,
-            total_deducciones: Math.round(Math.max(0, totalDed) * 100) / 100,
-            total: Math.round(effNeto * 100) / 100,
-            line_id: prevLine.id,
-            pay_type: 'fixed',
-            metadata: prevLine.metadata
-          })
+        if (shouldPreservePayrollLineOnPreview(prevLine, {
+          currentEffectivePayType: effectivePayType,
+        })) {
+          preservedEditedLines += 1
+          planilla_fixed.push(
+            buildFixedPlanillaRowFromPersistedLine({
+              emp: {
+                id: emp.id,
+                dni: emp.dni,
+                name: emp.name,
+                bank_name: emp.bank_name,
+                bank_account: emp.bank_account,
+                base_salary,
+              },
+              departmentName,
+              prevLine,
+              horasExtras: ahcOvertimeByEmployee[emp.id] || 0,
+              diasPeriodo,
+            })
+          )
           continue
         }
 
-        const { daysWorked: days_worked, includedWithoutAttendance } = resolveFixedDaysWorkedForPayroll(
-          effectivePayType,
-          emp.attendance_required,
-          registros.length,
-          diasPeriodo
-        )
-        const days_absent = diasPeriodo - days_worked
+        const paidLeaveCredits = paidLeaveCreditsByEmployee.get(emp.id) || 0
+        const { daysWorked: days_worked, includedWithoutAttendance, paidLeaveDays } =
+          resolveFixedDaysWorkedForPayroll(
+            effectivePayType,
+            emp.attendance_required,
+            registros.length,
+            diasPeriodo,
+            paidLeaveCredits
+          )
+        const days_absent = Math.max(0, diasPeriodo - days_worked)
 
         // Capa 3: Días Extra/Especial (festivo o descanso con asistencia)
         let days_extra = 0
@@ -744,7 +806,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           if (isHoliday || isRestDay) days_extra++
         }
         
-        let total_earnings = computeFixedGrossFromDays({
+        let dayGross = computeFixedGrossFromDays({
           baseSalary: base_salary,
           daysWorked: days_worked,
           paymentFrequency: paymentFrequency as PreviewPaymentFrequency,
@@ -753,6 +815,23 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           isMonthlyCalendarStandard: periodCtx.isMonthlyCalendarStandard,
           semanalProration
         })
+
+        if (!isFinite(dayGross) || isNaN(dayGross)) {
+          console.error(`❌ ERROR - dayGross inválido para empleado ${emp.name}:`, dayGross)
+          dayGross = 0
+        }
+
+        const prevMeta = (existingLineByEmployee[emp.id]?.metadata || null) as
+          | Record<string, unknown>
+          | null
+        const otResolved = resolveFixedOvertimePay({
+          companyPayOvertime,
+          employeePayOvertime: emp.pay_overtime,
+          hourlyRate: base_salary / HONDURAS_LABOR_FACTOR,
+          ahcBreakdown: ahcOvertimeBreakdownByEmployee[emp.id] || emptyOvertimeBreakdown(),
+          overrideBreakdown: readOvertimeOverrideFromMetadata(prevMeta),
+        })
+        let total_earnings = dayGross + otResolved.pay
 
         if (!isFinite(total_earnings) || isNaN(total_earnings)) {
           console.error(`❌ ERROR - total_earnings inválido para empleado ${emp.name}:`, total_earnings)
@@ -811,6 +890,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         const lineMetadata = buildFixedLinePlanMetadata(yearNum, empPlans, {
           base_salary_used: base_salary,
           position_snapshot: String((emp as any).position || (emp as any).role || ''),
+          horas_extras: otResolved.hoursTotal,
+          overtime_pay: otResolved.pay,
+          ...overtimeBreakdownToMetadata(otResolved.breakdown),
           ihss_patronal:
             countryCode === 'HND' && taxConstants
               ? calculateEmployerContributions({
@@ -834,7 +916,25 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
               }
             : {}),
           ...(includedWithoutAttendance ? { included_without_attendance: true } : {}),
+          ...(paidLeaveDays > 0
+            ? {
+                paid_leave_days: paidLeaveDays,
+                notes_paid_leave: `${paidLeaveDays} día(s) permiso con goce (sin marca)`,
+              }
+            : {}),
         })
+
+        // Preserve manual OT override markers across regenerate (hours already applied above)
+        if (prevMeta?.ot_adjusted_at != null) {
+          lineMetadata.ot_adjusted_at = prevMeta.ot_adjusted_at
+          if (prevMeta.ot_adjusted_by != null) lineMetadata.ot_adjusted_by = prevMeta.ot_adjusted_by
+          if (prevMeta.ot_adjusted_reason != null) {
+            lineMetadata.ot_adjusted_reason = prevMeta.ot_adjusted_reason
+          }
+          if (prevMeta.ot_adjust_reason != null) {
+            lineMetadata.ot_adjust_reason = prevMeta.ot_adjust_reason
+          }
+        }
 
         // Insertar línea en payroll_run_lines
         const { data: insertedLine, error: lineError } = await supabase
@@ -885,7 +985,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
         planilla_fixed.push({
           employee_id: emp.id,
-          id: emp.dni || emp.id,
+          id: emp.employee_code || '',
           name: emp?.name || 'Sin nombre',
           bank: emp.bank_name || 'No especificado',
           bank_account: emp.bank_account || 'No especificado',
@@ -896,7 +996,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           days_absent,
           days_extra: days_extra > 0 ? days_extra : undefined,
           notes_extra: days_extra > 0 ? `${days_extra} día(s) Extra/Especial (festivo/descanso)` : undefined,
-          horas_extras: Math.round((ahcOvertimeByEmployee[emp.id] || 0) * 100) / 100,
+          horas_extras: otResolved.hoursTotal,
+          overtime_pay: otResolved.pay > 0 ? otResolved.pay : undefined,
           total_earnings: Math.round(total_earnings * 100) / 100,
           IHSS: Math.round(IHSS * 100) / 100,
           RAP: Math.round(RAP * 100) / 100,
@@ -910,7 +1011,35 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         })
         
       } else {
-        // ========== EMPLEADOS POR HORA (HOURLY) ==========
+        // ========== EMPLEADOS POR HORA / ADMIN PISO ==========
+        const prevLineHourly = existingLineByEmployee[emp.id]
+        if (shouldPreservePayrollLineOnPreview(prevLineHourly, {
+          currentEffectivePayType: effectivePayType,
+        })) {
+          preservedEditedLines += 1
+          const hourly_rate_preserved = base_salary / HONDURAS_LABOR_FACTOR
+          const days_worked_preserved = registros.length
+          const preservedRow = buildHourlyPlanillaRowFromPersistedLine({
+              emp: {
+                id: emp.id,
+                dni: emp.dni,
+                name: emp.name,
+                bank_name: emp.bank_name,
+                bank_account: emp.bank_account,
+                base_salary,
+              },
+              departmentName,
+              prevLine: prevLineHourly,
+              horasExtras: ahcOvertimeByEmployee[emp.id] || 0,
+              diasPeriodo,
+              daysWorked: days_worked_preserved,
+              hourlyRate: hourly_rate_preserved,
+              payType: effectivePayType === 'admin_floor' ? 'admin_floor' : 'hourly',
+            })
+          planilla_hourly.push(preservedRow)
+          continue
+        }
+
         const completeRegistros = registros.filter((r: any) => r.check_in && r.check_out)
         const incompleteRegistros = registros.filter((r: any) => r.check_in && !r.check_out)
 
@@ -923,15 +1052,42 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         }
 
         let total_hours_worked: number
+        let horasExtrasDisplay = Math.round((ahcOvertimeByEmployee[emp.id] || 0) * 100) / 100
         const ahcEmp = ahcByEmployee[emp.id]
-        const payOvertimeMoney = shouldPayOvertimeToEmployee(companyPayOvertime, effectivePayType)
-        if (ahcEmp && (ahcEmp.total_hours > 0 || ahcEmp.normal_hours > 0)) {
+        const payOvertimeMoney = shouldPayOvertimeToEmployee(
+          companyPayOvertime,
+          effectivePayType,
+          emp.pay_overtime
+        )
+
+        if (effectivePayType === 'admin_floor') {
+          const floorDays = registros.map((r: any) => {
+            const fromAhc = ahcEmp?.by_record?.[r.id]
+            let total_hours = Number(fromAhc)
+            if (!Number.isFinite(total_hours) || total_hours < 0) {
+              total_hours =
+                r.check_in && r.check_out ? calculateHoursWorked([r]) : 0
+            }
+            return {
+              check_in: r.check_in,
+              check_out: r.check_out,
+              total_hours,
+            }
+          })
+          const floor = sumAdminFloorPeriodHours(floorDays, ordinaryHoursCap)
+          total_hours_worked = payOvertimeMoney ? floor.payable : floor.ordinary
+          horasExtrasDisplay = floor.overtime
+        } else if (ahcEmp && (ahcEmp.total_hours > 0 || ahcEmp.normal_hours > 0)) {
           // Statu quo when paying OT: all AHC hours at base rate. When off: only ordinary hours count toward bruto.
           total_hours_worked = payOvertimeMoney ? ahcEmp.total_hours : ahcEmp.normal_hours
           if (incompleteRecordDefaultHours != null && incompleteRecordDefaultHours > 0 && incompleteRegistros.length > 0) {
             total_hours_worked += incompleteRecordDefaultHours * incompleteRegistros.length
           }
         } else {
+          // Last resort after ensurePeriodAhcFresh — no lunch/band logic.
+          if (completeRegistros.length > 0) {
+            rawClockFallbackEmployeeIds.push(emp.id)
+          }
           total_hours_worked = calculateHoursWorked(completeRegistros)
           if (incompleteRecordDefaultHours != null && incompleteRecordDefaultHours > 0 && incompleteRegistros.length > 0) {
             total_hours_worked += incompleteRecordDefaultHours * incompleteRegistros.length
@@ -947,10 +1103,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         // Calcular salario bruto del período basado en horas trabajadas
         let total_earnings = total_hours_worked * hourly_rate
 
-        // Séptimo Día (Art. 338-340): solo para pay_type === 'hourly'
+        // Séptimo Día (Art. 338-340): solo para pay_type === 'hourly' (no admin_floor)
         let septimoDia = 0
         if (effectivePayType === 'hourly' && hourly_rate > 0) {
-          const ahcEmp = ahcByEmployee[emp.id]
           const ordinaryHours = ahcEmp?.normal_hours ?? Math.max(0, total_hours_worked)
           septimoDia = calculateSeptimoDia({
             hourlyRate: hourly_rate,
@@ -1106,12 +1261,10 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         }
         if (septimoDia > 0) lineMetadata.septimo_dia = septimoDia
         if (total_hours_worked > 0) lineMetadata.total_hours_worked = total_hours_worked
-        const planIdsHourly: string[] = []
-        for (const plan of empPlansHourly) {
-          lineMetadata[plan.field_key] = plan.monto_por_plazo
-          planIdsHourly.push(plan.id)
-        }
-        if (planIdsHourly.length > 0) lineMetadata._deduction_plan_ids = planIdsHourly
+        lineMetadata.pay_type = effectivePayType === 'admin_floor' ? 'admin_floor' : 'hourly'
+        lineMetadata.horas_extras = horasExtrasDisplay
+        lineMetadata.days_worked = days_worked
+        applyDeductionPlansToMetadata(lineMetadata, empPlansHourly)
 
         const { data: insertedLine, error: lineError } = await supabase
           .from('payroll_run_lines')
@@ -1162,7 +1315,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
         planilla_hourly.push({
           employee_id: emp.id,
-          id: emp.dni || emp.id,
+          id: emp.employee_code || '',
           name: emp?.name || 'Sin nombre',
           bank: emp.bank_name || 'No especificado',
           bank_account: emp.bank_account || 'No especificado',
@@ -1171,7 +1324,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           monthly_salary: base_salary,
           days_worked,
           days_absent,
-          horas_extras: Math.round((ahcOvertimeByEmployee[emp.id] || 0) * 100) / 100,
+          horas_extras: horasExtrasDisplay,
           total_hours_worked: Math.round(total_hours_worked * 100) / 100,
           hourly_rate: Math.round(hourly_rate * 100) / 100,
           total_earnings: Math.round(total_earnings * 100) / 100,
@@ -1181,9 +1334,33 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           total_deducciones: Math.round(total_deductions * 100) / 100,
           total: Math.round(total * 100) / 100,
           line_id: insertedLine.id,
-          pay_type: 'hourly',
+          pay_type: effectivePayType === 'admin_floor' ? 'admin_floor' : 'hourly',
           metadata: lineMetadata
         })
+      }
+    }
+
+    // Draft/edited only (authorized returns earlier): drop lines for employees no longer in calc
+    // so PDF from this run matches the preview table (e.g. inactive H01878 orphans).
+    const orphanLineIds = findOrphanPayrollLineIds(
+      existingRunLinesForSkip || [],
+      empleadosParaNomina.map((e: { id: string }) => e.id)
+    )
+    let orphanLinesRemoved = 0
+    if (orphanLineIds.length > 0) {
+      const { error: orphanDeleteError } = await supabase
+        .from('payroll_run_lines')
+        .delete()
+        .in('id', orphanLineIds)
+        .eq('run_id', runId)
+        .eq('company_id', companyId)
+      if (orphanDeleteError) {
+        console.error('Error eliminando líneas huérfanas del preview:', orphanDeleteError)
+      } else {
+        orphanLinesRemoved = orphanLineIds.length
+        console.log(
+          `Preview: eliminadas ${orphanLinesRemoved} línea(s) huérfana(s) fuera del set de cálculo`
+        )
       }
     }
 
@@ -1257,7 +1434,32 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
               message: `${attendanceExemptIncluded.length} empleado(s) administrativo(s) incluido(s) sin asistencia (exento de checada).`,
             }
           : undefined,
-      incompleteRecordsAlert: incompleteRecordsAlert.length > 0 ? incompleteRecordsAlert : undefined
+      incompleteRecordsAlert: incompleteRecordsAlert.length > 0 ? incompleteRecordsAlert : undefined,
+      ahc_refresh: {
+        complete: ahcRefresh.complete,
+        missing: ahcRefresh.missing,
+        stale: ahcRefresh.stale,
+        refreshed: ahcRefresh.refreshed,
+        error: ahcRefresh.error || null,
+      },
+      ahcRawClockFallbackWarning:
+        rawClockFallbackEmployeeIds.length > 0
+          ? {
+              count: rawClockFallbackEmployeeIds.length,
+              employee_ids: rawClockFallbackEmployeeIds,
+              message:
+                'Algunos empleados por hora usaron delta crudo check_in/out (sin AHC). Verifique asistencia o recalcule horas.',
+            }
+          : undefined,
+      preserved_edited_lines: preservedEditedLines,
+      orphan_lines_removed: orphanLinesRemoved,
+      preservedEditedSummary:
+        preservedEditedLines > 0
+          ? {
+              count: preservedEditedLines,
+              message: `${preservedEditedLines} empleado(s) con edición manual conservaron sus montos. Use "Recalcular desde asistencia" en cada línea para actualizarlos.`,
+            }
+          : undefined,
     })
 
   } catch (error: any) {

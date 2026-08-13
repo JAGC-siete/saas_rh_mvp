@@ -4,6 +4,10 @@
  */
 
 import { HONDURAS_LABOR_FACTOR } from './constants'
+import {
+  isHourBasedPayType,
+  resolvePlanillaRowPayType,
+} from './resolve-effective-pay-type'
 
 export type AuthorizedRunRow = {
   id: string
@@ -42,6 +46,7 @@ export async function buildAuthorizedPayrollPreviewPayload(
         id,
         name,
         dni,
+        employee_code,
         base_salary,
         bank_name,
         bank_account,
@@ -64,7 +69,14 @@ export async function buildAuthorizedPayrollPreviewPayload(
     const emp = (line as { employees?: Record<string, unknown> }).employees
     if (!emp) continue
 
-    const payType = emp.pay_type === 'hourly' ? 'hourly' : 'fixed'
+    const meta = ((line as { metadata?: Record<string, unknown> }).metadata || {}) as Record<
+      string,
+      unknown
+    >
+    const payType = resolvePlanillaRowPayType({
+      employeePayType: emp.pay_type,
+      metadataPayType: meta.pay_type,
+    })
     const base_salary = Number(emp.base_salary) || 0
     const departmentName =
       (emp.departments as { name?: string } | undefined)?.name || 'Sin Departamento'
@@ -75,21 +87,21 @@ export async function buildAuthorizedPayrollPreviewPayload(
     const ISR = Number((line as { eff_isr?: unknown }).eff_isr) || 0
     const total_hours = Number((line as { eff_hours?: unknown }).eff_hours) || 0
     const total_deducciones = round2(Math.max(0, eff_bruto - eff_neto))
-    const meta = ((line as { metadata?: Record<string, unknown> }).metadata || {}) as Record<
-      string,
-      unknown
-    >
     const lineId = (line as { id: string }).id
     const edited = Boolean((line as { edited?: boolean }).edited)
+    const horasExtras =
+      meta.horas_extras != null && Number.isFinite(Number(meta.horas_extras))
+        ? round2(Number(meta.horas_extras))
+        : undefined
 
-    if (payType === 'hourly') {
+    if (isHourBasedPayType(payType)) {
       const hourly_rate =
         total_hours > 0 ? eff_bruto / total_hours : base_salary / HONDURAS_LABOR_FACTOR
       const days_worked =
         typeof meta.days_worked === 'number' ? meta.days_worked : 0
       planilla_hourly.push({
         employee_id: emp.id,
-        id: (emp.dni as string) || emp.id,
+        id: (emp.employee_code as string) || '',
         name: (emp.name as string) || 'Sin nombre',
         bank: (emp.bank_name as string) || 'No especificado',
         bank_account: (emp.bank_account as string) || 'No especificado',
@@ -98,6 +110,7 @@ export async function buildAuthorizedPayrollPreviewPayload(
         monthly_salary: base_salary,
         days_worked,
         days_absent: 0,
+        ...(horasExtras != null ? { horas_extras: horasExtras } : {}),
         total_hours_worked: round2(total_hours),
         hourly_rate: round2(hourly_rate),
         total_earnings: round2(eff_bruto),
@@ -107,14 +120,14 @@ export async function buildAuthorizedPayrollPreviewPayload(
         total_deducciones,
         total: round2(eff_neto),
         line_id: lineId,
-        pay_type: 'hourly',
-        metadata: { ...meta, tax_year: meta.tax_year ?? run.year },
+        pay_type: payType,
+        metadata: { ...meta, tax_year: meta.tax_year ?? run.year, pay_type: payType },
         edited
       })
     } else {
       planilla_fixed.push({
         employee_id: emp.id,
-        id: (emp.dni as string) || emp.id,
+        id: (emp.employee_code as string) || '',
         name: (emp.name as string) || 'Sin nombre',
         bank: (emp.bank_name as string) || 'No especificado',
         bank_account: (emp.bank_account as string) || 'No especificado',
@@ -123,6 +136,7 @@ export async function buildAuthorizedPayrollPreviewPayload(
         monthly_salary: base_salary,
         days_worked: round2(total_hours),
         days_absent: 0,
+        ...(horasExtras != null ? { horas_extras: horasExtras } : {}),
         total_earnings: round2(eff_bruto),
         IHSS: round2(IHSS),
         RAP: round2(RAP),

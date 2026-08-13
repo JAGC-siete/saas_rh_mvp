@@ -1,5 +1,7 @@
 import {
   escapeHtml,
+  transactionalCta,
+  transactionalEmphasis,
   transactionalInfoBox,
   transactionalKeyValueTable,
   transactionalParagraph,
@@ -69,9 +71,9 @@ export function buildPayrollReceiptEmailHtml(data: PayrollReceiptEmailData): str
   )
 
   const bodyHtml = [
-    transactionalParagraph(`Estimado/a <strong style="color: #1a1a1a;">${escapeHtml(data.employeeName)}</strong>,`),
+    transactionalParagraph(`Estimado/a ${transactionalEmphasis(escapeHtml(data.employeeName))},`),
     transactionalParagraph(
-      `Adjunto encontrará su recibo de nómina correspondiente al período <strong style="color: #1a1a1a;">${escapeHtml(data.periodLabel)}</strong>.`
+      `Adjunto encontrará su recibo de nómina correspondiente al período ${transactionalEmphasis(escapeHtml(data.periodLabel))}.`
     ),
     `<p style="margin: 0 0 8px 0; font-size: 13px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: #64748b;">Resumen</p>`,
     transactionalKeyValueTable(rows),
@@ -79,7 +81,7 @@ export function buildPayrollReceiptEmailHtml(data: PayrollReceiptEmailData): str
       '<strong>¿Preguntas?</strong> Contacte a su manager de recursos humanos.',
       'neutral'
     ),
-    transactionalParagraph('Saludos cordiales,<br><strong style="color: #1a1a1a;">Departamento de Recursos Humanos</strong>'),
+    transactionalParagraph(`Saludos cordiales,<br>${transactionalEmphasis('Departamento de Recursos Humanos')}`),
   ].join('')
 
   return wrapTransactionalEmail({
@@ -120,15 +122,13 @@ export function buildVoucherLinkEmailText(data: VoucherLinkEmailData): string {
 
 export function buildVoucherLinkEmailHtml(data: VoucherLinkEmailData): string {
   const bodyHtml = [
-    transactionalParagraph(`Hola <strong style="color: #1a1a1a;">${escapeHtml(data.employeeName)}</strong>,`),
+    transactionalParagraph(`Hola ${transactionalEmphasis(escapeHtml(data.employeeName))},`),
     transactionalParagraph('Su voucher de pago individual está listo para descargar.'),
     transactionalKeyValueTable([
       { label: 'Código de empleado', value: data.employeeCode },
       { label: 'Período', value: data.periodLabel },
     ]),
-    `<div style="text-align: center; margin: 24px 0;">
-      <a href="${data.downloadUrl}" style="background: #0b4fa1; color: #ffffff; padding: 13px 28px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 700; font-size: 15px;">Descargar voucher</a>
-    </div>`,
+    transactionalCta(data.downloadUrl, 'Descargar voucher'),
     transactionalInfoBox(
       'Este enlace es válido solo para usuarios autorizados de la empresa.',
       'warning'

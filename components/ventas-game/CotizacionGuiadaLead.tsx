@@ -1,0 +1,668 @@
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/router'
+import { AnimatePresence, motion } from 'framer-motion'
+import {
+  DocumentTextIcon,
+  PaperAirplaneIcon,
+  ShieldCheckIcon,
+} from '@heroicons/react/24/outline'
+import { Card, CardContent } from '../ui/card'
+import BorderBeam from '../landing/BorderBeam'
+import WizardStepProgress from '../funnel/WizardStepProgress'
+import type { QuotationRequest, QuotationResponse } from '../../lib/ventas/types'
+import {
+  buildQuotationAcquisitionWhatsAppText,
+  buildVentasSupportWhatsAppUrl,
+} from '../../lib/ventas/bank-details'
+import { getVentasModalityDefinition } from '../../lib/ventas/modality-includes'
+import {
+  annualIncludesExtrasMessage,
+  isMonthlyModalityAvailable,
+  resolveHardwareMode,
+  resolveIncludedTerminalsCap,
+  VENTAS_ANNUAL_TERMINALS_INCLUDED_MIN_EMPLOYEES,
+  VENTAS_EXTRA_TERMINALS_DISCOUNT_PCT,
+  VENTAS_HARDWARE_SALE_UNIT_PRICE,
+  VENTAS_MAX_AUTO_QUOTE_TERMINALS,
+  VENTAS_MONTHLY_MIN_EMPLOYEES,
+  type VentasAnnualTerminalMode,
+} from '../../lib/ventas/business-rules'
+import { isCountryCode, currencyForCountryCode, type CountryCode } from '../../lib/country/supported'
+import {
+  buildMetaApiTrackingFields,
+  createMetaEventId,
+  trackQuotationSubmit,
+} from '../../lib/analytics/metaPixel'
+import { maskEmailForHint, writeThankYouContext } from '../../lib/analytics/thank-you-context'
+import type { VentasUtmContext } from '../../lib/ventas-game/ventas-utm-context'
+import { COTIZACION_GUIADA_COPY } from '../../lib/ventas-game/cotizacion-guiada-copy'
+import {
+  computeVentasErrors,
+  findPublicTierForEmployees,
+  formatEmployeeRangeLabel,
+  sortPublicTiers,
+  ventasCompanyErrors,
+  ventasDeliveryErrors,
+  ventasScopeErrors,
+  VENTAS_COUNTRY_LABEL,
+  VENTAS_SECTOR_OPTIONS,
+  type VentasFormLimits,
+  type VentasPublicTier,
+  type VentasValidationErrors,
+} from '../../lib/ventas-game/ventas-form'
+import { hasValidationErrors, omitValidationField } from '../../lib/forms/validation-errors'
+
+type WizardStep = 'intro' | 'scope' | 'company' | 'delivery'
+
+type Props = {
+  utmContext?: VentasUtmContext
+  initialCountryCode?: CountryCode
+}
+
+const defaultForm = (country: CountryCode): QuotationRequest => ({
+  contact_email: '',
+  contact_name: '',
+  company_name: '',
+  phone: '',
+  country_code: country,
+  employees_count: 1,
+  billing_modality: 'annual',
+  terminals_count: 1,
+  sector_rubro: '',
+  coupon_code: '',
+  consent_newsletter: true,
+})
+
+const VENTAS_WIZARD_STEPS: [string, string, string] = ['Alcance', 'Empresa', 'Entrega']
+
+function wizardStepIndex(step: WizardStep): number {
+  if (step === 'intro') return 0
+  if (step === 'scope') return 1
+  if (step === 'company') return 2
+  if (step === 'delivery') return 3
+  return 3
+}
+
+export default function CotizacionGuiadaLead({
+  utmContext = {},
+  initialCountryCode = 'HND',
+}: Props) {
+  const router = useRouter()
+  const copy = COTIZACION_GUIADA_COPY
+  const [step, setStep] = useState<WizardStep>('intro')
+  const [showCoupon, setShowCoupon] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+  const [errors, setErrors] = useState<VentasValidationErrors>({})
+  const [formData, setFormData] = useState<QuotationRequest>(() => defaultForm(initialCountryCode))
+  const [formLimits, setFormLimits] = useState<VentasFormLimits>({
+    monthly_min_employees: VENTAS_MONTHLY_MIN_EMPLOYEES,
+    max_auto_quote_terminals: VENTAS_MAX_AUTO_QUOTE_TERMINALS,
+    annual_terminals_included_min_employees: VENTAS_ANNUAL_TERMINALS_INCLUDED_MIN_EMPLOYEES,
+    hardware_sale_unit_price: VENTAS_HARDWARE_SALE_UNIT_PRICE,
+  })
+  const [publicTiers, setPublicTiers] = useState<VentasPublicTier[]>([])
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const res = await fetch('/api/ventas/public-config')
+        const data = await res.json()
+        if (!res.ok || cancelled) return
+        setFormLimits({
+          monthly_min_employees: Number(data.monthly_min_employees) || VENTAS_MONTHLY_MIN_EMPLOYEES,
+          max_auto_quote_terminals:
+            Number(data.max_auto_quote_terminals) || VENTAS_MAX_AUTO_QUOTE_TERMINALS,
+          annual_terminals_included_min_employees:
+            Number(data.annual_terminals_included_min_employees) ||
+            VENTAS_ANNUAL_TERMINALS_INCLUDED_MIN_EMPLOYEES,
+          hardware_sale_unit_price:
+            Number(data.hardware_sale_unit_price) || VENTAS_HARDWARE_SALE_UNIT_PRICE,
+        })
+        if (Array.isArray(data.tiers)) {
+          const mapped = sortPublicTiers(
+            data.tiers.map((t: any) => ({
+              min_employees: Number(t.min_employees),
+              max_employees: Number(t.max_employees),
+              annual_terminal_mode: (['auto', 'included', 'sale'].includes(t.annual_terminal_mode)
+                ? t.annual_terminal_mode
+                : 'auto') as VentasAnnualTerminalMode,
+              included_terminals_max:
+                t.included_terminals_max == null ? null : Number(t.included_terminals_max),
+            }))
+          )
+          setPublicTiers(mapped)
+          if (mapped.length > 0) {
+            setFormData((prev) => {
+              const current = Number(prev.employees_count)
+              if (findPublicTierForEmployees(current, mapped)) return prev
+              return { ...prev, employees_count: mapped[0].min_employees }
+            })
+          }
+        }
+      } catch {
+        /* keep defaults */
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const headline = utmContext.headline ?? copy.intro.headline
+  const subheadline = utmContext.subheadline ?? copy.intro.subheadline
+  const wizardStep = wizardStepIndex(step)
+  const countryLabel =
+    formData.country_code && isCountryCode(formData.country_code)
+      ? VENTAS_COUNTRY_LABEL[formData.country_code]
+      : ''
+
+  const employeesCount = Number(formData.employees_count) || 1
+  const monthlyMin = formLimits.monthly_min_employees ?? VENTAS_MONTHLY_MIN_EMPLOYEES
+  const maxTerminals = formLimits.max_auto_quote_terminals ?? VENTAS_MAX_AUTO_QUOTE_TERMINALS
+  const monthlyAvailable = isMonthlyModalityAvailable(employeesCount, formLimits)
+  const matchedTier = findPublicTierForEmployees(employeesCount, publicTiers)
+  const tierHints = {
+    annual_terminal_mode: matchedTier?.annual_terminal_mode ?? ('auto' as VentasAnnualTerminalMode),
+    included_terminals_max: matchedTier?.included_terminals_max ?? null,
+  }
+  const selectedRangeLabel = matchedTier
+    ? formatEmployeeRangeLabel(matchedTier.min_employees, matchedTier.max_employees)
+    : null
+  const selectEmployeesValue = matchedTier
+    ? matchedTier.min_employees
+    : publicTiers[0]?.min_employees ?? employeesCount
+  const hardwareModeForSelection = resolveHardwareMode(
+    (formData.billing_modality || 'annual') as 'annual' | 'monthly',
+    employeesCount,
+    { rules: formLimits, tier: tierHints }
+  )
+  const includedCap = resolveIncludedTerminalsCap(formLimits, tierHints)
+  const selectedTerminals = Number(formData.terminals_count) || 1
+  const showAnnualExtrasHint =
+    hardwareModeForSelection === 'included' && selectedTerminals > includedCap
+  const extrasCount = Math.max(0, selectedTerminals - includedCap)
+  const extrasPct = Math.round(VENTAS_EXTRA_TERMINALS_DISCOUNT_PCT * 100)
+
+  const patchForm = (patch: Partial<QuotationRequest>) => {
+    setFormData((prev) => {
+      const next = { ...prev, ...patch }
+      const emp = Number(next.employees_count)
+      if (
+        next.billing_modality === 'monthly' &&
+        Number.isFinite(emp) &&
+        !isMonthlyModalityAvailable(emp, formLimits)
+      ) {
+        next.billing_modality = 'annual'
+      }
+      return next
+    })
+    setErrors((prev) => (prev.submit ? omitValidationField(prev, 'submit') : prev))
+  }
+
+  const goScope = () => {
+    setErrors({})
+    setStep('scope')
+  }
+
+  const goCompany = () => {
+    const e = ventasScopeErrors(formData, formLimits, publicTiers)
+    if (hasValidationErrors(e)) {
+      setErrors(e)
+      return
+    }
+    setErrors({})
+    setStep('company')
+  }
+
+  const goDelivery = () => {
+    const e = ventasCompanyErrors(formData)
+    if (hasValidationErrors(e)) {
+      setErrors(e)
+      return
+    }
+    setErrors({})
+    setStep('delivery')
+  }
+
+  const handleSubmit = async () => {
+    const all = computeVentasErrors(formData, formLimits, publicTiers)
+    if (hasValidationErrors(all)) {
+      setErrors(all)
+      return
+    }
+
+    setIsLoading(true)
+    setErrors({})
+
+    try {
+      const metaEventId = createMetaEventId('ventas')
+      const quotationPayload: QuotationRequest = {
+        contact_email: formData.contact_email.trim(),
+        contact_name: formData.contact_name?.trim() || '',
+        company_name: formData.company_name?.trim() || '',
+        phone: formData.phone?.trim() || '',
+        country_code: isCountryCode(formData.country_code) ? formData.country_code : 'HND',
+        employees_count: Number(formData.employees_count),
+        billing_modality: formData.billing_modality || 'annual',
+        terminals_count: Number(formData.terminals_count) || 1,
+        sector_rubro: formData.sector_rubro?.trim() || '',
+        coupon_code: formData.coupon_code?.trim() || '',
+        consent_newsletter: formData.consent_newsletter === true,
+      }
+
+      const resp = await fetch('/api/quote', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...quotationPayload,
+          ...buildMetaApiTrackingFields(metaEventId),
+        }),
+      })
+
+      const data = (await resp.json()) as QuotationResponse | { error?: string }
+      if (!resp.ok) {
+        setErrors({ submit: (data as { error?: string })?.error || 'No se pudo completar la solicitud.' })
+        return
+      }
+
+      const responseQuote = (data as QuotationResponse).quote || null
+      trackQuotationSubmit({
+        eventId: metaEventId,
+        email: quotationPayload.contact_email,
+        phone: quotationPayload.phone || undefined,
+        firstName: quotationPayload.contact_name || undefined,
+        employeesCount: quotationPayload.employees_count,
+        countryCode: quotationPayload.country_code,
+        billingModality: quotationPayload.billing_modality,
+        quoteValue:
+          responseQuote?.billing_modality === 'monthly'
+            ? responseQuote.monthly_total
+            : responseQuote?.annual_total,
+        currency: responseQuote?.currency,
+      })
+
+      const waMsg = buildQuotationAcquisitionWhatsAppText({
+        contactName: quotationPayload.contact_name,
+        companyName: quotationPayload.company_name,
+        includeBankPrompt: true,
+      })
+      writeThankYouContext('ventas', {
+        displayName: quotationPayload.contact_name || undefined,
+        empresa: quotationPayload.company_name || undefined,
+        empleados: quotationPayload.employees_count,
+        countryCode: quotationPayload.country_code,
+        emailHintMasked: maskEmailForHint(quotationPayload.contact_email),
+        whatsappUrl: buildVentasSupportWhatsAppUrl(waMsg),
+      })
+      await router.push('/ventas/gracias')
+      return
+    } catch {
+      setErrors({ submit: 'No se pudo enviar. Revise su conexión e intente de nuevo.' })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const inputClass =
+    'w-full p-3.5 rounded-xl bg-white/5 backdrop-blur-sm border border-white/20 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-400/50 transition-all hover:bg-white/10'
+
+  return (
+    <div className="flex-grow flex items-center justify-center p-4 sm:p-6 lg:p-8">
+      <BorderBeam className="w-full max-w-3xl">
+        <Card variant="liquid" className="w-full shadow-2xl relative overflow-hidden">
+          <CardContent className="p-6 sm:p-8 lg:p-10 relative z-10">
+            <WizardStepProgress
+              step={wizardStep}
+              title="Cotización guiada"
+              stepLabels={VENTAS_WIZARD_STEPS}
+              gradientClass="from-emerald-500 to-cyan-500"
+              dotClass="bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.5)] ring-emerald-400/40"
+            />
+
+            <AnimatePresence mode="wait">
+              {step === 'intro' && (
+                <motion.div
+                  key="intro"
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  className="text-center"
+                >
+                  <span className="inline-flex items-center rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-300 mb-4">
+                    <ShieldCheckIcon className="h-3.5 w-3.5 mr-1.5" aria-hidden />
+                    {copy.badge}
+                  </span>
+                  <DocumentTextIcon className="w-14 h-14 text-emerald-400 mx-auto mb-4" />
+                  <h1 className="text-2xl sm:text-3xl font-bold text-white mb-4 leading-tight">{headline}</h1>
+                  <p className="text-brand-300 mb-8 max-w-lg mx-auto">{subheadline}</p>
+                  <button
+                    type="button"
+                    onClick={goScope}
+                    className="w-full sm:w-auto btn-shiny bg-brand-500 hover:bg-brand-600 text-white px-8 py-4 rounded-xl font-semibold inline-flex items-center justify-center"
+                  >
+                    <PaperAirplaneIcon className="h-5 w-5 mr-2" />
+                    {copy.intro.cta}
+                  </button>
+                </motion.div>
+              )}
+
+              {step === 'scope' && (
+                <motion.div key="scope" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -16 }}>
+                  <h2 className="text-xl font-bold text-white mb-1">{copy.scope.title}</h2>
+                  <p className="text-brand-400 text-sm mb-6">{copy.scope.subtitle}</p>
+
+                  <div className="space-y-5">
+                    <div>
+                      <label htmlFor="ventas-country" className="block text-white font-medium mb-2 text-sm">
+                        País de operación *
+                      </label>
+                      <select
+                        id="ventas-country"
+                        value={formData.country_code || 'HND'}
+                        onChange={(e) => {
+                          const v = e.target.value
+                          if (isCountryCode(v)) patchForm({ country_code: v })
+                        }}
+                        className={`${inputClass} ${errors.country_code ? 'border-red-500/50' : ''}`}
+                      >
+                        <option value="HND" className="bg-slate-800">Honduras</option>
+                        <option value="SLV" className="bg-slate-800">El Salvador</option>
+                        <option value="GTM" className="bg-slate-800">Guatemala</option>
+                      </select>
+                      {errors.country_code && <p className="text-red-400 text-xs mt-2">{errors.country_code}</p>}
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-white font-medium mb-2 text-sm">Modalidad</label>
+                        <select
+                          value={formData.billing_modality || 'annual'}
+                          onChange={(e) =>
+                            patchForm({ billing_modality: e.target.value as 'annual' | 'monthly' })
+                          }
+                          className={`${inputClass} ${errors.billing_modality ? 'border-red-500/50' : ''}`}
+                        >
+                          <option value="annual" className="bg-slate-800">
+                            Anual (recomendado)
+                          </option>
+                          <option
+                            value="monthly"
+                            className="bg-slate-800"
+                            disabled={!monthlyAvailable}
+                          >
+                            {monthlyAvailable
+                              ? 'Mensual'
+                              : `Mensual (desde ${monthlyMin} empleados)`}
+                          </option>
+                        </select>
+                        {!monthlyAvailable && (
+                          <p className="text-xs text-brand-400 mt-2">
+                            Modalidad mensual disponible a partir de {monthlyMin}{' '}
+                            empleados.
+                          </p>
+                        )}
+                        {errors.billing_modality && (
+                          <p className="text-red-400 text-xs mt-2">{errors.billing_modality}</p>
+                        )}
+                      </div>
+                      <div>
+                        <label className="block text-white font-medium mb-2 text-sm">Terminales</label>
+                        <select
+                          value={Number(formData.terminals_count) || 1}
+                          onChange={(e) => patchForm({ terminals_count: parseInt(e.target.value, 10) || 1 })}
+                          className={`${inputClass} ${errors.terminals_count ? 'border-red-500/50' : ''}`}
+                        >
+                          {Array.from({ length: maxTerminals }, (_, i) => i + 1).map((n) => (
+                            <option key={n} value={n} className="bg-slate-800">
+                              {n === 1 ? '1 terminal' : `${n} terminales`}
+                            </option>
+                          ))}
+                        </select>
+                        {hardwareModeForSelection === 'included' && (
+                          <p className="text-xs text-brand-400 mt-2">
+                            {annualIncludesExtrasMessage(includedCap)}
+                          </p>
+                        )}
+                        {showAnnualExtrasHint && (
+                          <p className="text-xs text-amber-300/90 mt-2">
+                            Seleccionó {selectedTerminals}: {includedCap} incluidas sin costo y{' '}
+                            {extrasCount} adicional{extrasCount === 1 ? '' : 'es'} a precio unitario
+                            con −{extrasPct}% de descuento, sumadas al total anual.
+                          </p>
+                        )}
+                        {hardwareModeForSelection === 'continuity' && (
+                          <p className="text-xs text-brand-400 mt-2">
+                            En plan mensual cada terminal suma Continuidad de Hardware (cuota
+                            mensual decreciente).
+                          </p>
+                        )}
+                        {errors.terminals_count && (
+                          <p className="text-red-400 text-xs mt-2">{errors.terminals_count}</p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-white font-medium mb-2 text-sm">
+                        Rango de empleados *
+                      </label>
+                      <select
+                        value={selectEmployeesValue}
+                        onChange={(e) =>
+                          patchForm({ employees_count: parseInt(e.target.value, 10) || 1 })
+                        }
+                        disabled={publicTiers.length === 0}
+                        className={`${inputClass} ${errors.employees_count ? 'border-red-500/50' : ''}`}
+                      >
+                        {publicTiers.length === 0 ? (
+                          <option value={selectEmployeesValue} className="bg-slate-800">
+                            Cargando rangos…
+                          </option>
+                        ) : (
+                          publicTiers.map((t) => (
+                            <option
+                              key={`${t.min_employees}-${t.max_employees}`}
+                              value={t.min_employees}
+                              className="bg-slate-800"
+                            >
+                              {formatEmployeeRangeLabel(t.min_employees, t.max_employees)}
+                            </option>
+                          ))
+                        )}
+                      </select>
+                      {errors.employees_count && (
+                        <p className="text-red-400 text-xs mt-2">{errors.employees_count}</p>
+                      )}
+                      {countryLabel && selectedRangeLabel && (
+                        <p className="text-xs text-brand-400 mt-2">
+                          {copy.scope.tierHint(selectedRangeLabel, countryLabel)}
+                        </p>
+                      )}
+                    </div>
+
+                    <p className="text-xs text-brand-300 bg-black/20 p-3 rounded-lg border border-white/10">
+                      {
+                        getVentasModalityDefinition(
+                          (formData.billing_modality || 'annual') === 'monthly' ? 'monthly' : 'annual',
+                          {
+                            employeesCount,
+                            currency: currencyForCountryCode(
+                              isCountryCode(formData.country_code) ? formData.country_code : 'HND'
+                            ),
+                            rules: formLimits,
+                            tier: tierHints,
+                          }
+                        ).formHint
+                      }
+                    </p>
+                  </div>
+
+                  <div className="flex gap-3 mt-8">
+                    <button type="button" onClick={() => setStep('intro')} className="text-brand-300 text-sm px-4 py-3">
+                      Atrás
+                    </button>
+                    <button
+                      type="button"
+                      onClick={goCompany}
+                      className="flex-1 btn-shiny bg-brand-500 hover:bg-brand-600 text-white py-3 rounded-xl font-semibold"
+                    >
+                      Siguiente
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+
+              {step === 'company' && (
+                <motion.div key="company" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -16 }}>
+                  <h2 className="text-xl font-bold text-white mb-1">{copy.company.title}</h2>
+                  <p className="text-brand-400 text-sm mb-6">{copy.company.subtitle}</p>
+
+                  <div className="space-y-5">
+                    <div>
+                      <label className="block text-white font-medium mb-2 text-sm">Nombre de la empresa *</label>
+                      <input
+                        type="text"
+                        value={formData.company_name || ''}
+                        onChange={(e) => patchForm({ company_name: e.target.value })}
+                        className={`${inputClass} ${errors.company_name ? 'border-red-500/50' : ''}`}
+                        placeholder="Ej. Comercializadora del Norte S.A."
+                      />
+                      {errors.company_name && <p className="text-red-400 text-xs mt-2">{errors.company_name}</p>}
+                    </div>
+
+                    <div>
+                      <label className="block text-white font-medium mb-2 text-sm">Rubro (opcional)</label>
+                      <select
+                        value={formData.sector_rubro || ''}
+                        onChange={(e) => patchForm({ sector_rubro: e.target.value })}
+                        className={inputClass}
+                      >
+                        {VENTAS_SECTOR_OPTIONS.map((opt) => (
+                          <option key={opt.value || 'empty'} value={opt.value} className="bg-slate-800">
+                            {opt.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {!showCoupon ? (
+                      <button
+                        type="button"
+                        onClick={() => setShowCoupon(true)}
+                        className="text-sm text-emerald-300 hover:text-emerald-200"
+                      >
+                        {copy.company.couponToggle}
+                      </button>
+                    ) : (
+                      <div>
+                        <label className="block text-white font-medium mb-2 text-sm">Cupón</label>
+                        <input
+                          type="text"
+                          value={formData.coupon_code || ''}
+                          onChange={(e) => patchForm({ coupon_code: e.target.value })}
+                          className={inputClass}
+                          placeholder="Código si aplica"
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex gap-3 mt-8">
+                    <button type="button" onClick={() => setStep('scope')} className="text-brand-300 text-sm px-4 py-3">
+                      Atrás
+                    </button>
+                    <button
+                      type="button"
+                      onClick={goDelivery}
+                      className="flex-1 btn-shiny bg-brand-500 hover:bg-brand-600 text-white py-3 rounded-xl font-semibold"
+                    >
+                      Siguiente
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+
+              {step === 'delivery' && (
+                <motion.div key="delivery" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -16 }}>
+                  <h2 className="text-xl font-bold text-white mb-1">{copy.delivery.title}</h2>
+                  <p className="text-brand-400 text-sm mb-6">{copy.delivery.subtitle}</p>
+
+                  <div className="space-y-5">
+                    <div>
+                      <label className="block text-white font-medium mb-2 text-sm">Correo corporativo *</label>
+                      <input
+                        type="email"
+                        value={formData.contact_email}
+                        onChange={(e) => patchForm({ contact_email: e.target.value })}
+                        className={`${inputClass} ${errors.contact_email ? 'border-red-500/50' : ''}`}
+                        placeholder="admin@miempresa.com"
+                      />
+                      {errors.contact_email && <p className="text-red-400 text-xs mt-2">{errors.contact_email}</p>}
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-white font-medium mb-2 text-sm">Su nombre (opcional)</label>
+                        <input
+                          type="text"
+                          value={formData.contact_name || ''}
+                          onChange={(e) => patchForm({ contact_name: e.target.value })}
+                          className={inputClass}
+                          placeholder="Nombre y apellido"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-white font-medium mb-2 text-sm">Teléfono / WhatsApp</label>
+                        <input
+                          type="tel"
+                          value={formData.phone || ''}
+                          onChange={(e) => patchForm({ phone: e.target.value })}
+                          className={inputClass}
+                          placeholder="+504 9999-9999"
+                          inputMode="tel"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {errors.submit && (
+                    <div className="bg-red-500/10 border border-red-500/50 rounded-lg p-3 mt-4">
+                      <p className="text-red-400 text-sm text-center">{errors.submit}</p>
+                    </div>
+                  )}
+
+                  <p className="text-white/45 text-xs text-center mt-4 leading-relaxed">{copy.delivery.finePrint}</p>
+
+                  <div className="flex gap-3 mt-6">
+                    <button type="button" onClick={() => setStep('company')} className="text-brand-300 text-sm px-4 py-3">
+                      Atrás
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSubmit}
+                      disabled={isLoading || hasValidationErrors(ventasDeliveryErrors(formData))}
+                      className="flex-1 btn-shiny bg-brand-500 hover:bg-brand-600 text-white py-3 rounded-xl font-semibold inline-flex items-center justify-center disabled:opacity-50"
+                    >
+                      {isLoading ? (
+                        <>
+                          <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                          {copy.delivery.submitting}
+                        </>
+                      ) : (
+                        <>
+                          <PaperAirplaneIcon className="h-5 w-5 mr-2" />
+                          {copy.delivery.submit}
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </CardContent>
+        </Card>
+      </BorderBeam>
+    </div>
+  )
+}

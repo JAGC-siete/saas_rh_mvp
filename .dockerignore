@@ -59,10 +59,9 @@ temp/
 *.zip
 *.tar.gz
 
-# Media files
+# Media files (keep public/images/ — landing, paz, secreto-chest ship in the image)
 uploads/
 public/media/
-public/images/
 
 # Python
 __pycache__/

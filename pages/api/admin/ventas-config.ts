@@ -1,8 +1,24 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { createAdminClient } from '../../../lib/supabase/server'
 import { requireSuperAdmin } from '../../../lib/auth/api-auth-fixed'
+import {
+  mergeVentasBusinessRules,
+  normalizeAnnualTerminalMode,
+  type VentasAnnualTerminalMode,
+  type VentasBusinessRules,
+} from '../../../lib/ventas/business-rules'
+import { normalizePromoCodeInputs, planPromoCodeUpserts } from '../../../lib/ventas/promo-codes'
 
-type TierInput = { min_employees: number; max_employees: number; price: number; sort_order?: number }
+type TierInput = {
+  min_employees: number
+  max_employees: number
+  price: number
+  sort_order?: number
+  annual_terminal_mode?: VentasAnnualTerminalMode | string
+  included_terminals_max?: number | null
+}
+
+type PromoBodyInput = { code?: unknown; discount_pct?: unknown; label?: unknown; sort_order?: unknown }
 
 function asString(v: unknown): string {
   return typeof v === 'string' ? v : ''
@@ -26,9 +42,15 @@ function validateTiers(tiers: TierInput[]): { ok: boolean; error?: string } {
     }
     if (min < 1 || max < min) return { ok: false, error: 'Rangos inválidos: min>=1 y max>=min.' }
     if (price <= 0) return { ok: false, error: 'El precio debe ser mayor a 0.' }
+
+    if (t.included_terminals_max != null && t.included_terminals_max !== ('' as any)) {
+      const cap = Math.trunc(asNumber(t.included_terminals_max as any))
+      if (!Number.isFinite(cap) || cap < 1) {
+        return { ok: false, error: 'Hasta N terminales debe ser un entero ≥ 1 o vacío.' }
+      }
+    }
   }
 
-  // Prevent overlap by sorting and ensuring gaps are ok
   const sorted = [...tiers].sort((a, b) => asNumber(a.min_employees) - asNumber(b.min_employees))
   for (let i = 1; i < sorted.length; i++) {
     const prevMax = Math.trunc(asNumber(sorted[i - 1].max_employees))
@@ -39,6 +61,89 @@ function validateTiers(tiers: TierInput[]): { ok: boolean; error?: string } {
   }
 
   return { ok: true }
+}
+
+function parseIncludedTerminalsMax(raw: unknown): number | null {
+  if (raw == null || raw === '') return null
+  const n = Math.trunc(asNumber(raw))
+  return Number.isFinite(n) && n >= 1 ? n : null
+}
+
+function tierRows(config_id: string, tiersInput: TierInput[]) {
+  return tiersInput.map((t, i) => ({
+    config_id,
+    min_employees: Math.trunc(asNumber(t.min_employees)),
+    max_employees: Math.trunc(asNumber(t.max_employees)),
+    price: asNumber(t.price),
+    is_active: true,
+    sort_order: Number.isFinite(asNumber(t.sort_order)) ? Math.trunc(asNumber(t.sort_order)) : (i + 1) * 10,
+    annual_terminal_mode: normalizeAnnualTerminalMode(t.annual_terminal_mode),
+    included_terminals_max: parseIncludedTerminalsMax(t.included_terminals_max),
+  }))
+}
+
+async function replacePromoCodes(
+  supabase: ReturnType<typeof createAdminClient>,
+  configId: string,
+  promoInput: PromoBodyInput[]
+) {
+  const promoCodes = normalizePromoCodeInputs(promoInput)
+
+  const { data: existing, error: existingErr } = await (supabase as any)
+    .from('config_ventas_promo_codes')
+    .select('id, code')
+    .eq('config_id', configId)
+
+  if (existingErr) throw new Error(existingErr.message)
+
+  const plan = planPromoCodeUpserts(existing || [], promoCodes)
+
+  for (const u of plan.updates) {
+    const { error } = await (supabase as any)
+      .from('config_ventas_promo_codes')
+      .update({
+        code: u.code,
+        discount_pct: u.discount_pct,
+        label: u.label,
+        is_active: true,
+        sort_order: u.sort_order,
+      })
+      .eq('id', u.id)
+    if (error) throw new Error(error.message)
+  }
+
+  if (plan.inserts.length > 0) {
+    const rows = plan.inserts.map((p) => ({
+      config_id: configId,
+      code: p.code,
+      discount_pct: p.discount_pct,
+      label: p.label,
+      is_active: true,
+      sort_order: p.sort_order,
+    }))
+    const { error } = await (supabase as any).from('config_ventas_promo_codes').insert(rows)
+    if (error) throw new Error(error.message)
+  }
+
+  if (plan.deactivateIds.length > 0) {
+    const { error } = await (supabase as any)
+      .from('config_ventas_promo_codes')
+      .update({ is_active: false })
+      .in('id', plan.deactivateIds)
+    if (error) throw new Error(error.message)
+  }
+}
+
+async function loadPromoCodes(supabase: ReturnType<typeof createAdminClient>, configId: string) {
+  const { data, error } = await (supabase as any)
+    .from('config_ventas_promo_codes')
+    .select('id, code, discount_pct, label, is_active, sort_order, updated_at')
+    .eq('config_id', configId)
+    .eq('is_active', true)
+    .order('sort_order', { ascending: true })
+
+  if (error) throw new Error(error.message)
+  return data || []
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -53,44 +158,84 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (req.method === 'GET') {
     const { data: configRow, error: cfgErr } = await (supabase as any)
       .from('config_ventas')
-      .select('id, is_active, currency, coupon_code, coupon_discount_pct, created_at, updated_at')
+      .select('id, is_active, currency, coupon_code, coupon_discount_pct, business_rules, created_at, updated_at')
       .eq('is_active', true)
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle()
 
     if (cfgErr) return res.status(500).json({ error: 'Error leyendo config_ventas' })
-    if (!configRow) return res.status(200).json({ config: null, tiers: [] })
+    if (!configRow) {
+      return res.status(200).json({
+        config: null,
+        tiers: [],
+        promo_codes: [],
+        business_rules: mergeVentasBusinessRules(null),
+      })
+    }
 
     const { data: tiers, error: tiersErr } = await (supabase as any)
       .from('config_ventas_pricing_tiers')
-      .select('id, min_employees, max_employees, price, is_active, sort_order, updated_at')
+      .select(
+        'id, min_employees, max_employees, price, is_active, sort_order, annual_terminal_mode, included_terminals_max, updated_at'
+      )
       .eq('config_id', configRow.id)
       .eq('is_active', true)
       .order('sort_order', { ascending: true })
 
     if (tiersErr) return res.status(500).json({ error: 'Error leyendo tiers' })
-    return res.status(200).json({ config: configRow, tiers: tiers || [] })
+
+    let promo_codes: unknown[] = []
+    try {
+      promo_codes = await loadPromoCodes(supabase, configRow.id)
+    } catch {
+      if (configRow.coupon_code) {
+        promo_codes = [
+          {
+            code: configRow.coupon_code,
+            discount_pct: configRow.coupon_discount_pct,
+            label: 'Cupón principal',
+            sort_order: 10,
+          },
+        ]
+      }
+    }
+
+    const business_rules = mergeVentasBusinessRules(configRow.business_rules)
+
+    return res.status(200).json({
+      config: configRow,
+      tiers: tiers || [],
+      promo_codes,
+      business_rules,
+    })
   }
 
   const currency = asString((req.body || {}).currency || 'HNL').trim().toUpperCase()
-  const coupon_code = asString((req.body || {}).coupon_code).trim()
-  const coupon_discount_pct = (req.body || {}).coupon_discount_pct
-  const discount = coupon_discount_pct === null || coupon_discount_pct === undefined ? null : asNumber(coupon_discount_pct)
+  const promoInput: PromoBodyInput[] = Array.isArray((req.body || {}).promo_codes)
+    ? (req.body || {}).promo_codes
+    : []
   const tiersInput: TierInput[] = Array.isArray((req.body || {}).tiers) ? (req.body || {}).tiers : []
+  const businessRulesInput = (req.body || {}).business_rules as Partial<VentasBusinessRules> | undefined
+  const business_rules = mergeVentasBusinessRules(businessRulesInput)
 
   if (!['HNL', 'USD', 'GTQ'].includes(currency)) {
     return res.status(400).json({ error: 'Moneda inválida. Use HNL, USD o GTQ.' })
   }
-  if (discount !== null && (!Number.isFinite(discount) || discount < 0 || discount > 1)) {
-    return res.status(400).json({ error: 'El descuento debe ser un decimal entre 0 y 1 (ej. 0.45).' })
+
+  const promoCodes = normalizePromoCodeInputs(promoInput)
+  for (const p of promoCodes) {
+    if (p.discount_pct < 0 || p.discount_pct > 1) {
+      return res.status(400).json({ error: 'Cada descuento debe ser un decimal entre 0 y 1 (ej. 0.20).' })
+    }
   }
 
   const tiersValidation = validateTiers(tiersInput)
   if (!tiersValidation.ok) return res.status(400).json({ error: tiersValidation.error })
 
+  const primaryPromo = promoCodes[0] ?? null
+
   if (req.method === 'POST') {
-    // Create new active config (versioning) and deactivate previous
     const { data: prev } = await (supabase as any)
       .from('config_ventas')
       .select('id')
@@ -107,8 +252,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .insert({
         is_active: true,
         currency,
-        coupon_code: coupon_code || null,
-        coupon_discount_pct: discount,
+        coupon_code: primaryPromo?.code || null,
+        coupon_discount_pct: primaryPromo?.discount_pct ?? null,
+        business_rules,
       })
       .select('id')
       .single()
@@ -116,22 +262,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (cfgErr) return res.status(500).json({ error: 'No se pudo crear config_ventas' })
 
     const config_id = cfg.id
-    const rows = tiersInput.map((t, i) => ({
-      config_id,
-      min_employees: Math.trunc(asNumber(t.min_employees)),
-      max_employees: Math.trunc(asNumber(t.max_employees)),
-      price: asNumber(t.price),
-      is_active: true,
-      sort_order: Number.isFinite(asNumber(t.sort_order)) ? Math.trunc(asNumber(t.sort_order)) : (i + 1) * 10,
-    }))
+    const rows = tierRows(config_id, tiersInput)
 
     const { error: tiersErr } = await (supabase as any).from('config_ventas_pricing_tiers').insert(rows)
     if (tiersErr) return res.status(500).json({ error: 'No se pudieron crear los tiers' })
 
-    return res.status(200).json({ success: true, config_id })
+    try {
+      await replacePromoCodes(supabase, config_id, promoInput)
+    } catch (e: any) {
+      return res.status(500).json({ error: e?.message || 'No se pudieron guardar los cupones' })
+    }
+
+    return res.status(200).json({ success: true, config_id, business_rules })
   }
 
-  // PATCH: update active config and replace tiers
   const { data: active, error: activeErr } = await (supabase as any)
     .from('config_ventas')
     .select('id')
@@ -149,31 +293,29 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     .from('config_ventas')
     .update({
       currency,
-      coupon_code: coupon_code || null,
-      coupon_discount_pct: discount,
+      coupon_code: primaryPromo?.code || null,
+      coupon_discount_pct: primaryPromo?.discount_pct ?? null,
+      business_rules,
     })
     .eq('id', config_id)
 
   if (updErr) return res.status(500).json({ error: 'No se pudo actualizar la configuración' })
 
-  // Deactivate existing tiers then insert new ones
   await (supabase as any)
     .from('config_ventas_pricing_tiers')
     .update({ is_active: false })
     .eq('config_id', config_id)
 
-  const rows = tiersInput.map((t, i) => ({
-    config_id,
-    min_employees: Math.trunc(asNumber(t.min_employees)),
-    max_employees: Math.trunc(asNumber(t.max_employees)),
-    price: asNumber(t.price),
-    is_active: true,
-    sort_order: Number.isFinite(asNumber(t.sort_order)) ? Math.trunc(asNumber(t.sort_order)) : (i + 1) * 10,
-  }))
+  const rows = tierRows(config_id, tiersInput)
 
   const { error: tiersErr } = await (supabase as any).from('config_ventas_pricing_tiers').insert(rows)
   if (tiersErr) return res.status(500).json({ error: 'No se pudieron actualizar los tiers' })
 
-  return res.status(200).json({ success: true, config_id })
-}
+  try {
+    await replacePromoCodes(supabase, config_id, promoInput)
+  } catch (e: any) {
+    return res.status(500).json({ error: e?.message || 'No se pudieron guardar los cupones' })
+  }
 
+  return res.status(200).json({ success: true, config_id, business_rules })
+}

@@ -151,7 +151,7 @@ export default function SecurityPage() {
             {activeTab === 'sessions' && (
               <div className="space-y-4">
                 {/* Search and Stats */}
-                <Card variant="glass" className="border-white/10">
+                <Card variant="liquid" className="border-white/10">
                   <CardHeader>
                     <CardTitle className="text-white">Filtros y Estadísticas</CardTitle>
                   </CardHeader>
@@ -166,7 +166,7 @@ export default function SecurityPage() {
                             setSessionsSearch(e.target.value)
                             setSessionsPage(1)
                           }}
-                          className="w-full px-3 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-md text-white"
+                          className="input-glass w-full text-white"
                           placeholder="email@ejemplo.com"
                         />
                       </div>
@@ -181,7 +181,7 @@ export default function SecurityPage() {
                 </Card>
 
                 {/* Table */}
-                <Card variant="glass" className="border-white/10">
+                <Card variant="liquid" className="border-white/10">
                   <CardHeader>
                     <CardTitle className="text-white">
                       Sesiones Activas ({sessionsTotal} sesiones)

@@ -1,7 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { generateDeductionReportPDF } from '../../../lib/deduction-validator/pdf-report'
 import { notificationManager } from '../../../lib/notification-providers'
-import { getResendFromContact } from '../../../lib/resend-from'
+import { getResendFromContact, getResendContactEmail } from '../../../lib/resend-from'
 import { generateDeductionEmailHTML, generateDeductionEmailSubject } from '../../../lib/deduction-validator/email-template'
 import { validateEmail } from '../../../lib/deduction-validator/validation'
 import { withRateLimit } from '../../../lib/deduction-validator/rate-limit-wrapper'
@@ -9,6 +9,16 @@ import { RATE_LIMITS } from '../../../lib/rate-limit'
 import { logger } from '../../../lib/logger'
 import { createAdminClient } from '../../../lib/supabase/server'
 import { maskEmail, normalizeSoftPhone } from '../../../lib/privacy'
+import {
+  enrollPublicToolLeadNonBlocking,
+  marketingSourceForDeductionCalculator,
+} from '../../../lib/marketing/enroll-public-tool-lead'
+import { parseCountryCodeInput } from '../../../lib/country/supported'
+import { PUBLIC_CALCULATOR_CONFIGS } from '../../../lib/public-calculator/config'
+import {
+  parseMetaTrackingPayload,
+  sendMetaWebsiteConversionFireAndForget,
+} from '../../../lib/analytics/metaCapiServer'
 
 interface SendDeductionReportRequest {
   email: string
@@ -33,6 +43,8 @@ interface SendDeductionReportRequest {
     minimumWage: number
     ihssCeiling: number
   }
+  country_code?: string
+  audience?: 'empleado' | 'empresa'
 }
 
 /**
@@ -45,7 +57,8 @@ async function sendEmailWithResend(
   pdfBuffer: Buffer,
   filename: string,
   apiKey: string,
-  fromEmail: string
+  fromEmail: string,
+  replyTo?: string
 ) {
   const { Resend } = await import('resend')
   const resend = new Resend(apiKey)
@@ -55,6 +68,7 @@ async function sendEmailWithResend(
   const result = await resend.emails.send({
     from: fromEmail,
     to: email,
+    replyTo: replyTo || undefined,
     subject,
     html,
     attachments: [
@@ -98,10 +112,11 @@ async function sendReportHandler(
       isrPercentage,
       totalDeductions,
       netSalary,
-      constants
+      constants,
+      country_code: countryCode,
+      audience: bodyAudience,
     }: SendDeductionReportRequest = req.body
 
-    // Validación robusta de email
     const emailValidation = validateEmail(email)
     if (!emailValidation.valid) {
       logger.warn('Email inválido en send-deduction-report', {
@@ -116,6 +131,16 @@ async function sendReportHandler(
     const sanitizedEmail = emailValidation.sanitized as string
     const consent = consentNewsletter === true
     const name = typeof fullName === 'string' ? fullName.trim() : ''
+    const resolvedCountry = parseCountryCodeInput(
+      typeof countryCode === 'string' ? countryCode : undefined
+    ) ?? 'HND'
+    const calcAudience =
+      bodyAudience === 'empresa' || bodyAudience === 'empleado' ? bodyAudience : null
+    const useGodfatherFunnel =
+      resolvedCountry === 'HND' &&
+      Boolean(PUBLIC_CALCULATOR_CONFIGS.HND.b2bFunnel) &&
+      calcAudience !== 'empresa'
+    const godfatherKeyword = PUBLIC_CALCULATOR_CONFIGS.HND.b2bFunnel?.godfatherKeyword
 
     if (!consent) {
       return res.status(400).json({
@@ -150,9 +175,12 @@ async function sendReportHandler(
             company: typeof company === 'string' ? company.trim() || null : null,
             phone: phoneNorm,
             source: 'deducciones',
+            calc_audience: calcAudience,
             consent_newsletter: true,
             consented_at: new Date().toISOString(),
             last_seen_at: new Date().toISOString(),
+            godfather_pending: useGodfatherFunnel,
+            ...(useGodfatherFunnel ? {} : { godfather_sent_at: null }),
           },
           { onConflict: 'email' }
         )
@@ -162,6 +190,14 @@ async function sendReportHandler(
         error: e?.message,
       })
       // No bloqueamos envío de PDF si falla el guardado
+    }
+
+    if (calcAudience === 'empresa') {
+      logger.info('Lead B2B prioritaria — calculadora deducciones', {
+        country: resolvedCountry,
+        email: maskEmail(sanitizedEmail),
+        company: typeof company === 'string' ? company.trim() || null : null,
+      })
     }
 
     // Generar PDF
@@ -179,7 +215,8 @@ async function sendReportHandler(
       isrPercentage,
       totalDeductions,
       netSalary,
-      constants
+      constants,
+      countryCode: resolvedCountry,
     })
 
     // Generar HTML del email usando plantilla
@@ -194,10 +231,14 @@ async function sendReportHandler(
       isr,
       isrPercentage,
       totalDeductions,
-      netSalary
+      netSalary,
+      countryCode: resolvedCountry,
+      useGodfatherFunnel,
+      godfatherKeyword,
+      audience: calcAudience ?? undefined,
     })
 
-    const subject = generateDeductionEmailSubject(year)
+    const subject = generateDeductionEmailSubject(year, useGodfatherFunnel)
     const filename = `reporte-deducciones-${year}-${paymentModality}.pdf`
 
     // Obtener configuración de notificaciones
@@ -207,6 +248,7 @@ async function sendReportHandler(
     // Determinar configuración de email
     const apiKey = notificationConfig?.emailProvider.apiKey || process.env.RESEND_API_KEY
     const fromEmail = getResendFromContact()
+    const replyTo = useGodfatherFunnel ? getResendContactEmail() : undefined
 
     if (!apiKey) {
       logger.error('RESEND_API_KEY no configurado')
@@ -223,7 +265,8 @@ async function sendReportHandler(
       pdfBuffer,
       filename,
       apiKey,
-      fromEmail
+      fromEmail,
+      replyTo
     )
 
     if ((result as any)?.error) {
@@ -237,12 +280,35 @@ async function sendReportHandler(
       })
     }
 
-    // Log de éxito
     const duration = Date.now() - startTime
     logger.info('Reporte enviado exitosamente', {
       email: maskEmail(sanitizedEmail),
       messageId: (result as any)?.id,
       duration,
+    })
+
+    enrollPublicToolLeadNonBlocking(
+      sanitizedEmail,
+      marketingSourceForDeductionCalculator(resolvedCountry)
+    )
+
+    const metaTracking = parseMetaTrackingPayload(req.body)
+    sendMetaWebsiteConversionFireAndForget({
+      req,
+      eventName: 'CompleteRegistration',
+      tracking: metaTracking,
+      userData: {
+        email: sanitizedEmail,
+        phone: typeof phone === 'string' ? phone : undefined,
+        firstName: name || undefined,
+      },
+      customData: {
+        content_name: marketingSourceForDeductionCalculator(resolvedCountry),
+        content_category: 'calculator',
+        value: 1,
+        currency: 'USD',
+        status: true,
+      },
     })
 
     return res.status(200).json({ 

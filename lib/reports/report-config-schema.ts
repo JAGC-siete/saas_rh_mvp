@@ -16,7 +16,10 @@ export const reportColumnSchema = z.object({
 
 export const brandingSchema = z.object({
   primaryColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
+  /** Legacy external URL (optional). Prefer logoStoragePath for private Storage logos. */
   logoUrl: z.union([z.string().url(), z.literal(''), z.null()]).optional(),
+  /** HR_BUCKET path, e.g. companies/{id}/branding/logo.png */
+  logoStoragePath: z.string().max(500).optional(),
   legalName: z.string().max(200).optional(),
   useLegalSuffix: z.boolean().optional()
 })
@@ -32,7 +35,7 @@ export type BrandingConfig = z.infer<typeof brandingSchema>
 export type ReportConfig = z.infer<typeof reportConfigSchema>
 
 export const reportTypeEnum = z.enum([
-  'attendance', 'payroll', 'employees', 'work_certificate', 'severance'
+  'attendance', 'payroll', 'employees', 'work_certificate', 'severance', 'voucher'
 ])
 export type ReportType = z.infer<typeof reportTypeEnum>
 
@@ -42,5 +45,6 @@ export const REPORT_TYPE_OPTIONS: { value: ReportType; label: string }[] = [
   { value: 'payroll', label: 'Nómina' },
   { value: 'employees', label: 'Empleados' },
   { value: 'work_certificate', label: 'Constancias' },
-  { value: 'severance', label: 'Liquidación' }
+  { value: 'severance', label: 'Liquidación' },
+  { value: 'voucher', label: 'Recibo de pago' }
 ]

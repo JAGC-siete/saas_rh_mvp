@@ -131,7 +131,9 @@ async function handleGetLeaveAttendanceSummary(
         employee_id,
         start_date,
         end_date,
-        employee:employees(${leaveEmployeeGateSelect})
+        status,
+        leave_type:leave_types(is_paid),
+        employee:employees!leave_requests_employee_id_fkey(${leaveEmployeeGateSelect})
       `)
       .eq('id', leaveRequestId)
       .single()
@@ -149,6 +151,8 @@ async function handleGetLeaveAttendanceSummary(
       employee_id: currentRequest.employee_id,
       start_date: currentRequest.start_date,
       end_date: currentRequest.end_date,
+      leave_status: currentRequest.status,
+      leave_is_paid: currentRequest.leave_type?.is_paid,
     })
 
     if (!result.ok) {
@@ -185,7 +189,7 @@ async function handleUpdateLeaveRequest(
       .from('leave_requests')
       .select(`
         *,
-        employee:employees(${leaveEmployeeGateSelect})
+        employee:employees!leave_requests_employee_id_fkey(${leaveEmployeeGateSelect})
       `)
       .eq('id', leaveRequestId)
       .single()
@@ -279,7 +283,7 @@ async function handleDeleteLeaveRequest(
       .from('leave_requests')
       .select(`
         *,
-        employee:employees(
+        employee:employees!leave_requests_employee_id_fkey(
           company_id
         )
       `)

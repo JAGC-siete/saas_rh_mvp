@@ -1,14 +1,6 @@
 import type { VentasBankDetails } from './bank-details'
 import { buildBankDetailsInlineHtml } from './bank-details'
-
-function escapeHtml(v: string): string {
-  return v
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#039;')
-}
+import { wrapLiquidEmailFragment } from '../emails/liquid-layout'
 
 export type { VentasBankDetails }
 export { getVentasBankDetailsFromEnv } from './bank-details'
@@ -23,9 +15,5 @@ export function generateVentasBankDetailsEmailHTML(params: {
   companyName?: string
   bank: VentasBankDetails
 }) {
-  return `
-    <div style="font-family: Arial, sans-serif; max-width: 640px; margin: 0 auto; padding: 20px;">
-      ${buildBankDetailsInlineHtml(params.bank, params.contactName)}
-    </div>
-  `
+  return wrapLiquidEmailFragment(buildBankDetailsInlineHtml(params.bank, params.contactName))
 }

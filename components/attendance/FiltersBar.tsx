@@ -98,7 +98,7 @@ export default function FiltersBar({
     const loadRoles = async () => {
       try {
         setLoadingRoles(true)
-        const response = await fetch('/api/teams')
+        const response = await fetch('/api/teams', { credentials: 'include' })
         if (response.ok) {
           const data = await response.json()
           if (data?.success) {
@@ -120,7 +120,7 @@ export default function FiltersBar({
     const loadDepartments = async () => {
       try {
         setLoadingDepartments(true)
-        const response = await fetch('/api/departments')
+        const response = await fetch('/api/departments', { credentials: 'include' })
         if (response.ok) {
           const data = await response.json()
           setDepartments(data.departments || [])

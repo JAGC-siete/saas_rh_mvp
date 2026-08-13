@@ -45,8 +45,8 @@ export default function StatsCard({
   if (onClick) {
     return (
       <Card 
-        variant="glass"
-        className={`border-white/10 hover:border-white/30 transition-all cursor-pointer ${className}`}
+        variant="liquid"
+        className={`border-white/10 hover:border-brand-400/30 transition-all cursor-pointer ${className}`}
         onClick={onClick}
       >
         {cardContent}
@@ -55,7 +55,7 @@ export default function StatsCard({
   }
 
   return (
-    <Card variant="glass" className={`border-white/10 ${className}`}>
+    <Card variant="liquid" className={`border-white/10 ${className}`}>
       {cardContent}
     </Card>
   )

@@ -247,7 +247,7 @@ export default function CesantiasPage() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card className="glass-strong border-white/10">
+            <Card variant="liquid" className="border-white/10">
               <CardHeader>
                 <CardTitle className="text-white">Datos de cálculo</CardTitle>
                 <CardDescription className="text-gray-300">
@@ -509,7 +509,7 @@ export default function CesantiasPage() {
               </CardContent>
             </Card>
 
-            <Card className="glass-strong border-white/10">
+            <Card variant="liquid" className="border-white/10">
               <CardHeader>
                 <CardTitle className="text-white">Resultado</CardTitle>
                 <CardDescription className="text-gray-300">
@@ -611,10 +611,17 @@ export default function CesantiasPage() {
                           <span className="text-gray-400">14to mes proporcional:</span>
                           <span>{formatCurrency(result.rubros.decimoCuarto)}</span>
                         </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-400">Reserva laboral:</span>
+                          <span>{formatCurrency(result.rubros.reservaLaboralEnTotal)}</span>
+                        </div>
                         <div className="border-t border-white/10 mt-2 pt-2 flex justify-between font-semibold text-white">
                           <span>Total a pagar:</span>
                           <span>{formatCurrency(result.rubros.totalPagar)}</span>
                         </div>
+                        <p className="text-xs text-gray-500 mt-3 leading-relaxed">
+                          {result.metadata.reservaLaboralDisclaimer}
+                        </p>
                       </div>
                     </div>
                   </div>

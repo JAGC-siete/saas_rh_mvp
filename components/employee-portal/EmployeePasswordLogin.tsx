@@ -175,8 +175,7 @@ export default function EmployeePasswordLogin({ onLoginSuccess }: EmployeePasswo
   const isOtpValid = otpCode.length === 6
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 p-4">
-      <Card className="w-full max-w-md glass-strong">
+    <Card variant="liquid" className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="mx-auto w-16 h-16 bg-brand-600 rounded-full flex items-center justify-center mb-4">
             <span className="text-2xl font-bold text-white">P</span>
@@ -184,7 +183,7 @@ export default function EmployeePasswordLogin({ onLoginSuccess }: EmployeePasswo
           <CardTitle className="text-2xl font-bold text-white">
             Portal de Empleados
           </CardTitle>
-          <CardDescription className="text-gray-300">
+          <CardDescription className="text-slate-400">
             {otpSent 
               ? 'Ingrese el código enviado a su email'
               : forgotPassword
@@ -205,7 +204,7 @@ export default function EmployeePasswordLogin({ onLoginSuccess }: EmployeePasswo
               )}
 
               <div className="text-center mb-4">
-                <p className="text-sm text-gray-300">
+                <p className="text-sm text-slate-400">
                   Código enviado a: <span className="text-brand-400 font-medium">{formData.email}</span>
                 </p>
                 <button
@@ -218,7 +217,7 @@ export default function EmployeePasswordLogin({ onLoginSuccess }: EmployeePasswo
               </div>
               
               <div>
-                <label htmlFor="otp" className="block text-sm font-medium text-gray-300 mb-2">
+                <label htmlFor="otp" className="block text-sm font-medium text-slate-300 mb-2">
                   Código de Verificación
                 </label>
                 <input
@@ -229,10 +228,10 @@ export default function EmployeePasswordLogin({ onLoginSuccess }: EmployeePasswo
                   value={otpCode}
                   onChange={(e) => handleInputChange('otpCode', e.target.value)}
                   placeholder="123456"
-                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white text-center text-lg font-mono tracking-wider placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-transparent"
+                  className="input-glass text-center text-lg font-mono tracking-wider"
                   maxLength={6}
                 />
-                <p className="text-xs text-gray-400 mt-1 text-center">
+                <p className="text-xs text-slate-400 mt-1 text-center">
                   Ingrese el código de 6 dígitos enviado a su email
                 </p>
               </div>
@@ -263,7 +262,7 @@ export default function EmployeePasswordLogin({ onLoginSuccess }: EmployeePasswo
 
               <div className="space-y-4">
                 <div>
-                  <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-2">
+                  <label htmlFor="email" className="block text-sm font-medium text-slate-300 mb-2">
                     Email Corporativo
                   </label>
                   <input
@@ -272,13 +271,13 @@ export default function EmployeePasswordLogin({ onLoginSuccess }: EmployeePasswo
                     value={formData.email}
                     onChange={(e) => handleInputChange('email', e.target.value)}
                     placeholder="nombre@paragonfinancialcorp.com"
-                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white text-lg placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-transparent"
+                    className="input-glass text-lg"
                     autoComplete="email"
                   />
                 </div>
 
                 <div>
-                  <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-2">
+                  <label htmlFor="password" className="block text-sm font-medium text-slate-300 mb-2">
                     Contraseña
                   </label>
                   <div className="relative">
@@ -288,7 +287,7 @@ export default function EmployeePasswordLogin({ onLoginSuccess }: EmployeePasswo
                       value={formData.password}
                       onChange={(e) => handleInputChange('password', e.target.value)}
                       placeholder="Ingrese su contraseña"
-                      className="w-full px-4 py-3 pr-12 bg-white/10 border border-white/20 rounded-lg text-white text-lg placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-transparent"
+                      className="input-glass text-lg pr-12"
                       autoComplete="current-password"
                     />
                     <button
@@ -334,7 +333,7 @@ export default function EmployeePasswordLogin({ onLoginSuccess }: EmployeePasswo
           )}
 
           {forgotPassword && !otpSent && (
-            <div className="mt-6 p-4 bg-blue-500/20 border border-blue-500/30 rounded-md">
+            <div className="mt-6 p-4 rounded-xl bg-brand-500/10 border border-brand-400/20">
               <p className="text-blue-400 text-sm mb-3">
                 Se enviará un código de verificación a su email para recuperar el acceso.
               </p>
@@ -362,23 +361,22 @@ export default function EmployeePasswordLogin({ onLoginSuccess }: EmployeePasswo
 
         <div className="px-6 pb-6">
           <div className="text-center space-y-2">
-            <p className="text-xs text-gray-400">
+            <p className="text-xs text-slate-400">
               ¿Problemas para acceder?
             </p>
-            <p className="text-xs text-gray-400">
+            <p className="text-xs text-slate-400">
               Contacte a Recursos Humanos: <br />
               <span className="text-brand-400 font-medium">rrhh@humanosisu.net</span>
             </p>
           </div>
 
           <div className="mt-4 pt-4 border-t border-white/10">
-            <div className="flex items-center justify-center space-x-1 text-xs text-gray-500">
+            <div className="flex items-center justify-center space-x-1 text-xs text-slate-500">
               <span>🔒</span>
               <span>Conexión segura y encriptada</span>
             </div>
           </div>
         </div>
       </Card>
-    </div>
   )
 }

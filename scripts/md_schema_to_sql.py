@@ -1,0 +1,182 @@
+#!/usr/bin/env python3
+"""Convert Supabase schema markdown (tables/enums) into bootstrap SQL for staging."""
+from __future__ import annotations
+import re
+import sys
+from pathlib import Path
+
+TYPE_MAP = {
+    "uuid": "uuid",
+    "text": "text",
+    "varchar": "varchar",
+    "bool": "boolean",
+    "boolean": "boolean",
+    "int2": "smallint",
+    "int4": "integer",
+    "int8": "bigint",
+    "float8": "double precision",
+    "numeric": "numeric",
+    "timestamptz": "timestamptz",
+    "timestamp": "timestamp",
+    "date": "date",
+    "time": "time",
+    "jsonb": "jsonb",
+    "inet": "inet",
+    "citext": "citext",
+    "_int2": "smallint[]",
+}
+
+def sql_ident(name: str) -> str:
+    return '"' + name.replace('"', '""') + '"'
+
+def map_type(t: str) -> str:
+    t = t.strip().strip("`")
+    if t in TYPE_MAP:
+        return TYPE_MAP[t]
+    # custom enum / domain
+    return t
+
+def parse(md: str):
+    enums = []
+    tables = []  # {name, columns:[{name,type,nullable,primary,unique}]}
+
+    # Enums section — labels like: `a` | `b` | `c`
+    enum_block = re.search(r"## Custom Types / Enums(.*?)(?:## RLS Policies|\Z)", md, re.S)
+    if enum_block:
+        for m in re.finditer(
+            r"### `([^`]+)`\s*\n\s*((?:`[^`]+`\s*(?:\|\s*)?)+)",
+            enum_block.group(1),
+        ):
+            name = m.group(1)
+            labels = re.findall(r"`([^`]+)`", m.group(2))
+            if labels:
+                enums.append((name, labels))
+
+    # Tables
+    for tm in re.finditer(r"## Table `([^`]+)`(.*?)(?=\n## Table `|\n## Custom Types|\n## RLS Policies|\Z)", md, re.S):
+        tname = tm.group(1)
+        body = tm.group(2)
+        cols = []
+        # rows like | `id` | `uuid` | Primary |
+        for row in re.finditer(r"\|\s*`([^`]+)`\s*\|\s*`([^`]+)`\s*\|\s*([^|]*)\|", body):
+            cname, ctype, constr = row.group(1), row.group(2), row.group(3)
+            constr_l = constr.lower()
+            cols.append({
+                "name": cname,
+                "type": ctype,
+                "primary": "primary" in constr_l,
+                "unique": "unique" in constr_l,
+                "nullable": "nullable" in constr_l or ("primary" not in constr_l and constr.strip() == ""),
+                # empty constraints and not primary => treat as NOT NULL if no Nullable
+                "not_null": ("nullable" not in constr_l) and ("primary" in constr_l or constr.strip() != "" or True),
+            })
+            # Fix nullable logic: markdown says "Nullable" explicitly; empty means NOT NULL for non-primary often
+            # Recompute:
+            if "nullable" in constr_l:
+                cols[-1]["nullable"] = True
+                cols[-1]["not_null"] = False
+            elif "primary" in constr_l:
+                cols[-1]["nullable"] = False
+                cols[-1]["not_null"] = True
+            else:
+                # blank constraints => nullable False (required) per common schema dumps
+                # but many cols have blank and are nullable in practice - markdown blank = required
+                cols[-1]["nullable"] = False
+                cols[-1]["not_null"] = True
+                if constr.strip() == "":
+                    # Looking at companies.name has blank -> required; subdomain has Nullable
+                    cols[-1]["nullable"] = False
+                    cols[-1]["not_null"] = True
+        if cols:
+            tables.append({"name": tname, "columns": cols})
+    return enums, tables
+
+def render(enums, tables) -> str:
+    out = []
+    out.append("-- Bootstrap staging schema from markdown export")
+    out.append("CREATE EXTENSION IF NOT EXISTS citext WITH SCHEMA public;")
+    out.append("CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA extensions;")
+    out.append("CREATE SCHEMA IF NOT EXISTS app_private;")
+    out.append("")
+    for name, labels in enums:
+        labs = ", ".join("'" + l.replace("'", "''") + "'" for l in labels)
+        out.append(f"DO $$ BEGIN CREATE TYPE public.{sql_ident(name)} AS ENUM ({labs}); EXCEPTION WHEN duplicate_object THEN NULL; END $$;")
+    out.append("")
+    for t in tables:
+        lines = []
+        pks = [c["name"] for c in t["columns"] if c["primary"]]
+        for c in t["columns"]:
+            parts = [sql_ident(c["name"]), map_type(c["type"])]
+            if c["primary"] and len(pks) == 1:
+                parts.append("PRIMARY KEY")
+            if c["not_null"] and not c["primary"]:
+                parts.append("NOT NULL")
+            if c["unique"] and not c["primary"]:
+                parts.append("UNIQUE")
+            # defaults (only for single-column PKs)
+            ctype = map_type(c["type"])
+            single_pk = c["primary"] and len(pks) == 1
+            if single_pk and ctype == "uuid":
+                parts.insert(2, "DEFAULT gen_random_uuid()")
+            elif single_pk and ctype in ("integer", "bigint", "smallint"):
+                parts.insert(2, "GENERATED BY DEFAULT AS IDENTITY")
+            elif c["name"] in ("created_at", "updated_at") and "timestamptz" in ctype:
+                parts.append("DEFAULT now()")
+            lines.append("  " + " ".join(parts))
+        if len(pks) > 1:
+            lines.append("  PRIMARY KEY (" + ", ".join(sql_ident(x) for x in pks) + ")")
+        out.append(f"CREATE TABLE IF NOT EXISTS public.{sql_ident(t['name'])} (")
+        out.append(",\n".join(lines))
+        out.append(");")
+        out.append(f"ALTER TABLE public.{sql_ident(t['name'])} ENABLE ROW LEVEL SECURITY;")
+        out.append("")
+
+    # helper functions referenced by policies
+    out.append("""
+CREATE OR REPLACE FUNCTION public.get_user_company()
+RETURNS uuid
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT company_id FROM public.user_profiles WHERE id = auth.uid() LIMIT 1;
+$$;
+
+CREATE OR REPLACE FUNCTION app_private.user_can_manage_work_schedules(uid uuid)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.user_profiles
+    WHERE id = uid AND role = ANY (ARRAY['company_admin','hr_manager','super_admin','admin'])
+  );
+$$;
+
+CREATE OR REPLACE FUNCTION app_private.user_can_create_work_schedules(uid uuid)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT app_private.user_can_manage_work_schedules(uid);
+$$;
+""")
+    return "\n".join(out)
+
+def main():
+    path = Path(sys.argv[1])
+    md = path.read_text()
+    # normalize leading junk
+    if "________" in md:
+        md = md.split("________", 1)[-1]
+    enums, tables = parse(md)
+    print(f"-- parsed enums={len(enums)} tables={len(tables)}", file=sys.stderr)
+    sys.stdout.write(render(enums, tables))
+
+if __name__ == "__main__":
+    main()

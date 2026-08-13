@@ -134,7 +134,7 @@ export default memo(function RealtimeEmployeeAchievements({
 
   if (loading) {
     return (
-      <Card variant="glass">
+      <Card variant="liquid">
         <CardHeader>
           <CardTitle className="text-white">Employee Achievements</CardTitle>
           <CardDescription className="text-gray-300">Loading achievements...</CardDescription>
@@ -150,7 +150,7 @@ export default memo(function RealtimeEmployeeAchievements({
 
   if (error) {
     return (
-      <Card variant="glass">
+      <Card variant="liquid">
         <CardHeader>
           <CardTitle className="text-white">Employee Achievements</CardTitle>
         </CardHeader>
@@ -170,7 +170,7 @@ export default memo(function RealtimeEmployeeAchievements({
   }
 
   return (
-    <Card variant="glass">
+    <Card variant="liquid">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-white">
           Employee Achievements

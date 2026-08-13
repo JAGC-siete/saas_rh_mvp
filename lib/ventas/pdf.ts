@@ -1,15 +1,20 @@
 import { Buffer } from 'buffer'
 import type { QuotationQuote } from './types'
-import { formatMoney } from './pricing'
-import type { UrgencyOffer } from './urgency-offer'
-import { formatUrgencyOfferExpiryFriendly } from './urgency-offer'
-import type { VentasBankDetails } from './bank-details'
-import { buildBankDetailsPlainText } from './bank-details'
 import {
-  buildModalityIncludesPlainLines,
-  buildTerminalsPricingNote,
-  VENTAS_MAX_AUTO_QUOTE_TERMINALS,
-} from './modality-includes'
+  buildQuotationPlanSummary,
+  employeesCountFromQuote,
+  getContractIncludesLabels,
+} from './quote-display'
+import type { VentasBankDetails } from './bank-details'
+import { buildModalityComparison } from './modality-comparison'
+import { getVentasModalityDefinition } from './modality-includes'
+import { buildTerminalsDisplayLabel, buildVentasRefLabel } from './brand-styles'
+import { quoteIncludesBiometricTerminals, resolveHardwareMode } from './business-rules'
+import { convertVentasMoney, pricesInCurrencyFooter, VENTAS_PRICE_LIST_CURRENCY } from './currency'
+import { PDF_TYPE as TYPE, VENTAS_PDF_THEME as T } from './pdf-theme'
+
+const MARGIN = 40
+const ROW = 13
 
 export async function generateVentasQuotationPDF(params: {
   quote: QuotationQuote
@@ -20,35 +25,55 @@ export async function generateVentasQuotationPDF(params: {
   employeesCount: number
   terminalsCount?: number
   couponCodeSubmitted?: string
-  /** Ej. Honduras */
   countryLabel: string
-  urgencyOffer?: UrgencyOffer
+  sentAt?: Date
   bankDetails?: VentasBankDetails | null
 }): Promise<Buffer> {
   const {
     quote,
-    contactEmail,
     contactName,
     companyName,
-    phone,
-    employeesCount,
-    terminalsCount,
-    couponCodeSubmitted,
     countryLabel,
-    urgencyOffer,
+    employeesCount,
+    sentAt = new Date(),
     bankDetails,
   } = params
+
+  const employees = quote.employees_count || employeesCount || employeesCountFromQuote(quote)
+  const ruleOpts = {
+    rules: quote.business_rules,
+    tier: {
+      annual_terminal_mode: quote.tier?.annual_terminal_mode,
+      included_terminals_max: quote.tier?.included_terminals_max,
+    },
+  }
+  const includesTerminals =
+    quote.hardware_mode === 'included' ||
+    quoteIncludesBiometricTerminals(quote.billing_modality, employees, ruleOpts)
+  const hardwareMode =
+    quote.hardware_mode || resolveHardwareMode(quote.billing_modality, employees, ruleOpts)
+  const planSummary = buildQuotationPlanSummary({ quote, sentAt })
+  const modalityComparison = buildModalityComparison({ quote, sentAt })
+  const modalityDef = getVentasModalityDefinition(quote.billing_modality, {
+    employeesCount: employees,
+    currency: quote.currency,
+    rules: quote.business_rules,
+    tier: ruleOpts.tier,
+  })
+  const isAnnual = quote.billing_modality === 'annual'
+  const refLabel = buildVentasRefLabel(companyName, contactName)
 
   return new Promise<Buffer>((resolve, reject) => {
     try {
       const PDFDocument = require('pdfkit')
       const doc = new PDFDocument({
         size: 'A4',
-        margin: 40,
+        margin: 0,
+        autoFirstPage: true,
         info: {
           Title: 'Cotización Humano SISU',
           Author: 'Humano SISU',
-          Subject: 'Cotización',
+          Subject: 'Propuesta comercial',
         },
       })
 
@@ -57,180 +82,81 @@ export async function generateVentasQuotationPDF(params: {
       doc.on('data', (chunk: Buffer) => buffers.push(chunk))
       doc.on('end', () => resolve(Buffer.concat(buffers)))
 
-      doc.rect(0, 0, doc.page.width, 90).fill('#0b4fa1')
-      doc.fillColor('white')
-      doc.fontSize(22).text('Humano SISU', 40, 26)
-      doc.fontSize(12).text('Cotización', 40, 56)
+      const pageW = doc.page.width
+      const contentW = pageW - MARGIN * 2
 
-      doc.fillColor('#0f172a')
-      doc.fontSize(11).text('DATOS DE CONTACTO', 40, 110)
-      doc
-        .fontSize(10)
-        .text(`Email: ${contactEmail}`, 40, 128)
-        .text(`Nombre: ${contactName?.trim() || '—'}`, 40, 144)
-        .text(`Empresa: ${companyName?.trim() || '—'}`, 40, 160)
-        .text(`Teléfono: ${phone?.trim() || '—'}`, 40, 176)
+      doc.rect(0, 0, pageW, doc.page.height).fill(T.white)
 
-      doc.fontSize(11).text('PARÁMETROS', 40, 206)
-      doc
-        .fontSize(10)
-        .text(`País de operación: ${countryLabel}`, 40, 224)
-        .text(`Empleados declarados: ${employeesCount}`, 40, 240)
-        .text(`Rango tarifario: ${quote.tier.min_employees}–${quote.tier.max_employees}`, 40, 256)
-        .text(`Modalidad de facturación: ${quote.billing_modality === 'monthly' ? 'Mensual' : 'Anual'}`, 40, 272)
-        .text(
-          buildTerminalsPricingNote({
-            modality: quote.billing_modality,
-            terminalsCount: quote.terminals_count || terminalsCount || 1,
-          }),
-          40,
-          288,
-          { width: doc.page.width - 80 }
-        )
-        .text(`Cupón: ${couponCodeSubmitted?.trim() ? couponCodeSubmitted.trim() : '—'}`, 40, 318)
+      drawHeader(doc, {
+        contentW,
+        quoteLabel: isAnnual ? 'COTIZACIÓN ANUAL' : 'COTIZACIÓN MENSUAL',
+        refLabel,
+      })
 
-      let cursorY = 358
-      doc.fontSize(11).text('QUÉ INCLUYE ESTA MODALIDAD', 40, cursorY)
-      cursorY += 18
-      doc.fontSize(9).fillColor('#334155')
-      for (const line of buildModalityIncludesPlainLines(quote.billing_modality)) {
-        if (cursorY > doc.page.height - 80) {
-          doc.addPage()
-          cursorY = 40
-        }
-        doc.text(line, 40, cursorY, { width: doc.page.width - 80 })
-        cursorY += line.startsWith('Plan') ? 16 : 13
-      }
-      doc.fillColor('#0f172a')
-      cursorY += 10
+      drawClientFicha(doc, {
+        y: 96,
+        contentW,
+        companyName: companyName?.trim() || 'Su empresa',
+        contactName: contactName?.trim() || 'Estimado cliente',
+        countryLabel,
+        tierLabel: planSummary.tierLabel,
+        terminalsCount: quote.terminals_count,
+        includesTerminals,
+        hardwareMode,
+        includedCount: quote.terminals_included_count,
+        extraCount: quote.terminals_extra_count,
+      })
 
-      const isMonthly = quote.billing_modality === 'monthly'
-      const boxHeight = isMonthly ? 132 : 132
-      doc.roundedRect(40, cursorY, doc.page.width - 80, boxHeight, 12).stroke('#cbd5e1')
-      doc.fontSize(12).text('RESUMEN DE COTIZACIÓN', 56, cursorY + 18)
+      const featuresY = 178
+      const featuresH = drawFeaturesRow(doc, {
+        y: featuresY,
+        contentW,
+        isAnnual,
+        terminalsCount: quote.terminals_count,
+        includesTerminals,
+        hardwareMode,
+        currency: quote.currency,
+        includedCount: quote.terminals_included_count,
+        extraCount: quote.terminals_extra_count,
+        hardwareSaleUnitPrice:
+          quote.hardware_sale_unit_price ??
+          (quote.business_rules?.hardware_sale_unit_price != null
+            ? convertVentasMoney(
+                quote.business_rules.hardware_sale_unit_price,
+                VENTAS_PRICE_LIST_CURRENCY,
+                quote.currency
+              )
+            : undefined),
+      })
 
-      const lineY = (i: number) => cursorY + 44 + i * 22
-      doc.fontSize(10)
-      if (isMonthly) {
-        doc.text('Software (mensual)', 56, lineY(0))
-        doc.text(formatMoney(quote.currency, quote.monthly_software_total) + ' / mes', 0, lineY(0), {
-          align: 'right',
-          width: doc.page.width - 56,
+      const priceY = featuresY + featuresH + 10
+      drawPriceCard(doc, {
+        y: priceY,
+        contentW,
+        quote,
+        planSummary,
+        modalityLabel: modalityDef.label,
+      })
+
+      const comparisonY = priceY + 156
+      if (modalityComparison) {
+        drawComparisonStrip(doc, {
+          y: comparisonY,
+          contentW,
+          title: modalityComparison.title,
+          total: `${modalityComparison.totalLabel}: ${modalityComparison.totalValue}`,
+          note: truncateText(modalityComparison.equivalentNote || modalityComparison.footnote, 120),
         })
-
-        doc.text('Continuidad hardware', 56, lineY(1))
-        doc.text(formatMoney(quote.currency, quote.monthly_hardware_fee) + ' / mes', 0, lineY(1), {
-          align: 'right',
-          width: doc.page.width - 56,
-        })
-
-        doc.fontSize(12)
-        doc.text('Total mensual cotizado', 56, lineY(2) + 2)
-        doc.fillColor('#166534')
-        doc.text(formatMoney(quote.currency, quote.monthly_total) + ' / mes', 0, lineY(2) + 2, {
-          align: 'right',
-          width: doc.page.width - 56,
-        })
-        doc.fillColor('#0f172a')
-
-        doc.fontSize(9).fillColor('#475569')
-        doc.text('Terminal biométrica: venta por separado', 56, lineY(3), {
-          width: doc.page.width - 120,
-        })
-        doc.fillColor('#0f172a')
-      } else {
-        doc.text('Subtotal (anual)', 56, lineY(0))
-        doc.text(formatMoney(quote.currency, quote.annual_subtotal) + ' / año', 0, lineY(0), {
-          align: 'right',
-          width: doc.page.width - 56,
-        })
-
-        doc.text('Descuento por cupón', 56, lineY(1))
-        const discountLabel = quote.coupon_applied
-          ? `-${formatMoney(quote.currency, quote.annual_discount_amount)}`
-          : formatMoney(quote.currency, 0)
-        doc.text(discountLabel + ' / año', 0, lineY(1), { align: 'right', width: doc.page.width - 56 })
-
-        doc.fontSize(12)
-        doc.text('Total anual cotizado', 56, lineY(2) + 2)
-        doc.fillColor('#166534')
-        doc.text(formatMoney(quote.currency, quote.annual_total) + ' / año', 0, lineY(2) + 2, {
-          align: 'right',
-          width: doc.page.width - 56,
-        })
-        doc.fillColor('#0f172a')
-
-        doc.fontSize(9).fillColor('#475569')
-        doc.text(
-          `Terminal biométrica incluida · ${quote.terminals_count || terminalsCount || 1} declarada(s) (hasta ${VENTAS_MAX_AUTO_QUOTE_TERMINALS} en cotización automática)`,
-          56,
-          lineY(3),
-          { width: doc.page.width - 120 }
-        )
-        doc.fillColor('#0f172a')
       }
 
-      cursorY = boxYAfterSummary(cursorY, boxHeight)
-
-      if (urgencyOffer?.isActive) {
-        const periodLabel = isMonthly ? 'mes' : 'año'
-        const urgencyHeight = 118
-        doc.roundedRect(40, cursorY, doc.page.width - 80, urgencyHeight, 12).stroke('#86efac')
-        doc.fontSize(12).fillColor('#0f172a').text('OFERTA POR CONTRATACIÓN RÁPIDA (72 H)', 56, cursorY + 16)
-        doc.fontSize(10)
-        doc.text(`Precio cotizado`, 56, cursorY + 40)
-        doc.text(`${formatMoney(quote.currency, urgencyOffer.quotedTotal)} / ${periodLabel}`, 0, cursorY + 40, {
-          align: 'right',
-          width: doc.page.width - 56,
-        })
-        doc.text('Descuento 20% por contratar en 72 h', 56, cursorY + 62)
-        doc.text(`-${formatMoney(quote.currency, urgencyOffer.discountAmount)} / ${periodLabel}`, 0, cursorY + 62, {
-          align: 'right',
-          width: doc.page.width - 56,
-        })
-        doc.fontSize(11).fillColor('#166534')
-        doc.text('Precio con descuento', 56, cursorY + 84)
-        doc.text(`${formatMoney(quote.currency, urgencyOffer.discountedTotal)} / ${periodLabel}`, 0, cursorY + 84, {
-          align: 'right',
-          width: doc.page.width - 56,
-        })
-        doc.fontSize(9).fillColor('#475569')
-        doc.text(
-          `Válido hasta ${formatUrgencyOfferExpiryFriendly(urgencyOffer.expiresAt)} (hora Honduras).`,
-          56,
-          cursorY + 102,
-          { width: doc.page.width - 120 }
-        )
-        doc.fillColor('#0f172a')
-        cursorY += urgencyHeight + 16
-      }
-
-      if (bankDetails) {
-        const bankLines = buildBankDetailsPlainText(bankDetails).split('\n')
-        doc.fontSize(11).text('DATOS BANCARIOS', 40, cursorY)
-        cursorY += 18
-        doc.fontSize(9).fillColor('#334155')
-        for (const line of bankLines) {
-          if (cursorY > doc.page.height - 60) {
-            doc.addPage()
-            cursorY = 40
-          }
-          doc.text(line || ' ', 40, cursorY, { width: doc.page.width - 80 })
-          cursorY += line.trim() ? 14 : 8
-        }
-        doc.fillColor('#0f172a')
-        cursorY += 8
-      }
-
-      doc
-        .fontSize(9)
-        .fillColor('#475569')
-        .text(
-          'Nota: cotización orientativa con precio de lista. Si aplica oferta por contratación en 72 h, el descuento se confirma en el correo y al formalizar. Un asesor confirma alcance, integraciones y vigencia.',
-          40,
-          cursorY + 6,
-          { width: doc.page.width - 80 }
-        )
+      drawFooter(doc, {
+        y: modalityComparison ? comparisonY + 58 : comparisonY,
+        contentW,
+        bankDetails,
+        isAnnual,
+        includesTerminals,
+        currency: quote.currency,
+      })
 
       doc.end()
     } catch (e) {
@@ -239,6 +165,355 @@ export async function generateVentasQuotationPDF(params: {
   })
 }
 
-function boxYAfterSummary(startY: number, boxHeight: number): number {
-  return startY + boxHeight + 18
+function drawSectionTitle(doc: PDFKit.PDFDocument, text: string, x: number, y: number) {
+  doc.fillColor(T.primary).font('Helvetica-Bold').fontSize(TYPE.section).text(text.toUpperCase(), x, y, {
+    characterSpacing: 0.5,
+  })
+}
+
+function drawMetaLabel(doc: PDFKit.PDFDocument, text: string, x: number, y: number) {
+  doc.fillColor(T.textMuted).font('Helvetica').fontSize(TYPE.label).text(text.toUpperCase(), x, y)
+}
+
+function drawMetaValue(doc: PDFKit.PDFDocument, text: string, x: number, y: number, width: number, bold = false) {
+  doc
+    .fillColor(bold ? T.text : T.textBody)
+    .font(bold ? 'Helvetica-Bold' : 'Helvetica')
+    .fontSize(TYPE.value)
+    .text(text, x, y, { width, lineGap: 1 })
+}
+
+function drawHeader(
+  doc: PDFKit.PDFDocument,
+  params: { contentW: number; quoteLabel: string; refLabel: string }
+) {
+  const { contentW, quoteLabel, refLabel } = params
+
+  doc.fillColor(T.primary).font('Helvetica-Bold').fontSize(TYPE.brand).text('Humano SISU', MARGIN, MARGIN)
+  doc.fillColor(T.textMuted).font('Helvetica').fontSize(TYPE.ref).text(
+    `${quoteLabel}  //  REF: ${refLabel}`,
+    MARGIN,
+    MARGIN + 26,
+    { width: contentW, align: 'right' }
+  )
+
+  doc.moveTo(MARGIN, 82).lineTo(MARGIN + contentW, 82).lineWidth(2.5).strokeColor(T.primary).stroke()
+}
+
+function drawClientFicha(
+  doc: PDFKit.PDFDocument,
+  params: {
+    y: number
+    contentW: number
+    companyName: string
+    contactName: string
+    countryLabel: string
+    tierLabel: string
+    terminalsCount: number
+    includesTerminals: boolean
+    hardwareMode: 'included' | 'sale' | 'continuity'
+    includedCount?: number
+    extraCount?: number
+  }
+) {
+  const {
+    y,
+    contentW,
+    companyName,
+    contactName,
+    countryLabel,
+    tierLabel,
+    terminalsCount,
+    includesTerminals,
+    hardwareMode,
+    includedCount,
+    extraCount,
+  } = params
+  const boxH = 76
+  const colW = (contentW - 36) / 2
+
+  doc.roundedRect(MARGIN, y, contentW, boxH, 8).fill(T.panelBgAlt)
+  doc.roundedRect(MARGIN, y, contentW, boxH, 8).lineWidth(0.8).stroke(T.panelBorder)
+
+  const colAX = MARGIN + 14
+  const colBX = MARGIN + 14 + colW + 8
+  let rowY = y + 12
+
+  doc.fillColor(T.textMuted).font('Helvetica').fontSize(TYPE.label)
+  doc.text(`ATENCIÓN: ${contactName}`, colAX, rowY, { width: contentW - 28 })
+  rowY += 16
+
+  drawMetaLabel(doc, 'EMPRESA', colAX, rowY)
+  drawMetaLabel(doc, 'ALCANCE', colBX, rowY)
+  rowY += ROW
+  drawMetaValue(doc, companyName, colAX, rowY, colW, true)
+  drawMetaValue(doc, tierLabel, colBX, rowY, colW, true)
+  rowY += ROW + 2
+
+  drawMetaLabel(doc, 'PAÍS', colAX, rowY)
+  drawMetaLabel(doc, '# DE TERMINALES', colBX, rowY)
+  rowY += ROW
+  drawMetaValue(doc, countryLabel, colAX, rowY, colW)
+  drawMetaValue(
+    doc,
+    buildTerminalsDisplayLabel({
+      terminalsCount,
+      includesTerminals,
+      hardwareMode,
+      includedCount,
+      extraCount,
+    }),
+    colBX,
+    rowY,
+    colW
+  )
+}
+
+function drawFeaturesRow(
+  doc: PDFKit.PDFDocument,
+  params: {
+    y: number
+    contentW: number
+    isAnnual: boolean
+    terminalsCount: number
+    includesTerminals: boolean
+    hardwareMode: 'included' | 'sale' | 'continuity'
+    currency: QuotationQuote['currency']
+    includedCount?: number
+    extraCount?: number
+    hardwareSaleUnitPrice?: number
+  }
+): number {
+  const {
+    y,
+    contentW,
+    isAnnual,
+    terminalsCount,
+    includesTerminals,
+    hardwareMode,
+    currency,
+    includedCount,
+    extraCount,
+    hardwareSaleUnitPrice,
+  } = params
+  const labels = getContractIncludesLabels({
+    isAnnual,
+    terminalsCount,
+    includesTerminals,
+    hardwareMode,
+    currency,
+    includedCount,
+    extraCount,
+    hardwareSaleUnitPrice,
+  })
+  const colGap = 16
+  const colW = (contentW - colGap) / 2
+  const rowH = 14
+  const listTop = y + 18
+  const leftCol = labels.filter((_, i) => i % 2 === 0)
+  const rightCol = labels.filter((_, i) => i % 2 === 1)
+  const rows = Math.max(leftCol.length, rightCol.length)
+
+  drawSectionTitle(doc, 'Incluido en su contratación', MARGIN, y)
+
+  doc.fillColor(T.textBody).font('Helvetica').fontSize(TYPE.body)
+
+  for (let i = 0; i < leftCol.length; i++) {
+    const itemY = listTop + i * rowH
+    doc.circle(MARGIN + 3, itemY + 4, 1.8).fill(T.primary)
+    doc.text(leftCol[i], MARGIN + 10, itemY, { width: colW - 10, lineGap: 0 })
+  }
+
+  const rightX = MARGIN + colW + colGap
+  for (let i = 0; i < rightCol.length; i++) {
+    const itemY = listTop + i * rowH
+    doc.circle(rightX + 3, itemY + 4, 1.8).fill(T.primary)
+    doc.text(rightCol[i], rightX + 10, itemY, { width: colW - 10, lineGap: 0 })
+  }
+
+  return 18 + rows * rowH
+}
+
+function drawPriceCard(
+  doc: PDFKit.PDFDocument,
+  params: {
+    y: number
+    contentW: number
+    quote: QuotationQuote
+    planSummary: ReturnType<typeof buildQuotationPlanSummary>
+    modalityLabel: string
+  }
+) {
+  const { y, contentW, quote, planSummary, modalityLabel } = params
+  const boxH = 148
+
+  doc.roundedRect(MARGIN, y, contentW, boxH, 10).fill(T.panelBg)
+  doc.roundedRect(MARGIN, y, contentW, boxH, 10).lineWidth(1).stroke(T.panelBorder)
+  doc.rect(MARGIN, y + 12, 4, boxH - 24).fill(T.primary)
+
+  drawSectionTitle(doc, 'Inversión', MARGIN + 16, y + 16)
+  doc.fillColor(T.textMuted).font('Helvetica').fontSize(TYPE.body).text(modalityLabel, MARGIN + 16, y + 30)
+
+  const innerX = MARGIN + 16
+  let cursorY = y + 48
+
+  for (const line of planSummary.lines) {
+    const isDiscount = line.variant === 'discount'
+    doc
+      .fillColor(isDiscount ? T.accentDark : T.textBody)
+      .font(isDiscount ? 'Helvetica-Bold' : 'Helvetica')
+      .fontSize(TYPE.body)
+      .text(`${line.label}: ${line.value}`, innerX, cursorY, {
+        width: contentW - 32,
+      })
+    cursorY += 14
+  }
+
+  doc.fillColor(T.accent).font('Helvetica-Bold').fontSize(TYPE.price).text(planSummary.totalValue, innerX, cursorY + 6)
+  doc.fillColor(T.text).font('Helvetica').fontSize(TYPE.value).text(planSummary.totalLabel, innerX, cursorY + 30)
+}
+
+function drawComparisonStrip(
+  doc: PDFKit.PDFDocument,
+  params: { y: number; contentW: number; title: string; total: string; note: string }
+) {
+  const { y, contentW, title, total, note } = params
+  const boxH = 48
+
+  doc.roundedRect(MARGIN, y, contentW, boxH, 8).fill(T.panelBgAlt)
+  doc.roundedRect(MARGIN, y, contentW, boxH, 8).lineWidth(0.7).stroke(T.panelBorder)
+
+  doc.fillColor(T.primary).font('Helvetica-Bold').fontSize(TYPE.section).text(title.toUpperCase(), MARGIN + 12, y + 10, {
+    characterSpacing: 0.4,
+  })
+  doc.fillColor(T.text).font('Helvetica-Bold').fontSize(TYPE.value).text(total, MARGIN + 12, y + 22, {
+    width: contentW - 24,
+  })
+  doc.fillColor(T.textMuted).font('Helvetica').fontSize(TYPE.label).text(note, MARGIN + 12, y + 34, {
+    width: contentW - 24,
+  })
+}
+
+function drawFooter(
+  doc: PDFKit.PDFDocument,
+  params: {
+    y: number
+    contentW: number
+    bankDetails?: VentasBankDetails | null
+    isAnnual: boolean
+    includesTerminals: boolean
+    currency: QuotationQuote['currency']
+  }
+) {
+  const { y, contentW, bankDetails, isAnnual, includesTerminals, currency } = params
+  const boxW = (contentW - 14) / 2
+  const boxH = 128
+
+  const implementationTitle = 'Tiempo de implementación'
+  const implementationBody = isAnnual
+    ? 'Tiempo de entrega en 3 a 5 días hábiles.'
+    : 'Entrega en 3 a 5 días hábiles tras confirmar el depósito.'
+
+  const paymentIntro = isAnnual
+    ? includesTerminals
+      ? '50% anticipo (licencia anual) para programar la instalación y enlace de las terminales y 50% únicamente contra la instalación y enlace efectivos con el sistema.'
+      : 'Anticipo del 50% sobre (licencia anual + terminales en venta) para programar la instalación. El saldo de la licencia se cancela contra instalación.'
+    : 'El siguiente paso es enviar el comprobante del 100% de la primera mensualidad (software + continuidad de hardware).'
+
+  drawSectionTitle(doc, implementationTitle, MARGIN, y)
+  doc.roundedRect(MARGIN, y + 14, boxW, boxH, 8).fill(T.panelBgAlt)
+  doc.roundedRect(MARGIN, y + 14, boxW, boxH, 8).lineWidth(0.7).stroke(T.panelBorder)
+  doc.fillColor(T.textBody).font('Helvetica').fontSize(TYPE.body).text(
+    implementationBody,
+    MARGIN + 12,
+    y + 28,
+    { width: boxW - 24, lineGap: 2 }
+  )
+  doc.fillColor(T.textMuted).font('Helvetica').fontSize(TYPE.label).text(
+    'Envíe comprobante por WhatsApp o responda al correo de cotización.',
+    MARGIN + 12,
+    y + 108,
+    { width: boxW - 24 }
+  )
+
+  const paymentX = MARGIN + boxW + 14
+  drawSectionTitle(doc, 'Modalidad de pago', paymentX, y)
+  doc.roundedRect(paymentX, y + 14, boxW, boxH, 8).fill(T.panelBgAlt)
+  doc.roundedRect(paymentX, y + 14, boxW, boxH, 8).lineWidth(0.7).stroke(T.panelBorder)
+
+  doc.fillColor(T.textBody).font('Helvetica').fontSize(TYPE.body).text(
+    paymentIntro,
+    paymentX + 12,
+    y + 28,
+    { width: boxW - 24, lineGap: 2 }
+  )
+
+  if (bankDetails) {
+    let rowY = y + (isAnnual ? 68 : 52)
+    doc.font('Helvetica').fillColor(T.textBody).fontSize(TYPE.label)
+    if (bankDetails.clientName) {
+      doc.text(`Titular: ${bankDetails.clientName}`, paymentX + 12, rowY, { width: boxW - 24 })
+      rowY += 11
+    }
+    if (bankDetails.clientDni) {
+      doc.text(`DNI: ${bankDetails.clientDni}`, paymentX + 12, rowY, { width: boxW - 24 })
+      rowY += 11
+    }
+    doc.font('Courier').fontSize(TYPE.bankMono).fillColor(T.text)
+    if (bankDetails.bacAccount) {
+      doc.text(`BAC Credomatic   ${bankDetails.bacAccount}`, paymentX + 12, rowY, { width: boxW - 24 })
+      rowY += 11
+    }
+    if (bankDetails.banpaisAccount) {
+      doc.text(`Banpais          ${bankDetails.banpaisAccount}`, paymentX + 12, rowY, { width: boxW - 24 })
+      rowY += 11
+    }
+    if (bankDetails.atlantidaAccount) {
+      doc.text(`Atlántida        ${bankDetails.atlantidaAccount}`, paymentX + 12, rowY, { width: boxW - 24 })
+    }
+  } else {
+    doc.fillColor(T.textMuted).font('Helvetica').fontSize(TYPE.body).text(
+      'Solicite datos bancarios a su asesor al confirmar.',
+      paymentX + 12,
+      y + 70,
+      { width: boxW - 24 }
+    )
+  }
+
+  doc.fillColor(T.textLight).font('Helvetica').fontSize(TYPE.footnote).text(
+    `Humano SISU · humanosisu.net · Propuesta comercial · ${pricesInCurrencyFooter(currency)}`,
+    MARGIN,
+    y + boxH + 28,
+    { width: contentW, align: 'center' }
+  )
+}
+
+function truncateText(text: string, maxLen: number): string {
+  const normalized = text.replace(/\s+/g, ' ').trim()
+  if (normalized.length <= maxLen) return normalized
+  return `${normalized.slice(0, maxLen - 1)}…`
+}
+
+namespace PDFKit {
+  export interface PDFDocument {
+    page: { width: number; height: number }
+    save(): this
+    restore(): this
+    rect(x: number, y: number, w: number, h: number): this
+    roundedRect(x: number, y: number, w: number, h: number, r: number): this
+    circle(x: number, y: number, r: number): this
+    fill(color?: string): this
+    stroke(color?: string): this
+    fillColor(color: string): this
+    strokeColor(color: string): this
+    font(name: string): this
+    fontSize(size: number): this
+    text(text: string, x?: number, y?: number, options?: Record<string, unknown>): this
+    lineWidth(w: number): this
+    moveTo(x: number, y: number): this
+    lineTo(x: number, y: number): this
+    widthOfString(text: string): number
+    on(event: string, cb: (...args: unknown[]) => void): void
+    end(): void
+  }
 }

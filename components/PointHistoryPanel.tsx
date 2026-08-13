@@ -82,7 +82,7 @@ export default memo(function PointHistoryPanel({
 
   if (loading) {
     return (
-      <Card variant="glass">
+      <Card variant="liquid">
         <CardHeader>
           <CardTitle className="text-white">Historial de Puntos</CardTitle>
           <CardDescription className="text-gray-300">Cargando...</CardDescription>
@@ -97,7 +97,7 @@ export default memo(function PointHistoryPanel({
   }
 
   return (
-    <Card variant="glass">
+    <Card variant="liquid">
       <CardHeader>
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>

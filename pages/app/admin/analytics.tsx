@@ -476,7 +476,7 @@ export default function AnalyticsPage() {
             {activeTab === 'runs' && (
               <div className="space-y-4">
                 {/* Filters */}
-                <Card variant="glass" className="border-white/10">
+                <Card variant="liquid" className="border-white/10">
                   <CardHeader>
                     <CardTitle className="text-white">Filtros</CardTitle>
                   </CardHeader>
@@ -487,7 +487,7 @@ export default function AnalyticsPage() {
                         <select
                           value={runsFilters.company_id}
                           onChange={(e) => setRunsFilters({ ...runsFilters, company_id: e.target.value })}
-                          className="w-full px-3 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-md text-white"
+                          className="input-glass w-full text-white"
                         >
                           <option value="">Todas</option>
                           {companies.map((c) => (
@@ -501,7 +501,7 @@ export default function AnalyticsPage() {
                           type="number"
                           value={runsFilters.year}
                           onChange={(e) => setRunsFilters({ ...runsFilters, year: e.target.value })}
-                          className="w-full px-3 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-md text-white"
+                          className="input-glass w-full text-white"
                           placeholder="2025"
                         />
                       </div>
@@ -510,7 +510,7 @@ export default function AnalyticsPage() {
                         <select
                           value={runsFilters.month}
                           onChange={(e) => setRunsFilters({ ...runsFilters, month: e.target.value })}
-                          className="w-full px-3 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-md text-white"
+                          className="input-glass w-full text-white"
                         >
                           <option value="">Todos</option>
                           {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
@@ -523,7 +523,7 @@ export default function AnalyticsPage() {
                         <select
                           value={runsFilters.status}
                           onChange={(e) => setRunsFilters({ ...runsFilters, status: e.target.value })}
-                          className="w-full px-3 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-md text-white"
+                          className="input-glass w-full text-white"
                         >
                           <option value="">Todos</option>
                           <option value="draft">Draft</option>
@@ -537,7 +537,7 @@ export default function AnalyticsPage() {
                 </Card>
 
                 {/* Table */}
-                <Card variant="glass" className="border-white/10">
+                <Card variant="liquid" className="border-white/10">
                   <CardHeader>
                     <CardTitle className="text-white">
                       Ejecuciones de Nómina ({runsTotal} registros)
@@ -624,7 +624,7 @@ export default function AnalyticsPage() {
             {activeTab === 'records' && (
               <div className="space-y-4">
                 {/* Filters */}
-                <Card variant="glass" className="border-white/10">
+                <Card variant="liquid" className="border-white/10">
                   <CardHeader>
                     <CardTitle className="text-white">Filtros</CardTitle>
                   </CardHeader>
@@ -635,7 +635,7 @@ export default function AnalyticsPage() {
                         <select
                           value={recordsFilters.company_id}
                           onChange={(e) => setRecordsFilters({ ...recordsFilters, company_id: e.target.value })}
-                          className="w-full px-3 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-md text-white"
+                          className="input-glass w-full text-white"
                         >
                           <option value="">Todas</option>
                           {companies.map((c) => (
@@ -649,7 +649,7 @@ export default function AnalyticsPage() {
                           type="date"
                           value={recordsFilters.start_date}
                           onChange={(e) => setRecordsFilters({ ...recordsFilters, start_date: e.target.value })}
-                          className="w-full px-3 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-md text-white"
+                          className="input-glass w-full text-white"
                         />
                       </div>
                       <div>
@@ -658,7 +658,7 @@ export default function AnalyticsPage() {
                           type="date"
                           value={recordsFilters.end_date}
                           onChange={(e) => setRecordsFilters({ ...recordsFilters, end_date: e.target.value })}
-                          className="w-full px-3 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-md text-white"
+                          className="input-glass w-full text-white"
                         />
                       </div>
                     </div>
@@ -666,7 +666,7 @@ export default function AnalyticsPage() {
                 </Card>
 
                 {/* Table */}
-                <Card variant="glass" className="border-white/10">
+                <Card variant="liquid" className="border-white/10">
                   <CardHeader>
                     <CardTitle className="text-white">
                       Historial de Nómina ({recordsTotal} registros)
@@ -754,7 +754,7 @@ export default function AnalyticsPage() {
             {activeTab === 'gamification' && (
               <div className="space-y-4">
                 {/* Filters */}
-                <Card variant="glass" className="border-white/10">
+                <Card variant="liquid" className="border-white/10">
                   <CardHeader>
                     <CardTitle className="text-white">Filtros</CardTitle>
                   </CardHeader>
@@ -765,7 +765,7 @@ export default function AnalyticsPage() {
                         <select
                           value={scoresFilters.company_id}
                           onChange={(e) => setScoresFilters({ ...scoresFilters, company_id: e.target.value })}
-                          className="w-full px-3 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-md text-white"
+                          className="input-glass w-full text-white"
                         >
                           <option value="">Todas</option>
                           {companies.map((c) => (
@@ -779,7 +779,7 @@ export default function AnalyticsPage() {
                           type="number"
                           value={scoresFilters.min_points}
                           onChange={(e) => setScoresFilters({ ...scoresFilters, min_points: e.target.value })}
-                          className="w-full px-3 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-md text-white"
+                          className="input-glass w-full text-white"
                           placeholder="0"
                         />
                       </div>
@@ -788,7 +788,7 @@ export default function AnalyticsPage() {
                 </Card>
 
                 {/* Table */}
-                <Card variant="glass" className="border-white/10">
+                <Card variant="liquid" className="border-white/10">
                   <CardHeader>
                     <CardTitle className="text-white">
                       Leaderboard de Gamificación ({scoresTotal} registros)
@@ -883,7 +883,7 @@ export default function AnalyticsPage() {
             {activeTab === 'leave' && (
               <div className="space-y-4">
                 {/* Filters */}
-                <Card variant="glass" className="border-white/10">
+                <Card variant="liquid" className="border-white/10">
                   <CardHeader>
                     <CardTitle className="text-white">Filtros</CardTitle>
                   </CardHeader>
@@ -894,7 +894,7 @@ export default function AnalyticsPage() {
                         <select
                           value={leaveFilters.company_id}
                           onChange={(e) => setLeaveFilters({ ...leaveFilters, company_id: e.target.value })}
-                          className="w-full px-3 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-md text-white"
+                          className="input-glass w-full text-white"
                         >
                           <option value="">Todas</option>
                           {companies.map((c) => (
@@ -907,7 +907,7 @@ export default function AnalyticsPage() {
                         <select
                           value={leaveFilters.status}
                           onChange={(e) => setLeaveFilters({ ...leaveFilters, status: e.target.value })}
-                          className="w-full px-3 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-md text-white"
+                          className="input-glass w-full text-white"
                         >
                           <option value="">Todos</option>
                           <option value="pending">Pendiente</option>
@@ -921,7 +921,7 @@ export default function AnalyticsPage() {
                           type="date"
                           value={leaveFilters.start_date}
                           onChange={(e) => setLeaveFilters({ ...leaveFilters, start_date: e.target.value })}
-                          className="w-full px-3 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-md text-white"
+                          className="input-glass w-full text-white"
                         />
                       </div>
                       <div>
@@ -930,7 +930,7 @@ export default function AnalyticsPage() {
                           type="date"
                           value={leaveFilters.end_date}
                           onChange={(e) => setLeaveFilters({ ...leaveFilters, end_date: e.target.value })}
-                          className="w-full px-3 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-md text-white"
+                          className="input-glass w-full text-white"
                         />
                       </div>
                     </div>
@@ -938,7 +938,7 @@ export default function AnalyticsPage() {
                 </Card>
 
                 {/* Table */}
-                <Card variant="glass" className="border-white/10">
+                <Card variant="liquid" className="border-white/10">
                   <CardHeader>
                     <CardTitle className="text-white">
                       Solicitudes de Permisos ({leaveTotal} registros)
@@ -1049,7 +1049,7 @@ export default function AnalyticsPage() {
             {activeTab === 'attendance' && (
               <div className="space-y-4">
                 {/* Filters */}
-                <Card variant="glass" className="border-white/10">
+                <Card variant="liquid" className="border-white/10">
                   <CardHeader>
                     <CardTitle className="text-white">Filtros</CardTitle>
                   </CardHeader>
@@ -1060,7 +1060,7 @@ export default function AnalyticsPage() {
                         <select
                           value={attendanceFilters.company_id}
                           onChange={(e) => setAttendanceFilters({ ...attendanceFilters, company_id: e.target.value })}
-                          className="w-full px-3 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-md text-white"
+                          className="input-glass w-full text-white"
                         >
                           <option value="">Todas</option>
                           {companies.map((c) => (
@@ -1073,7 +1073,7 @@ export default function AnalyticsPage() {
                         <select
                           value={attendanceFilters.status}
                           onChange={(e) => setAttendanceFilters({ ...attendanceFilters, status: e.target.value })}
-                          className="w-full px-3 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-md text-white"
+                          className="input-glass w-full text-white"
                         >
                           <option value="">Todos</option>
                           <option value="present">Presente</option>
@@ -1087,7 +1087,7 @@ export default function AnalyticsPage() {
                           type="date"
                           value={attendanceFilters.start_date}
                           onChange={(e) => setAttendanceFilters({ ...attendanceFilters, start_date: e.target.value })}
-                          className="w-full px-3 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-md text-white"
+                          className="input-glass w-full text-white"
                         />
                       </div>
                       <div>
@@ -1096,7 +1096,7 @@ export default function AnalyticsPage() {
                           type="date"
                           value={attendanceFilters.end_date}
                           onChange={(e) => setAttendanceFilters({ ...attendanceFilters, end_date: e.target.value })}
-                          className="w-full px-3 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-md text-white"
+                          className="input-glass w-full text-white"
                         />
                       </div>
                     </div>
@@ -1104,7 +1104,7 @@ export default function AnalyticsPage() {
                 </Card>
 
                 {/* Table */}
-                <Card variant="glass" className="border-white/10">
+                <Card variant="liquid" className="border-white/10">
                   <CardHeader>
                     <CardTitle className="text-white">
                       Registros de Asistencia ({attendanceTotal} registros)

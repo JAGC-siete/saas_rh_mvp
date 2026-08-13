@@ -1,6 +1,29 @@
 /** @type {import('next').NextConfig} */
+const path = require('path')
+const withBundleAnalyzer = require('@next/bundle-analyzer')({
+  enabled: process.env.ANALYZE === 'true',
+})
+
 const nextConfig = {
   reactStrictMode: true,
+
+  // Evita que Next infiera el workspace desde ~/package-lock.json (build standalone colgado/lento).
+  outputFileTracingRoot: path.join(__dirname),
+
+  images: {
+    formats: ['image/avif', 'image/webp'],
+  },
+
+  /** Tree-shake barrel imports (lucide, heroicons, charts, motion, date-fns). */
+  experimental: {
+    optimizePackageImports: [
+      'lucide-react',
+      '@heroicons/react',
+      'date-fns',
+      'recharts',
+      'framer-motion',
+    ],
+  },
 
   /** pdfkit + dependencias usan require/fs; si Webpack los empaqueta mal, el PDF falla en runtime (500). */
   serverExternalPackages: ['pdfkit'],
@@ -49,15 +72,32 @@ const nextConfig = {
   
   // Configuración para rutas internas (no subdominios)
   async rewrites() {
-    return [
-      // Rewrite /favicon.ico to logo to prevent 502 errors
-      // Browsers automatically request /favicon.ico, and if it doesn't exist,
-      // it can cause 502 errors when behind a proxy like Cloudflare
-      {
-        source: '/favicon.ico',
-        destination: '/logo-humano-sisu.png',
-      },
-    ]
+    return {
+      // /en/... → same page files; locale read from asPath (no Next i18n — keeps /app clean)
+      beforeFiles: [
+        { source: '/en', destination: '/' },
+        { source: '/en/:path*', destination: '/:path*' },
+      ],
+      afterFiles: [
+        {
+          source: '/favicon.ico',
+          destination: '/brand/favicon-humano-sisu.png',
+        },
+        // Public descriptive slugs → internal page files
+        {
+          source: '/cerrar-planilla-en-paz',
+          destination: '/info',
+        },
+        {
+          source: '/cerrar-planilla-en-paz/m/:id',
+          destination: '/info/m/:id',
+        },
+        {
+          source: '/domingos-sin-planilla',
+          destination: '/viernes',
+        },
+      ],
+    }
   },
   
   // Redirecciones para mantener compatibilidad
@@ -69,11 +109,11 @@ const nextConfig = {
         destination: '/app/attendance/dashboard',
         permanent: false,
       },
-      // Redirigir /landing a la página principal
+      // Redirigir /landing a la página principal (301 permanente)
       {
         source: '/landing',
         destination: '/',
-        permanent: false,
+        permanent: true,
       },
       // Redirigir rutas legacy del dashboard
       {
@@ -116,6 +156,70 @@ const nextConfig = {
         source: '/login',
         destination: '/app/login',
         permanent: false,
+      },
+      // Funnel TOFU: canonical /cerrar-planilla-en-paz (legacy /secreto, /info → 301)
+      {
+        source: '/secreto',
+        destination: '/cerrar-planilla-en-paz',
+        permanent: true,
+      },
+      {
+        source: '/secreto/m/:id',
+        destination: '/cerrar-planilla-en-paz/m/:id',
+        permanent: true,
+      },
+      {
+        source: '/info',
+        destination: '/cerrar-planilla-en-paz',
+        permanent: true,
+      },
+      {
+        source: '/info/m/:id',
+        destination: '/cerrar-planilla-en-paz/m/:id',
+        permanent: true,
+      },
+      // Campaign: canonical /domingos-sin-planilla (legacy + typo → 301)
+      {
+        source: '/viernes',
+        destination: '/domingos-sin-planilla',
+        permanent: true,
+      },
+      {
+        source: '/domingo',
+        destination: '/domingos-sin-planilla',
+        permanent: true,
+      },
+      {
+        source: '/domingo-sin-planilla',
+        destination: '/domingos-sin-planilla',
+        permanent: true,
+      },
+      {
+        source: '/planilla-sin-domingos',
+        destination: '/domingos-sin-planilla',
+        permanent: true,
+      },
+      // Legal: hyphenated privacy path
+      {
+        source: '/politicadeprivacidad',
+        destination: '/politica-de-privacidad',
+        permanent: true,
+      },
+      // Calculadoras deducciones: canónico calculadora-deducciones* (calcusisu* → 301)
+      {
+        source: '/calcusisuhn',
+        destination: '/calculadora-deducciones',
+        permanent: true,
+      },
+      {
+        source: '/calcusisusv',
+        destination: '/calculadora-deducciones-el-salvador',
+        permanent: true,
+      },
+      {
+        source: '/calcusisuguate',
+        destination: '/calculadora-deducciones-guatemala',
+        permanent: true,
       },
       // Redirigir attendance legacy - COMENTADO: ahora /attendance/register existe directamente
       // {
@@ -163,12 +267,13 @@ const nextConfig = {
             key: 'Content-Security-Policy',
             value:
               "default-src 'self'; " +
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com; " +
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://connect.facebook.net; " +
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
               "style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
               "img-src 'self' data: https:; " +
               "font-src 'self' data: https://fonts.gstatic.com; " +
-              "connect-src 'self' https://*.supabase.co https://*.supabase.com https://www.googletagmanager.com https://www.google-analytics.com; " +
+              "connect-src 'self' https://*.supabase.co https://*.supabase.com https://www.googletagmanager.com https://www.google-analytics.com https://analytics.google.com https://www.facebook.com https://connect.facebook.net; " +
+              "frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com; " +
               "frame-ancestors 'none';",
           },
           // Permissions policy (restricts browser features)
@@ -202,8 +307,45 @@ const nextConfig = {
           },
         ],
       },
+      // Static marketing assets — cache agresivo en CDN (patrones simples; regex compleja rompe build)
+      {
+        source: '/:path*.png',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=86400, s-maxage=604800, stale-while-revalidate=86400',
+          },
+        ],
+      },
+      {
+        source: '/:path*.jpg',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=86400, s-maxage=604800, stale-while-revalidate=86400',
+          },
+        ],
+      },
+      {
+        source: '/:path*.webp',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=86400, s-maxage=604800, stale-while-revalidate=86400',
+          },
+        ],
+      },
+      {
+        source: '/_next/static/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
+          },
+        ],
+      },
     ]
   },
 }
 
-module.exports = nextConfig
+module.exports = withBundleAnalyzer(nextConfig)

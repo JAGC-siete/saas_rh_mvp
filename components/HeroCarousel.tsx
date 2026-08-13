@@ -149,13 +149,13 @@ export default function HeroCarousel() {
                 >
                   {s.ctaText}
                 </a>
-                                            <button
-                              onClick={() => window.location.href = '/activar'}
+                            <a
+                              href="/activar"
                               className="btn btn-ghost h-12 px-8"
                               aria-label="Solicitar demo de 15 minutos"
                             >
                               Solicitar Demo
-                            </button>
+                            </a>
               </div>
             </div>
           ))}

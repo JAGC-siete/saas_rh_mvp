@@ -1,6 +1,6 @@
 import React from 'react'
 import { nowInHonduras } from './timezone'
-import { NotificationContext } from '../components/NotificationProvider'
+import { NotificationContext } from '../components/notification-context'
 
 
 

@@ -131,7 +131,7 @@ export default function CreateDepartmentModal({
       />
       
       {/* Modal */}
-      <Card className="relative w-full max-w-md mx-4 bg-gray-900/95 border-gray-700" variant="glass">
+      <Card className="relative w-full max-w-md mx-4 bg-gray-900/95 border-gray-700" variant="liquid">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-white">🏢 Nuevo Departamento</CardTitle>
           <button

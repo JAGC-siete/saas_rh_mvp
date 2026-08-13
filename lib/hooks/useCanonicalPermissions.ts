@@ -47,9 +47,27 @@ export function useCanonicalPermission(key: CanonicalPermissionKey): boolean {
 }
 
 /**
- * Returns true when the current user can export reports/CSV/Excel/PDF.
+ * Returns true when the current user can export reports/CSV/Excel/PDF (nómina, empleados, etc.).
  * Mirrors backend helper `canExportReports` in `lib/security/permissions.ts`.
  */
 export function useCanExportReports(): boolean {
   return useCanonicalPermission('can_export_reports')
+}
+
+/**
+ * Reportes de asistencia: managers y usuarios con permiso granular.
+ * Mirrors backend `canExportAttendanceReports`.
+ */
+export function useCanExportAttendanceReports(): boolean {
+  const perms = useCanonicalPermissions()
+  return perms.can_export_reports === true || perms.can_export_attendance_reports === true
+}
+
+export type ExportPermissionScope = 'full' | 'attendance'
+
+/** Gate de UI según alcance de exportación. */
+export function useCanExportReportsScope(scope: ExportPermissionScope = 'full'): boolean {
+  const full = useCanExportReports()
+  const attendance = useCanExportAttendanceReports()
+  return scope === 'attendance' ? attendance : full
 }

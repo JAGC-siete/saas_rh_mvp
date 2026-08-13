@@ -1,13 +1,10 @@
 import { useState, FormEvent } from 'react'
 import Head from 'next/head'
 import Link from 'next/link'
-import dynamic from 'next/dynamic'
+import PublicPageShell from '../../components/landing/PublicPageShell'
 import { Card, CardContent } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
-import MainHeader from '../../components/MainHeader'
-
-const CloudBackground = dynamic(() => import('../../components/CloudBackground'), { ssr: false })
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('')
@@ -56,12 +53,9 @@ export default function ForgotPasswordPage() {
         <title>Recuperar contraseña - Humano SISU</title>
         <meta name="robots" content="noindex,nofollow" />
       </Head>
-      <div className="min-h-screen bg-app text-white flex flex-col relative">
-        <MainHeader enableScrollEffect={false} fixed={true} />
-        <main className="flex-grow flex items-center justify-center p-4 pt-24">
-          <CloudBackground />
-          <div className="relative w-full max-w-md z-10">
-            <Card variant="glass" className="shadow-xl border-white/10">
+      <PublicPageShell centered showFooter={false}>
+        <div className="relative w-full max-w-md p-4">
+          <Card variant="liquid" className="shadow-xl border-white/10">
               <CardContent className="p-8 space-y-4">
                 <h1 className="text-2xl font-semibold text-white text-center">Recuperar contraseña</h1>
                 <p className="text-sm text-brand-200/80 text-center">
@@ -81,10 +75,10 @@ export default function ForgotPasswordPage() {
                     />
                   </div>
                   {error ? (
-                    <div className="text-red-200 text-sm glass-strong p-3 rounded-md">{error}</div>
+                    <div className="text-red-200 text-sm glass-modern p-3 rounded-xl border border-red-500/30">{error}</div>
                   ) : null}
                   {message ? (
-                    <div className="text-emerald-200/90 text-sm glass-strong p-3 rounded-md">{message}</div>
+                    <div className="text-emerald-200/90 text-sm glass-modern p-3 rounded-xl border border-emerald-500/30">{message}</div>
                   ) : null}
                   <Button
                     type="submit"
@@ -101,9 +95,8 @@ export default function ForgotPasswordPage() {
                 </form>
               </CardContent>
             </Card>
-          </div>
-        </main>
-      </div>
+        </div>
+      </PublicPageShell>
     </>
   )
 }

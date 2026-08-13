@@ -19,14 +19,20 @@ export interface Employee {
   bank_account: string | null
   emergency_contact_name: string | null
   emergency_contact_phone: string | null
-  address: string | Record<string, any> | null
+  address: string | null
   metadata: Record<string, any> | null
   department_id: string | null
   work_schedule_id: string | null
   payment_frequency: 'quincenal' | 'mensual' | 'semanal' | null
-  pay_type?: 'fixed' | 'hourly' | null
+  pay_type?: 'fixed' | 'hourly' | 'admin_floor' | null
   /** false = exento de checada (fixed, pago período completo en nómina). Default true. */
   attendance_required?: boolean
+  /**
+   * Capa 2 — elegibilidad de horas extras.
+   * false = HE visibles en asistencia/AHC sin monto en nómina.
+   * Default true (Sí). Requiere company metadata.pay_overtime activo para impacto en bruto.
+   */
+  pay_overtime?: boolean
   employee_pin_hash: string | null
   created_at: string
   updated_at: string

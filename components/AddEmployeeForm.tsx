@@ -30,9 +30,11 @@ interface AddEmployeeFormProps {
   onProfileImageUploaded?: (fileId: string, storagePath: string) => void
   onProfileImageError?: (error: string) => void
   /** Company calculation_mode for dynamic "Default de la empresa" label */
-  companyCalculationMode?: 'daily' | 'hourly'
+  companyCalculationMode?: 'daily' | 'hourly' | 'admin_floor'
   canEditSalary?: boolean
   canViewSalary?: boolean
+  /** Solo Enlace: código auto = inicial + últimos 5 del DNI */
+  autoGenerateEmployeeCode?: boolean
 }
 
 function AddEmployeeForm({
@@ -49,6 +51,7 @@ function AddEmployeeForm({
   onProfileImageError,
   companyCalculationMode = 'daily',
   canEditSalary = true,
+  autoGenerateEmployeeCode = false,
 }: AddEmployeeFormProps) {
   // Helper to keep inputs controlled and avoid React warnings
   const v = (value: any) => (value ?? '')
@@ -57,18 +60,22 @@ function AddEmployeeForm({
     v(formData?.pay_type) === ''
       ? companyCalculationMode === 'hourly'
         ? 'hourly'
-        : 'fixed'
+        : companyCalculationMode === 'admin_floor'
+          ? 'admin_floor'
+          : 'fixed'
       : v(formData?.pay_type) || 'fixed'
 
   const defaultPayTypeLabel =
     companyCalculationMode === 'hourly'
       ? 'Default de la empresa (Por hora)'
-      : 'Default de la empresa (Administrativo)'
+        : companyCalculationMode === 'admin_floor'
+        ? 'Default de la empresa (Legacy — Admin con piso horario)'
+        : 'Default de la empresa (Administrativo)'
 
   const handleSubmit = (e: React.FormEvent) => {
     const payType = resolvedPayType
     const baseSalary = Number(formData?.base_salary) || 0
-    if (payType === 'hourly' && baseSalary > 0 && baseSalary < 2000) {
+    if ((payType === 'hourly' || payType === 'admin_floor') && baseSalary > 0 && baseSalary < 2000) {
       e.preventDefault()
       return
     }
@@ -87,12 +94,12 @@ function AddEmployeeForm({
   const addressValue =
     typeof formData?.address === 'string'
       ? formData.address
-      : formData?.address
-      ? JSON.stringify(formData.address, null, 2)
-      : ''
+      : formData?.address && typeof formData.address === 'object'
+        ? Object.values(formData.address as Record<string, unknown>).filter(Boolean).join(', ')
+        : ''
 
   return (
-    <Card variant="glass">
+    <Card variant="liquid">
       <CardHeader>
         <CardTitle className="text-white">{isEditing ? 'Editar Empleado' : 'Agregar Nuevo Empleado'}</CardTitle>
         <CardDescription className="text-gray-300">
@@ -113,13 +120,19 @@ function AddEmployeeForm({
                   id="employee_code"
                   name="employee_code"
                   autoComplete="off"
-                  disabled={loading}
+                  disabled={loading || (autoGenerateEmployeeCode && !isEditing)}
+                  readOnly={autoGenerateEmployeeCode && !isEditing}
                   value={v(formData?.employee_code)}
                   onChange={(e) => onFormChange('employee_code', e.target.value)}
-                  placeholder="EMP001"
-                  required
+                  placeholder={autoGenerateEmployeeCode ? 'J00731' : 'EMP001'}
+                  required={!(autoGenerateEmployeeCode && !isEditing)}
                   className="bg-white/10 border-white/20 text-white placeholder-gray-400"
                 />
+                {autoGenerateEmployeeCode && !isEditing ? (
+                  <p className="text-xs text-gray-400 mt-1">
+                    Se genera solo: inicial del nombre + últimos 5 dígitos del DNI (ej. J00731).
+                  </p>
+                ) : null}
               </div>
 
               <div>
@@ -294,14 +307,21 @@ function AddEmployeeForm({
                   <option value="fixed" className="bg-brand-900 text-white">
                     Administrativo (por día de asistencia)
                   </option>
+                  <option value="admin_floor" className="bg-brand-900 text-white">
+                    Legacy — Admin con piso horario
+                  </option>
                   <option value="hourly" className="bg-brand-900 text-white">
                     Por hora
                   </option>
                 </select>
                 <p className="text-xs text-gray-400 mt-1">
-                  <strong>Default de la empresa:</strong> hereda el método por defecto de Nómina (administrativo o por hora).
+                  <strong>Default de la empresa:</strong> hereda el método por defecto de Nómina.
                   <br />
-                  <strong>Administrativo:</strong> Salario mensual por día de asistencia. Usa horario fijo para inferir entrada/salida.
+                  <strong>Administrativo:</strong> Salario mensual por día de asistencia. HE AHC
+                  (con recargos) entra al bruto si empresa y empleado pagan HE.
+                  <br />
+                  <strong>Legacy — Admin con piso horario:</strong> No usar en altas nuevas; preferir
+                  administrativo por día.
                   <br />
                   <strong>Por hora:</strong> Ingresa el salario mensual equivalente. La tarifa por hora se calcula automáticamente (base ÷ 240).
                 </p>
@@ -337,9 +357,11 @@ function AddEmployeeForm({
                 </div>
               )}
 
-              {resolvedPayType === 'hourly' && (
+              {(resolvedPayType === 'hourly' || resolvedPayType === 'admin_floor') && (
                 <div className="md:col-span-2 text-xs text-gray-400">
-                  Empleados por hora siempre requieren control de asistencia. Sin marcas en el período aparecen con 0 horas en la nómina para que pueda ajustarlas manualmente.
+                  {resolvedPayType === 'admin_floor'
+                    ? 'Admin con piso horario siempre requiere asistencia. Sin salida o con horas bajo el tope, se acredita el tope ordinario del día (parámetros de empresa).'
+                    : 'Empleados por hora siempre requieren control de asistencia. Sin marcas en el período aparecen con 0 horas en la nómina para que pueda ajustarlas manualmente.'}
                 </div>
               )}
 
@@ -362,12 +384,14 @@ function AddEmployeeForm({
                   required
                   className="bg-white/10 border-white/20 text-white placeholder-gray-400"
                 />
-                {resolvedPayType === 'hourly' && Number(formData?.base_salary) > 0 && (
+                {resolvedPayType === 'hourly' || resolvedPayType === 'admin_floor' ? (
+                  Number(formData?.base_salary) > 0 && (
                   <p className="text-sm text-blue-400 mt-1">
                     Tarifa por hora: L. {(Number(formData?.base_salary) / HONDURAS_LABOR_FACTOR).toFixed(2)} (basado en 240h/mes)
                   </p>
-                )}
-                {resolvedPayType === 'hourly' && Number(formData?.base_salary) > 0 && Number(formData?.base_salary) < 2000 && (
+                  )
+                ) : null}
+                {(resolvedPayType === 'hourly' || resolvedPayType === 'admin_floor') && Number(formData?.base_salary) > 0 && Number(formData?.base_salary) < 2000 && (
                   <p className="text-sm text-amber-400 mt-1">
                     Por favor ingresa el salario mensual equivalente. El sistema calculará la tarifa por hora automáticamente.
                   </p>
@@ -394,6 +418,34 @@ function AddEmployeeForm({
                 </select>
                 <p className="text-xs text-gray-400 mt-1">
                   Si está vacío, usa la configuración de la empresa (Capa 2).
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-white mb-1" htmlFor="pay_overtime">
+                  Horas extras
+                </label>
+                <select
+                  id="pay_overtime"
+                  name="pay_overtime"
+                  disabled={loading}
+                  value={formData?.pay_overtime === false ? 'false' : 'true'}
+                  onChange={(e) =>
+                    onFormChange('pay_overtime', e.target.value === 'true')
+                  }
+                  className="w-full p-2 border border-white/20 rounded-md focus:ring-2 focus:ring-brand-500 focus:border-brand-500 bg-white/10 text-white"
+                >
+                  <option value="true" className="bg-brand-900 text-white">
+                    Sí
+                  </option>
+                  <option value="false" className="bg-brand-900 text-white">
+                    No
+                  </option>
+                </select>
+                <p className="text-xs text-gray-400 mt-1">
+                  <strong>Sí:</strong> elegible — si el parámetro de empresa &quot;Pagar horas extras&quot; está activo, las HE impactan el bruto (administrativos y por hora).
+                  <br />
+                  <strong>No:</strong> las HE pueden registrarse en asistencia, pero no impactan el bruto de este empleado.
                 </p>
               </div>
 
@@ -583,7 +635,7 @@ function AddEmployeeForm({
                   disabled={loading}
                   value={addressValue}
                   onChange={(e) => onFormChange('address', e.target.value)}
-                  placeholder='{"street": "Calle Principal #123", "neighborhood": "Colonia Los Laureles", "city": "Tegucigalpa", "country": "Honduras"}'
+                  placeholder="Calle Principal #123, Colonia Los Laureles, Tegucigalpa, Honduras"
                   rows={3}
                   className="w-full p-2 border border-white/20 rounded-md focus:ring-2 focus:ring-brand-500 focus:border-brand-500 bg-white/10 text-white placeholder-gray-400"
                 />

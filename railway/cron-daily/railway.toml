@@ -1,0 +1,9 @@
+# Triggers POST /api/cron/daily at 06:00 America/Tegucigalpa (UTC-6 → 12:00 UTC)
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+cronSchedule = "0 12 * * *"
+restartPolicyType = "NEVER"
+startCommand = "bun run index.ts"

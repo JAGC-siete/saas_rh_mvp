@@ -43,14 +43,35 @@ export async function authenticateUser(
     // Create Supabase client with cookies from request - USAR createClient de server.ts
     const supabase = createClient(req, res)
 
-    // Get user from auth
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    // Cookies first (legacy path). Bearer only as fallback — never prefer a stale
+    // Authorization header over a valid cookie session.
+    const authHeader = req.headers.authorization
+    const bearer =
+      typeof authHeader === 'string' && authHeader.startsWith('Bearer ')
+        ? authHeader.slice(7).trim()
+        : null
+
+    let {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser()
+
+    if ((!user || authError) && bearer) {
+      const bearerResult = await supabase.auth.getUser(bearer)
+      if (bearerResult.data.user) {
+        user = bearerResult.data.user
+        authError = bearerResult.error
+      }
+    }
     
     if (authError || !user) {
       console.error('Auth error:', authError)
       // Check if response has already been sent
       if (!res.headersSent) {
-        res.status(401).json({ error: 'Unauthorized' })
+        res.status(401).json({
+          error: 'Unauthorized',
+          message: 'Sesión inválida o expirada. Vuelve a iniciar sesión.',
+        })
       }
       throw new Error('UNAUTHORIZED')
     }

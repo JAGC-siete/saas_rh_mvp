@@ -39,7 +39,7 @@ export default function ThirteenthFourteenthManager() {
   if (companyError || !companyId) {
     return (
       <div className="p-6">
-        <Card variant="glass">
+        <Card variant="liquid">
           <CardContent className="pt-6">
             <p className="text-red-400">
               {companyError || 'No se pudo cargar el contexto de la empresa.'}
@@ -163,7 +163,7 @@ export default function ThirteenthFourteenthManager() {
 
       {/* Error */}
       {error && (
-        <Card variant="glass" className="border-red-500/30 bg-red-500/10">
+        <Card variant="liquid" className="border-red-500/30 bg-red-500/10">
           <CardContent className="pt-6">
             <p className="text-red-400">{error}</p>
           </CardContent>

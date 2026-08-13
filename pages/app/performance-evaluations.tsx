@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/router'
-import dynamic from 'next/dynamic'
 import ProtectedRoute from '../../components/ProtectedRoute'
 import AppRoleGate from '../../components/AppRoleGate'
 import DashboardLayout from '../../components/DashboardLayout'
+import { CyclePicker } from '../../components/performance/CyclePicker'
 import { PAYROLL_NAV_ROLES } from '../../lib/auth/role-access'
 import { Button } from '../../components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card'
@@ -36,10 +36,6 @@ interface MtpDraftRow {
   version: number
   updated_at: string
 }
-
-const CyclePicker = dynamic(() => import('../../components/performance/CyclePicker').then((m) => m.CyclePicker), {
-  ssr: false,
-})
 
 export default function PerformanceEvaluationsPage() {
   const router = useRouter()
@@ -176,7 +172,7 @@ export default function PerformanceEvaluationsPage() {
           )}
 
           <div className="grid grid-cols-1 gap-6 xl:grid-cols-[360px_1fr]">
-            <Card variant="glass">
+            <Card variant="liquid">
               <CardHeader>
                 <CardTitle className="text-white">Nueva evaluación</CardTitle>
                 <CardDescription className="text-gray-300">
@@ -239,7 +235,7 @@ export default function PerformanceEvaluationsPage() {
               </CardContent>
             </Card>
 
-            <Card variant="glass">
+            <Card variant="liquid">
               <CardHeader>
                 <CardTitle className="text-white">Empleados</CardTitle>
                 <CardDescription className="text-gray-300">

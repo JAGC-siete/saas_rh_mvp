@@ -1,24 +1,43 @@
 /** Enlaces del cluster de calculadoras — hub & spoke para SEO interno. */
+import { INFO_FUNNEL_PUBLIC_PATH } from '../marketing/info-funnel-path'
+import { VIERNES_PUBLIC_PATH } from '../marketing/viernes-copy'
+import { deductionCalculatorPublicPath } from '../marketing/calculator-public-paths'
+
 export const CALCULATOR_HUB_LINKS = {
   hub: { href: '/calculadora', label: 'Todas las calculadoras laborales' },
+  suscripcion: {
+    href: '/suscripcion',
+    label: 'Alertas de sueldo',
+    subtitle: 'Fechas legales y cambios en deducciones — gratis',
+  },
+  info: {
+    href: INFO_FUNNEL_PUBLIC_PATH,
+    label: 'Cerrar planilla en paz',
+    subtitle: 'Claves para recuperar la paz al cerrar nómina',
+  },
+  viernes: {
+    href: VIERNES_PUBLIC_PATH,
+    label: 'Domingos sin planilla',
+    subtitle: 'Método para digitalizar y automatizar RR.HH. en MiPyMes',
+  },
   landing: { href: '/#como-funciona', label: 'Automatizar nómina con Humano SISU' },
   deductions: [
     {
-      href: '/calculadora-deducciones',
+      href: deductionCalculatorPublicPath('HND'),
       country: 'Honduras',
-      title: 'IHSS, RAP e ISR',
+      title: 'Seguro Social, RAP e ISR',
       subtitle: 'Deducciones en lempiras (HNL)',
     },
     {
-      href: '/calculadora-deducciones-el-salvador',
+      href: deductionCalculatorPublicPath('SLV'),
       country: 'El Salvador',
-      title: 'ISSS, AFP e ISR',
+      title: 'Seguro Social, AFP e ISR',
       subtitle: 'Sueldo neto en dólares (USD)'
     },
     {
-      href: '/calculadora-deducciones-guatemala',
+      href: deductionCalculatorPublicPath('GTM'),
       country: 'Guatemala',
-      title: 'IGSS e ISR',
+      title: 'Seguro Social e ISR',
       subtitle: 'Sueldo neto en quetzales (GTQ)'
     }
   ],
@@ -26,5 +45,19 @@ export const CALCULATOR_HUB_LINKS = {
     href: '/calculadora-prestaciones',
     title: 'Prestaciones y finiquito',
     subtitle: 'Cesantía, preaviso, vacaciones, 13vo y 14vo'
-  }
+  },
+  benefits: [
+    {
+      href: '/calculadora-aguinaldo-honduras',
+      country: 'Honduras',
+      title: 'Aguinaldo (13vo)',
+      subtitle: 'Décimo tercer mes en lempiras',
+    },
+    {
+      href: '/calculadora-catorceavo-honduras',
+      country: 'Honduras',
+      title: 'Catorceavo (14vo)',
+      subtitle: 'Décimo cuarto mes jul–jun',
+    },
+  ],
 } as const

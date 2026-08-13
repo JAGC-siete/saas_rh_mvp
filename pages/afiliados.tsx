@@ -3,12 +3,11 @@ import { useState } from 'react'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
-import MainHeader from '../components/MainHeader'
-import DemoFooter from '../components/DemoFooter'
+import PublicPageShell from '../components/landing/PublicPageShell'
 import { getPageTitle } from '../lib/seo/title'
 import { getPageDescription } from '../lib/seo/description'
 import SchemaMarkup from '../components/SEO/SchemaMarkup'
-import { generateWebPageSchema } from '../lib/seo/schema'
+import { generateWebPageSchema, generateBreadcrumbListSchema } from '../lib/seo/schema'
 
 export default function AfiliadosPage() {
   const [email, setEmail] = useState('')
@@ -54,25 +53,27 @@ export default function AfiliadosPage() {
     title: pageTitle,
     description: pageDescription
   })
+  const breadcrumbSchema = generateBreadcrumbListSchema([
+    { name: 'Inicio', url: '/' },
+    { name: 'Afiliados', url: '/afiliados' },
+  ])
 
   return (
-    <div className="min-h-screen bg-app text-white flex flex-col pt-24 relative">
+    <PublicPageShell>
       <Head>
         <title>{pageTitle}</title>
         <meta name="description" content={pageDescription} />
+        <meta name="robots" content="index, follow" />
         <meta property="og:title" content={pageTitle} />
         <meta property="og:description" content={pageDescription} />
         <meta property="og:url" content="https://humanosisu.net/afiliados" />
         <link rel="canonical" href="https://humanosisu.net/afiliados" />
       </Head>
-      <SchemaMarkup schema={webPageSchema} />
+      <SchemaMarkup schema={[webPageSchema, breadcrumbSchema]} />
 
-      {/* Header */}
-      <MainHeader enableScrollEffect={false} fixed={true} />
-
-      <main className="flex-grow container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-8">
         <section className="text-center mb-12">
-          <h1 className="text-4xl md:text-5xl font-bold mb-4">
+          <h1 className="text-4xl md:text-5xl font-bold mb-4 text-white">
             Conviértete en Afiliado de Humano SISU
           </h1>
           <p className="text-lg text-gray-400 max-w-2xl mx-auto mb-6">
@@ -83,23 +84,23 @@ export default function AfiliadosPage() {
         <section className="grid md:grid-cols-2 gap-8 items-start">
           <div className="space-y-6">
             <div>
-              <h2 className="text-3xl font-bold mb-4">Estructura de Comisiones 2026</h2>
-              <ul className="list-disc list-inside space-y-2 text-gray-300">
+              <h2 className="text-2xl sm:text-3xl font-bold mb-4 text-white">Estructura de Comisiones 2026</h2>
+              <ul className="list-disc list-inside space-y-2 text-brand-200/90 text-sm sm:text-base">
                 <li><strong className="text-white">10% de comisión</strong> por tu primer negocio cerrado.</li>
                 <li><strong className="text-white">1% de comisión adicional</strong> por cada nuevo negocio, hasta un tope del <strong className="text-white">20%</strong>.</li>
                 <li>El nivel de comisión que alcances se mantendrá fijo durante todo el año 2026.</li>
               </ul>
             </div>
             <div>
-              <h2 className="text-3xl font-bold mb-4">Bono de Rendimiento 2026</h2>
-              <ul className="list-disc list-inside space-y-2 text-gray-300">
+              <h2 className="text-2xl sm:text-3xl font-bold mb-4 text-white">Bono de Rendimiento 2026</h2>
+              <ul className="list-disc list-inside space-y-2 text-brand-200/90 text-sm sm:text-base">
                 <li>Gana un <strong className="text-white">5% de comisiones adicional</strong> durante todo el 2026.</li>
                 <li>Condición: cierra 10 negocios antes del <strong className="text-white">1 de febrero de 2026</strong>.</li>
               </ul>
             </div>
             <div>
-              <h2 className="text-3xl font-bold mb-4">Reglas del Programa</h2>
-              <ul className="list-disc list-inside space-y-2 text-gray-300">
+              <h2 className="text-2xl sm:text-3xl font-bold mb-4 text-white">Reglas del Programa</h2>
+              <ul className="list-disc list-inside space-y-2 text-brand-200/90 text-sm sm:text-base">
                 <li>La comisión se paga sobre el valor anual de la licencia del cliente referido.</li>
                 <li>Un negocio se considera &quot;cerrado&quot; únicamente cuando la empresa ha pagado su licencia anual.</li>
                 <li>Los pagos de comisiones se realizan mensualmente.</li>
@@ -107,7 +108,7 @@ export default function AfiliadosPage() {
             </div>
           </div>
           <div>
-            <Card className="glass-strong sticky top-24">
+            <Card variant="liquid" className="sticky top-24">
               <CardHeader>
                 <CardTitle>Regístrate Ahora</CardTitle>
                 <CardDescription>Completa el formulario para empezar.</CardDescription>
@@ -143,7 +144,7 @@ export default function AfiliadosPage() {
                       </p>
                     </div>
                     {error && <p className="text-red-500 text-sm">{error}</p>}
-                    <Button type="submit" disabled={loading} className="w-full bg-blue-600 hover:bg-blue-700">
+                    <Button type="submit" disabled={loading} className="w-full btn-shiny bg-brand-500 hover:bg-brand-600">
                       {loading ? 'Enviando...' : 'Solicitar Afiliación'}
                     </Button>
                   </form>
@@ -152,9 +153,7 @@ export default function AfiliadosPage() {
             </Card>
           </div>
         </section>
-      </main>
-
-      <DemoFooter />
-    </div>
+      </div>
+    </PublicPageShell>
   )
 }

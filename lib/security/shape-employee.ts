@@ -35,6 +35,7 @@ export const EMPLOYEE_WRITE_ALLOWLIST = [
   'pay_type',
   'quincena_config',
   'attendance_required',
+  'pay_overtime',
   'termination_reason_code',
   'termination_reason_detail',
 ] as const

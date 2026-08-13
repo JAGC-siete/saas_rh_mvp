@@ -131,7 +131,7 @@ export default function PlanFeaturesAdminPage() {
               </p>
             </div>
 
-            <Card variant="glass" className="border-white/10">
+            <Card variant="liquid" className="border-white/10">
               <CardHeader>
                 <CardTitle className="text-white flex items-center gap-2">
                   <Info className="h-5 w-5 text-amber-300" />
@@ -144,7 +144,7 @@ export default function PlanFeaturesAdminPage() {
             </Card>
 
             {error && (
-              <Card variant="glass" className="border-red-400/40 bg-red-500/10">
+              <Card variant="liquid" className="border-red-400/40 bg-red-500/10">
                 <CardContent className="pt-4 text-red-100 text-sm">{error}</CardContent>
               </Card>
             )}
@@ -154,7 +154,7 @@ export default function PlanFeaturesAdminPage() {
                 <Loader2 className="h-10 w-10 animate-spin text-amber-300" />
               </div>
             ) : (
-              <Card variant="glass" className="border-white/10 overflow-hidden">
+              <Card variant="liquid" className="border-white/10 overflow-hidden">
                 <CardHeader>
                   <CardTitle className="text-white">Matriz plan × módulo</CardTitle>
                   <CardDescription className="text-white/60">
@@ -206,7 +206,7 @@ export default function PlanFeaturesAdminPage() {
                             <td key={`${p.plan_key}-${f.feature_key}`} className="py-2 px-2 text-center">
                               <input
                                 type="checkbox"
-                                className="h-4 w-4 rounded border-white/30 bg-white/10 text-amber-400 focus:ring-amber-300/50"
+                                className="input-glass focus:ring-amber-300/50 text-white"
                                 checked={!!draft[p.plan_key]?.[f.feature_key]}
                                 onChange={() => toggle(p.plan_key, f.feature_key)}
                                 aria-label={`${p.plan_key} — ${f.feature_key}`}

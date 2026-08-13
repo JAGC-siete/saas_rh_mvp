@@ -298,19 +298,52 @@ export async function computeFixedLineDeductionsAndNet(input: {
   }
 }
 
+export type DeductionPlanBreakdownItem = {
+  plan_id: string
+  field_key: string
+  monto: number
+}
+
+/** Sum plan cuotas per field_key; keep per-plan breakdown so same-key plans do not overwrite. */
+export function applyDeductionPlansToMetadata(
+  lineMetadata: Record<string, unknown>,
+  empPlans: EmployeeDeductionPlanRow[]
+): Record<string, unknown> {
+  const planIds: string[] = []
+  const breakdown: DeductionPlanBreakdownItem[] = []
+  const sums: Record<string, number> = {}
+
+  for (const plan of empPlans) {
+    const monto = Math.round((Number(plan.monto_por_plazo) || 0) * 100) / 100
+    sums[plan.field_key] = Math.round(((sums[plan.field_key] || 0) + monto) * 100) / 100
+    planIds.push(plan.id)
+    breakdown.push({ plan_id: plan.id, field_key: plan.field_key, monto })
+  }
+
+  for (const [fieldKey, total] of Object.entries(sums)) {
+    lineMetadata[fieldKey] = total
+  }
+  if (planIds.length > 0) {
+    lineMetadata._deduction_plan_ids = planIds
+    lineMetadata._deduction_plan_breakdown = breakdown
+  } else {
+    delete lineMetadata._deduction_plan_ids
+    delete lineMetadata._deduction_plan_breakdown
+  }
+  return lineMetadata
+}
+
 export function buildFixedLinePlanMetadata(
   taxYear: number,
   empPlans: EmployeeDeductionPlanRow[],
   extra: Record<string, unknown> = {}
 ): Record<string, unknown> {
-  const lineMetadata: Record<string, unknown> = { tax_year: taxYear, ...extra }
-  const planIds: string[] = []
-  for (const plan of empPlans) {
-    lineMetadata[plan.field_key] = plan.monto_por_plazo
-    planIds.push(plan.id)
+  const lineMetadata: Record<string, unknown> = {
+    tax_year: taxYear,
+    pay_type: 'fixed',
+    ...extra,
   }
-  if (planIds.length > 0) lineMetadata._deduction_plan_ids = planIds
-  return lineMetadata
+  return applyDeductionPlansToMetadata(lineMetadata, empPlans)
 }
 
 /**
@@ -326,6 +359,7 @@ export function mergeRecalcMetadata(
     delete base[k]
   }
   delete base._deduction_plan_ids
+  delete base._deduction_plan_breakdown
   delete base.tax_year
   return { ...base, ...recalc }
 }

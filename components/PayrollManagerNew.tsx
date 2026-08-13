@@ -8,15 +8,9 @@ import ConfigNomina from './ConfigNomina'
 import CustomPayrollFieldsForm from './CustomPayrollFieldsForm'
 import DeductionPlansDashboard from './DeductionPlansDashboard'
 import { PayrollAccountingTab } from './accounting/PayrollAccountingTab'
-import { calculatePayroll } from '../lib/payroll-client-specific'
-import { createClient } from '../lib/supabase/client'
-
-// Type definitions for better type safety
-interface CustomFieldData {
-  metadata: Record<string, unknown>
-  eff_bruto: number
-  eff_neto: number
-}
+import VoucherPreviewModal from './payroll/VoucherPreviewModal'
+import PlanillaPreviewModal from './payroll/PlanillaPreviewModal'
+import { getBrowserAuthHeaders } from '../lib/auth/browser-auth-headers'
 
 interface ModalState {
   lineId: string
@@ -33,14 +27,10 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
   const [showCustomFieldsModal, setShowCustomFieldsModal] = useState(false)
   const [modalState, setModalState] = useState<ModalState | null>(null)
   
-  // Local state for preview-only custom fields changes (not persisted until authorization)
-  const [previewCustomFields, setPreviewCustomFields] = useState<Record<string, CustomFieldData>>({})
-  
-  // Payment frequency from company config (para mostrar "Deducción en dos pagos" solo cuando es quincenal)
-  const [paymentFrequency, setPaymentFrequency] = useState<string | null>(null)
   const [payrollApiConfig, setPayrollApiConfig] = useState<{
     legal_deductions?: { ihss?: boolean; rap?: boolean; isr?: boolean }
     custom_fields?: Record<string, unknown>
+    pay_overtime?: boolean
   } | null>(null)
 
   // Tab: Planilla | Partida Contable
@@ -53,38 +43,27 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
     }
   }, [payroll.companyId, payroll.companyLoading])
 
-  // Fetch payment frequency for conditional 2PAGOS visibility
+  // Fetch company payroll config for legal deductions / custom fields
   useEffect(() => {
     if (!payroll.companyId) return
     fetch('/api/payroll/config')
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         const cfg = data?.config
-        const pf = cfg?.payment_frequency
-        setPaymentFrequency(pf ?? null)
         setPayrollApiConfig(
           cfg
             ? {
                 legal_deductions: cfg.legal_deductions,
-                custom_fields: cfg.custom_fields
+                custom_fields: cfg.custom_fields,
+                pay_overtime: cfg.pay_overtime !== false,
               }
             : null
         )
       })
       .catch(() => {
-        setPaymentFrequency(null)
         setPayrollApiConfig(null)
       })
   }, [payroll.companyId])
-
-  // Si frecuencia es mensual/semanal (no quincenal) y tipo es 2PAGOS, resetear a CON
-  useEffect(() => {
-    const notQuincenal = paymentFrequency === 'mensual' || paymentFrequency === 'monthly' ||
-      paymentFrequency === 'semanal' || paymentFrequency === 'weekly'
-    if (notQuincenal && payroll.filters.tipo === '2PAGOS') {
-      payroll.updateFilter('tipo', 'CON')
-    }
-  }, [paymentFrequency, payroll.filters.tipo, payroll.updateFilter])
 
   // Memoize total deducciones calculation to avoid recalculating on every render
   const totalDeducciones = useMemo(() => {
@@ -138,7 +117,7 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
     }
   }, [payroll])
 
-  // Handle pre-authorize - NOW PERSISTS custom fields to database using batch API (memoized)
+  // Marca la corrida como revisada (los campos personalizados ya se guardan al cerrar el modal)
   const handlePreAuthorize = useCallback(async () => {
     if (!payroll.runId) {
       alert('No hay corrida de nómina activa')
@@ -146,89 +125,10 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
     }
 
     try {
-      // First, persist all preview custom fields to database using batch endpoint
-      if (Object.keys(previewCustomFields).length > 0) {
-        const { companyId } = payroll
-        if (!companyId) {
-          throw new Error('Company ID no encontrado')
-        }
-
-        // Prepare batch updates - normalizar valores antes de enviar
-        const batchUpdates = Object.entries(previewCustomFields).map(([lineId, fieldData]) => {
-          // Normalizar metadata: asegurar que números sean números, no strings
-          const normalizedFields: Record<string, unknown> = {}
-          for (const [key, value] of Object.entries(fieldData.metadata || {})) {
-            if (value === '' || value === null || value === undefined) {
-              continue // Omitir valores vacíos
-            }
-            // Convertir strings numéricos a números
-            if (typeof value === 'string' && !isNaN(parseFloat(value)) && value.trim() !== '') {
-              normalizedFields[key] = parseFloat(value)
-            } else if (typeof value === 'string' && (value === 'true' || value === 'false')) {
-              normalizedFields[key] = value === 'true'
-            } else {
-              normalizedFields[key] = value
-            }
-          }
-          
-          return {
-            run_line_id: lineId,
-            custom_fields: normalizedFields
-          }
-        })
-        
-        console.log('🔍 DEBUG - Batch updates preparados:', JSON.stringify(batchUpdates, null, 2))
-
-        // Save all custom field changes in a single batch API call
-        const batchResponse = await fetch('/api/payroll/update-custom-fields-batch', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ updates: batchUpdates })
-        })
-
-        if (!batchResponse.ok) {
-          const error = await batchResponse.json()
-          
-          // Si hay detalles de validación, mostrarlos
-          if (error.details && Array.isArray(error.details)) {
-            const validationErrors = error.details.map((d: any) => 
-              `Línea ${d.run_line_id}: ${d.error}`
-            ).join('\n')
-            throw new Error(`Error guardando campos en batch:\n\n${validationErrors}`)
-          }
-          
-          throw new Error(`Error guardando campos en batch: ${error.error || error.message || 'Error desconocido'}`)
-        }
-
-        const batchData = await batchResponse.json()
-        
-        // Check if all updates were successful
-        if (!batchData.success) {
-          // Partial failure - show which ones failed
-          interface BatchResult {
-            run_line_id: string
-            success: boolean
-            error?: string
-          }
-          const failedUpdates = (batchData.results as BatchResult[] | undefined)?.filter((r) => !r.success) || []
-          if (failedUpdates.length > 0) {
-            const failedDetails = failedUpdates.map((r) => 
-              `Línea ${r.run_line_id}: ${r.error || 'Error desconocido'}`
-            ).join('\n')
-            throw new Error(`Error guardando algunos campos:\n\n${failedDetails}`)
-          }
-        }
-
-        console.log(`✅ Batch update successful: ${batchData.summary?.successful || 0} líneas actualizadas`)
-
-        // Clear preview fields after persisting
-        setPreviewCustomFields({})
-      }
-
-      // Then update status to 'edited'
       const response = await fetch('/api/payroll/pre-authorize', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ run_id: payroll.runId })
       })
 
@@ -238,22 +138,21 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
       }
 
       const data = await response.json()
-      
-      // Reload data to reflect persisted changes and new status
       await payroll.loadUnifiedData()
-      
-      alert(`Nómina consolidada exitosamente\n\n` +
-            `✓ Cambios guardados en base de datos\n` +
-            `Líneas editadas: ${data.summary.edited_lines}\n` +
-            `Con campos personalizados: ${data.summary.lines_with_metadata}\n` +
-            `Total Neto: L. ${data.summary.total_neto.toFixed(2)}\n\n` +
-            `Ya puede autorizar la nómina`)
+
+      alert(
+        `Nómina consolidada exitosamente\n\n` +
+          `Líneas editadas: ${data.summary.edited_lines}\n` +
+          `Con campos personalizados: ${data.summary.lines_with_metadata}\n` +
+          `Total Neto: L. ${data.summary.total_neto.toFixed(2)}\n\n` +
+          `Ya puede autorizar la nómina`
+      )
     } catch (error: unknown) {
       console.error('Error consolidando:', error)
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
       alert('Error al consolidar: ' + errorMessage)
     }
-  }, [payroll, previewCustomFields])
+  }, [payroll])
 
   // Handle edit custom fields (memoized)
   const handleEditCustomFields = useCallback((lineId: string, metadata: Record<string, unknown> | null, baseSalary: number, employeeId?: string) => {
@@ -268,9 +167,10 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
 
   const handleAdjustFixedDays = useCallback(
     async (payload: { run_line_id: string; days_worked: number; reason?: string }) => {
+      const authHeaders = await getBrowserAuthHeaders()
       const res = await fetch('/api/payroll/adjust-fixed-days', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders },
         credentials: 'include',
         body: JSON.stringify(payload)
       })
@@ -283,116 +183,131 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
     [payroll]
   )
 
-  // Handle save custom fields - ONLY UPDATE PREVIEW (not persisted until authorization) (memoized)
+  const handleAdjustFixedOvertime = useCallback(
+    async (payload: {
+      run_line_id: string
+      overtime: {
+        evening_25: number
+        night_50: number
+        late_75: number
+        morning_25: number
+        holiday_100: number
+      }
+      reason?: string
+    }) => {
+      const authHeaders = await getBrowserAuthHeaders()
+      const res = await fetch('/api/payroll/adjust-fixed-overtime', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeaders },
+        credentials: 'include',
+        body: JSON.stringify(payload),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        throw new Error(data.message || data.error || 'Error al ajustar horas extras')
+      }
+      await payroll.loadUnifiedData()
+    },
+    [payroll]
+  )
+
+  const normalizeCustomFields = (metadata: Record<string, unknown>): Record<string, unknown> => {
+    const normalized: Record<string, unknown> = {}
+    for (const [key, value] of Object.entries(metadata)) {
+      if (value === '' || value === null || value === undefined) continue
+      if (typeof value === 'string' && !isNaN(parseFloat(value)) && value.trim() !== '') {
+        normalized[key] = parseFloat(value)
+      } else if (typeof value === 'string' && (value === 'true' || value === 'false')) {
+        normalized[key] = value === 'true'
+      } else {
+        normalized[key] = value
+      }
+    }
+    return normalized
+  }
+
+  const handleResetLineRecalc = useCallback(
+    async (runLineId: string) => {
+      const authHeaders = await getBrowserAuthHeaders()
+      const res = await fetch('/api/payroll/reset-line-recalc', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeaders },
+        credentials: 'include',
+        body: JSON.stringify({ run_line_id: runLineId }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        throw new Error(data.message || data.error || 'Error al preparar recálculo')
+      }
+      await payroll.generatePreview()
+    },
+    [payroll]
+  )
+
+  const handleZeroStatutory = useCallback(
+    async (payload: {
+      run_line_id: string
+      reason: string
+      ihss?: number
+      rap?: number
+      isr?: number
+    }) => {
+      const res = await fetch('/api/payroll/zero-statutory-deductions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(payload),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        throw new Error(data.message || data.error || 'Error al editar retenciones de ley')
+      }
+      await payroll.loadUnifiedData()
+    },
+    [payroll]
+  )
+
+  // Persist custom fields immediately when saving the modal
   const handleSaveCustomFields = useCallback(async (metadata: Record<string, unknown>) => {
     if (!modalState) {
       throw new Error('No hay estado de modal activo')
     }
 
-    try {
-      const companyId = payroll.companyId
-      if (!companyId) {
-        throw new Error('Company ID no encontrado')
-      }
-
-      // Find the row in current data
-      if (!payroll.unifiedData) {
-        throw new Error('No hay datos de planilla cargados')
-      }
-
-      const row = payroll.unifiedData.rows.find(
-        r => (r.line_id === modalState.lineId || r.employee_id === modalState.lineId)
-      )
-
-      if (!row) {
-        throw new Error('Línea de planilla no encontrada')
-      }
-
-      // Normalizar metadata: convertir strings a números donde sea necesario
-      const normalizedMetadata: Record<string, unknown> = {}
-      for (const [key, value] of Object.entries(metadata)) {
-        if (value === '' || value === null || value === undefined) {
-          // Omitir valores vacíos
-          continue
-        }
-        // Si es un string que parece número, convertirlo
-        if (typeof value === 'string' && !isNaN(parseFloat(value)) && value.trim() !== '') {
-          normalizedMetadata[key] = parseFloat(value)
-        } else if (typeof value === 'string' && (value === 'true' || value === 'false')) {
-          normalizedMetadata[key] = value === 'true'
-        } else {
-          normalizedMetadata[key] = value
-        }
-      }
-
-      // Calculate new totals using new calculation engine
-      const supabase = createClient()
-      const calcResult = await calculatePayroll(
-        companyId,
-        row.total_earnings || 0,
-        normalizedMetadata,
-        supabase
-      )
-      
-      const ingresosAdicionales = calcResult.totalIngresosAdicionales
-      const deduccionesAdicionales = calcResult.totalDeduccionesAdicionales
-
-      // Calculate new net
-      const baseBruto = row.total_earnings || 0
-      const statutoryDeductions = (row.IHSS || 0) + (row.RAP || 0) + (row.ISR || 0)
-      const newBruto = baseBruto + ingresosAdicionales
-      const newNeto = newBruto - statutoryDeductions - deduccionesAdicionales
-
-      // Update local preview state (NOT persisted to DB) - usar metadata normalizado
-      setPreviewCustomFields(prev => ({
-        ...prev,
-        [modalState.lineId]: {
-          metadata: normalizedMetadata,
-          eff_bruto: newBruto,
-          eff_neto: newNeto
-        }
-      }))
-
-      // Update local unified data for immediate preview
-      const updatedRows = payroll.unifiedData.rows.map(r => {
-        if (r.line_id === modalState.lineId || r.employee_id === modalState.lineId) {
-          return {
-            ...r,
-            total_earnings: newBruto,
-            total: newNeto,
-            metadata: normalizedMetadata
-          }
-        }
-        return r
-      })
-
-      // Recalculate resumen
-      const newResumen = updatedRows.reduce((acc, r) => {
-        acc.total_bruto += r.total_earnings || 0
-        acc.total_neto += r.total || 0
-        acc.total_deducciones.IHSS += r.IHSS || 0
-        acc.total_deducciones.RAP += r.RAP || 0
-        acc.total_deducciones.ISR += r.ISR || 0
-        return acc
-      }, {
-        empleados: updatedRows.length,
-        total_bruto: 0,
-        total_deducciones: { IHSS: 0, RAP: 0, ISR: 0, otros: 0 },
-        total_neto: 0,
-        total_dias_trabajados: payroll.unifiedData.resumen.total_dias_trabajados,
-        total_horas_extras: payroll.unifiedData.resumen.total_horas_extras
-      })
-
-      // Update state directly without API call
-      payroll.setUnifiedData({ rows: updatedRows, resumen: newResumen })
-
-      setShowCustomFieldsModal(false)
-      setModalState(null)
-    } catch (error: unknown) {
-      console.error('Error calculating custom fields:', error)
-      const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
-      alert('Error al calcular campos personalizados: ' + errorMessage)
+    if (!payroll.unifiedData) {
+      throw new Error('No hay datos de planilla cargados')
     }
+
+    const row = payroll.unifiedData.rows.find(
+      (r) => r.line_id === modalState.lineId || r.employee_id === modalState.lineId
+    )
+
+    if (!row?.line_id) {
+      throw new Error('Línea de planilla no encontrada. Genere preview primero.')
+    }
+
+    const custom_fields = normalizeCustomFields(metadata)
+
+    const res = await fetch('/api/payroll/update-custom-fields', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({
+        run_line_id: row.line_id,
+        custom_fields,
+      }),
+    })
+
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) {
+      const details = Array.isArray(data.details)
+        ? data.details.map((d: unknown) => String(d)).join('\n')
+        : ''
+      throw new Error(data.error || data.message || details || 'Error guardando campos personalizados')
+    }
+
+    await payroll.loadUnifiedData()
+    setShowCustomFieldsModal(false)
+    setModalState(null)
   }, [modalState, payroll])
 
   // Loading state while company is being loaded
@@ -481,7 +396,7 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
 
       {/* Error Display */}
       {payroll.error && (
-        <Card variant="glass" className="border-red-500/30 bg-red-500/20">
+        <Card variant="liquid" className="border-red-500/30 bg-red-500/20">
           <CardContent className="pt-6">
             <div className="flex items-center gap-2 text-red-300">
               <Icon name="alert" className="h-5 w-5" />
@@ -504,7 +419,7 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
       {/* DASHBOARD DE MÉTRICAS - GRID RESPONSIVE */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 lg:gap-6">
         {/* 1. Empleados Activos */}
-        <Card variant="glass" className="hover:scale-105 transition-all duration-200 cursor-pointer backdrop-blur-md bg-white/10 border border-white/20">
+        <Card variant="liquid" className="hover:scale-105 transition-all duration-200 cursor-pointer backdrop-blur-md bg-white/10 border border-white/20">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -525,7 +440,7 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
         </Card>
 
         {/* 2. Total Salario Quincenal */}
-        <Card variant="glass" className="hover:scale-105 transition-all duration-200 cursor-pointer backdrop-blur-md bg-white/10 border border-white/20">
+        <Card variant="liquid" className="hover:scale-105 transition-all duration-200 cursor-pointer backdrop-blur-md bg-white/10 border border-white/20">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -546,7 +461,7 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
         </Card>
 
         {/* 3. Total Deducciones */}
-        <Card variant="glass" className="hover:scale-105 transition-all duration-200 cursor-pointer backdrop-blur-md bg-white/10 border border-white/20">
+        <Card variant="liquid" className="hover:scale-105 transition-all duration-200 cursor-pointer backdrop-blur-md bg-white/10 border border-white/20">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -567,7 +482,7 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
         </Card>
 
         {/* 4. Total Salario Neto */}
-        <Card variant="glass" className="hover:scale-105 transition-all duration-200 cursor-pointer backdrop-blur-md bg-white/10 border border-white/20">
+        <Card variant="liquid" className="hover:scale-105 transition-all duration-200 cursor-pointer backdrop-blur-md bg-white/10 border border-white/20">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -598,26 +513,28 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
         year={payroll.currentPeriod.year}
         month={payroll.currentPeriod.month}
         quincena={payroll.currentPeriod.quincena}
-        tipo={payroll.filters.tipo}
+        paymentFrequency={payroll.paymentFrequency}
+        paymentCutDates={payroll.paymentCutDates}
+        deductionModeLabel={payroll.deductionModeLabel}
         onYearChange={(year) => handleFilterChange('year', year)}
         onMonthChange={(month) => handleFilterChange('month', month)}
         onQuincenaChange={(quincena) => handleFilterChange('quincena', quincena)}
-        onTipoChange={(tipo) => handleFilterChange('tipo', tipo)}
         onPreview={handlePreview}
         onReset={payroll.resetFilters}
         loading={payroll.loading}
         canPreview={payroll.canPreview}
-        paymentFrequency={paymentFrequency as 'quincenal' | 'mensual' | 'semanal' | null}
       />
 
       {/* Preflight AHC (overtime readiness) */}
-      {payroll.unifiedData && payroll.ahcPreflight && (
+      {payroll.unifiedData && (payroll.ahcPreflight || payroll.ahcPreflightError) && (
         <Card
-          variant="glass"
+          variant="liquid"
           className={`border ${
-            payroll.ahcPreflight.status === 'GREEN'
-              ? 'border-emerald-500/30 bg-emerald-500/10'
-              : 'border-amber-500/35 bg-amber-500/10'
+            payroll.ahcPreflightError
+              ? 'border-red-500/35 bg-red-500/10'
+              : payroll.ahcPreflight?.status === 'GREEN'
+                ? 'border-emerald-500/30 bg-emerald-500/10'
+                : 'border-amber-500/35 bg-amber-500/10'
           }`}
         >
           <CardContent className="pt-5 pb-5 flex flex-wrap items-start justify-between gap-4">
@@ -625,28 +542,38 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
               <div className="flex items-center gap-2">
                 <span
                   className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold ${
-                    payroll.ahcPreflight.status === 'GREEN'
-                      ? 'bg-emerald-500/20 text-emerald-200'
-                      : 'bg-amber-500/20 text-amber-200'
+                    payroll.ahcPreflightError
+                      ? 'bg-red-500/20 text-red-200'
+                      : payroll.ahcPreflight?.status === 'GREEN'
+                        ? 'bg-emerald-500/20 text-emerald-200'
+                        : 'bg-amber-500/20 text-amber-200'
                   }`}
                 >
-                  {payroll.ahcPreflight.status === 'GREEN'
-                    ? 'Horas calculadas'
-                    : 'Faltan horas por calcular'}
+                  {payroll.ahcPreflightError
+                    ? 'Error al verificar'
+                    : payroll.ahcPreflight?.status === 'GREEN'
+                      ? 'Horas calculadas'
+                      : 'Faltan horas por calcular'}
                 </span>
                 <span className="text-sm text-gray-200 font-medium">
                   Horas desde asistencia (incluye extras para nómina)
                 </span>
               </div>
-              <p className="text-xs text-gray-300">
-                Marcas completas (entrada/salida):{' '}
-                <span className="font-semibold">{payroll.ahcPreflight.completeRecords}</span> · Ya calculadas:{' '}
-                <span className="font-semibold">{payroll.ahcPreflight.ahcRecords}</span> · Por calcular:{' '}
-                <span className="font-semibold">{payroll.ahcPreflight.missingAHC}</span>
-              </p>
-              {payroll.ahcPreflight.recommendedAction && (
-                <p className="text-xs text-gray-400">{payroll.ahcPreflight.recommendedAction}</p>
-              )}
+              {payroll.ahcPreflightError ? (
+                <p className="text-xs text-red-200">{payroll.ahcPreflightError}</p>
+              ) : payroll.ahcPreflight ? (
+                <>
+                  <p className="text-xs text-gray-300">
+                    Marcas completas (entrada/salida):{' '}
+                    <span className="font-semibold">{payroll.ahcPreflight.completeRecords}</span> · Ya calculadas:{' '}
+                    <span className="font-semibold">{payroll.ahcPreflight.ahcRecords}</span> · Por calcular:{' '}
+                    <span className="font-semibold">{payroll.ahcPreflight.missingAHC}</span>
+                  </p>
+                  {payroll.ahcPreflight.recommendedAction && (
+                    <p className="text-xs text-gray-400">{payroll.ahcPreflight.recommendedAction}</p>
+                  )}
+                </>
+              ) : null}
             </div>
             <div className="flex items-center gap-2">
               <Button
@@ -658,7 +585,7 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
               >
                 {payroll.ahcPreflightLoading ? 'Verificando…' : 'Actualizar estado'}
               </Button>
-              {payroll.ahcPreflight.missingAHC > 0 && (
+              {payroll.ahcPreflight && payroll.ahcPreflight.missingAHC > 0 && (
                 <Button
                   type="button"
                   className="bg-brand-600 hover:bg-brand-700 text-white"
@@ -712,16 +639,25 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
           rows={payroll.unifiedData.rows}
           resumen={payroll.unifiedData.resumen}
           incompleteRecordsAlert={payroll.unifiedData.incompleteRecordsAlert}
+          onPreviewVoucher={payroll.openVoucherPreview}
           onGenerateVoucher={payroll.generateVoucher}
           onPreAuthorize={handlePreAuthorize}
           onAuthorize={payroll.authorizeRun}
-          onGeneratePDF={payroll.generatePDF}
+          onOpenPlanillaPreview={() => void payroll.openPlanillaPreview()}
           onSendEmail={() => payroll.sendEmail()}
           onEditCustomFields={handleEditCustomFields}
           canAdjustFixedDays={
             !!payroll.runId && (payroll.status === 'draft' || payroll.status === 'edited')
           }
           onAdjustFixedDays={handleAdjustFixedDays}
+          onAdjustFixedOvertime={handleAdjustFixedOvertime}
+          companyPayOvertime={payrollApiConfig?.pay_overtime !== false}
+          onResetLineRecalc={handleResetLineRecalc}
+          canResetLineRecalc={payroll.status === 'draft' || payroll.status === 'edited'}
+          canZeroStatutory={
+            !!payroll.runId && (payroll.status === 'draft' || payroll.status === 'edited')
+          }
+          onZeroStatutory={handleZeroStatutory}
           loading={payroll.loading}
           canAuthorize={payroll.canAuthorize}
           canSend={payroll.canSend}
@@ -730,6 +666,7 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
           runId={payroll.runId}
           status={payroll.status}
           period={payroll.currentPeriod}
+          paymentFrequency={payroll.paymentFrequency}
           companyId={payroll.companyId}
           payrollApiConfig={payrollApiConfig}
         />
@@ -749,7 +686,7 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
 
       {/* Loading State */}
       {!payroll.unifiedData && payroll.loading && (
-        <Card variant="glass" className="backdrop-blur-md bg-white/10 border border-white/20">
+        <Card variant="liquid" className="backdrop-blur-md bg-white/10 border border-white/20">
           <CardContent className="p-6 text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-400 mx-auto mb-4"></div>
             <h2 className="text-xl font-semibold text-blue-300 mb-2">Cargando Datos</h2>
@@ -760,7 +697,7 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
 
       {/* No Data State */}
       {!payroll.unifiedData && !payroll.loading && (
-        <Card variant="glass" className="backdrop-blur-md bg-white/10 border border-white/20">
+        <Card variant="liquid" className="backdrop-blur-md bg-white/10 border border-white/20">
           <CardContent className="p-6 text-center">
             <Icon name="alert" className="h-12 w-12 text-gray-400 mx-auto mb-4" />
             <h2 className="text-xl font-semibold text-gray-300 mb-2">Sin Datos</h2>
@@ -797,6 +734,26 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
           </div>
         </div>
       )}
+
+      <VoucherPreviewModal
+        open={payroll.voucherPreview.open}
+        loading={payroll.voucherPreview.loading}
+        error={payroll.voucherPreview.error}
+        data={payroll.voucherPreview.data}
+        downloading={payroll.voucherPreview.downloading}
+        onClose={payroll.closeVoucherPreview}
+        onDownload={payroll.downloadVoucherFromPreview}
+      />
+
+      <PlanillaPreviewModal
+        open={payroll.planillaPreview.open}
+        loading={payroll.planillaPreview.loading}
+        error={payroll.planillaPreview.error}
+        data={payroll.planillaPreview.data}
+        downloading={payroll.planillaPreview.downloading}
+        onClose={payroll.closePlanillaPreview}
+        onDownload={payroll.downloadPlanillaFromPreview}
+      />
     </div>
   )
 }

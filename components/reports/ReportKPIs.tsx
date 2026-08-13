@@ -13,7 +13,7 @@ export default function ReportKPIs({ summary, reportType, loading }: ReportKPIsP
     return (
       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
         {[1, 2, 3, 4].map((i) => (
-          <Card key={i} variant="glass" className="border border-white/10">
+          <Card key={i} variant="liquid" className="border border-white/10">
             <div className="p-4 flex items-center gap-3">
               <div className="animate-pulse h-12 w-12 rounded-lg bg-white/10"></div>
               <div className="flex-1 space-y-2">
@@ -76,7 +76,7 @@ export default function ReportKPIs({ summary, reportType, loading }: ReportKPIsP
       {Object.entries(summary).map(([key, value], index) => (
         <Card 
           key={key} 
-          variant="glass" 
+          variant="liquid" 
           className={`${config.bg} border border-white/10 hover:border-white/20 transition-colors`}
         >
           <div className="p-4 flex items-center gap-3">

@@ -50,7 +50,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           ...row, 
           team: row.role ?? row.team_out ?? null,
           check_in_time: row.check_in, // Map check_in to check_in_time for UI compatibility
-          delta_min: row.late_minutes || 0 // Map late_minutes to delta_min for UI compatibility
+          delta_min: row.late_minutes ?? 0 // Map late_minutes to delta_min for UI compatibility
         }))
       : []
     res.status(200).json(mapped)

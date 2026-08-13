@@ -22,6 +22,8 @@ export function summaryLabelEs(s: string): string {
       return 'Presente'
     case 'ausente':
       return 'Ausente'
+    case 'permiso_pagado':
+      return 'Permiso pagado'
     case 'sin_datos':
       return 'Sin datos'
     default:

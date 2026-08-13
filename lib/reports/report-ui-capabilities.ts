@@ -17,6 +17,8 @@ export function getReportExportCapabilities(reportType: ReportType): ReportExpor
       return { excel: false, pdf: true, csv: true }
     case 'severance':
       return { excel: false, pdf: false, csv: true }
+    case 'voucher':
+      return { excel: false, pdf: true, csv: false }
     default:
       return { excel: false, pdf: false, csv: false }
   }
@@ -38,6 +40,8 @@ export function reportSubtitle(reportType: ReportType): string {
       return 'Vista previa de datos para constancia laboral (empleados activos). Descarga PDF o CSV por empleado.'
     case 'severance':
       return 'Cálculo de liquidación según fecha de terminación. Exporta el resultado como CSV desde la vista previa.'
+    case 'voucher':
+      return 'Recibo de pago individual (denarius). Configura branding y campos visibles; se genera al autorizar nómina y al enviar por correo.'
     default:
       return ''
   }

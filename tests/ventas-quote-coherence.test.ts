@@ -1,7 +1,7 @@
 import { describe, it, beforeEach, afterEach } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { computeUrgencyOffer } from '../lib/ventas/urgency-offer'
+import { buildQuotationPlanSummary } from '../lib/ventas/quote-display'
 import {
   buildBankDetailsPlainText,
   buildQuotationAcquisitionWhatsAppText,
@@ -10,19 +10,21 @@ import {
 import { generateVentasQuotationEmailText } from '../lib/ventas/email-template'
 import type { QuotationQuote } from '../lib/ventas/types'
 
-const sampleQuote: QuotationQuote = {
-  tier: { min_employees: 11, max_employees: 25 },
-  billing_modality: 'annual',
+const monthlyQuote: QuotationQuote = {
+  tier: { min_employees: 21, max_employees: 50 },
+  billing_modality: 'monthly',
   currency: 'HNL',
-  annual_subtotal: 100000,
-  annual_discount_amount: 10000,
-  annual_total: 90000,
-  monthly_software_total: 0,
-  monthly_hardware_fee: 0,
-  monthly_total: 0,
-  coupon_applied: true,
-  discount_pct_applied: 0.1,
+  annual_subtotal: 76500,
+  annual_discount_amount: 0,
+  annual_total: 76500,
+  monthly_software_total: 6375,
+  monthly_hardware_fee: 1821.66,
+  monthly_total: 8196.66,
+  hardware_sale_total: 0,
+  coupon_applied: false,
+  discount_pct_applied: 0,
   terminals_count: 2,
+  employees_count: 30,
 }
 
 describe('ventas quote coherence', () => {
@@ -36,30 +38,63 @@ describe('ventas quote coherence', () => {
     process.env = envBackup
   })
 
-  it('urgency discount matches 20% of quoted total in email text', () => {
+  it('annual quote shows coupon breakdown when applied', () => {
     const sentAt = new Date('2026-05-22T12:00:00.000Z')
-    const urgency = computeUrgencyOffer({ quotedTotal: sampleQuote.annual_total, sentAt, now: sentAt })
+    const annualQuote: QuotationQuote = {
+      ...monthlyQuote,
+      billing_modality: 'annual',
+      annual_subtotal: 76500,
+      annual_discount_amount: 15300,
+      annual_total: 61200,
+      monthly_software_total: 5100,
+      monthly_hardware_fee: 0,
+      monthly_total: 5100,
+      hardware_sale_total: 0,
+      coupon_applied: true,
+      discount_pct_applied: 0.2,
+      coupon_code_applied: 'aghas',
+      tier: { min_employees: 51, max_employees: 70 },
+      employees_count: 60,
+    }
+    const summary = buildQuotationPlanSummary({ quote: annualQuote, sentAt, now: sentAt })
     const text = generateVentasQuotationEmailText({
-      quote: sampleQuote,
-      contactName: 'Jorge Arturo Gómez',
-      companyName: 'Acme SA',
+      quote: annualQuote,
+      contactName: 'Alejandra',
+      companyName: 'Grupo Infinitum',
       countryLabel: 'Honduras',
       sentAt,
       now: sentAt,
     })
 
-    assert.equal(urgency.discountAmount, 18000)
-    assert.equal(urgency.discountedTotal, 72000)
-    assert.match(text, /verdaderamente queremos ayudarte/)
-    assert.match(text, /enorme 20% sobre el total anual/)
-    assert.match(text, /Precio normal: L\.\s?90,000\.00 \/ año/)
-    assert.match(text, /Tu precio hoy: L\.\s?72,000\.00 \/ año/)
-    assert.match(text, /Lo que incluye tu Plan Anual/)
-    assert.match(text, /Terminal biométrica incluida/)
-    assert.match(text, /precio de lista/)
+    assert.equal(summary.urgency.isActive, false)
+    assert.match(text, /Cupón promocional «aghas»/)
+    assert.match(text, /Precio Software \(lista\): L\.\s?76,500\.00 \/ año/)
+    assert.match(text, /Total anual cotizado: L\.\s?61,200\.00 \/ año/)
+    assert.doesNotMatch(text, /Ahorro exclusivo por contratación temprana/)
+    assert.doesNotMatch(text, /verdaderamente queremos ayudarte/)
   })
 
-  it('WhatsApp message references quote review and bank confirmation', () => {
+  it('monthly quote has no early-contract discount', () => {
+    const sentAt = new Date('2026-05-22T12:00:00.000Z')
+    const summary = buildQuotationPlanSummary({ quote: monthlyQuote, sentAt, now: sentAt })
+    const text = generateVentasQuotationEmailText({
+      quote: monthlyQuote,
+      contactName: 'Alejandra',
+      companyName: 'Grupo Infinitum',
+      countryLabel: 'Honduras',
+      sentAt,
+      now: sentAt,
+    })
+
+    assert.equal(summary.urgency.isActive, false)
+    assert.match(text, /Precio Software: L\.\s?6,375\.00 \/ mes/)
+    assert.match(text, /Servicio de Continuidad de Hardware \(2 Terminales\): L\.\s?1,821\.66 \/ mes/)
+    assert.match(text, /Total mensual cotizado: L\.\s?8,196\.66 \/ mes/)
+    assert.doesNotMatch(text, /Ahorro exclusivo por contratación temprana/)
+    assert.doesNotMatch(text, /verdaderamente queremos ayudarte/)
+  })
+
+  it('WhatsApp message references quote review and 50% comprobante', () => {
     const msg = buildQuotationAcquisitionWhatsAppText({
       contactName: 'María López',
       companyName: 'Acme SA',
@@ -69,7 +104,7 @@ describe('ventas quote coherence', () => {
 
     assert.match(msg, /Hola Jorge, soy María\./)
     assert.match(msg, /cotización de Humano SISU para Acme SA/)
-    assert.match(msg, /confirmar los datos bancarios/)
+    assert.match(msg, /comprobante del 50%/)
   })
 
   it('bank details load from env without hardcoded account numbers', () => {

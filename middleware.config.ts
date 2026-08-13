@@ -1,4 +1,10 @@
 // Middleware Configuration
+import {
+  ALL_DEDUCTION_CALCULATOR_INTERNAL_PATHS,
+  ALL_DEDUCTION_CALCULATOR_LEGACY_PATHS,
+  ALL_DEDUCTION_CALCULATOR_PUBLIC_PATHS,
+} from './lib/marketing/calculator-public-paths'
+
 export const MIDDLEWARE_CONFIG = {
   // Security settings
   security: {
@@ -69,16 +75,25 @@ export const MIDDLEWARE_CONFIG = {
       '/features',
       '/about',
       '/trial-dashboard',
+      '/politica-de-privacidad',
       '/politicadeprivacidad',
       '/terminos-de-servicio',
-      '/calculadora-deducciones',
-      '/calculadora-deducciones-el-salvador',
-      '/calculadora-deducciones-guatemala',
+      ...ALL_DEDUCTION_CALCULATOR_PUBLIC_PATHS,
+      ...ALL_DEDUCTION_CALCULATOR_INTERNAL_PATHS,
+      ...ALL_DEDUCTION_CALCULATOR_LEGACY_PATHS,
       '/alternativa-odoo-honduras',
       '/sistema-biometrico-nomina',
       '/implementacion-48-horas',
       '/deducciones-honduras-ihss-rap-isr',
       '/afiliados',
+      '/secreto',
+      '/cerrar-planilla-en-paz',
+      '/info',
+      '/paz',
+      '/viernes',
+      '/planilla-sin-domingos',
+      '/domingo-sin-planilla',
+      '/domingos-sin-planilla',
       '/suscripcion',
       '/recursos',
       '/sitemap.xml'
@@ -128,6 +143,8 @@ export const MIDDLEWARE_CONFIG = {
   staticAssets: [
     '/voucher-sample.png',
     '/logo-humano-sisu.png',
+    '/brand/logo-humano-sisu-sm.png',
+    '/brand/favicon-humano-sisu.png',
     '/favicon.ico',
     '/robots.txt',
     '/sitemap.xml'
@@ -156,7 +173,6 @@ export function getAllPublicRoutes(): string[] {
     '/api/attendance/lookup',
     '/api/attendance/register',
     '/api/attendance/first-time-check',
-    '/api/attendance/update-schedule',
     '/api/activar',
     '/api/demo/verify-pin',
     '/api/health',

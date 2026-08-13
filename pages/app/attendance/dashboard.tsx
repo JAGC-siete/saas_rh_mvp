@@ -1,6 +1,8 @@
 import { useEffect, useState, useCallback } from 'react'
+import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
+import { motion } from 'framer-motion'
 import {
   ArrowTrendingUpIcon,
   CalendarDaysIcon,
@@ -13,13 +15,26 @@ import DashboardLayout from '../../../components/DashboardLayout'
 import HeaderBar from '../../../components/attendance/HeaderBar'
 import KpiCards from '../../../components/attendance/KpiCards'
 import AttendanceTablesSection from '../../../components/attendance/AttendanceTablesSection'
-import TrendsChart, { type TrendData } from '../../../components/attendance/TrendsChart'
-import KpiBarsChart from '../../../components/attendance/KpiBarsChart'
+import type { TrendData } from '../../../components/attendance/TrendsChart'
+
+const chartFallback = (
+  <div className="h-64 flex items-center justify-center text-gray-400 text-sm">Cargando gráfico…</div>
+)
+
+const TrendsChart = dynamic(() => import('../../../components/attendance/TrendsChart'), {
+  ssr: false,
+  loading: () => chartFallback,
+})
+
+const KpiBarsChart = dynamic(() => import('../../../components/attendance/KpiBarsChart'), {
+  ssr: false,
+  loading: () => chartFallback,
+})
 import { Card } from '../../../components/ui/card'
 import { useCompanyContext } from '../../../lib/useCompanyContext'
 import { getTodayInHonduras } from '../../../lib/timezone'
 import EmployeeDrawer, { type EmployeeDrawerRawPunch } from '../../../components/attendance/EmployeeDrawer'
-import { useAttendanceData, calculateAttendanceRates } from '../../../lib/hooks/useAttendanceData'
+import { useAttendanceData } from '../../../lib/hooks/useAttendanceData'
 import { mapAttendanceError } from '../../../lib/attendance-api'
 import { getDateRange } from '../../../lib/attendance'
 import { useNotificationContext } from '../../../components/NotificationProvider'
@@ -30,6 +45,7 @@ import type {
   AttendanceEmployeeDrawerSchedule,
   AttendanceEmployeeDetail,
 } from '../../../lib/attendance/dashboard-types'
+import type { KpiFilter } from '../../../lib/attendance/kpi-filter'
 
 function getPresetLabel(preset: string) {
   switch (preset) {
@@ -133,6 +149,7 @@ export default function AttendanceDashboardApp() {
     anomalies: number
     finalized: number
   } | null>(null)
+  const [kpiFilter, setKpiFilter] = useState<KpiFilter>('all')
 
   useEffect(() => {
     if (!router.isReady || urlSynced) return
@@ -200,15 +217,6 @@ export default function AttendanceDashboardApp() {
     selectedDepartmentId,
     refreshTick
   )
-
-  const {
-    total,
-    llegadas,
-    asistenciaPct,
-    puntualidadSobreLlegadasPct,
-    tempranosSobreLlegadasPct,
-    tardesSobreLlegadasPct,
-  } = calculateAttendanceRates(kpis)
 
   useEffect(() => {
     if (!companyId) {
@@ -463,7 +471,14 @@ export default function AttendanceDashboardApp() {
   return (
     <ProtectedRoute>
       <DashboardLayout>
-        <div className="space-y-6">
+        <motion.div
+          className="space-y-6 origin-center"
+          animate={{
+            scale: drawer.open ? 0.97 : 1,
+            filter: drawer.open ? 'blur(3px)' : 'blur(0px)',
+          }}
+          transition={{ duration: 0.35, ease: [0.32, 0.72, 0, 1] }}
+        >
           {error && (
             <div className="rounded-lg bg-red-500/10 border border-red-500/30 text-red-200 px-4 py-3 text-sm">
               {error}
@@ -537,19 +552,16 @@ export default function AttendanceDashboardApp() {
             <KpiCards
               presentes={kpis?.presentes ?? 0}
               ausentes={kpis?.ausentes ?? 0}
+              permisosPagados={kpis?.permisos_pagados ?? 0}
               temprano={kpis?.tempranos ?? 0}
               tarde={kpis?.tardes ?? 0}
               presetLabel={` ${getPresetLabel(preset)}`}
-              asistenciaPct={asistenciaPct}
-              puntualidadSobreLlegadasPct={puntualidadSobreLlegadasPct}
-              tempranosSobreLlegadasPct={tempranosSobreLlegadasPct}
-              tardesSobreLlegadasPct={tardesSobreLlegadasPct}
-              total={total}
-              llegadas={llegadas}
               loading={loading}
+              activeFilter={kpiFilter}
+              onFilterChange={setKpiFilter}
             />
 
-            <Card variant="glass" className="border border-white/10">
+            <Card variant="liquid" className="border border-white/10">
               <button
                 type="button"
                 onClick={() => setShowDistribution((v) => !v)}
@@ -614,10 +626,13 @@ export default function AttendanceDashboardApp() {
             late={late}
             outsideSchedule={outsideSchedule}
             presetLabel={getPresetLabel(preset)}
+            preset={preset}
             onSelectEmployee={handleEmployeeClick}
+            kpiFilter={kpiFilter}
+            onKpiFilterChange={setKpiFilter}
           />
 
-          <Card variant="glass" className="border border-white/10">
+          <Card variant="liquid" className="border border-white/10">
             <div className="p-6">
               <h3 className="text-lg font-semibold text-white mb-6 flex flex-wrap items-center gap-2">
                 <ArrowTrendingUpIcon className="h-6 w-6 text-gray-300 shrink-0" aria-hidden />
@@ -663,7 +678,7 @@ export default function AttendanceDashboardApp() {
               )}
             </div>
           </Card>
-        </div>
+        </motion.div>
         <EmployeeDrawer
           open={drawer.open}
           onClose={closeDrawer}

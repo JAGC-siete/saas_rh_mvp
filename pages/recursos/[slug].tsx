@@ -1,8 +1,11 @@
 import Head from 'next/head'
-import MainHeader from '../../components/MainHeader'
-import DemoFooter from '../../components/DemoFooter'
+import Link from 'next/link'
+import PublicPageShell from '../../components/landing/PublicPageShell'
 import SchemaMarkup from '../../components/SEO/SchemaMarkup'
 import Breadcrumbs from '../../components/SEO/Breadcrumbs'
+import RecursoAuthorSignature from '../../components/recursos/RecursoAuthorSignature'
+import RecursoSalesCta from '../../components/recursos/RecursoSalesCta'
+import { RECURSO_CATEGORY_META } from '../../lib/recursos/categories'
 import { generateArticleSchema } from '../../lib/seo/schema'
 import { recursosAdapter } from '../../lib/recursos'
 import type { RecursoMeta } from '../../lib/recursos'
@@ -14,6 +17,9 @@ interface RecursoPageProps {
 
 export default function RecursoPage({ article }: RecursoPageProps) {
   const canonical = `https://humanosisu.net/recursos/${article.slug}`
+  const collectionMeta = RECURSO_CATEGORY_META[article.category]
+  const isFactorHumano = article.category === 'responsabilidad-individual'
+
   const articleSchema = generateArticleSchema({
     url: `/recursos/${article.slug}`,
     headline: article.title,
@@ -21,16 +27,19 @@ export default function RecursoPage({ article }: RecursoPageProps) {
     datePublished: article.datePublished,
     dateModified: article.dateModified,
     image: article.image,
-    author: article.author
+    author: article.author,
+    articleSection: collectionMeta.breadcrumbLabel,
   })
+
   const breadcrumbItems = [
     { name: 'Inicio', url: '/' },
     { name: 'Recursos', url: '/recursos' },
-    { name: article.title, url: `/recursos/${article.slug}` }
+    { name: collectionMeta.breadcrumbLabel, url: collectionMeta.path },
+    { name: article.title, url: `/recursos/${article.slug}` },
   ]
 
   return (
-    <div className="min-h-screen bg-app text-white flex flex-col pt-16 sm:pt-20 md:pt-24">
+    <PublicPageShell>
       <Head>
         <title>{article.title} | Humano SISU</title>
         <meta name="description" content={article.description} />
@@ -39,27 +48,36 @@ export default function RecursoPage({ article }: RecursoPageProps) {
         <meta property="og:description" content={article.description} />
         <meta property="og:url" content={canonical} />
         <meta property="og:type" content="article" />
-        {article.image && <meta property="og:image" content={article.image.startsWith('http') ? article.image : `https://humanosisu.net${article.image}`} />}
+        {article.image && (
+          <meta
+            property="og:image"
+            content={article.image.startsWith('http') ? article.image : `https://humanosisu.net${article.image}`}
+          />
+        )}
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content={article.title} />
         <meta name="twitter:description" content={article.description} />
       </Head>
       <SchemaMarkup schema={articleSchema} />
 
-      <MainHeader enableScrollEffect={true} fixed={true} />
-
-      <main className="flex-1 max-w-3xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-12">
+      <div className="flex-1 max-w-3xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-12">
         <Breadcrumbs items={breadcrumbItems} />
 
         <article>
           <header className="mb-8">
-            <h1 className="text-3xl font-bold mb-2">{article.title}</h1>
+            <Link
+              href={collectionMeta.path}
+              className="inline-block text-xs uppercase tracking-[0.3em] text-white/50 hover:text-white/80 mb-3 transition-colors"
+            >
+              {collectionMeta.breadcrumbLabel}
+            </Link>
+            <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2">{article.title}</h1>
             <div className="flex items-center gap-4 text-brand-300 text-sm">
               <time dateTime={article.datePublished}>
                 {new Date(article.datePublished).toLocaleDateString('es-HN', {
                   year: 'numeric',
                   month: 'long',
-                  day: 'numeric'
+                  day: 'numeric',
                 })}
               </time>
               {article.author && <span>{article.author}</span>}
@@ -70,10 +88,14 @@ export default function RecursoPage({ article }: RecursoPageProps) {
             dangerouslySetInnerHTML={{ __html: article.content }}
           />
         </article>
-      </main>
 
-      <DemoFooter />
-    </div>
+        {isFactorHumano ? (
+          <RecursoAuthorSignature author={article.author} />
+        ) : (
+          <RecursoSalesCta />
+        )}
+      </div>
+    </PublicPageShell>
   )
 }
 
@@ -81,7 +103,7 @@ export const getStaticPaths: GetStaticPaths = async () => {
   const slugs = await recursosAdapter.getAllSlugs()
   return {
     paths: slugs.map(({ slug }) => ({ params: { slug } })),
-    fallback: 'blocking'
+    fallback: 'blocking',
   }
 }
 
@@ -99,12 +121,13 @@ export const getStaticProps: GetStaticProps<RecursoPageProps, { slug: string }> 
     description: article.description,
     content: article.content,
     datePublished: article.datePublished,
+    category: article.category,
     ...(article.dateModified != null && { dateModified: article.dateModified }),
     ...(article.image != null && { image: article.image }),
-    ...(article.author != null && { author: article.author })
+    ...(article.author != null && { author: article.author }),
   }
   return {
     props: { article: articleSerialized },
-    revalidate: 3600
+    revalidate: 60,
   }
 }

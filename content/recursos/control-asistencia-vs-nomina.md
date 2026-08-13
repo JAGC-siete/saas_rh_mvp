@@ -2,7 +2,7 @@
 title: "Control de asistencia y nómina: por qué unificarlos"
 description: "Ventajas de integrar reloj checador o biométrico con el software de nómina para evitar doble captura y errores en la planilla."
 datePublished: 2025-02-03
-author: Humano SISU
+author: "Licenciado Jorge Arturo Gómez Coello"
 ---
 
 Tener el reloj checador por un lado y la nómina por otro obliga a exportar horas, revisar en Excel y volver a cargar datos. Ese flujo genera retrasos y equivocaciones. Unificar asistencia y nómina en un solo sistema simplifica todo el proceso.

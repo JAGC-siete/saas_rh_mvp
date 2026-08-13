@@ -1,135 +1,162 @@
-import Head from 'next/head'
 import Link from 'next/link'
-import dynamic from 'next/dynamic'
-import MainHeader from '../components/MainHeader'
-import DemoFooter from '../components/DemoFooter'
+import TrackedInternalCta from '../components/TrackedInternalCta'
+import PublicPageShell from '../components/landing/PublicPageShell'
+import PublicPageHead from '../components/SEO/PublicPageHead'
 import SchemaMarkup from '../components/SEO/SchemaMarkup'
+import { useLandingPreferences } from '../components/landing/LandingPreferencesProvider'
+import { getCalculatorsCopy } from '../lib/i18n/landings/calculators'
 import { generateWebPageSchema, generateBreadcrumbListSchema } from '../lib/seo/schema'
 import { generateTitle } from '../lib/seo/title'
 import { generateDescription } from '../lib/seo/description'
 import { CALCULATOR_HUB_LINKS } from '../lib/public-calculator/hub-links'
 
-const CloudBackground = dynamic(() => import('../components/CloudBackground'), { ssr: false })
-
 export default function CalculadoraHubPage() {
+  const { locale, href } = useLandingPreferences()
+  const copy = getCalculatorsCopy(locale)
+
   const pageTitle = generateTitle({
-    primaryKeyword: 'Calculadoras laborales gratis (norma local)',
-    secondaryKeywords: 'Deducciones e indemnización SV GT HN'
+    primaryKeyword: copy.metaPrimary,
+    secondaryKeywords: copy.metaSecondary,
   })
   const pageDescription = generateDescription({
-    valueProposition:
-      'Calculadoras de deducciones (IHSS, ISSS, IGSS, ISR) y prestaciones para Honduras, El Salvador y Guatemala',
-    cta: 'Usa la calculadora gratis',
-    additionalBenefit: 'mismo motor legal que Humano SISU'
+    valueProposition: copy.metaDescription,
+    cta: copy.metaCta,
+    additionalBenefit: copy.metaBenefit,
   })
 
   const webPageSchema = generateWebPageSchema({
-    url: '/calculadora',
+    url: href('/calculadora'),
     title: pageTitle,
-    description: pageDescription
+    description: pageDescription,
+    inLanguage: locale === 'en' ? 'en' : 'es-HN',
   })
   const breadcrumbSchema = generateBreadcrumbListSchema([
-    { name: 'Inicio', url: '/' },
-    { name: 'Calculadoras laborales', url: '/calculadora' }
+    { name: copy.breadcrumbHome, url: href('/') },
+    { name: copy.breadcrumbHub, url: href('/calculadora') },
   ])
 
   return (
-    <div className="min-h-screen bg-app pt-16 sm:pt-20 md:pt-24 relative">
-      <Head>
-        <title>{pageTitle}</title>
-        <meta name="description" content={pageDescription} />
-        <meta
-          name="keywords"
-          content="calculadora deducciones, IHSS RAP ISR Honduras, ISSS AFP El Salvador, IGSS Guatemala, sueldo neto, nómina regional, Humano SISU"
-        />
-        <meta property="og:title" content={pageTitle} />
-        <meta property="og:description" content={pageDescription} />
-        <meta property="og:url" content="https://humanosisu.net/calculadora" />
-        <link rel="canonical" href="https://humanosisu.net/calculadora" />
-      </Head>
+    <PublicPageShell>
+      <PublicPageHead
+        title={pageTitle}
+        description={pageDescription}
+        canonicalPath="/calculadora"
+        keywords={copy.metaKeywords}
+      />
       <SchemaMarkup schema={[webPageSchema, breadcrumbSchema]} />
 
-      <MainHeader enableScrollEffect fixed />
-
-      <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 relative z-10">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 relative z-10">
         <div className="text-center mb-10 sm:mb-14">
           <div className="flex flex-wrap justify-center gap-2 sm:gap-3 md:gap-4 mb-6">
             <span className="px-3 py-1 bg-cyan-500/20 text-cyan-200 text-xs rounded-full border border-cyan-500/30">
-              Herramientas gratuitas
+              {copy.badgeFree}
             </span>
             <span className="px-3 py-1 bg-blue-500/20 text-blue-200 text-xs rounded-full border border-blue-500/30">
-              Honduras · El Salvador · Guatemala
+              {copy.badgeCountries}
             </span>
           </div>
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white mb-4 leading-tight">
-            Calculadoras laborales gratuitas
+            {copy.title}
           </h1>
-          <p className="text-lg sm:text-xl text-brand-200/90 max-w-2xl mx-auto">
-            Elige tu país y valida deducciones o prestaciones. Misma lógica legal que el software de nómina Humano SISU.
-          </p>
+          <p className="text-lg sm:text-xl text-brand-200/90 max-w-2xl mx-auto">{copy.lead}</p>
         </div>
 
-        <h2 className="text-xl font-semibold text-white mb-4">Deducciones de salario por país</h2>
+        <h2 className="text-xl font-semibold text-white mb-4">{copy.sectionDeductions}</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-10">
-          {CALCULATOR_HUB_LINKS.deductions.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="glass-strong rounded-2xl p-5 border border-white/15 hover:border-cyan-400/40 transition-all hover:-translate-y-0.5"
-            >
-              <div className="text-xs text-brand-300 mb-1">{item.country}</div>
-              <div className="text-lg font-bold text-white">{item.title}</div>
-              <div className="text-sm text-brand-200/80 mt-2">{item.subtitle}</div>
-              {'badge' in item && typeof item.badge === 'string' && (
-                <div className="mt-3 text-xs text-cyan-300">{item.badge}</div>
-              )}
-            </Link>
-          ))}
+          {CALCULATOR_HUB_LINKS.deductions.map((item, i) => {
+            const labels = copy.deductions[i]
+            return (
+              <Link
+                key={item.href}
+                href={href(item.href)}
+                className="glass-modern rounded-2xl p-5 border border-white/15 hover:border-cyan-400/40 transition-all hover:-translate-y-0.5"
+              >
+                <div className="text-xs text-brand-300 mb-1">{labels?.country ?? item.country}</div>
+                <div className="text-lg font-bold text-white">{labels?.title ?? item.title}</div>
+                <div className="text-sm text-brand-200/80 mt-2">{labels?.subtitle ?? item.subtitle}</div>
+              </Link>
+            )
+          })}
         </div>
 
-        <h2 className="text-xl font-semibold text-white mb-4">Otras herramientas</h2>
+        <h2 className="text-xl font-semibold text-white mb-4">{copy.sectionBenefits}</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-10">
+          {CALCULATOR_HUB_LINKS.benefits.map((item, i) => {
+            const labels = copy.benefits[i]
+            return (
+              <Link
+                key={item.href}
+                href={href(item.href)}
+                className="glass-modern rounded-2xl p-5 border border-white/15 hover:border-green-400/40 transition-all hover:-translate-y-0.5"
+              >
+                <div className="text-xs text-brand-300 mb-1">{labels?.country ?? item.country}</div>
+                <div className="text-lg font-bold text-white">{labels?.title ?? item.title}</div>
+                <div className="text-sm text-brand-200/80 mt-2">{labels?.subtitle ?? item.subtitle}</div>
+              </Link>
+            )
+          })}
+        </div>
+
+        <h2 className="text-xl font-semibold text-white mb-4">{copy.sectionOther}</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <Link
-            href={CALCULATOR_HUB_LINKS.prestaciones.href}
-            className="glass-strong rounded-2xl p-6 border border-white/15 hover:border-green-400/40 transition-all"
+            href={href(CALCULATOR_HUB_LINKS.prestaciones.href)}
+            className="glass-modern rounded-2xl p-6 border border-white/15 hover:border-green-400/40 transition-all"
           >
-            <h3 className="text-xl font-bold text-white">{CALCULATOR_HUB_LINKS.prestaciones.title}</h3>
-            <p className="text-brand-200/90 mt-2 text-sm">{CALCULATOR_HUB_LINKS.prestaciones.subtitle}</p>
+            <h3 className="text-xl font-bold text-white">{copy.prestacionesTitle}</h3>
+            <p className="text-brand-200/90 mt-2 text-sm">{copy.prestacionesSubtitle}</p>
           </Link>
           <Link
-            href={CALCULATOR_HUB_LINKS.landing.href}
-            className="glass-strong rounded-2xl p-6 border border-brand-500/30 hover:border-brand-400/50 transition-all bg-brand-600/10"
+            href={href(CALCULATOR_HUB_LINKS.landing.href)}
+            className="glass-modern rounded-2xl p-6 border border-brand-500/30 hover:border-brand-400/50 transition-all bg-brand-600/10"
           >
-            <h3 className="text-xl font-bold text-white">Software de nómina regional</h3>
-            <p className="text-brand-200/90 mt-2 text-sm">
-              {CALCULATOR_HUB_LINKS.landing.label} — biometría, planilla y deducciones de ley en un solo lugar.
-            </p>
+            <h3 className="text-xl font-bold text-white">{copy.softwareTitle}</h3>
+            <p className="text-brand-200/90 mt-2 text-sm">{copy.softwareLead}</p>
           </Link>
         </div>
 
-        <div className="mt-10 text-center glass rounded-xl p-6 border border-white/10">
-          <p className="text-brand-200/90 mb-4">
-            ¿Validaste tu sueldo y quieres eliminar Excel en tu empresa?
-          </p>
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Link
-              href="/activar"
-              className="inline-flex justify-center py-3 px-6 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl"
+        <div className="mt-10 text-center glass-modern rounded-xl p-6 border border-white/10">
+          <p className="text-brand-200/90 mb-4">{copy.ctaPrompt}</p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center flex-wrap">
+            <TrackedInternalCta
+              href={href('/activar')}
+              ctaType="activar_trial"
+              location="calculadora_footer_activar"
+              className="inline-flex justify-center py-3 px-6 btn-shiny bg-brand-500 hover:bg-brand-600 text-white font-semibold rounded-xl"
             >
-              Probar Humano SISU gratis
+              {copy.ctaTrial}
+            </TrackedInternalCta>
+            <Link
+              href={href('/suscripcion?utm_source=calculadora-hub&utm_medium=cta&utm_campaign=footer')}
+              className="inline-flex justify-center py-3 px-6 glass-modern hover:bg-white/10 text-white font-semibold rounded-xl border border-brand-500/40"
+            >
+              {copy.ctaAlerts}
             </Link>
             <Link
-              href="/"
-              className="inline-flex justify-center py-3 px-6 bg-white/10 hover:bg-white/15 text-white font-semibold rounded-xl border border-white/20"
+              href={href(`${CALCULATOR_HUB_LINKS.info.href}?utm_source=calculadora-hub&utm_medium=cta&utm_campaign=footer`)}
+              className="inline-flex justify-center py-3 px-6 glass-modern hover:bg-white/10 text-white font-semibold rounded-xl border border-white/20"
             >
-              Volver a la landing principal
+              {copy.ctaInfo}
             </Link>
+            <Link
+              href={href(
+                `${CALCULATOR_HUB_LINKS.viernes.href}?utm_source=calculadora-hub&utm_medium=cta&utm_campaign=footer`
+              )}
+              className="inline-flex justify-center py-3 px-6 glass-modern hover:bg-white/10 text-white font-semibold rounded-xl border border-white/20"
+            >
+              {copy.ctaViernes}
+            </Link>
+            <TrackedInternalCta
+              href={href('/ventas?utm_source=calculadora-hub&utm_medium=cta&utm_campaign=pricing')}
+              ctaType="solicitar_cotizacion"
+              location="calculadora_footer_ventas"
+              className="inline-flex justify-center py-3 px-6 glass-modern hover:bg-white/10 text-white font-semibold rounded-xl border border-white/20"
+            >
+              {copy.ctaPricing}
+            </TrackedInternalCta>
           </div>
         </div>
-      </main>
-
-      <CloudBackground />
-      <DemoFooter />
-    </div>
+      </div>
+    </PublicPageShell>
   )
 }

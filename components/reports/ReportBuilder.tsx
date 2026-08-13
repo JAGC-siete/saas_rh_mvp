@@ -7,6 +7,8 @@ import ExportBar from './ExportBar'
 import { formatTimeDisplay, parseDateOnlyAsHonduras, HONDURAS_TIMEZONE } from '../../lib/timezone'
 import { useCompanyContext } from '../../lib/useCompanyContext'
 import { useReportsExport } from '../../lib/hooks/useReportsExport'
+import { useAuth } from '../../lib/auth'
+import { allowedReportTypesForUser } from '../../lib/security/report-access'
 import { downloadPreviewAsCsv } from '../../lib/reports/download-preview-csv'
 import {
   Calendar,
@@ -15,7 +17,8 @@ import {
   Users,
   DollarSign,
   ClipboardList,
-  TrendingUp
+  TrendingUp,
+  Receipt
 } from 'lucide-react'
 import { REPORT_TYPE_OPTIONS, type ReportType } from '../../lib/reports/report-config-schema'
 import {
@@ -57,7 +60,8 @@ const TAB_ICONS: Record<ReportType, typeof Clock> = {
   payroll: DollarSign,
   employees: Users,
   work_certificate: FileText,
-  severance: ClipboardList
+  severance: ClipboardList,
+  voucher: Receipt
 }
 
 const TAB_COLORS: Record<ReportType, string> = {
@@ -65,7 +69,8 @@ const TAB_COLORS: Record<ReportType, string> = {
   payroll: 'text-green-400',
   employees: 'text-purple-400',
   work_certificate: 'text-yellow-400',
-  severance: 'text-orange-400'
+  severance: 'text-orange-400',
+  voucher: 'text-cyan-400'
 }
 
 const TAB_CONFIG = REPORT_TYPE_OPTIONS.map(({ value: id, label }) => ({
@@ -83,6 +88,17 @@ function formatHnl(n: number | string | null | undefined): string {
 
 export default function ReportBuilder() {
   const { companyId, loading: companyLoading } = useCompanyContext()
+  const { userProfile } = useAuth()
+  const allowedReportTypes = useMemo(
+    () => allowedReportTypesForUser(userProfile?.role, userProfile?.permissions),
+    [userProfile?.role, userProfile?.permissions]
+  )
+  const visibleTabs = useMemo(() => {
+    if (allowedReportTypes === 'all') return TAB_CONFIG
+    const allowed = new Set(allowedReportTypes)
+    return TAB_CONFIG.filter((tab) => allowed.has(tab.id))
+  }, [allowedReportTypes])
+
   const [activeTab, setActiveTab] = useState<ReportType>('attendance')
   const [filters, setFilters] = useState<ReportFilters>(() => ({
     reportType: 'attendance',
@@ -94,6 +110,13 @@ export default function ReportBuilder() {
   const [previewData, setPreviewData] = useState<PreviewData | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (visibleTabs.length === 0) return
+    if (!visibleTabs.some((tab) => tab.id === activeTab)) {
+      setActiveTab(visibleTabs[0].id as ReportType)
+    }
+  }, [visibleTabs, activeTab])
 
   useEffect(() => {
     setFilters((prev) => ({
@@ -361,6 +384,22 @@ export default function ReportBuilder() {
           break
         }
 
+        case 'voucher': {
+          setPreviewData({
+            headers: ['Información'],
+            rows: [
+              ['Tipo', 'Recibo de pago (denarius)'],
+              ['Generación', 'Desde el módulo de nómina al descargar o enviar recibos'],
+              ['Configuración', 'Parámetros → Recibo de pago (branding y campos visibles)']
+            ],
+            summary: {
+              nota: 'La vista previa detallada se genera por empleado desde Nómina'
+            },
+            totalCount: 1
+          })
+          break
+        }
+
         case 'severance': {
           const empId = filters.employeeIds?.[0]
           const term = filters.terminationDate
@@ -563,6 +602,11 @@ export default function ReportBuilder() {
           title: 'Empleado y fecha de terminación',
           body: 'Selecciona empleado e indica la fecha de terminación para calcular y exportar la liquidación (CSV).'
         }
+      case 'voucher':
+        return {
+          title: 'Recibo de pago',
+          body: 'Configura color, logo y campos en Parámetros de Reportes. Los PDF se generan desde Nómina al descargar o enviar por correo.'
+        }
       default:
         return {
           title: 'Configura los filtros',
@@ -584,7 +628,7 @@ export default function ReportBuilder() {
       </div>
 
       <div className="flex gap-2 border-b border-white/10 overflow-x-auto">
-        {TAB_CONFIG.map((tab) => {
+        {visibleTabs.map((tab) => {
           const Icon = tab.icon
           const isActive = activeTab === tab.id
 
@@ -609,7 +653,7 @@ export default function ReportBuilder() {
         })}
       </div>
 
-      <Card variant="glass" className="border border-white/10">
+      <Card variant="liquid" className="border border-white/10">
         <ReportFilters
           reportType={activeTab}
           filters={filters}
@@ -619,7 +663,7 @@ export default function ReportBuilder() {
       </Card>
 
       {error && (
-        <Card variant="glass" className="border-red-500/50 bg-red-500/10">
+        <Card variant="liquid" className="border-red-500/50 bg-red-500/10">
           <div className="p-4 flex items-center gap-2 text-red-300">
             <span className="text-xl" aria-hidden>
               ⚠️
@@ -638,6 +682,7 @@ export default function ReportBuilder() {
             data={previewData}
             onExport={handleExport}
             disabled={loading || !!error}
+            exportScope={activeTab === 'attendance' ? 'attendance' : 'full'}
             capabilities={
               activeTab === 'payroll' && (filters.payrollView ?? 'lines') === 'derived'
                 ? { excel: true, pdf: false, csv: true }
@@ -651,7 +696,7 @@ export default function ReportBuilder() {
       )}
 
       {!previewData && !loading && !error && (
-        <Card variant="glass" className="border border-white/10">
+        <Card variant="liquid" className="border border-white/10">
           <div className="p-12 text-center">
             <Calendar className="h-16 w-16 text-gray-600 mx-auto mb-4" />
             <h3 className="text-xl font-semibold text-white mb-2">{emptyMessage.title}</h3>

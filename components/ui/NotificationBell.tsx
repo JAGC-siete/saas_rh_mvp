@@ -1,11 +1,18 @@
 import Link from 'next/link'
+import dynamic from 'next/dynamic'
 import React, { useEffect, useRef, useState } from 'react'
 import { Bell } from 'lucide-react'
 import { cn } from '../../lib/utils'
 import { Badge } from './badge'
 import { Button } from './button'
-import NotificationInbox from './NotificationInbox'
 import { useNotificationContext } from '../NotificationProvider'
+
+const NotificationInbox = dynamic(() => import('./NotificationInbox'), {
+  ssr: false,
+  loading: () => (
+    <div className="px-4 py-6 text-center text-sm text-gray-400">Cargando…</div>
+  ),
+})
 
 export default function NotificationBell({ className }: { className?: string }) {
   const { notifications, unreadCount, markAllAsRead } = useNotificationContext()

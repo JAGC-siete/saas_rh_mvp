@@ -1,23 +1,36 @@
 import React from 'react'
+import Link from 'next/link'
 import TrackedWhatsAppLink from './TrackedWhatsAppLink'
+import { FOOTER_GUIDE_KEYS, GUIDE_LINKS } from '../lib/seo/internal-links'
+import { SOCIAL_LINKS } from '../lib/marketing/social-links'
+import { PRIVACY_PUBLIC_PATH, TERMS_PUBLIC_PATH } from '../lib/marketing/legal-paths'
+import { getCommonCopy } from '../lib/i18n/landings/common'
+import { useLandingPreferences } from './landing/LandingPreferencesProvider'
 
-const DemoFooter: React.FC = () => {
+interface DemoFooterProps {
+  variant?: 'default' | 'minimal'
+}
+
+const DemoFooter: React.FC<DemoFooterProps> = ({ variant = 'default' }) => {
+  const isMinimal = variant === 'minimal'
+  const { locale, href } = useLandingPreferences()
+  const copy = getCommonCopy(locale)
+
   return (
-    <footer className="bg-white border-t border-gray-200 mt-auto">
-      <div className="max-w-6xl mx-auto px-4 py-8">
-        {/* Main Footer Content */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          
-          {/* Contact Info */}
+    <footer className={`bg-slate-50 border-t border-slate-200 mt-auto ${isMinimal ? 'py-20' : ''}`}>
+      <div className={`max-w-6xl mx-auto px-4 ${isMinimal ? 'py-4' : 'py-8'}`}>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12">
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Contacto</h3>
+            <h3 className={`font-semibold text-brand-900 mb-4 ${isMinimal ? 'text-xs uppercase tracking-widest' : 'text-lg'}`}>
+              {copy.contact}
+            </h3>
             <div className="space-y-2">
-              <div className="flex items-center text-gray-600">
+              <div className={`flex items-center text-gray-600 ${isMinimal ? 'text-sm' : ''}`}>
                 <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                 </svg>
-                <a href="mailto:jorgearturo@humanosisu.net" className="hover:text-blue-600">
-                  jorgearturo@humanosisu.net
+                <a href="mailto:humanosisu@humanosisu.net" className="hover:text-blue-600">
+                  humanosisu@humanosisu.net
                 </a>
               </div>
               <div className="flex items-center text-gray-600">
@@ -37,17 +50,17 @@ const DemoFooter: React.FC = () => {
             </div>
           </div>
 
-          {/* Join Community */}
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Únete a la Comunidad</h3>
-            <p className="text-gray-600 text-sm mb-4">
-              Síguenos en nuestras redes sociales para conocer las últimas actualizaciones
+            <h3 className={`font-semibold text-brand-900 mb-4 ${isMinimal ? 'text-xs uppercase tracking-widest' : 'text-lg'}`}>
+              {copy.joinCommunity}
+            </h3>
+            <p className={`text-gray-600 mb-4 ${isMinimal ? 'text-xs' : 'text-sm'}`}>
+              {copy.followBlurb}
             </p>
             <div className="flex space-x-4">
-              {/* Facebook */}
-              <a 
-                href="https://facebook.com/humanosisu" 
-                target="_blank" 
+              <a
+                href={SOCIAL_LINKS.facebook}
+                target="_blank"
                 rel="noopener noreferrer"
                 className="text-gray-400 hover:text-blue-600 transition-colors"
                 title="Facebook"
@@ -57,25 +70,22 @@ const DemoFooter: React.FC = () => {
                 </svg>
               </a>
 
-              {/* Instagram */}
-              <a 
-                href="https://instagram.com/humanosisu" 
-                target="_blank" 
+              <a
+                href={SOCIAL_LINKS.instagram}
+                target="_blank"
                 rel="noopener noreferrer"
                 className="text-gray-400 hover:text-pink-600 transition-colors"
-                title="Instagram"
+                title="Instagram @humanosisu666"
+                aria-label="Instagram @humanosisu666"
               >
-                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M12.017 0C5.396 0 .029 5.367.029 11.987c0 6.62 5.367 11.987 11.988 11.987c6.62 0 11.987-5.367 11.987-11.987C24.014 5.367 18.637.001 12.017.001zM8.449 16.988c-1.297 0-2.448-.49-3.323-1.297C4.198 14.895 3.708 13.744 3.708 12.447s.49-2.448 1.418-3.323C6.001 8.198 7.152 7.708 8.449 7.708s2.448.49 3.323 1.297c.926.875 1.418 2.026 1.418 3.323s-.49 2.448-1.418 3.323C10.897 16.498 9.746 16.988 8.449 16.988z"/>
-                  <path d="M12 7.378c-2.552 0-4.622 2.069-4.622 4.622S9.448 16.622 12 16.622s4.622-2.069 4.622-4.622S14.552 7.378 12 7.378zM12 15.004c-1.657 0-3.004-1.347-3.004-3.004S10.343 8.996 12 8.996s3.004 1.347 3.004 3.004S13.657 15.004 12 15.004z"/>
-                  <circle cx="16.806" cy="7.207" r="1.078"/>
+                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z" />
                 </svg>
               </a>
 
-              {/* LinkedIn */}
-              <a 
-                href="https://linkedin.com/company/humanosisu" 
-                target="_blank" 
+              <a
+                href={SOCIAL_LINKS.linkedin}
+                target="_blank"
                 rel="noopener noreferrer"
                 className="text-gray-400 hover:text-blue-700 transition-colors"
                 title="LinkedIn"
@@ -85,10 +95,9 @@ const DemoFooter: React.FC = () => {
                 </svg>
               </a>
 
-              {/* YouTube */}
-              <a 
-                href="https://youtube.com/@humanosisu" 
-                target="_blank" 
+              <a
+                href={SOCIAL_LINKS.youtube}
+                target="_blank"
                 rel="noopener noreferrer"
                 className="text-gray-400 hover:text-red-600 transition-colors"
                 title="YouTube"
@@ -97,43 +106,85 @@ const DemoFooter: React.FC = () => {
                   <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
                 </svg>
               </a>
+
+              <a
+                href={SOCIAL_LINKS.tiktok}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-gray-400 hover:text-gray-900 transition-colors"
+                title="TikTok"
+              >
+                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z" />
+                </svg>
+              </a>
+
+              <a
+                href={SOCIAL_LINKS.x}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-gray-400 hover:text-gray-900 transition-colors"
+                title="X"
+              >
+                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                </svg>
+              </a>
             </div>
           </div>
 
-          {/* About */}
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">SISU</h3>
-            <p className="text-gray-600 text-sm mb-4">
-              Gestión de Recursos Humanos 100% digital, legal y automatizada. Diseñada para que las PyMEs de la región operen sin fricción.
+            <h3 className={`font-semibold text-brand-900 mb-4 ${isMinimal ? 'text-xs uppercase tracking-widest' : 'text-lg'}`}>
+              {copy.guides}
+            </h3>
+            <ul className="space-y-2">
+              {FOOTER_GUIDE_KEYS.map((key) => (
+                <li key={GUIDE_LINKS[key].href}>
+                  <Link
+                    href={href(GUIDE_LINKS[key].href)}
+                    className={`text-gray-600 hover:text-blue-600 transition-colors ${isMinimal ? 'text-xs uppercase tracking-wider' : 'text-sm'}`}
+                  >
+                    {copy.guideLabels[key as keyof typeof copy.guideLabels] ?? GUIDE_LINKS[key].label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div>
+            <h3 className={`font-semibold text-brand-900 mb-4 ${isMinimal ? 'text-xs uppercase tracking-widest' : 'text-lg'}`}>
+              SISU
+            </h3>
+            <p className={`text-gray-600 mb-4 ${isMinimal ? 'text-xs' : 'text-sm'}`}>
+              {copy.aboutBlurb}
             </p>
             <div className="text-sm text-gray-500">
-              <p>© 2026 Humano SISU. Nómina y RRHH para El Salvador, Guatemala y Honduras.</p>
+              <p>{copy.aboutCopyright}</p>
             </div>
           </div>
         </div>
 
-        {/* Privacy Notice */}
-        <div className="border-t border-gray-200 mt-8 pt-8">
+        <div className={`border-t border-slate-200 mt-8 ${isMinimal ? 'pt-12' : 'pt-8'}`}>
           <div className="text-center">
             <p className="text-sm text-gray-600 mb-3">
-              Protegemos tu información. <strong>Solo será utilizada para contactarte</strong>.
+              {copy.privacyNotice} <strong>{copy.privacyNoticeStrong}</strong>.
             </p>
             <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 justify-center items-center text-xs text-gray-500">
-              <a 
-                href="/politicadeprivacidad" 
+              <Link
+                href={href(PRIVACY_PUBLIC_PATH)}
                 className="text-gray-600 hover:text-gray-900 transition-colors underline decoration-gray-400/30 hover:decoration-gray-600"
               >
-                Política de Privacidad
-              </a>
+                {copy.privacy}
+              </Link>
               <span className="hidden sm:inline">•</span>
-              <a
-                href="/terminos-de-servicio"
+              <Link
+                href={href(TERMS_PUBLIC_PATH)}
                 className="text-gray-600 hover:text-gray-900 transition-colors underline decoration-gray-400/30 hover:decoration-gray-600"
               >
-                Términos de servicio
-              </a>
+                {copy.terms}
+              </Link>
               <span className="hidden sm:inline">•</span>
-              <span>© 2026 Humano SISU. Todos los derechos reservados.</span>
+              <span>{copy.rightsReserved}</span>
             </div>
           </div>
         </div>

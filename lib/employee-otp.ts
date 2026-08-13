@@ -3,6 +3,8 @@ import { logger } from './logger'
 import { getResendFromNoreply } from './resend-from'
 import {
   escapeHtml,
+  liquidCodeBlock,
+  transactionalEmphasis,
   transactionalInfoBox,
   transactionalParagraph,
   wrapTransactionalEmail,
@@ -46,18 +48,10 @@ export async function sendOtp(email: string, employeeId: string, employeeName: s
     const resend = new Resend(resendApiKey)
 
     const bodyHtml = [
-      transactionalParagraph(`Hola <strong style="color: #1a1a1a;">${escapeHtml(employeeName)}</strong>,`),
+      transactionalParagraph(`Hola ${transactionalEmphasis(escapeHtml(employeeName))},`),
       transactionalParagraph('Use este código para acceder al portal de empleados:'),
-      `<div style="text-align: center; margin: 20px 0;">
-        <motion></motion>
-      </div>`.replace(
-        '<motion></motion>',
-        `<motion></motion>`.replace(
-          '<motion></motion>',
-          `<div style="display: inline-block; font-size: 32px; font-weight: 700; color: #0b4fa1; letter-spacing: 8px; font-family: monospace; background: #f8fafc; padding: 16px 24px; border-radius: 8px; border: 1px solid #e2e8f0;">${otpCode}</div>`
-        )
-      ),
-      transactionalParagraph('Este código expira en <strong>10 minutos</strong>.'),
+      `<div style="text-align: center; margin: 20px 0;">${liquidCodeBlock(otpCode)}</div>`,
+      transactionalParagraph(`Este código expira en ${transactionalEmphasis('10 minutos')}.`),
       transactionalInfoBox(
         '<strong>Seguridad:</strong> si no solicitó este código, ignore este mensaje. Nunca lo comparta con terceros.',
         'warning'

@@ -1,0 +1,112 @@
+import type { QuotationQuote } from './types'
+import { buildQuotationPlanSummary, employeesCountFromQuote } from './quote-display'
+import { getVentasModalityDefinition } from './modality-includes'
+import { VENTAS_BRAND as B, buildTerminalsDisplayLabel } from './brand-styles'
+import { quoteIncludesBiometricTerminals } from './business-rules'
+
+export function escapeVentasHtml(v: string): string {
+  return v
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;')
+}
+
+export function buildEmailHeaderBlock(quoteLabel: string, refLabel: string): string {
+  return `
+    <div style="border-bottom: 2px solid ${B.emailGlassBorder}; padding-bottom: 14px; margin-bottom: 18px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse;">
+        <tr>
+          <td style="font-family: Montserrat, Arial, Helvetica, sans-serif; font-size: 22px; font-weight: bold; color: ${B.emailText}; vertical-align: bottom;">
+            Humano SISU
+          </td>
+          <td style="font-family: Montserrat, Arial, Helvetica, sans-serif; font-size: 11px; color: ${B.emailTextMuted}; text-align: right; vertical-align: bottom; letter-spacing: 0.03em;">
+            ${escapeVentasHtml(quoteLabel)}&nbsp;&nbsp;//&nbsp;&nbsp;REF: ${escapeVentasHtml(refLabel)}
+          </td>
+        </tr>
+      </table>
+    </div>
+  `
+}
+
+export function buildClientFichaHtml(params: {
+  companyName: string
+  contactName: string
+  countryLabel: string
+  tierLabel: string
+  terminalsCount: number
+  includesTerminals: boolean
+  hardwareMode?: 'included' | 'sale' | 'continuity'
+  includedCount?: number
+  extraCount?: number
+}): string {
+  const terminals = buildTerminalsDisplayLabel({
+    terminalsCount: params.terminalsCount,
+    includesTerminals: params.includesTerminals,
+    hardwareMode: params.hardwareMode,
+    includedCount: params.includedCount,
+    extraCount: params.extraCount,
+  })
+
+  return `
+    <div style="background: ${B.emailGlassBg}; border: 1px solid ${B.emailGlassBorder}; border-radius: 16px; padding: 14px 16px; margin: 0 0 18px 0; font-family: Montserrat, Arial, Helvetica, sans-serif;">
+      <p style="margin: 0 0 12px 0; font-size: 11px; color: ${B.emailTextMuted}; text-transform: uppercase; letter-spacing: 0.04em;">
+        Atención: ${escapeVentasHtml(params.contactName)}
+      </p>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse;">
+        <tr>
+          <td width="50%" style="padding: 0 8px 4px 0; font-size: 10px; color: ${B.emailTextMuted}; text-transform: uppercase; letter-spacing: 0.04em;">Empresa</td>
+          <td width="50%" style="padding: 0 0 4px 0; font-size: 10px; color: ${B.emailTextMuted}; text-transform: uppercase; letter-spacing: 0.04em;">Alcance</td>
+        </tr>
+        <tr>
+          <td style="padding: 0 8px 10px 0; font-size: 14px; font-weight: bold; color: ${B.emailText}; vertical-align: top;">${escapeVentasHtml(params.companyName)}</td>
+          <td style="padding: 0 0 10px 0; font-size: 14px; font-weight: bold; color: ${B.emailText}; vertical-align: top;">${escapeVentasHtml(params.tierLabel)}</td>
+        </tr>
+        <tr>
+          <td style="padding: 0 8px 4px 0; font-size: 10px; color: ${B.emailTextMuted}; text-transform: uppercase; letter-spacing: 0.04em;">País</td>
+          <td style="padding: 0 0 4px 0; font-size: 10px; color: ${B.emailTextMuted}; text-transform: uppercase; letter-spacing: 0.04em;"># de terminales</td>
+        </tr>
+        <tr>
+          <td style="padding: 0 8px 0 0; font-size: 14px; color: ${B.emailTextSoft}; vertical-align: top;">${escapeVentasHtml(params.countryLabel)}</td>
+          <td style="padding: 0; font-size: 14px; color: ${B.emailTextSoft}; vertical-align: top;">${escapeVentasHtml(terminals)}</td>
+        </tr>
+      </table>
+    </div>
+  `
+}
+
+export function buildPriceCardHtml(params: {
+  quote: QuotationQuote
+  sentAt?: Date
+  now?: Date
+  showPdfNote?: boolean
+}): string {
+  const { showPdfNote = true } = params
+  const summary = buildQuotationPlanSummary(params)
+  const employees = employeesCountFromQuote(params.quote)
+  const modalityLabel = getVentasModalityDefinition(params.quote.billing_modality, {
+    employeesCount: employees,
+  }).label
+
+  let inner = ''
+  for (const line of summary.lines) {
+    const isDiscount = line.variant === 'discount'
+    inner += `<p style="margin: 0 0 6px 0; font-size: 13px; color: ${isDiscount ? B.accentDark : B.emailTextSoft}; font-weight: ${isDiscount ? 'bold' : 'normal'};">${escapeVentasHtml(line.label)}: ${escapeVentasHtml(line.value)}</p>`
+  }
+  inner += `<p style="margin: 8px 0 4px 0; font-size: 24px; font-weight: bold; color: ${B.accent};">${escapeVentasHtml(summary.totalValue)}</p>`
+  inner += `<p style="margin: 0; font-size: 13px; font-weight: bold; color: ${B.emailText};">${escapeVentasHtml(summary.totalLabel)}</p>`
+
+  const pdfNote = showPdfNote
+    ? `<p style="margin: 14px 0 0 0; font-size: 12px; color: ${B.emailTextMuted};">Comparativa de modalidades, condiciones y datos bancarios: PDF adjunto.</p>`
+    : ''
+
+  return `
+    <div style="background: ${B.emailGlassBg}; border: 1px solid ${B.emailGlassBorder}; border-left: 4px solid ${B.emailAccent}; border-radius: 16px; padding: 18px 20px; margin: 0 0 16px 0; font-family: Montserrat, Arial, Helvetica, sans-serif;">
+      <p style="margin: 0 0 4px 0; font-size: 11px; font-weight: bold; color: ${B.emailAccent}; text-transform: uppercase; letter-spacing: 0.05em;">Inversión</p>
+      <p style="margin: 0 0 14px 0; font-size: 12px; color: ${B.emailTextMuted};">${escapeVentasHtml(modalityLabel)}</p>
+      ${inner}
+      ${pdfNote}
+    </div>
+  `
+}

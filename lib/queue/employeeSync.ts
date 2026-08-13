@@ -1,6 +1,7 @@
 import { Queue } from 'bullmq';
 import Redis from 'ioredis';
 import { trace, context, propagation } from '@opentelemetry/api';
+import { getRedisUrl } from '../redis/url';
 
 // Ensure we only have one instance of Redis and Queue
 let redis: Redis | undefined;
@@ -8,9 +9,9 @@ let employeeSyncQueue: Queue | undefined;
 
 const getRedisInstance = () => {
   if (!redis) {
-    const redisUrl = process.env.REDIS_URL;
+    const redisUrl = getRedisUrl();
     if (!redisUrl) {
-      throw new Error('REDIS_URL is not defined in environment variables.');
+      throw new Error('REDIS_PRIVATE_URL or REDIS_URL is not defined in environment variables.');
     }
     redis = new Redis(redisUrl, {
       maxRetriesPerRequest: null,

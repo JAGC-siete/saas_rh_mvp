@@ -220,6 +220,7 @@ export default function HeaderBar({
 
             <ExportFormatButtons
               formats={['excel', 'csv', 'pdf']}
+              exportScope="attendance"
               onExport={async (format) => {
                 await handleExport(format === 'excel' ? 'xlsx' : format)
               }}

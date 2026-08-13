@@ -150,7 +150,7 @@ export default function LeaveCalendar({
         </div>
       </div>
 
-      <Card variant="glass" className="border-white/10 overflow-hidden">
+      <Card variant="liquid" className="border-white/10 overflow-hidden">
         <CardHeader className="pb-2 border-b border-white/10">
           <CardTitle className="text-white text-base">Quién está fuera</CardTitle>
           <p className="text-xs text-gray-400 font-normal">

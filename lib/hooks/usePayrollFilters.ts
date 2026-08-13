@@ -2,7 +2,7 @@
 // Provides clean, focused API for filter operations
 
 import { useCallback, useMemo } from 'react'
-import { PayrollFilters } from '../../types/payroll'
+import { PayrollFilters, Quincena } from '../../types/payroll'
 import { getCurrentPeriod } from '../payroll-unified'
 
 export interface PayrollFilterActions {
@@ -14,7 +14,7 @@ export interface PayrollFilterActions {
 
 export interface PayrollFilterState {
   filters: PayrollFilters
-  currentPeriod: { year: number; month: number; quincena: 1 | 2 }
+  currentPeriod: { year: number; month: number; quincena: Quincena }
   hasChanges: boolean
   isValid: boolean
 }
@@ -27,7 +27,7 @@ const getDefaultFilters = (): PayrollFilters => {
   return {
     year: now.year,
     month: now.month,
-    quincena: now.quincena as 1 | 2,
+    quincena: (now.quincena === 2 ? 2 : 1) as Quincena,
     tipo: 'CON'
   }
 }
@@ -73,7 +73,7 @@ const validateFilters = (filters: PayrollFilters): boolean => {
   return !!(
     filters.year &&
     filters.month >= 1 && filters.month <= 12 &&
-    (filters.quincena === 1 || filters.quincena === 2) &&
+    filters.quincena >= 1 && filters.quincena <= 4 &&
     (filters.tipo === 'CON' || filters.tipo === 'SIN' || filters.tipo === '2PAGOS')
   )
 }
@@ -81,7 +81,7 @@ const validateFilters = (filters: PayrollFilters): boolean => {
 export const usePayrollFilters = (
   filters: PayrollFilters,
   onFiltersChange: (filters: PayrollFilters) => void,
-  onPeriodChange: (period: { year: number; month: number; quincena: 1 | 2 }) => void
+  onPeriodChange: (period: { year: number; month: number; quincena: Quincena }) => void
 ): PayrollFilterState & PayrollFilterActions => {
   
   // Check if filters have changed from default

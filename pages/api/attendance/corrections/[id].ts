@@ -1,5 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { requireCompanyAccess } from '../../../../lib/auth/api-auth-fixed'
+import {
+  getAttendanceMarksValidationError,
+  humanizeAttendanceHoursCalcError,
+} from '../../../../lib/attendance/validate-marks'
 import { createAdminClient } from '../../../../lib/supabase/server'
 
 type Status = 'pending' | 'approved' | 'rejected'
@@ -131,6 +135,9 @@ async function handlePatch(req: NextApiRequest, res: NextApiResponse, id: string
       lunch_end: corr.proposed_lunch_end ?? existing?.lunch_end ?? null,
     }
 
+    const marksErr = getAttendanceMarksValidationError(patch)
+    if (marksErr) return res.status(400).json({ error: marksErr })
+
     let recordId = existing?.id as string | undefined
     let afterSnapshot: any = null
 
@@ -167,7 +174,9 @@ async function handlePatch(req: NextApiRequest, res: NextApiResponse, id: string
         p_record_ids: [recordId],
         p_law_year: new Date(`${dateStr}T00:00:00.000Z`).getUTCFullYear(),
       })
-      if (rpcErr) return res.status(500).json({ error: rpcErr.message })
+      if (rpcErr) {
+        return res.status(500).json({ error: humanizeAttendanceHoursCalcError(rpcErr.message) })
+      }
       recalculated = Array.isArray(results) ? results.length : 0
     }
 

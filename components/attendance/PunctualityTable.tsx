@@ -21,7 +21,7 @@ export default function PunctualityTable({ data, type, title, onSelect }: Punctu
   const displayTitle = title || (type === 'early' ? 'Tempranos hoy' : 'Tarde hoy')
   
   return (
-    <Card variant="glass">
+    <Card variant="liquid">
       <CardHeader className="pb-2"><CardTitle className="text-white text-base">{displayTitle}</CardTitle></CardHeader>
       <CardContent className="pt-0">
       <table className="w-full text-sm text-left">

@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react'
+import Link from 'next/link'
 import { createClient } from '../lib/supabase/client'
 import { useCompanyContext } from '../lib/useCompanyContext'
+import { useAuth } from '../lib/auth'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Card, CardContent } from './ui/card'
@@ -9,7 +11,8 @@ import {
   CalculatorIcon,
   DocumentChartBarIcon,
   ClipboardDocumentListIcon,
-  ChartBarIcon
+  ChartBarIcon,
+  UsersIcon
 } from '@heroicons/react/24/outline'
 import LeaveTypesSettings from './LeaveTypesSettings'
 import PayrollConfigEditor from './PayrollConfigEditor'
@@ -24,6 +27,7 @@ import type { ScheduleEditorFormState } from '../lib/attendance/shift-config'
 import { BIOMETRIC_MODES, type BiometricMode } from '../lib/attendance/attendance-metadata'
 import { DEFAULT_PERFORMANCE_SETTINGS, parsePerformanceSettings } from '../lib/performance/settings'
 import { useSettingsAccess } from '../lib/hooks/useSettingsAccess'
+import { canManageCompanyUsers } from '../lib/company/users'
 
 interface Company {
   id: string
@@ -59,6 +63,8 @@ interface WorkSchedule {
 
 export default function CompanySettings() {
   const settingsAccess = useSettingsAccess()
+  const { userProfile } = useAuth()
+  const canManageUsers = canManageCompanyUsers(userProfile?.role)
   const {
     canViewFullSettings,
     canCreateWorkSchedules,
@@ -335,7 +341,7 @@ export default function CompanySettings() {
   // Show error state if company context failed
   if ((error || companyError) && !company) {
     return (
-      <Card variant="glass" className="p-6">
+      <Card variant="liquid" className="p-6">
         <CardContent className="text-center">
           <p className="text-red-400 mb-2">{error || companyError}</p>
           <p className="text-sm text-gray-300 mt-2">
@@ -348,7 +354,7 @@ export default function CompanySettings() {
 
   if (!settingsAccess.showSettingsNav) {
     return (
-      <Card variant="glass" className="p-6">
+      <Card variant="liquid" className="p-6">
         <CardContent className="text-center">
           <p className="text-red-400">No tiene permiso para acceder a parámetros.</p>
         </CardContent>
@@ -368,6 +374,28 @@ export default function CompanySettings() {
             : 'Administra la configuración y ajustes de tu empresa'}
         </p>
       </div>
+
+      {canManageUsers && (
+        <Link href="/app/settings/users" className="block">
+          <Card
+            variant="liquid"
+            className="border-white/20 hover:border-white/40 transition-colors cursor-pointer"
+          >
+            <CardContent className="pt-5 pb-5 flex items-center gap-4">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-white/10">
+                <UsersIcon className="h-6 w-6 text-white" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-base font-semibold text-white">Gestionar usuarios</p>
+                <p className="text-sm text-white/65">
+                  Crear cuentas, roles, permisos por módulo y restablecer acceso
+                </p>
+              </div>
+              <span className="text-sm text-white/70 shrink-0">Abrir →</span>
+            </CardContent>
+          </Card>
+        </Link>
+      )}
 
       {/* Tabs */}
       {tabs.length > 1 && (
@@ -417,17 +445,20 @@ export default function CompanySettings() {
           </div>
 
           {error && (
-            <Card variant="glass" className="p-4 border border-red-500/30 bg-red-500/10">
+            <Card variant="liquid" className="p-4 border border-red-500/30 bg-red-500/10">
               <p className="text-red-400 text-sm">{error}</p>
             </Card>
           )}
 
           {canViewFullSettings && (
-          <Card variant="glass" className="p-5 border border-white/15">
+          <Card variant="liquid" className="p-5 border border-white/15">
             <h4 className="text-md font-medium text-white mb-1">Modalidad de marcas biométricas</h4>
             <p className="text-xs text-gray-400 mb-3">
               Define cómo se interpretan las marcas del reloj al consolidar el día (cierre diario). STRICT_2: entrada y
-              salida; STRICT_4: entrada, almuerzo y salida; FLEXIBLE: acepta 2 o 4 marcas según cantidad recibida.
+              salida (si llegan 4 marcas, las intermedias se usan como almuerzo con aviso). STRICT_4: entrada, almuerzo
+              y salida (si solo hay 2 marcas, se toman como entrada/salida con aviso). FLEXIBLE: acepta 2 o 4 marcas
+              según cantidad recibida. Tras cambiar modalidad, ejecute &quot;Consolidar marcas&quot; en los días afectados
+              (registros ya cerrados no se re-mapean automáticamente).
             </p>
             <div className="flex flex-wrap items-end gap-3">
               <div className="min-w-[200px]">
@@ -458,7 +489,7 @@ export default function CompanySettings() {
           )}
 
           {showScheduleForm && (
-            <Card variant="glass" className="p-6">
+            <Card variant="liquid" className="p-6">
               <h4 className="text-md font-medium text-white mb-4">
                 {editingSchedule ? 'Editar Horario' : 'Nuevo Horario'}
               </h4>
@@ -480,7 +511,7 @@ export default function CompanySettings() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {workSchedules.length === 0 ? (
-              <Card variant="glass" className="p-8 col-span-2">
+              <Card variant="liquid" className="p-8 col-span-2">
                 <div className="text-center">
                   <ClockIcon className="h-12 w-12 mx-auto text-gray-400 mb-3" />
                   <p className="text-gray-300 text-sm">No hay horarios configurados</p>
@@ -489,7 +520,7 @@ export default function CompanySettings() {
               </Card>
             ) : (
               workSchedules.map((schedule) => (
-                <Card key={schedule.id} variant="glass" className="p-5 glass-list-item border border-white/20">
+                <Card key={schedule.id} variant="liquid" className="p-5 glass-list-item border border-white/20">
                   <div className="flex justify-between items-start mb-4">
                     <div className="flex-1">
                       <h4 className="font-semibold text-white text-lg mb-1">{schedule.name}</h4>
@@ -539,7 +570,7 @@ export default function CompanySettings() {
             }}
           />
         ) : (
-          <Card variant="glass" className="p-6">
+          <Card variant="liquid" className="p-6">
             <CardContent className="text-center">
               <p className="text-red-400 mb-4">{error || companyError || 'No se pudo cargar la información de la empresa'}</p>
               {!companyId && (
@@ -557,7 +588,7 @@ export default function CompanySettings() {
             onSave={() => console.log('Report params saved')}
           />
         ) : (
-          <Card variant="glass" className="p-6">
+          <Card variant="liquid" className="p-6">
             <CardContent className="text-center">
               <p className="text-red-400 mb-4">{error || companyError || 'No se pudo cargar la información de la empresa'}</p>
               {!companyId && (
@@ -572,7 +603,7 @@ export default function CompanySettings() {
         companyId && company ? (
           <LeaveTypesSettings companyId={companyId} />
         ) : (
-          <Card variant="glass" className="p-6">
+          <Card variant="liquid" className="p-6">
             <CardContent className="text-center">
               <p className="text-red-400 mb-4">{error || companyError || 'No se pudo cargar la información de la empresa'}</p>
               {!companyId && (
@@ -585,7 +616,7 @@ export default function CompanySettings() {
 
       {canViewFullSettings && activeTab === 'performance' && (
         <div className="space-y-6">
-          <Card variant="glass" className="p-5 border border-white/15">
+          <Card variant="liquid" className="p-5 border border-white/15">
             <h4 className="text-md font-medium text-white mb-1">Evaluación de desempeño</h4>
             <p className="text-xs text-gray-400 mb-4">
               Estos parámetros controlan validaciones al finalizar evaluaciones y el peso relativo de “Supera”.

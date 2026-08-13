@@ -2,6 +2,8 @@
 
 Esta guía te ayudará a configurar un entorno de staging en Railway rápidamente.
 
+> **Pro credit:** staging debe usar **Serverless** (`sleepApplication = true` en `railway.toml` → `environments.staging`). Playbook completo: `docs/RAILWAY_PRO_CREDIT_PLAYBOOK.md` · `npm run railway:pro-infra`
+
 ## ⚡ Inicio Rápido (5 minutos)
 
 ### 1. Crear el Environment de Staging

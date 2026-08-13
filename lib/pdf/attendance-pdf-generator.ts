@@ -1,3 +1,4 @@
+import { LIQUID } from '../brand/liquid-tokens'
 import PDFDocument from 'pdfkit'
 import { getDateRange } from '../attendance'
 import { formatDateOnlyForHonduras } from '../timezone'
@@ -46,11 +47,11 @@ const PDF_CONFIG = {
   footerFontSize: 8,
   timezone: 'America/Tegucigalpa' as const,
   colors: {
-    primary: '#1e40af',
+    primary: LIQUID.brand900,
     success: '#059669',
     warning: '#d97706',
     danger: '#dc2626',
-    muted: '#94a3b8'
+    muted: LIQUID.textMuted,
   }
 } as const
 

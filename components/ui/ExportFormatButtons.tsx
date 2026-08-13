@@ -2,7 +2,7 @@
 
 import { Download } from 'lucide-react'
 import { Button } from './button'
-import { useCanExportReports } from '../../lib/hooks/useCanonicalPermissions'
+import { useCanExportReportsScope, type ExportPermissionScope } from '../../lib/hooks/useCanonicalPermissions'
 
 export type ExportFormat = 'pdf' | 'excel' | 'csv'
 
@@ -15,11 +15,13 @@ interface ExportFormatButtonsProps {
   size?: 'sm' | 'default' | 'lg'
   variant?: 'primary' | 'outline'
   /**
-   * If true, skips the built-in `can_export_reports` permission gate.
+   * If true, skips the built-in permission gate.
    * Use only for self-service contexts (e.g. employee portal exporting own data)
    * where the backend already enforces the proper rules.
    */
   bypassPermissionCheck?: boolean
+  /** `attendance` permite managers con reporte de asistencia; `full` requiere export general. */
+  exportScope?: ExportPermissionScope
 }
 
 const formatLabels: Record<ExportFormat, string> = {
@@ -41,8 +43,9 @@ export function ExportFormatButtons({
   size = 'sm',
   variant = 'primary',
   bypassPermissionCheck = false,
+  exportScope = 'full',
 }: ExportFormatButtonsProps) {
-  const canExport = useCanExportReports()
+  const canExport = useCanExportReportsScope(exportScope)
   const permissionBlocked = !bypassPermissionCheck && !canExport
   const baseClass = variant === 'primary'
     ? 'bg-blue-600 hover:bg-blue-700 text-white border-blue-500'

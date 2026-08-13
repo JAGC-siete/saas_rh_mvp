@@ -266,7 +266,7 @@ export default function AttendanceSchedulingPage() {
             </p>
           </div>
 
-          <Card variant="glass" className="border border-white/10">
+          <Card variant="liquid" className="border border-white/10">
             <div className="p-5 space-y-4">
               <h2 className="text-lg font-semibold text-white">Nueva asignación</h2>
 
@@ -409,7 +409,7 @@ export default function AttendanceSchedulingPage() {
             </div>
           </Card>
 
-          <Card variant="glass" className="border border-white/10">
+          <Card variant="liquid" className="border border-white/10">
             <div className="p-5 space-y-4">
               <div className="flex flex-wrap items-end justify-between gap-3">
                 <h2 className="text-lg font-semibold text-white">Libro de asignaciones</h2>
@@ -504,7 +504,7 @@ export default function AttendanceSchedulingPage() {
 
           {editingAssignment && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-              <Card variant="glass" className="w-full max-w-md border border-white/15 p-5 space-y-4">
+              <Card variant="liquid" className="w-full max-w-md border border-white/15 p-5 space-y-4">
                 <h3 className="text-lg font-semibold text-white">Editar asignación</h3>
                 <label className="text-sm text-gray-300 block">
                   Horario

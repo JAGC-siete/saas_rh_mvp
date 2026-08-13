@@ -19,6 +19,11 @@ import {
   getTerminationReasonLabel
 } from '../lib/employees/termination-reasons'
 import {
+  isEnlaceCompany,
+  resolveEnlaceEmployeeCode,
+  suggestEnlaceEmployeeCode,
+} from '../lib/employees/enlace-employee-code'
+import {
   groupKeyForRow,
   type PlanillaRowForGrouping,
   type PayrollPdfGroupBy
@@ -49,6 +54,7 @@ const INITIAL_FORM_DATA = {
   base_salary: '',
   pay_type: '', // vacío = default de empresa (hereda calculation_mode)
   attendance_required: true,
+  pay_overtime: true,
   payment_frequency: '', // vacío = usa default de empresa (Capa 2)
   hire_date: '',
   termination_date: '',
@@ -152,14 +158,23 @@ const formatAddress = (address: EmployeeShaped['address']) => {
   if (!address) return 'No especificada'
 
   if (typeof address === 'string') {
-    const parsed = parseMaybeJsonObject(address)
-    if (!parsed) return address
-    const values = Object.values(parsed).filter(Boolean)
+    const trimmed = address.trim()
+    if (!trimmed) return 'No especificada'
+    // Legacy rows may still hold a JSON object string after migration edge-cases.
+    const parsed = parseMaybeJsonObject(trimmed)
+    if (parsed) {
+      const values = Object.values(parsed).filter(Boolean)
+      return values.length ? values.join(', ') : trimmed
+    }
+    return trimmed
+  }
+
+  if (typeof address === 'object') {
+    const values = Object.values(address as Record<string, unknown>).filter(Boolean)
     return values.length ? values.join(', ') : 'No especificada'
   }
 
-  const values = Object.values(address).filter(Boolean)
-  return values.length ? values.join(', ') : 'No especificada'
+  return String(address)
 }
 
 const EMPLOYEE_SORT_CYCLE: EmployeeListSortBy[] = ['name', 'department', 'team', 'position']
@@ -212,7 +227,7 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
   const [searchTerm, setSearchTerm] = useState('')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
   const [departmentFilter, setDepartmentFilter] = useState('all')
-  const [companyCalculationMode, setCompanyCalculationMode] = useState<'daily' | 'hourly'>('daily')
+  const [companyCalculationMode, setCompanyCalculationMode] = useState<'daily' | 'hourly' | 'admin_floor'>('daily')
   const [sortBy, setSortBy] = useState<EmployeeListSortBy>('name')
   const [currentPage, setCurrentPage] = useState(1)
   const [uploadedProfileImagePath, setUploadedProfileImagePath] = useState<string | null>(null)
@@ -403,8 +418,36 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
   }, [])
 
   const handleFormChange = useCallback((field: string, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }))
-  }, [])
+    setFormData((prev) => {
+      const next = { ...prev, [field]: value }
+      // Enlace: sugerir código = inicial + últimos 5 del DNI (solo alta, no edición)
+      if (
+        !editingEmployee &&
+        isEnlaceCompany(companyId) &&
+        (field === 'name' || field === 'dni')
+      ) {
+        const suggested = suggestEnlaceEmployeeCode(
+          field === 'name' ? value : next.name,
+          field === 'dni' ? value : next.dni
+        )
+        if (suggested) {
+          const taken = new Set(
+            employees
+              .map((e) => e.employee_code)
+              .filter((c): c is string => !!c)
+              .map((c) => c.toUpperCase())
+          )
+          next.employee_code =
+            resolveEnlaceEmployeeCode(
+              field === 'name' ? value : next.name,
+              field === 'dni' ? value : next.dni,
+              taken
+            ) || suggested
+        }
+      }
+      return next
+    })
+  }, [companyId, editingEmployee, employees])
 
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault()
@@ -453,28 +496,37 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
         const trd = String(sanitizedFormData.termination_reason_detail || '').trim()
         sanitizedFormData.termination_reason_detail = trd || null
       }
-      // pay_type: constraint permite 'fixed' | 'hourly'
+      // pay_type: constraint permite 'fixed' | 'hourly' | 'admin_floor'
       if (typeof sanitizedFormData.pay_type === 'string') {
         const rawPayType = sanitizedFormData.pay_type.trim()
         if (rawPayType === '') {
           sanitizedFormData.pay_type = null
-        } else if (rawPayType !== 'fixed' && rawPayType !== 'hourly') {
+        } else if (
+          rawPayType !== 'fixed' &&
+          rawPayType !== 'hourly' &&
+          rawPayType !== 'admin_floor'
+        ) {
           sanitizedFormData.pay_type = 'fixed'
         }
       }
       const resolvedPayForAttendance =
         sanitizedFormData.pay_type === 'hourly'
           ? 'hourly'
-          : sanitizedFormData.pay_type === 'fixed'
-            ? 'fixed'
-            : companyCalculationMode === 'hourly'
-              ? 'hourly'
-              : 'fixed'
-      if (resolvedPayForAttendance === 'hourly') {
+          : sanitizedFormData.pay_type === 'admin_floor'
+            ? 'admin_floor'
+            : sanitizedFormData.pay_type === 'fixed'
+              ? 'fixed'
+              : companyCalculationMode === 'hourly'
+                ? 'hourly'
+                : companyCalculationMode === 'admin_floor'
+                  ? 'admin_floor'
+                  : 'fixed'
+      if (resolvedPayForAttendance === 'hourly' || resolvedPayForAttendance === 'admin_floor') {
         sanitizedFormData.attendance_required = true
       } else {
         sanitizedFormData.attendance_required = sanitizedFormData.attendance_required !== false
       }
+      sanitizedFormData.pay_overtime = sanitizedFormData.pay_overtime !== false
       // payment_frequency: vacío = usa default de empresa (Capa 2)
       if (typeof sanitizedFormData.payment_frequency === 'string') {
         const pf = sanitizedFormData.payment_frequency.trim()
@@ -484,23 +536,29 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
           sanitizedFormData.payment_frequency = null
         }
       }
-      // Campos JSONB: normalizar a objeto o null
-      for (const key of ['address', 'metadata'] as const) {
-        const value = sanitizedFormData[key]
+      // Dirección = texto libre
+      if (typeof sanitizedFormData.address === 'string') {
+        const trimmed = sanitizedFormData.address.trim()
+        sanitizedFormData.address = trimmed || null
+      } else if (sanitizedFormData.address === '' || sanitizedFormData.address === undefined) {
+        sanitizedFormData.address = null
+      }
+
+      // Metadatos = JSONB (sigue esperando JSON válido)
+      {
+        const value = sanitizedFormData.metadata
         if (value === '' || value === null || value === undefined) {
-          sanitizedFormData[key] = null
-          continue
-        }
-        if (typeof value === 'string') {
+          sanitizedFormData.metadata = null
+        } else if (typeof value === 'string') {
           const trimmed = value.trim()
           if (!trimmed) {
-            sanitizedFormData[key] = null
-            continue
-          }
-          try {
-            sanitizedFormData[key] = JSON.parse(trimmed)
-          } catch {
-            throw new Error(`El campo ${key === 'address' ? 'Dirección' : 'Metadatos'} debe ser JSON válido.`)
+            sanitizedFormData.metadata = null
+          } else {
+            try {
+              sanitizedFormData.metadata = JSON.parse(trimmed)
+            } catch {
+              throw new Error('El campo Metadatos debe ser JSON válido.')
+            }
           }
         }
       }
@@ -577,6 +635,7 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
         : '',
       pay_type: (employee as any).pay_type ?? '',
       attendance_required: (employee as any).attendance_required !== false,
+      pay_overtime: (employee as any).pay_overtime !== false,
       payment_frequency: (employee as any).payment_frequency || '',
       hire_date: employee.hire_date || '',
       termination_date: employee.termination_date || '',
@@ -585,7 +644,12 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
       bank_account: employee.bank_account || '',
       emergency_contact_name: employee.emergency_contact_name || '',
       emergency_contact_phone: employee.emergency_contact_phone || '',
-      address: typeof employee.address === 'string' ? employee.address : JSON.stringify(employee.address || {}),
+      address:
+        typeof employee.address === 'string'
+          ? employee.address
+          : employee.address && typeof employee.address === 'object'
+            ? Object.values(employee.address as Record<string, unknown>).filter(Boolean).join(', ')
+            : '',
       metadata: typeof employee.metadata === 'object' ? JSON.stringify(employee.metadata || {}) : (employee.metadata || ''),
       termination_reason_code: employee.termination_reason_code || '',
       termination_reason_detail: employee.termination_reason_detail || ''
@@ -929,7 +993,9 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         const mode = data?.config?.calculation_mode
-        setCompanyCalculationMode(mode === 'hourly' ? 'hourly' : 'daily')
+        setCompanyCalculationMode(
+          mode === 'hourly' || mode === 'admin_floor' ? mode : 'daily'
+        )
       })
       .catch(() => setCompanyCalculationMode('daily'))
   }, [companyId])
@@ -946,7 +1012,7 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
   if (isLoading && !hasErrors) {
     return (
       <div className="p-6">
-        <Card variant="glass">
+        <Card variant="liquid">
           <CardHeader>
             <CardTitle className="text-white">Empleados</CardTitle>
           </CardHeader>
@@ -969,7 +1035,7 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
   if (hasErrors && !showForm) {
     return (
       <div className="p-6">
-        <Card variant="glass">
+        <Card variant="liquid">
           <CardHeader>
             <CardTitle className="text-white">Empleados</CardTitle>
           </CardHeader>
@@ -1067,6 +1133,7 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
             companyCalculationMode={companyCalculationMode}
             canEditSalary={canEditSalary}
             canViewSalary={canViewSalary}
+            autoGenerateEmployeeCode={isEnlaceCompany(companyId)}
           />
         </div>
       ) : (
@@ -1179,7 +1246,7 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
         </>
       )}
 
-      <Card variant="glass">
+      <Card variant="liquid">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>

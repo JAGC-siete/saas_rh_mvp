@@ -14,6 +14,7 @@ import {
   shapeEmployee,
 } from '../../../lib/security/shape-employee'
 import { parseAttendanceRequiredInput } from '../../../lib/payroll/payroll-attendance-inclusion'
+import { parseEmployeePayOvertimeInput } from '../../../lib/payroll/overtime-pay'
 
 /** Solo columnas permitidas vía API (evita mass-assignment). */
 const ALLOWED_UPDATE_KEYS = new Set([
@@ -40,6 +41,7 @@ const ALLOWED_UPDATE_KEYS = new Set([
   'pay_type',
   'quincena_config',
   'attendance_required',
+  'pay_overtime',
   'termination_reason_code',
   'termination_reason_detail'
 ])
@@ -162,12 +164,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const pt = updateData.pay_type
       if (pt === '' || pt === null) {
         updateData.pay_type = null
-      } else if (pt === 'fixed' || pt === 'hourly') {
+      } else if (pt === 'fixed' || pt === 'hourly' || pt === 'admin_floor') {
         updateData.pay_type = pt
       } else {
         return res.status(400).json({
           error: 'pay_type inválido',
-          message: "pay_type debe ser 'fixed', 'hourly' o null (default de la empresa)."
+          message: "pay_type debe ser 'fixed', 'hourly', 'admin_floor' o null (default de la empresa)."
         })
       }
     }
@@ -176,11 +178,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       updateData.attendance_required = parseAttendanceRequiredInput(updateData.attendance_required)
     }
 
+    if ('pay_overtime' in updateData) {
+      updateData.pay_overtime = parseEmployeePayOvertimeInput(updateData.pay_overtime)
+    }
+
     const effectivePayTypeForAttendance =
       updateData.pay_type !== undefined
         ? (updateData.pay_type as string | null)
         : (existing as { pay_type?: string | null }).pay_type
-    if (effectivePayTypeForAttendance === 'hourly') {
+    if (effectivePayTypeForAttendance === 'hourly' || effectivePayTypeForAttendance === 'admin_floor') {
       updateData.attendance_required = true
     }
 

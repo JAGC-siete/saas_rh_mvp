@@ -46,14 +46,15 @@ export function generateTitle(options: TitleOptions = {}): string {
  * Predefined titles for common pages
  */
 export const pageTitles = {
-  home: 'Asistencia y nómina en un lugar | Sin cálculos manuales | Humano SISU',
-  activate: 'Activar Cuenta | Nómina y asistencia regional | Humano SISU',
+  home: 'Software de recursos humanos (RRHH) | Asistencia biométrica + nómina | Humano SISU',
+  activate: 'Activa SISU | Toca el cielo | Humano SISU',
+  activarGracias: 'Trial activado | Llaves enviadas | Humano SISU',
   affiliates: 'Programa de Afiliados | Humano SISU',
   calculator: 'Calculadora ISR Honduras y Calculadora RAP | IHSS · Humano SISU',
   calculatorSlv: 'Calculadora ISR El Salvador | ISSS, AFP y sueldo neto | Humano SISU',
   calculatorGtm: 'Calculadora sueldo neto Guatemala | IGSS e ISR | Humano SISU',
   privacy: 'Política de Privacidad | Humano SISU',
-  subscription: 'Suscripción | Planes y Precios | Humano SISU',
+  subscription: 'Alertas legales sobre tu sueldo | Humano SISU',
   login: 'Iniciar Sesión | Humano SISU',
   dashboard: 'Dashboard | Humano SISU',
   employees: 'Gestión de Empleados | Humano SISU',
@@ -62,10 +63,16 @@ export const pageTitles = {
   reports: 'Reportes y Análisis | Humano SISU',
   // New strategic pages (aligned with Google Ads hero messaging)
   alternativaOdoo: 'Software RH regional | Biométrico, nómina y ley local | Humano SISU',
-  biometricoNomina: 'Asistencia y nómina en un lugar | Sin cálculos manuales | Humano SISU',
+  biometricoNomina: 'Sistema biométrico + nómina | HN, SV y GT | Humano SISU',
+  ventas: 'Cotización nómina y asistencia | PDF al instante | Humano SISU',
+  ventasGracias: 'Propuesta enviada | PDF y acceso | Humano SISU',
+  gracias: 'Confirmación de activación | Humano SISU',
+  info: 'Recuperá la paz al cerrar planilla | Software nómina y asistencia HN SV GT | Humano SISU',
   implementacion48h: 'Automatiza asistencia y payroll | Ahorra horas | Humano SISU',
   deduccionesHonduras: 'IHSS, RAP, ISR automático | Sin cálculos manuales | Humano SISU',
   recursos: 'Recursos | Automatización RH y nómina local | Humano SISU',
+  paz: 'La forma pacífica de cerrar planilla | Humano SISU',
+  viernes: 'Recuperá la paz con RR.HH. | Método Humano SISU',
 }
 
 /**

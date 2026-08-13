@@ -35,6 +35,11 @@ import {
 } from 'lucide-react'
 
 import { parseOrdinaryHoursOverrideInput } from '../lib/payroll/ordinary-hours-override'
+import {
+  getPayrollDeductionModeLabel,
+  isBiweeklyPaymentFrequency,
+} from '../lib/payroll/deduction-mode'
+import type { TipoCalculo } from '../types/payroll'
 import { cn } from '../lib/utils'
 
 const ORDINARY_HOURS_PRESETS = [7, 7.5, 8, 8.5, 9] as const
@@ -61,7 +66,7 @@ interface PayrollConfig {
   // Configuración básica de payroll
   payment_frequency: 'monthly' | 'biweekly' | 'weekly' // mensual, quincenal o semanal
   currency: 'HNL' | 'USD' // Lempiras o Dólares
-  calculation_mode?: 'daily' | 'hourly' // Default empresa: administrativo (daily) o por hora (hourly)
+  calculation_mode?: 'daily' | 'hourly' | 'admin_floor' // Default empresa
   semanal_proration?: 'proportional' | 'fixed' // Semanal: proporcional a días o monto fijo (mensual/4)
   incomplete_record_default_hours?: number | null // Horas por defecto si falta check_out (solo hourly)
   /** Tope diario de horas ordinarias antes de HE; null = usar labor_laws.legal_daily_hours en el RPC. */
@@ -74,6 +79,8 @@ interface PayrollConfig {
     isr: boolean
     infop: boolean
   }
+  /** Modo de deducciones legales por quincena (parámetro de empresa). */
+  payroll_deduction_mode: TipoCalculo
   payment_cut_dates: {
     // Para quincenal
     biweekly_type?: 'standard' | 'custom' // standard: 1-15, 16-30 | custom: personalizado
@@ -124,6 +131,7 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
       isr: true,
       infop: false
     },
+    payroll_deduction_mode: 'CON',
     payment_cut_dates: {
       biweekly_first_start: 1,
       biweekly_first_end: 15,
@@ -158,6 +166,7 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
     calculationMode: false, // Método de cálculo por defecto (administrativo / por hora)
     currency: false, // Retraída por defecto
     legalDeductions: false, // Retraída por defecto
+    deductionMode: false, // Modo de deducciones por quincena
     paymentCutDates: false, // Retraída por defecto
     ordinaryDailyCap: false, // Tope horas ordinarias / día (previo a extras)
     overtimePay: false // Horas extras en nómina
@@ -233,6 +242,8 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
     const deductionsStr = JSON.stringify(config.legal_deductions)
     const initialDeductionsStr = JSON.stringify(initialConfig.legal_deductions)
     if (deductionsStr !== initialDeductionsStr) return true
+
+    if ((config.payroll_deduction_mode ?? 'CON') !== (initialConfig.payroll_deduction_mode ?? 'CON')) return true
     
     // Comparar payment_cut_dates (deep comparison)
     const cutDatesStr = JSON.stringify(config.payment_cut_dates)
@@ -282,6 +293,7 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
         isr: apiConfig.legal_deductions?.isr ?? true,
         infop: apiConfig.legal_deductions?.infop ?? false
       },
+      payroll_deduction_mode: apiConfig.payroll_deduction_mode ?? 'CON',
       semanal_proration: apiConfig.semanal_proration ?? 'proportional',
       pay_overtime: apiConfig.pay_overtime !== false,
       payment_cut_dates: {
@@ -342,6 +354,7 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
               isr: true,
               infop: false
             },
+            payroll_deduction_mode: 'CON',
             payment_cut_dates: {
               biweekly_type: 'standard',
               biweekly_first_start: 1,
@@ -377,6 +390,7 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
             isr: true,
             infop: false
           },
+          payroll_deduction_mode: 'CON',
           payment_cut_dates: {
             biweekly_type: 'standard',
             biweekly_first_start: 1,
@@ -460,6 +474,7 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
           incomplete_record_default_hours: config.incomplete_record_default_hours ?? null,
           ordinary_hours_override: config.ordinary_hours_override ?? null,
           legal_deductions: config.legal_deductions,
+          payroll_deduction_mode: config.payroll_deduction_mode,
           payment_cut_dates: config.payment_cut_dates,
           semanal_proration: config.semanal_proration ?? 'proportional',
           pay_overtime: config.pay_overtime !== false,
@@ -604,14 +619,14 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
     }
     
     if ((cfg.calculation_mode ?? 'daily') !== (initialConfig.calculation_mode ?? 'daily')) {
-      const oldMode =
-        (initialConfig.calculation_mode ?? 'daily') === 'daily'
-          ? 'Administrativo (por día de asistencia)'
-          : 'Por hora'
-      const newMode =
-        (cfg.calculation_mode ?? 'daily') === 'daily'
-          ? 'Administrativo (por día de asistencia)'
-          : 'Por hora'
+      const labelMode = (m: string) =>
+        m === 'hourly'
+          ? 'Por hora'
+          : m === 'admin_floor'
+            ? 'Legacy — Admin con piso horario'
+            : 'Administrativo (por día de asistencia)'
+      const oldMode = labelMode(initialConfig.calculation_mode ?? 'daily')
+      const newMode = labelMode(cfg.calculation_mode ?? 'daily')
       changes.push(`método de cálculo de ${oldMode} a ${newMode}`)
     }
     if ((cfg.incomplete_record_default_hours ?? null) !== (initialConfig.incomplete_record_default_hours ?? null)) {
@@ -632,6 +647,12 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
     const initialDeductionsStr = JSON.stringify(initialConfig.legal_deductions)
     if (deductionsStr !== initialDeductionsStr) {
       changes.push('deducciones legales')
+    }
+
+    if ((cfg.payroll_deduction_mode ?? 'CON') !== (initialConfig.payroll_deduction_mode ?? 'CON')) {
+      changes.push(
+        `modo de deducciones de ${getPayrollDeductionModeLabel(initialConfig.payroll_deduction_mode ?? 'CON')} a ${getPayrollDeductionModeLabel(cfg.payroll_deduction_mode ?? 'CON')}`
+      )
     }
     
     const cutDatesStr = JSON.stringify(cfg.payment_cut_dates)
@@ -742,7 +763,7 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
   if (loading) {
     console.log('⏳ PayrollConfigEditor: Rendering loading state')
     return (
-      <Card variant="glass" className="p-6">
+      <Card variant="liquid" className="p-6">
         <CardContent className="text-center">
           <Loader2 className="h-6 w-6 animate-spin mx-auto text-white mb-2" />
           <p className="text-white">Cargando configuración...</p>
@@ -757,7 +778,7 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
   return (
     <div className="space-y-6">
       {/* Header */}
-      <Card variant="glass" className="p-6">
+      <Card variant="liquid" className="p-6">
         <CardHeader>
           <CardTitle className="text-white flex items-center gap-2">
             <Settings className="h-5 w-5" />
@@ -844,6 +865,8 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
                       setConfig(prev => ({
                         ...prev,
                         payment_frequency: 'monthly' as 'biweekly' | 'monthly' | 'weekly',
+                        payroll_deduction_mode:
+                          prev.payroll_deduction_mode === '2PAGOS' ? 'CON' : prev.payroll_deduction_mode,
                         payment_cut_dates: {
                           ...prev.payment_cut_dates,
                           monthly_type: 'standard',
@@ -866,6 +889,8 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
                       setConfig(prev => ({
                         ...prev,
                         payment_frequency: 'weekly' as 'biweekly' | 'monthly' | 'weekly',
+                        payroll_deduction_mode:
+                          prev.payroll_deduction_mode === '2PAGOS' ? 'CON' : prev.payroll_deduction_mode,
                         payment_cut_dates: {
                           ...prev.payment_cut_dates,
                           weekly_type: 'standard'
@@ -901,10 +926,11 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
                 </div>
               </button>
               <div className={`overflow-hidden transition-all duration-300 ease-in-out ${
-                expandedSections.calculationMode ? 'max-h-[320px] opacity-100 mt-4' : 'max-h-0 opacity-0'
+                expandedSections.calculationMode ? 'max-h-[520px] opacity-100 mt-4' : 'max-h-0 opacity-0'
               }`}>
                 <div className="flex flex-col gap-4">
-                  <div className="flex gap-4">
+                <div className="flex flex-col gap-3">
+                  <div className="flex flex-col sm:flex-row gap-3">
                     <label className="flex items-center gap-2 cursor-pointer p-3 glass border border-white/20 rounded-lg hover:border-emerald-400/50 transition-colors flex-1">
                       <input
                         type="radio"
@@ -941,6 +967,32 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
                       </div>
                     </label>
                   </div>
+                  <label className="flex items-center gap-2 cursor-pointer p-3 glass border border-white/20 rounded-lg hover:border-emerald-400/50 transition-colors">
+                    <input
+                      type="radio"
+                      name="calculation_mode"
+                      value="admin_floor"
+                      checked={(config.calculation_mode ?? 'daily') === 'admin_floor'}
+                      onChange={() =>
+                        setConfig((prev) => ({
+                          ...prev,
+                          calculation_mode: 'admin_floor',
+                          incomplete_record_default_hours: null,
+                        }))
+                      }
+                      className="w-4 h-4 text-emerald-600"
+                    />
+                    <div>
+                      <span className="text-white font-medium">
+                        Legacy — Admin con piso horario
+                      </span>
+                      <p className="text-xs text-gray-400 mt-0.5">
+                        No usar en altas nuevas. Preferir Administrativo (por día) con pago de HE.
+                        Ruta mantenida solo por compatibilidad.
+                      </p>
+                    </div>
+                  </label>
+                </div>
                   {(config.calculation_mode ?? 'daily') === 'hourly' && (
                     <div className="p-3 glass border border-amber-500/30 rounded-lg">
                       <label className="flex items-center gap-2 text-sm text-amber-200">
@@ -1094,6 +1146,72 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
                   />
                   <span className="text-white">INFOP</span>
                 </label>
+                </div>
+              </div>
+            </div>
+
+            {/* Modo de deducciones por quincena */}
+            <div className="glass border border-white/20 rounded-lg p-4">
+              <button
+                onClick={() => setExpandedSections(prev => ({ ...prev, deductionMode: !prev.deductionMode }))}
+                className="w-full flex items-center justify-between p-3 hover:bg-white/5 rounded-lg transition-all duration-200 cursor-pointer"
+              >
+                <div className="flex items-center gap-3">
+                  <ToggleLeft className="h-4 w-4 text-indigo-300" />
+                  <label className="text-sm font-medium text-white">
+                    Modo de deducciones
+                  </label>
+                </div>
+                <div className="flex items-center gap-2">
+                  {expandedSections.deductionMode ? (
+                    <ChevronUp className="h-5 w-5 text-indigo-300 transition-transform duration-200" />
+                  ) : (
+                    <ChevronDown className="h-5 w-5 text-indigo-300 transition-transform duration-200" />
+                  )}
+                </div>
+              </button>
+              <div className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                expandedSections.deductionMode ? 'max-h-[360px] opacity-100 mt-4' : 'max-h-0 opacity-0'
+              }`}>
+                <p className="text-xs text-gray-300 mb-3">
+                  Define cómo se aplican las deducciones legales en cada ciclo de pago. Este valor se usa en toda la nómina de la empresa.
+                </p>
+                <div className="flex flex-col gap-3">
+                  <label className="flex items-center gap-2 cursor-pointer p-3 glass border border-white/20 rounded-lg hover:border-indigo-400/50 transition-colors">
+                    <input
+                      type="radio"
+                      name="payroll_deduction_mode"
+                      value="CON"
+                      checked={config.payroll_deduction_mode === 'CON'}
+                      onChange={() => setConfig(prev => ({ ...prev, payroll_deduction_mode: 'CON' }))}
+                      className="w-4 h-4 text-indigo-600"
+                    />
+                    <span className="text-white">Con deducciones</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer p-3 glass border border-white/20 rounded-lg hover:border-indigo-400/50 transition-colors">
+                    <input
+                      type="radio"
+                      name="payroll_deduction_mode"
+                      value="SIN"
+                      checked={config.payroll_deduction_mode === 'SIN'}
+                      onChange={() => setConfig(prev => ({ ...prev, payroll_deduction_mode: 'SIN' }))}
+                      className="w-4 h-4 text-indigo-600"
+                    />
+                    <span className="text-white">Sin deducciones</span>
+                  </label>
+                  {isBiweeklyPaymentFrequency(config.payment_frequency) && (
+                    <label className="flex items-center gap-2 cursor-pointer p-3 glass border border-white/20 rounded-lg hover:border-indigo-400/50 transition-colors">
+                      <input
+                        type="radio"
+                        name="payroll_deduction_mode"
+                        value="2PAGOS"
+                        checked={config.payroll_deduction_mode === '2PAGOS'}
+                        onChange={() => setConfig(prev => ({ ...prev, payroll_deduction_mode: '2PAGOS' }))}
+                        className="w-4 h-4 text-indigo-600"
+                      />
+                      <span className="text-white">Deducción en dos pagos</span>
+                    </label>
+                  )}
                 </div>
               </div>
             </div>
@@ -1640,9 +1758,12 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
                         Pagar horas extras en nómina
                       </span>
                       <span className="text-xs text-gray-400 mt-1 block leading-relaxed">
-                        Activado: las horas extraordinarias impactan el bruto de empleados por hora.
-                        Desactivado: solo se registran y muestran en asistencia/nómina sin monto adicional.
-                        Los empleados administrativos (fijos) siguen viendo horas AHC de forma informativa.
+                        Activado: las horas extraordinarias impactan el bruto de empleados elegibles
+                        (administrativos por día, por hora y legado piso). Desactivado: solo se
+                        registran y muestran sin monto adicional. La elegibilidad por empleado se
+                        define en Información Laboral → Horas extras. No configure un campo custom
+                        &quot;horas_extras&quot; como ingreso si el motor ya paga HE (evita doble
+                        conteo).
                       </span>
                     </div>
                     <input
@@ -1665,7 +1786,7 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
       </Card>
 
       {/* Custom Fields */}
-      <Card variant="glass" className="p-6">
+      <Card variant="liquid" className="p-6">
         <CardHeader>
           <div className="flex items-start justify-between flex-wrap gap-4">
             <div className="flex-1">
@@ -2345,7 +2466,7 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
 
 
       {/* Save Button - Siempre visible, deshabilitado si no hay cambios */}
-      <Card variant="glass" className={`p-4 ${hasChangesState ? 'border-yellow-400/30' : 'border-white/10'}`}>
+      <Card variant="liquid" className={`p-4 ${hasChangesState ? 'border-yellow-400/30' : 'border-white/10'}`}>
         <div className="flex items-center justify-between">
           {hasChangesState ? (
             <div className="flex items-center gap-2 text-yellow-300 text-sm">

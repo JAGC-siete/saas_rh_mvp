@@ -3,6 +3,7 @@ import Head from 'next/head'
 import { useRouter } from 'next/router'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
+import PublicPageShell from '../../components/landing/PublicPageShell'
 
 interface LeaderboardRow {
   rank: number
@@ -59,25 +60,25 @@ export default function TrialGamificationPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 flex items-center justify-center">
-        <div className="text-center">
+      <PublicPageShell centered showFooter={false}>
+        <div className="text-center p-4">
           <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-white mx-auto"></div>
           <p className="mt-4 text-white">Cargando gamificación...</p>
         </div>
-      </div>
+      </PublicPageShell>
     )
   }
 
   if (error || !data) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 flex items-center justify-center">
+      <PublicPageShell centered showFooter={false}>
         <div className="text-center max-w-md mx-auto p-6">
           <div className="text-red-400 text-6xl mb-4">⚠️</div>
           <h1 className="text-2xl font-bold text-white mb-4">Error cargando gamificación</h1>
           <p className="text-gray-300 mb-6">{error || 'No se pudo cargar el leaderboard'}</p>
           <Button onClick={goBackToTrial}>Volver al Trial</Button>
         </div>
-      </div>
+      </PublicPageShell>
     )
   }
 
@@ -90,9 +91,8 @@ export default function TrialGamificationPage() {
         <meta name="description" content="Gamificación demo para entorno de prueba SISU" />
       </Head>
 
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900">
-        {/* Header */}
-        <header className="glass-strong border-b border-white/10 shadow-lg">
+      <PublicPageShell showFooter={false}>
+        <header className="glass-modern border-b border-white/10 shadow-lg">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
             <div className="flex justify-between items-center">
               <div>
@@ -106,10 +106,9 @@ export default function TrialGamificationPage() {
           </div>
         </header>
 
-        {/* Content */}
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
           {/* Leaderboard */}
-          <Card variant="glass">
+          <Card variant="liquid">
             <CardHeader>
               <CardTitle className="text-white">Leaderboard</CardTitle>
               <CardDescription className="text-gray-300">Top empleados por puntos</CardDescription>
@@ -146,7 +145,7 @@ export default function TrialGamificationPage() {
           </Card>
 
           {/* Department Points */}
-          <Card variant="glass">
+          <Card variant="liquid">
             <CardHeader>
               <CardTitle className="text-white">Puntos por departamento</CardTitle>
               <CardDescription className="text-gray-300">Acumulado de puntos por equipo</CardDescription>
@@ -167,8 +166,8 @@ export default function TrialGamificationPage() {
               </div>
             </CardContent>
           </Card>
-        </main>
-      </div>
+        </div>
+      </PublicPageShell>
     </>
   )
 }

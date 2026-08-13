@@ -2,15 +2,15 @@ import { useState } from 'react'
 import { useRouter } from 'next/router'
 import Link from 'next/link'
 import Head from 'next/head'
-import dynamic from 'next/dynamic'
-const CloudBackground = dynamic(() => import('../../components/CloudBackground'), { ssr: false })
+import PublicPageShell from '../../components/landing/PublicPageShell'
 import { Card, CardContent } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
 import { ArrowRight } from 'lucide-react'
 import Image from 'next/image'
 import { createClient } from '../../lib/supabase/client'
-import MainHeader from '../../components/MainHeader'
+import { canAccessPayrollNavigation } from '../../lib/auth/role-access'
+import { canAccessDeduccionesModule } from '../../lib/security/deducciones-access'
 
 export default function LoginExisting() {
   const [email, setEmail] = useState('')
@@ -71,6 +71,13 @@ export default function LoginExisting() {
       } else if (!data.user.company_id) {
         // Other users without company_id go to onboarding
         router.push('/onboarding')
+      } else if (
+        data.userProfile &&
+        canAccessDeduccionesModule(data.userProfile.role, data.userProfile.permissions) &&
+        !canAccessPayrollNavigation(data.user.role)
+      ) {
+        // Acceso limitado solo a Deducciones
+        router.push('/app/deducciones')
       } else {
         // Regular users go to dashboard
         router.push('/app/dashboard')
@@ -89,14 +96,8 @@ export default function LoginExisting() {
         <meta name="description" content="Accede a tu cuenta de Humano SISU" />
       </Head>
 
-      <div className="min-h-screen bg-app text-white flex flex-col relative">
-        {/* Header */}
-        <MainHeader enableScrollEffect={false} fixed={true} />
-        <main className="flex-grow flex items-center justify-center p-4 pt-24">
-          <CloudBackground />
-          <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiMxZTI5M2IiIGZpbGwtb3BhY2l0eT0iMC4xIj48Y2lyY2xlIGN4PSIzMCIgY3k9IjMwIiByPSI0Ii8+PC9nPjwvZz48L3N2Zz4=')] opacity-20"></div>
-          
-          <div className="relative w-full max-w-md space-y-8 z-10">
+      <PublicPageShell centered showFooter={false}>
+        <div className="w-full max-w-md space-y-8 p-4">
             {/* Header */}
             <div className="text-center">
               <div className="mx-auto h-40 w-40 bg-white/10 rounded-full flex items-center justify-center mb-6 shadow-xl border border-white/20 backdrop-blur-sm">
@@ -117,7 +118,7 @@ export default function LoginExisting() {
             </div>
 
             {/* Login Form */}
-            <Card variant="glass" className="shadow-xl">
+            <Card variant="liquid" className="shadow-xl">
               <CardContent className="p-8">
                 <form onSubmit={handleLogin} className="space-y-4">
                   <div>
@@ -151,7 +152,7 @@ export default function LoginExisting() {
                   </div>
 
                   {error && (
-                    <div className="text-red-200 text-sm glass-strong p-3 rounded-md">
+                    <div className="text-red-200 text-sm glass-modern p-3 rounded-xl border border-red-500/30">
                       {error}
                     </div>
                   )}
@@ -199,9 +200,8 @@ export default function LoginExisting() {
                 Sesión segura. Podés desvincular el acceso cuando quieras.
               </p>
             </div>
-          </div>
-        </main>
-      </div>
+        </div>
+      </PublicPageShell>
     </>
   )
 }

@@ -2,21 +2,77 @@
 // Consolidates all payroll state management into a single, cohesive system
 // Replaces the dual state system with a single source of truth
 
-import { useReducer, useCallback, useMemo, useEffect, useState } from 'react'
+import { useReducer, useCallback, useMemo, useEffect, useState, useRef } from 'react'
 import { useCompanyContext } from '../useCompanyContext'
 import { useToast } from '../toast'
-import { fetchUnifiedPayroll, getCurrentPeriod, UnifiedRow, UnifiedResumen } from '../payroll-unified'
+import { fetchUnifiedPayroll, getCurrentPeriod, mapPlanillaItemToUnifiedRow, summarizeUnifiedRows, UnifiedRow, UnifiedResumen } from '../payroll-unified'
 import { usePayrollMetrics } from './usePayrollMetrics'
 import { payrollApi, mapPayrollError } from '../payroll-api'
 import { BULK_VOUCHER_EMAIL_TRIAL_MESSAGE } from '../billing/messages'
 import type { PayrollPdfGroupBy } from '../payroll/pdf-layout'
-import { PayrollFilters, UIRunStatus } from '../../types/payroll'
+import { PayrollFilters, UIRunStatus, TipoCalculo, Quincena, PayrollUiCutDates, PayrollUiFrequency } from '../../types/payroll'
+import {
+  PAYROLL_DEDUCTION_MODE_DEFAULT,
+  getPayrollDeductionModeLabel,
+} from '../payroll/deduction-mode'
+import type { VoucherPreviewData } from '../payroll/voucher-preview'
+import type { PlanillaPreviewData } from '../payroll/planilla-preview'
+
+function normalizeUiPaymentFrequency(raw: unknown): PayrollUiFrequency {
+  const v = String(raw || '').toLowerCase()
+  if (v === 'monthly' || v === 'mensual') return 'monthly'
+  if (v === 'weekly' || v === 'semanal') return 'weekly'
+  return 'biweekly'
+}
+
+function clampPeriodSlot(freq: PayrollUiFrequency, slot: number): Quincena {
+  if (freq === 'monthly') return 1
+  if (freq === 'weekly') {
+    if (slot >= 1 && slot <= 4) return slot as Quincena
+    return 1
+  }
+  return slot === 2 ? 2 : 1
+}
+
+type VoucherPreviewState = {
+  open: boolean
+  loading: boolean
+  downloading: boolean
+  runLineId: string | null
+  data: VoucherPreviewData | null
+  error: string | null
+}
+
+const EMPTY_VOUCHER_PREVIEW: VoucherPreviewState = {
+  open: false,
+  loading: false,
+  downloading: false,
+  runLineId: null,
+  data: null,
+  error: null,
+}
+
+type PlanillaPreviewState = {
+  open: boolean
+  loading: boolean
+  downloading: boolean
+  data: PlanillaPreviewData | null
+  error: string | null
+}
+
+const EMPTY_PLANILLA_PREVIEW: PlanillaPreviewState = {
+  open: false,
+  loading: false,
+  downloading: false,
+  data: null,
+  error: null,
+}
 
 // Unified State Interface
 export interface PayrollManagerState {
   // Data
   unifiedData: { rows: UnifiedRow[]; resumen: UnifiedResumen; runId?: string; status?: string; incompleteRecordsAlert?: { employee_id: string; employee_name: string; dates: string[] }[] } | null
-  currentPeriod: { year: number; month: number; quincena: 1 | 2 }
+  currentPeriod: { year: number; month: number; quincena: 1 | 2 | 3 | 4 }
   
   // UI State
   status: UIRunStatus
@@ -40,6 +96,7 @@ export interface PayrollManagerState {
     recommendedAction?: string
   } | null
   ahcPreflightLoading?: boolean
+  ahcPreflightError?: string | null
 }
 
 // Action Types
@@ -49,10 +106,11 @@ export type PayrollManagerAction =
   | { type: 'SET_ERROR'; payload: string | null }
   | { type: 'SET_STATUS'; payload: UIRunStatus }
   | { type: 'SET_FILTERS'; payload: Partial<PayrollFilters> }
-  | { type: 'SET_PERIOD'; payload: { year: number; month: number; quincena: 1 | 2 } }
+  | { type: 'SET_PERIOD'; payload: { year: number; month: number; quincena: 1 | 2 | 3 | 4 } }
   | { type: 'SET_RUN_ID'; payload: string | undefined }
   | { type: 'SET_LOADED_INITIAL'; payload: boolean }
   | { type: 'SET_AHC_PREFLIGHT'; payload: PayrollManagerState['ahcPreflight'] }
+  | { type: 'SET_AHC_PREFLIGHT_ERROR'; payload: string | null }
   | { type: 'SET_AHC_PREFLIGHT_LOADING'; payload: boolean }
   | { type: 'CLEAR_ERROR' }
   | { type: 'RESET_STATE' }
@@ -64,7 +122,7 @@ const getInitialState = (): PayrollManagerState => {
     unifiedData: null,
     currentPeriod: {
       ...currentPeriod,
-      quincena: currentPeriod.quincena as 1 | 2
+      quincena: clampPeriodSlot('biweekly', currentPeriod.quincena)
     },
     status: 'idle',
     loading: false,
@@ -72,13 +130,14 @@ const getInitialState = (): PayrollManagerState => {
     filters: {
       year: currentPeriod.year,
       month: currentPeriod.month,
-      quincena: currentPeriod.quincena as 1 | 2,
+      quincena: clampPeriodSlot('biweekly', currentPeriod.quincena) as Quincena,
       tipo: 'CON'
     },
     runId: undefined,
     hasLoadedInitialData: false,
     ahcPreflight: null,
-    ahcPreflightLoading: false
+    ahcPreflightLoading: false,
+    ahcPreflightError: null,
   }
 }
 
@@ -136,7 +195,10 @@ const payrollManagerReducer = (
       return { ...state, hasLoadedInitialData: action.payload }
 
     case 'SET_AHC_PREFLIGHT':
-      return { ...state, ahcPreflight: action.payload }
+      return { ...state, ahcPreflight: action.payload, ahcPreflightError: null }
+
+    case 'SET_AHC_PREFLIGHT_ERROR':
+      return { ...state, ahcPreflightError: action.payload }
 
     case 'SET_AHC_PREFLIGHT_LOADING':
       return { ...state, ahcPreflightLoading: action.payload }
@@ -158,6 +220,85 @@ export const usePayrollManager = () => {
   const { companyId, loading: companyLoading } = useCompanyContext()
   const toast = useToast()
   const [commercialPlan, setCommercialPlan] = useState<string | null>(null)
+  const companyDeductionModeRef = useRef<TipoCalculo>(PAYROLL_DEDUCTION_MODE_DEFAULT)
+  const [deductionModeLabel, setDeductionModeLabel] = useState(
+    getPayrollDeductionModeLabel(PAYROLL_DEDUCTION_MODE_DEFAULT)
+  )
+  const [paymentFrequency, setPaymentFrequency] = useState<PayrollUiFrequency>('biweekly')
+  const [paymentCutDates, setPaymentCutDates] = useState<PayrollUiCutDates | null>(null)
+  const paymentFrequencyRef = useRef<PayrollUiFrequency>('biweekly')
+  const currentPeriodRef = useRef(state.currentPeriod)
+  currentPeriodRef.current = state.currentPeriod
+  const [voucherPreview, setVoucherPreview] = useState<VoucherPreviewState>(EMPTY_VOUCHER_PREVIEW)
+  const [planillaPreview, setPlanillaPreview] = useState<PlanillaPreviewState>(EMPTY_PLANILLA_PREVIEW)
+
+  const applyCompanyDeductionMode = useCallback((mode: TipoCalculo) => {
+    const prev = companyDeductionModeRef.current
+    companyDeductionModeRef.current = mode
+    setDeductionModeLabel(getPayrollDeductionModeLabel(mode))
+    dispatch({ type: 'SET_FILTERS', payload: { tipo: mode } })
+    if (prev !== mode) {
+      dispatch({ type: 'SET_LOADED_INITIAL', payload: false })
+    }
+  }, [])
+
+  const applyCompanyPaymentFrequency = useCallback((
+    freq: PayrollUiFrequency,
+    cutDates: PayrollUiCutDates | null | undefined
+  ) => {
+    const prev = paymentFrequencyRef.current
+    paymentFrequencyRef.current = freq
+    setPaymentFrequency(freq)
+    setPaymentCutDates(cutDates ?? null)
+
+    const period = currentPeriodRef.current
+    const nextSlot = clampPeriodSlot(freq, period.quincena)
+    if (nextSlot !== period.quincena) {
+      dispatch({
+        type: 'SET_PERIOD',
+        payload: {
+          year: period.year,
+          month: period.month,
+          quincena: nextSlot,
+        },
+      })
+      dispatch({ type: 'SET_FILTERS', payload: { quincena: nextSlot as Quincena } })
+    }
+
+    if (prev !== freq) {
+      dispatch({ type: 'SET_LOADED_INITIAL', payload: false })
+    }
+  }, [])
+
+  const loadCompanyPayrollConfig = useCallback(async () => {
+    if (!companyId) return
+    try {
+      const res = await fetch('/api/payroll/config')
+      if (!res.ok) return
+      const data = await res.json()
+      const cfg = data?.config
+      const mode = (cfg?.payroll_deduction_mode ?? PAYROLL_DEDUCTION_MODE_DEFAULT) as TipoCalculo
+      applyCompanyDeductionMode(mode)
+      applyCompanyPaymentFrequency(
+        normalizeUiPaymentFrequency(cfg?.payment_frequency),
+        (cfg?.payment_cut_dates as PayrollUiCutDates | undefined) ?? null
+      )
+    } catch {
+      // Mantener default
+    }
+  }, [companyId, applyCompanyDeductionMode, applyCompanyPaymentFrequency])
+
+  useEffect(() => {
+    loadCompanyPayrollConfig()
+  }, [loadCompanyPayrollConfig])
+
+  useEffect(() => {
+    const onConfigUpdated = () => {
+      void loadCompanyPayrollConfig()
+    }
+    window.addEventListener('payrollConfigUpdated', onConfigUpdated)
+    return () => window.removeEventListener('payrollConfigUpdated', onConfigUpdated)
+  }, [loadCompanyPayrollConfig])
 
   // Metrics calculation
   const metrics = usePayrollMetrics(state.unifiedData?.rows || [])
@@ -191,7 +332,11 @@ export const usePayrollManager = () => {
 
   // Filter Management
   const updateFilter = useCallback(async (key: keyof PayrollFilters, value: any) => {
-    dispatch({ type: 'SET_FILTERS', payload: { [key]: value } })
+    let nextValue = value
+    if (key === 'quincena') {
+      nextValue = clampPeriodSlot(paymentFrequencyRef.current, Number(value))
+    }
+    dispatch({ type: 'SET_FILTERS', payload: { [key]: nextValue } })
     
     // Update period if it's a period-related filter
     if (['year', 'month', 'quincena'].includes(key)) {
@@ -199,42 +344,21 @@ export const usePayrollManager = () => {
         type: 'SET_PERIOD', 
         payload: { 
           ...state.currentPeriod, 
-          [key]: value 
+          [key]: nextValue 
         } 
       })
     }
-    
-    // If tipo changes, reload data to reflect the change
-    if (key === 'tipo' && companyId) {
-      try {
-        dispatch({ type: 'SET_LOADING', payload: true })
-        dispatch({ type: 'CLEAR_ERROR' })
-        
-        const data = await fetchUnifiedPayroll(
-          companyId,
-          state.currentPeriod.year,
-          state.currentPeriod.month,
-          state.currentPeriod.quincena,
-          state.filters.tipo
-        )
-        
-        dispatch({ type: 'SET_DATA', payload: data })
-      } catch (error: any) {
-        const errorMessage = error?.message || 'Error desconocido'
-        dispatch({ type: 'SET_ERROR', payload: `Error cargando datos: ${errorMessage}` })
-      } finally {
-        dispatch({ type: 'SET_LOADING', payload: false })
-      }
-    }
-  }, [state.currentPeriod, companyId])
+  }, [state.currentPeriod])
 
   const resetFilters = useCallback(() => {
     const newPeriod = getCurrentPeriod()
+    const quincena = clampPeriodSlot(paymentFrequencyRef.current, newPeriod.quincena)
     dispatch({ 
       type: 'SET_PERIOD', 
       payload: {
-        ...newPeriod,
-        quincena: newPeriod.quincena as 1 | 2
+        year: newPeriod.year,
+        month: newPeriod.month,
+        quincena,
       }
     })
     dispatch({ 
@@ -242,8 +366,8 @@ export const usePayrollManager = () => {
       payload: {
         year: newPeriod.year,
         month: newPeriod.month,
-        quincena: newPeriod.quincena as 1 | 2,
-        tipo: 'CON'
+        quincena,
+        tipo: companyDeductionModeRef.current,
       }
     })
   }, [])
@@ -254,7 +378,7 @@ export const usePayrollManager = () => {
 
     try {
       const response = await fetch(
-        `/api/payroll/draft?year=${state.filters.year}&month=${state.filters.month}&quincena=${state.filters.quincena}&tipo=${state.filters.tipo}`
+        `/api/payroll/draft?year=${state.filters.year}&month=${state.filters.month}&quincena=${state.filters.quincena}`
       )
 
       if (!response.ok) {
@@ -349,7 +473,12 @@ export const usePayrollManager = () => {
       const res = await fetch(`/api/payroll/preflight?${q.toString()}`, { credentials: 'include' })
       const json = await res.json().catch(() => ({}))
       if (!res.ok) {
+        const message =
+          (typeof json.message === 'string' && json.message) ||
+          (typeof json.error === 'string' && json.error) ||
+          `Error verificando horas de asistencia (${res.status})`
         dispatch({ type: 'SET_AHC_PREFLIGHT', payload: null })
+        dispatch({ type: 'SET_AHC_PREFLIGHT_ERROR', payload: message })
         return
       }
       dispatch({
@@ -362,6 +491,12 @@ export const usePayrollManager = () => {
           totalRecords: json.totalRecords ?? 0,
           recommendedAction: json.recommendedAction,
         },
+      })
+    } catch (e) {
+      dispatch({ type: 'SET_AHC_PREFLIGHT', payload: null })
+      dispatch({
+        type: 'SET_AHC_PREFLIGHT_ERROR',
+        payload: e instanceof Error ? e.message : 'Error de red al verificar horas de asistencia',
       })
     } finally {
       dispatch({ type: 'SET_AHC_PREFLIGHT_LOADING', payload: false })
@@ -426,35 +561,11 @@ export const usePayrollManager = () => {
       if (response.planilla && Array.isArray(response.planilla)) {
         console.log('🔍 DEBUG - Actualizando tabla con datos del preview:', response.planilla.length, 'empleados')
         
-        // Convertir datos del preview a formato unificado
-        const rows: UnifiedRow[] = response.planilla.map((p: any) => ({
-          ...p,
-          horas_trabajadas: 0,
-          extras: { horas: 0, monto: 0 },
-          observaciones: '',
-          status: 'completo' as const
-        }))
-        
-        // Calcular resumen
-        const resumen = rows.reduce((acc, r) => {
-          acc.empleados += 1
-          acc.total_bruto += r.total_earnings
-          acc.total_deducciones.IHSS += r.IHSS || 0
-          acc.total_deducciones.RAP += r.RAP || 0
-          acc.total_deducciones.ISR += r.ISR || 0
-          acc.total_deducciones.otros += 0
-          acc.total_neto += r.total
-          acc.total_dias_trabajados += r.days_worked || 0
-          acc.total_horas_extras += 0
-          return acc
-        }, {
-          empleados: 0,
-          total_bruto: 0,
-          total_deducciones: { IHSS: 0, RAP: 0, ISR: 0, otros: 0 },
-          total_neto: 0,
-          total_dias_trabajados: 0,
-          total_horas_extras: 0
-        })
+        // Convertir datos del preview a formato unificado (incluye horas_extras AHC)
+        const rows: UnifiedRow[] = response.planilla.map((p: any) =>
+          mapPlanillaItemToUnifiedRow(p)
+        )
+        const resumen = summarizeUnifiedRows(rows)
         
         // Actualizar estado inmediatamente
         dispatch({
@@ -490,6 +601,12 @@ export const usePayrollManager = () => {
           'Exentos de asistencia',
           response.attendanceExemptSummary.message,
           8000
+        )
+      } else if (response?.preservedEditedSummary?.count) {
+        toast.warning(
+          'Líneas editadas conservadas',
+          response.preservedEditedSummary.message,
+          9000
         )
       } else if (response?.incompleteRecordsAlert?.length) {
         toast.warning(
@@ -758,14 +875,100 @@ export const usePayrollManager = () => {
 
   const generateVoucher = useCallback(async (runLineId: string) => {
     try {
-      // The API function already handles the download
-      await payrollApi.generateVoucher(runLineId)
-      
-      toast.success('Voucher Generado', 'El voucher se ha descargado correctamente', 4000)
-    } catch (error: any) {
-      toast.error('Error Generando Voucher', 'No se pudo generar el voucher', 6000)
+      await payrollApi.downloadVoucher(runLineId)
+      toast.success('Voucher generado', 'El comprobante se descargó correctamente', 4000)
+    } catch {
+      toast.error('Error generando voucher', 'No se pudo generar el comprobante', 6000)
     }
   }, [toast])
+
+  const openVoucherPreview = useCallback(async (runLineId: string) => {
+    setVoucherPreview({
+      open: true,
+      loading: true,
+      downloading: false,
+      runLineId,
+      data: null,
+      error: null,
+    })
+    try {
+      const { preview } = await payrollApi.fetchVoucherPreview(runLineId)
+      setVoucherPreview((prev) => ({ ...prev, loading: false, data: preview }))
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'No se pudo cargar el comprobante'
+      setVoucherPreview((prev) => ({ ...prev, loading: false, error: message }))
+    }
+  }, [])
+
+  const closeVoucherPreview = useCallback(() => {
+    setVoucherPreview(EMPTY_VOUCHER_PREVIEW)
+  }, [])
+
+  const downloadVoucherFromPreview = useCallback(async () => {
+    const runLineId = voucherPreview.runLineId
+    if (!runLineId) return
+    setVoucherPreview((prev) => ({ ...prev, downloading: true }))
+    try {
+      await payrollApi.downloadVoucher(runLineId)
+      toast.success('Voucher generado', 'El PDF se descargó correctamente', 4000)
+    } catch {
+      toast.error('Error generando voucher', 'No se pudo descargar el PDF', 6000)
+    } finally {
+      setVoucherPreview((prev) => ({ ...prev, downloading: false }))
+    }
+  }, [voucherPreview.runLineId, toast])
+
+  const openPlanillaPreview = useCallback(async () => {
+    if (!state.runId) {
+      toast.error('Error', 'No hay una corrida de nómina activa', 4000)
+      return
+    }
+    setPlanillaPreview({
+      open: true,
+      loading: true,
+      downloading: false,
+      data: null,
+      error: null,
+    })
+    try {
+      const { preview } = await payrollApi.fetchPlanillaPreview(state.runId)
+      setPlanillaPreview((prev) => ({ ...prev, loading: false, data: preview }))
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'No se pudo cargar la planilla'
+      setPlanillaPreview((prev) => ({ ...prev, loading: false, error: message }))
+    }
+  }, [state.runId, toast])
+
+  const closePlanillaPreview = useCallback(() => {
+    setPlanillaPreview(EMPTY_PLANILLA_PREVIEW)
+  }, [])
+
+  const downloadPlanillaFromPreview = useCallback(
+    async (groupBy: PayrollPdfGroupBy = 'none') => {
+      const runId = planillaPreview.data?.runId || state.runId
+      if (!runId) {
+        toast.error('Error', 'No hay una corrida de nómina activa', 4000)
+        return
+      }
+      setPlanillaPreview((prev) => ({ ...prev, downloading: true }))
+      try {
+        await payrollApi.downloadPlanillaPdf(runId, {
+          groupBy,
+          defaultFilename: planillaPreview.data?.defaultFilename,
+        })
+        toast.success('PDF Generado', 'El PDF se ha descargado correctamente', 4000)
+      } catch (error: unknown) {
+        const message =
+          error instanceof Error && error.message.trim()
+            ? error.message
+            : 'No se pudo generar el PDF'
+        toast.error('Error Generando PDF', message, 6000)
+      } finally {
+        setPlanillaPreview((prev) => ({ ...prev, downloading: false }))
+      }
+    },
+    [planillaPreview.data, state.runId, toast]
+  )
 
   // Auto-load data when period changes (client-side only)
   useEffect(() => {
@@ -875,12 +1078,23 @@ export const usePayrollManager = () => {
     sendEmail,
     generatePDF,
     generateVoucher,
+    openVoucherPreview,
+    closeVoucherPreview,
+    downloadVoucherFromPreview,
+    voucherPreview,
+    openPlanillaPreview,
+    closePlanillaPreview,
+    downloadPlanillaFromPreview,
+    planillaPreview,
     loadAhcPreflight,
     recalculateMissingAhc,
     
     // Filter Management
     updateFilter,
     resetFilters,
+    deductionModeLabel,
+    paymentFrequency,
+    paymentCutDates,
     
     // State Management
     setStatus,

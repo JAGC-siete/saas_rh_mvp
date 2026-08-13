@@ -1,5 +1,6 @@
 import { emailService } from '../email-service'
 import { notificationManager } from '../notification-providers'
+import { LIQUID } from '../brand/liquid-tokens'
 import {
   transactionalCta,
   transactionalInfoBox,
@@ -30,7 +31,7 @@ export async function sendAffiliateWelcomeEmail(data: AffiliateWelcomeEmailData)
       'neutral'
     ),
     transactionalInfoBox(
-      `<strong>Tu código de referido</strong><br><span style="font-size: 24px; font-weight: 700; letter-spacing: 2px; font-family: monospace; color: #0b4fa1;">${data.referralCode}</span>`,
+      `<strong>Tu código de referido</strong><br><span style="font-size: 24px; font-weight: 700; letter-spacing: 2px; font-family: monospace; color: ${LIQUID.textAccent};">${data.referralCode}</span>`,
       'neutral'
     ),
     transactionalCta(data.loginUrl, 'Ir al inicio de sesión'),

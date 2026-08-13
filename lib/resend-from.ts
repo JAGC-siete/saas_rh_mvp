@@ -1,5 +1,5 @@
 const NOREPLY_EMAIL = 'noreply@humanosisu.net'
-const CONTACT_EMAIL = 'jorgearturo@humanosisu.net'
+const CONTACT_EMAIL = 'humanosisu@humanosisu.net'
 
 function extractEmail(from: string): string | null {
   const angle = from.match(/<([^>]+)>/)

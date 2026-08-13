@@ -81,7 +81,8 @@ function permissionsForRole(role: string): Record<string, boolean> {
       return {
         view_employees: true,
         manage_attendance: true,
-        view_reports: true
+        can_view_attendance_reports: true,
+        can_export_attendance_reports: true,
       }
     case 'employee':
       return {

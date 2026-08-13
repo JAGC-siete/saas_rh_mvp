@@ -9,9 +9,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     const supabase = createClient(req, res)
-    
-    // Get the authenticated user
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+    const authHeader = req.headers.authorization
+    const bearer =
+      typeof authHeader === 'string' && authHeader.startsWith('Bearer ')
+        ? authHeader.slice(7).trim()
+        : null
+
+    // Cookies first; Bearer only if cookie session missing (auth.tsx may send both)
+    let { data: { user }, error: authError } = await supabase.auth.getUser()
+    if ((!user || authError) && bearer) {
+      const bearerResult = await supabase.auth.getUser(bearer)
+      if (bearerResult.data.user) {
+        user = bearerResult.data.user
+        authError = bearerResult.error
+      }
+    }
     
     if (authError || !user) {
       return res.status(401).json({ error: 'Unauthorized' })

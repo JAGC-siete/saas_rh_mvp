@@ -7,6 +7,11 @@ import {
   payrollPdfGroupByFilenameSuffix
 } from '../../../lib/payroll/pdf-layout'
 import { requirePlanAndQuota, incrementUsage } from '../../../lib/billing/enforce'
+import { resolveReportConfig } from '../../../lib/reports/column-resolver'
+import {
+  coalescePlanillaPayType,
+  isExactHourlyPlanillaTablePayType,
+} from '../../../lib/payroll/resolve-effective-pay-type'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -63,11 +68,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Mapear datos del draft a estructura de PlanillaItem
     const planilla: PlanillaItem[] = draftData.rows.map((row: any) => {
       const employee = employees.find((e: any) => e.id === row.employee_id)
-      const payType = employee?.pay_type || 'fixed'
+      const payType = coalescePlanillaPayType(employee?.pay_type || row.pay_type || 'fixed')
       const totalHours = Number(row.total_hours_worked) || (Number(row.days_worked) || 0) * 8
-      const hourlyRate = payType === 'hourly' && totalHours > 0 
-        ? (Number(row.gross_salary) || 0) / totalHours 
-        : 0
+      const showHourCols = isExactHourlyPlanillaTablePayType(payType)
+      const hourlyRate =
+        showHourCols && totalHours > 0
+          ? (Number(row.gross_salary) || 0) / totalHours
+          : 0
       
       return {
         id: employee?.employee_code || row.employee_code || '',
@@ -91,8 +98,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         notes_on_ingress: row.adj_bonus ? `Bono: L. ${row.adj_bonus.toFixed(2)}` : '',
         notes_on_deductions: row.adj_discount ? `Descuento: L. ${row.adj_discount.toFixed(2)}` : '',
         pay_type: payType,
-        total_hours_worked: payType === 'hourly' ? totalHours : undefined,
-        hourly_rate: payType === 'hourly' ? hourlyRate : undefined
+        total_hours_worked: showHourCols ? totalHours : undefined,
+        hourly_rate: showHourCols ? hourlyRate : undefined,
+        ...(Number.isFinite(Number(row.horas_extras ?? row.metadata?.horas_extras)) &&
+        Number(row.horas_extras ?? row.metadata?.horas_extras) > 0
+          ? {
+              horas_extras:
+                Math.round(Number(row.horas_extras ?? row.metadata?.horas_extras) * 100) / 100,
+            }
+          : {}),
+        ...(Number.isFinite(Number(row.overtime_pay ?? row.metadata?.overtime_pay)) &&
+        Number(row.overtime_pay ?? row.metadata?.overtime_pay) > 0
+          ? {
+              overtime_pay:
+                Math.round(Number(row.overtime_pay ?? row.metadata?.overtime_pay) * 100) / 100,
+            }
+          : {}),
       }
     })
 
@@ -162,9 +183,34 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       country_code: company?.country_code || 'HND'
     }
 
-    // Separate fixed and hourly employees
-    const planillaFixed = planilla.filter(p => (p as any).pay_type !== 'hourly')
-    const planillaHourly = planilla.filter(p => (p as any).pay_type === 'hourly')
+    // Separate fixed and hourly employees (detalle UI: solo exact hourly → por hora)
+    const planillaFixed = planilla.filter(p => !isExactHourlyPlanillaTablePayType((p as any).pay_type))
+    const planillaHourly = planilla.filter(p => isExactHourlyPlanillaTablePayType((p as any).pay_type))
+
+    let reportVisual: { primaryColor?: string; branding?: Record<string, unknown> } | undefined
+    let visibleColumnIds: string[] | undefined
+    let columnLabels: Record<string, string> | undefined
+    let columnOrder: Record<string, number> | undefined
+    let includeCustomPayrollFields: boolean | undefined
+    try {
+      const resolvedConfig = await resolveReportConfig(companyId, 'payroll', supabase)
+      if (resolvedConfig?.branding) {
+        reportVisual = {
+          primaryColor: resolvedConfig.branding.primaryColor,
+          branding: resolvedConfig.branding,
+        }
+      }
+      if (resolvedConfig?.columns?.length) {
+        visibleColumnIds = resolvedConfig.columns.map((c) => c.id)
+        columnLabels = Object.fromEntries(resolvedConfig.columns.map((c) => [c.id, c.label]))
+        columnOrder = Object.fromEntries(
+          resolvedConfig.columns.map((c, i) => [c.id, c.order ?? i])
+        )
+      }
+      includeCustomPayrollFields = resolvedConfig?.includeCustomPayrollFields
+    } catch (configErr) {
+      console.warn('generate-pdf: report config skipped', configErr)
+    }
 
     const pdf = await generateConsolidatedPayrollPDF(
       planillaFixed,
@@ -176,8 +222,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       pdfCustomFieldsForPdf,
       pdfPayrollConfig,
       undefined,
-      undefined,
-      { groupBy: pdfGroupBy }
+      reportVisual,
+      { groupBy: pdfGroupBy, visibleColumnIds, columnLabels, columnOrder, includeCustomPayrollFields }
     )
     
     // Increment usage meter for PDF generation

@@ -60,7 +60,7 @@ export default function MailListStats() {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {[...Array(4)].map((_, i) => (
-          <Card key={i} variant="glass" className="border-white/10 animate-pulse">
+          <Card key={i} variant="liquid" className="border-white/10 animate-pulse">
             <CardContent className="pt-6 h-24" />
           </Card>
         ))}
@@ -70,7 +70,7 @@ export default function MailListStats() {
 
   if (error || !stats) {
     return (
-      <Card variant="glass" className="border-white/10">
+      <Card variant="liquid" className="border-white/10">
         <CardContent className="pt-6">
           <p className="text-red-400">{error || 'No se pudieron cargar las estadísticas'}</p>
         </CardContent>

@@ -8,6 +8,7 @@ import { useCompanyContext } from '../../lib/useCompanyContext'
 import { formatDateOnlyForHonduras } from '../../lib/timezone'
 import { useAuth } from '../../lib/auth'
 import { canAccessPayrollNavigation } from '../../lib/auth/role-access'
+import { canAccessDeduccionesModule } from '../../lib/security/deducciones-access'
 
 interface DashboardStats {
   totalEmployees: number
@@ -51,6 +52,16 @@ export default function Dashboard() {
   })
   const [loading, setLoading] = useState(true)
   const router = useRouter()
+
+  useEffect(() => {
+    if (authLoading || !userProfile) return
+    if (
+      canAccessDeduccionesModule(userProfile.role, userProfile.permissions) &&
+      !canAccessPayrollNavigation(userProfile.role)
+    ) {
+      router.replace('/app/deducciones')
+    }
+  }, [authLoading, userProfile, router])
 
   // Memo: evitar recrear el formateador en cada render/llamada
   const currencyFormatter = useMemo(
@@ -162,7 +173,7 @@ export default function Dashboard() {
 
           {/* Main Stats Cards */}
           <div className={`grid grid-cols-1 md:grid-cols-2 gap-6 ${allowPayrollDashboard ? 'lg:grid-cols-4' : 'lg:grid-cols-2'}`}>
-            <Card variant="glass">
+            <Card variant="liquid">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-gray-200">Total Empleados</CardTitle>
                 <span className="text-2xl"></span>
@@ -175,7 +186,7 @@ export default function Dashboard() {
               </CardContent>
             </Card>
 
-            <Card variant="glass">
+            <Card variant="liquid">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-gray-200">Asistencia Hoy</CardTitle>
                 <span className="text-2xl"></span>
@@ -189,7 +200,7 @@ export default function Dashboard() {
             </Card>
 
             {allowPayrollDashboard && (
-            <Card variant="glass">
+            <Card variant="liquid">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-gray-200">Nómina Total</CardTitle>
                 <span className="text-2xl"></span>
@@ -203,7 +214,7 @@ export default function Dashboard() {
             </Card>
             )}
 
-            <Card variant="glass">
+            <Card variant="liquid">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-gray-200">Tasa Asistencia</CardTitle>
                 <span className="text-2xl"></span>
@@ -223,7 +234,7 @@ export default function Dashboard() {
           {/* Quick Actions */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Quick Actions */}
-            <Card variant="glass" className="lg:col-span-3">
+            <Card variant="liquid" className="lg:col-span-3">
               <CardHeader>
                 <CardTitle className="text-white">Acciones Rápidas</CardTitle>
                 <CardDescription className="text-gray-300">
@@ -284,7 +295,7 @@ export default function Dashboard() {
 
           {/* Recent Payrolls */}
           {allowPayrollDashboard && (
-          <Card variant="glass">
+          <Card variant="liquid">
             <CardHeader>
               <CardTitle className="text-white">Nóminas Recientes</CardTitle>
               <CardDescription className="text-gray-300">
@@ -321,7 +332,7 @@ export default function Dashboard() {
           )}
 
           {/* System Status */}
-          <Card variant="glass">
+          <Card variant="liquid">
             <CardHeader>
               <CardTitle className="text-white">Estado del Sistema</CardTitle>
               <CardDescription className="text-gray-300">

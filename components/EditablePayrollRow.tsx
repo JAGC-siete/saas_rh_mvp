@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Icon } from './Icon'
+import { hasValidationErrors, omitValidationField } from '../lib/forms/validation-errors'
 
 interface PayrollLine {
   line_id: string
@@ -91,7 +92,7 @@ export default function EditablePayrollRow({
         newErrors.ISR = 'ISR no puede ser negativo'
       }
 
-      if (Object.keys(newErrors).length > 0) {
+      if (hasValidationErrors(newErrors)) {
         setErrors(newErrors)
         setLoading(false)
         return
@@ -127,7 +128,7 @@ export default function EditablePayrollRow({
     
     // Limpiar error del campo
     if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: '' }))
+      setErrors((prev) => omitValidationField(prev, field))
     }
   }
 

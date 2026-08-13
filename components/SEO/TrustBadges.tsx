@@ -25,13 +25,13 @@ const defaultBadges: TrustBadge[] = [
     color: 'green'
   },
   {
-    text: 'Implementación 48h',
+    text: 'Biométrico en 72 h',
     icon: '⚡',
     color: 'blue'
   },
   {
-    text: '30 días gratis',
-    icon: '🎁',
+    text: '30 días dinero de regreso',
+    icon: '💰',
     color: 'purple'
   }
 ]

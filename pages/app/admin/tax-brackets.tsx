@@ -287,7 +287,7 @@ export default function TaxBracketsPage() {
           </div>
 
           {error && (
-            <Card variant="glass" className="border-red-400/40 bg-red-500/10">
+            <Card variant="liquid" className="border-red-400/40 bg-red-500/10">
               <CardContent className="pt-4 flex items-center gap-3 text-red-100 text-sm">
                 <AlertCircle className="h-5 w-5 text-red-400 flex-shrink-0" />
                 <span>{error}</span>
@@ -300,7 +300,7 @@ export default function TaxBracketsPage() {
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
             </div>
           ) : brackets.length === 0 ? (
-            <Card variant="glass" className="border-white/10">
+            <Card variant="liquid" className="border-white/10">
               <CardContent className="pt-6 text-center py-12">
                 <FileText className="h-12 w-12 text-white/40 mx-auto mb-4" />
                 <p className="text-white/70 text-lg mb-2">No hay tablas de impuestos configuradas</p>
@@ -318,7 +318,7 @@ export default function TaxBracketsPage() {
               {/* List of existing brackets */}
               <div className="grid gap-4">
                 {brackets.map((bracket) => (
-                  <Card key={bracket.id} className="glass-strong border-white/10">
+                  <Card key={bracket.id} variant="liquid" className="border-white/10">
                     <CardHeader>
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
@@ -394,7 +394,7 @@ export default function TaxBracketsPage() {
 
               {/* Form for create/edit */}
               {formData && (
-                <Card className="glass-strong border-white/10">
+                <Card variant="liquid" className="border-white/10">
                   <CardHeader>
                     <CardTitle>
                       {isCreating ? 'Crear Nueva Tabla' : `Editar Tabla ${editingYear}`}
@@ -411,7 +411,7 @@ export default function TaxBracketsPage() {
                           type="number"
                           value={formData.year}
                           onChange={(e) => setFormData({ ...formData, year: parseInt(e.target.value) })}
-                          className="w-full px-3 py-2 border border-white/20 rounded-md bg-white/10 text-white placeholder:text-white/50 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-amber-300/50 focus:border-amber-300/50 disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="input-glass w-full text-white placeholder:text-white/50 disabled:opacity-50 disabled:cursor-not-allowed focus:ring-amber-300/50"
                           disabled={!isCreating}
                         />
                       </div>
@@ -422,7 +422,7 @@ export default function TaxBracketsPage() {
                           step="0.01"
                           value={formData.minimum_wage}
                           onChange={(e) => setFormData({ ...formData, minimum_wage: parseFloat(e.target.value) })}
-                          className="w-full px-3 py-2 border border-white/20 rounded-md bg-white/10 text-white placeholder:text-white/50 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-amber-300/50 focus:border-amber-300/50"
+                          className="input-glass w-full text-white placeholder:text-white/50 focus:ring-amber-300/50"
                         />
                       </div>
                       <div>
@@ -432,7 +432,7 @@ export default function TaxBracketsPage() {
                           step="0.01"
                           value={formData.ihss_ceiling}
                           onChange={(e) => setFormData({ ...formData, ihss_ceiling: parseFloat(e.target.value) })}
-                          className="w-full px-3 py-2 border border-white/20 rounded-md bg-white/10 text-white placeholder:text-white/50 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-amber-300/50 focus:border-amber-300/50"
+                          className="input-glass w-full text-white placeholder:text-white/50 focus:ring-amber-300/50"
                         />
                       </div>
                       <div>
@@ -442,7 +442,7 @@ export default function TaxBracketsPage() {
                           step="0.0001"
                           value={formData.ihss_employee_rate * 100}
                           onChange={(e) => setFormData({ ...formData, ihss_employee_rate: parseFloat(e.target.value) / 100 })}
-                          className="w-full px-3 py-2 border border-white/20 rounded-md bg-white/10 text-white placeholder:text-white/50 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-amber-300/50 focus:border-amber-300/50"
+                          className="input-glass w-full text-white placeholder:text-white/50 focus:ring-amber-300/50"
                         />
                       </div>
                       <div>
@@ -452,7 +452,7 @@ export default function TaxBracketsPage() {
                           step="0.0001"
                           value={formData.rap_rate * 100}
                           onChange={(e) => setFormData({ ...formData, rap_rate: parseFloat(e.target.value) / 100 })}
-                          className="w-full px-3 py-2 border border-white/20 rounded-md bg-white/10 text-white placeholder:text-white/50 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-amber-300/50 focus:border-amber-300/50"
+                          className="input-glass w-full text-white placeholder:text-white/50 focus:ring-amber-300/50"
                         />
                       </div>
                       <div>
@@ -460,7 +460,7 @@ export default function TaxBracketsPage() {
                         <select
                           value={formData.source}
                           onChange={(e) => setFormData({ ...formData, source: e.target.value })}
-                          className="w-full px-3 py-2 border border-white/20 rounded-md bg-white/10 text-white backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-amber-300/50 focus:border-amber-300/50"
+                          className="input-glass w-full text-white focus:ring-amber-300/50"
                         >
                           <option value="official">Oficial</option>
                           <option value="manual">Manual</option>
@@ -493,7 +493,7 @@ export default function TaxBracketsPage() {
                                 value={bracket.limit === Infinity ? '' : bracket.limit}
                                 onChange={(e) => handleBracketChange(idx, 'limit', e.target.value === '' ? Infinity : parseFloat(e.target.value))}
                                 placeholder="∞"
-                                className="w-full px-2 py-1 border border-white/20 rounded-md bg-white/10 text-white text-sm placeholder:text-white/50 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-amber-300/50 focus:border-amber-300/50"
+                                className="input-glass w-full text-sm text-white placeholder:text-white/50 focus:ring-amber-300/50"
                               />
                             </div>
                             <div>
@@ -503,7 +503,7 @@ export default function TaxBracketsPage() {
                                 step="0.01"
                                 value={bracket.rate * 100}
                                 onChange={(e) => handleBracketChange(idx, 'rate', parseFloat(e.target.value) / 100)}
-                                className="w-full px-2 py-1 border border-white/20 rounded-md bg-white/10 text-white text-sm placeholder:text-white/50 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-amber-300/50 focus:border-amber-300/50"
+                                className="input-glass w-full text-sm text-white placeholder:text-white/50 focus:ring-amber-300/50"
                               />
                             </div>
                             <div>
@@ -513,7 +513,7 @@ export default function TaxBracketsPage() {
                                 step="0.01"
                                 value={bracket.base}
                                 onChange={(e) => handleBracketChange(idx, 'base', parseFloat(e.target.value))}
-                                className="w-full px-2 py-1 border border-white/20 rounded-md bg-white/10 text-white text-sm placeholder:text-white/50 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-amber-300/50 focus:border-amber-300/50"
+                                className="input-glass w-full text-sm text-white placeholder:text-white/50 focus:ring-amber-300/50"
                               />
                             </div>
                             <div>
@@ -523,7 +523,7 @@ export default function TaxBracketsPage() {
                                 step="0.01"
                                 value={bracket.lower}
                                 onChange={(e) => handleBracketChange(idx, 'lower', parseFloat(e.target.value))}
-                                className="w-full px-2 py-1 border border-white/20 rounded-md bg-white/10 text-white text-sm placeholder:text-white/50 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-amber-300/50 focus:border-amber-300/50"
+                                className="input-glass w-full text-sm text-white placeholder:text-white/50 focus:ring-amber-300/50"
                               />
                             </div>
                             <Button
@@ -546,7 +546,7 @@ export default function TaxBracketsPage() {
                       <textarea
                         value={formData.notes}
                         onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                        className="w-full px-3 py-2 border border-white/20 rounded-md bg-white/10 text-white placeholder:text-white/50 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-amber-300/50 focus:border-amber-300/50"
+                        className="input-glass w-full text-white placeholder:text-white/50 focus:ring-amber-300/50"
                         rows={3}
                         placeholder="Notas adicionales sobre esta tabla..."
                       />
@@ -566,7 +566,7 @@ export default function TaxBracketsPage() {
                             step="0.01"
                             value={previewSalary}
                             onChange={(e) => setPreviewSalary(parseFloat(e.target.value))}
-                            className="w-full px-3 py-2 border border-white/20 rounded-md bg-white/10 text-white placeholder:text-white/50 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-amber-300/50 focus:border-amber-300/50"
+                            className="input-glass w-full text-white placeholder:text-white/50 focus:ring-amber-300/50"
                             placeholder="30000"
                           />
                         </div>

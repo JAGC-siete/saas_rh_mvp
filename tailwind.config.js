@@ -85,8 +85,54 @@ module.exports = {
         '2xl': '24px',
         '3xl': '40px',
       },
+      animation: {
+        'mesh-flow': 'mesh-flow 15s ease infinite',
+        'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+        'glow-line': 'glow-line 2s linear infinite',
+        'fade-in': 'fade-in 0.35s ease-out forwards',
+        'elastic-up': 'elastic-up 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) forwards',
+        'critical-pulse': 'critical-pulse 2s ease-in-out infinite',
+        'chest-float': 'chest-float 4.5s ease-in-out infinite',
+        'chest-glow': 'chest-glow 4.2s ease-in-out infinite',
+      },
+      keyframes: {
+        'mesh-flow': {
+          '0%': { backgroundPosition: '0% 0%' },
+          '50%': { backgroundPosition: '100% 100%' },
+          '100%': { backgroundPosition: '0% 0%' },
+        },
+        'glow-line': {
+          '0%': { transform: 'translateX(-100%)' },
+          '100%': { transform: 'translateX(100%)' },
+        },
+        'fade-in': {
+          '0%': { opacity: '0', transform: 'translateY(8px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
+        'elastic-up': {
+          '0%': { opacity: '0', transform: 'translateY(24px) scale(0.96)' },
+          '100%': { opacity: '1', transform: 'translateY(0) scale(1)' },
+        },
+        'critical-pulse': {
+          '0%, 100%': { opacity: '1' },
+          '50%': { opacity: '0.55' },
+        },
+        'chest-float': {
+          '0%, 100%': { transform: 'translateY(0) rotate(0deg)' },
+          '50%': { transform: 'translateY(-14px) rotate(0.8deg)' },
+        },
+        'chest-glow': {
+          '0%, 100%': { opacity: '0.2', transform: 'translateX(-50%) scaleX(0.85)' },
+          '50%': { opacity: '0.55', transform: 'translateX(-50%) scaleX(1.15)' },
+        },
+      },
+      dropShadow: {
+        'clock-glow': '0 0 15px rgba(59,130,246,0.5)',
+        'severity-safe': '0 0 10px rgba(52,211,153,0.3)',
+      },
       fontFamily: {
-        'montserrat': ['Montserrat', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+        'montserrat': ['var(--font-montserrat)', 'Montserrat', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+        sans: ['var(--font-montserrat)', 'Montserrat', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
       },
     },
   },

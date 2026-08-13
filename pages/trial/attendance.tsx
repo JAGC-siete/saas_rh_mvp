@@ -3,6 +3,7 @@ import Head from 'next/head'
 import { useRouter } from 'next/router'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
+import PublicPageShell from '../../components/landing/PublicPageShell'
 import KpiCards from '../../components/attendance/KpiCards'
 import AbsenceTable from '../../components/attendance/AbsenceTable'
 import PunctualityTable from '../../components/attendance/PunctualityTable'
@@ -66,25 +67,25 @@ export default function TrialAttendancePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 flex items-center justify-center">
-        <div className="text-center">
+      <PublicPageShell centered showFooter={false}>
+        <div className="text-center p-4">
           <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-white mx-auto"></div>
           <p className="mt-4 text-white">Cargando asistencia de agosto 2025...</p>
         </div>
-      </div>
+      </PublicPageShell>
     )
   }
 
   if (error || !data) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 flex items-center justify-center">
+      <PublicPageShell centered showFooter={false}>
         <div className="text-center max-w-md mx-auto p-6">
           <div className="text-red-400 text-6xl mb-4">⚠️</div>
           <h1 className="text-2xl font-bold text-white mb-4">Error cargando asistencia</h1>
           <p className="text-gray-300 mb-6">{error || 'No se pudo cargar la información de asistencia'}</p>
           <Button onClick={goBackToTrial}>Volver al Trial</Button>
         </div>
-      </div>
+      </PublicPageShell>
     )
   }
 
@@ -103,9 +104,8 @@ export default function TrialAttendancePage() {
         <meta name="description" content="Asistencia de agosto 2025 para entorno de prueba SISU" />
       </Head>
 
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900">
-        {/* Header */}
-        <header className="glass-strong border-b border-white/10 shadow-lg">
+      <PublicPageShell showFooter={false}>
+        <header className="glass-modern border-b border-white/10 shadow-lg">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
             <div className="flex justify-between items-center">
               <div>
@@ -120,9 +120,9 @@ export default function TrialAttendancePage() {
         </header>
 
         {/* Main */}
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {/* KPIs */}
-          <Card variant="glass" className="mb-6">
+          <Card variant="liquid" className="mb-6">
             <CardHeader>
               <CardTitle className="text-white">Resumen de Agosto 2025</CardTitle>
               <CardDescription className="text-gray-300">Indicadores principales de asistencia</CardDescription>
@@ -143,14 +143,14 @@ export default function TrialAttendancePage() {
           </div>
 
           {/* Notes */}
-          <Card variant="glass" className="mt-8">
+          <Card variant="liquid" className="mt-8">
             <CardHeader>
               <CardTitle className="text-white">Sobre este entorno</CardTitle>
               <CardDescription className="text-gray-300">Datos filtrados por tu empresa del trial y periodo fijo agosto 2025.</CardDescription>
             </CardHeader>
           </Card>
-        </main>
-      </div>
+        </div>
+      </PublicPageShell>
     </>
   )
 }

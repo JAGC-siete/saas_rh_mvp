@@ -8,12 +8,21 @@ import { maskEmail, normalizeSoftPhone } from '../../lib/privacy'
 import { notificationManager } from '../../lib/notification-providers'
 import { getResendFromContact } from '../../lib/resend-from'
 import type { QuotationRequest, QuotationResponse, VentasPricingTier, CurrencyCode } from '../../lib/ventas/types'
-import { clampInt, normalizeCouponCode, resolveTierByEmployees, roundMoney } from '../../lib/ventas/pricing'
-import { hardwareFeeMonthly, ventasTooManyTerminalsErrorMessage } from '../../lib/ventas/modality-includes'
+import { clampInt, resolveTierByEmployees, roundMoney } from '../../lib/ventas/pricing'
+import { hardwareFeeMonthly } from '../../lib/ventas/modality-includes'
+import {
+  computeAnnualHardwareCharges,
+  DEFAULT_VENTAS_BUSINESS_RULES,
+  isMonthlyModalityAvailable,
+  resolveFormMaxTerminals,
+  shouldChargeHardwareContinuity,
+  ventasMonthlyUnavailableMessage,
+  ventasTooManyTerminalsErrorMessage,
+} from '../../lib/ventas/business-rules'
+import { loadActiveVentasConfig, resolveSubmittedPromo } from '../../lib/ventas/load-ventas-config'
 import { generateVentasQuotationPDF } from '../../lib/ventas/pdf'
 import { generateVentasQuotationEmailHTML, generateVentasQuotationEmailSubject, generateVentasQuotationEmailText } from '../../lib/ventas/email-template'
 import { generateVentasActivationEmailHTML, generateVentasActivationEmailSubject } from '../../lib/ventas/activation-email'
-import { computeUrgencyOffer } from '../../lib/ventas/urgency-offer'
 import {
   generateVentasBankDetailsEmailHTML,
   generateVentasBankDetailsEmailSubject,
@@ -26,10 +35,23 @@ import {
   isCountryCode,
   type CountryCode,
 } from '../../lib/country/supported'
+import {
+  parseMetaTrackingPayload,
+  sendMetaWebsiteConversionFireAndForget,
+} from '../../lib/analytics/metaCapiServer'
+import { enrollMarketingLead } from '../../lib/marketing/enroll-lead'
+import { sendLeadRegistroNotification } from '../../lib/leads/registro-notification'
+import { buildModalityComparisonSnapshot } from '../../lib/ventas/modality-comparison'
+import {
+  convertVentasMoney,
+  localizeQuotationQuote,
+  VENTAS_PRICE_LIST_CURRENCY,
+} from '../../lib/ventas/currency'
+import { computeFrozenQuoteAmounts } from '../../lib/billing/quote-amounts'
+import { getHondurasTimestamp } from '../../lib/timezone'
+import { addDays } from 'date-fns'
 
 const FALLBACK_CURRENCY: CurrencyCode = 'HNL'
-const FALLBACK_COUPON_CODE = 'gastro2026'
-const FALLBACK_COUPON_DISCOUNT_PCT = 0.45
 const FALLBACK_TIERS: VentasPricingTier[] = [
   { min_employees: 1, max_employees: 30, price: 65000, is_active: true, sort_order: 10 },
   { min_employees: 31, max_employees: 50, price: 74000, is_active: true, sort_order: 20 },
@@ -104,6 +126,8 @@ async function createTrialEnvironmentFromQuote(supabase: any, params: {
   const subdomain = `ventas-${Date.now().toString(36)}`
   const tz = ianaTimezoneForCountryCode(countryCode)
   const currency = currencyForCountryCode(countryCode)
+  const trialActivatedAt = getHondurasTimestamp()
+  const trialEnd = addDays(new Date(trialActivatedAt), 30).toISOString()
 
   const { error: companyError } = await supabase
     .from('companies')
@@ -116,6 +140,7 @@ async function createTrialEnvironmentFromQuote(supabase: any, params: {
       timezone: tz,
       settings: {
         trial_employee_limit: params.employeesCount,
+        trial_activated_at: trialActivatedAt,
         currency,
         language: 'es',
         ventas_quote: params.quoteMeta,
@@ -168,6 +193,23 @@ async function createTrialEnvironmentFromQuote(supabase: any, params: {
     throw new Error(`Error creando perfil: ${profileError.message}`)
   }
 
+  const { error: subError } = await supabase
+    .from('company_subscriptions')
+    .upsert({
+      company_id: companyId,
+      status: 'trial',
+      plan: 'basic',
+      trial_start: trialActivatedAt,
+      trial_end: trialEnd,
+    }, {
+      onConflict: 'company_id',
+      ignoreDuplicates: false,
+    })
+
+  if (subError) {
+    throw new Error(`Error creando suscripción trial: ${subError.message}`)
+  }
+
   return { companyId, userId: authUser.user.id, tempPassword }
 }
 
@@ -189,9 +231,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
   }
   const contactEmail = emailValidation.sanitized as string
 
-  const employeesCount = clampInt(Number(body.employees_count), 1, 200)
-  if (employeesCount < 1 || employeesCount > 200) {
-    return res.status(400).json({ error: 'El número de empleados debe estar entre 1 y 200.' })
+  const employeesCount = clampInt(Number(body.employees_count), 1, 10000)
+  if (employeesCount < 1) {
+    return res.status(400).json({ error: 'Seleccione un rango de empleados válido.' })
   }
 
   const billingModality = normalizeBillingModality((body as any).billing_modality)
@@ -200,7 +242,6 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
 
   const phoneNorm = normalizeSoftPhone(body.phone)
   const couponSubmitted = typeof body.coupon_code === 'string' ? body.coupon_code : ''
-  const couponSubmittedNorm = normalizeCouponCode(couponSubmitted)
 
   const contactName = typeof body.contact_name === 'string' ? body.contact_name.trim() : ''
   const companyName = typeof body.company_name === 'string' ? body.company_name.trim() : ''
@@ -221,42 +262,33 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
   try {
     const supabase = createAdminClient()
 
-    // Load active config + tiers (private)
-    const { data: configRow, error: configErr } = await (supabase as any)
-      .from('config_ventas')
-      .select('id, currency, coupon_code, coupon_discount_pct')
-      .eq('is_active', true)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle()
-
-    if (configErr) {
-      logger.warn('Error leyendo config_ventas, usando fallback', { error: configErr.message })
-    }
-
-    const configId: string | null = configRow?.id || null
-    const currency: CurrencyCode =
-      (configRow?.currency as CurrencyCode) || FALLBACK_CURRENCY
-    const couponCode = normalizeCouponCode(configRow?.coupon_code || FALLBACK_COUPON_CODE)
-    const discountPct = Number(configRow?.coupon_discount_pct ?? FALLBACK_COUPON_DISCOUNT_PCT)
-
-    let tiers: VentasPricingTier[] = FALLBACK_TIERS
-    let pricingTierId: string | null = null
-
-    if (configId) {
-      const { data: tiersRows, error: tiersErr } = await (supabase as any)
-        .from('config_ventas_pricing_tiers')
-        .select('id, min_employees, max_employees, price, is_active, sort_order')
-        .eq('config_id', configId)
-        .eq('is_active', true)
-        .order('sort_order', { ascending: true })
-
-      if (tiersErr) {
-        logger.warn('Error leyendo config_ventas_pricing_tiers, usando fallback', { error: tiersErr.message })
-      } else if (Array.isArray(tiersRows) && tiersRows.length > 0) {
-        tiers = tiersRows
+    let ventasConfig
+    try {
+      ventasConfig = await loadActiveVentasConfig(supabase as any)
+    } catch (configLoadErr: any) {
+      logger.warn('Error leyendo config ventas, usando fallback', { error: configLoadErr?.message })
+      ventasConfig = {
+        configId: null,
+        currency: FALLBACK_CURRENCY,
+        tiers: FALLBACK_TIERS,
+        promoCodes: [],
+        businessRules: DEFAULT_VENTAS_BUSINESS_RULES,
       }
     }
+
+    const { currency: configCurrency, tiers, promoCodes, businessRules } = ventasConfig
+    const listCurrency: CurrencyCode = configCurrency || FALLBACK_CURRENCY
+    const displayCurrency = currencyForCountryCode(countryCode)
+    const promo = resolveSubmittedPromo({
+      promoCodes,
+      submittedRaw: couponSubmitted,
+    })
+    const couponSubmittedNorm = promo.submittedNorm
+    const isCouponValid = promo.isCouponValid
+    const discountPctApplied = promo.discountPctApplied
+    const couponCodeApplied = promo.couponCodeApplied
+
+    let pricingTierId: string | null = null
 
     const tier = resolveTierByEmployees(tiers, employeesCount)
     if (!tier) {
@@ -264,35 +296,91 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
     }
     pricingTierId = (tier as any).id || null
 
+    const tierHardware = {
+      annual_terminal_mode: tier.annual_terminal_mode ?? 'auto',
+      included_terminals_max: tier.included_terminals_max ?? null,
+    }
+    const ruleOpts = { rules: businessRules, tier: tierHardware }
+
+    if (billingModality === 'monthly' && !isMonthlyModalityAvailable(employeesCount, businessRules)) {
+      return res.status(400).json({ error: ventasMonthlyUnavailableMessage(businessRules) })
+    }
+
+    // Software tiers viven en la moneda de config; hardware lista en HNL.
     const annualSubtotal = roundMoney(Number(tier.price))
-    const isCouponValid = !!couponSubmittedNorm && couponSubmittedNorm === couponCode
-    const discountPctApplied = isCouponValid ? discountPct : 0
     const annualDiscountAmount = roundMoney(annualSubtotal * discountPctApplied)
     const annualTotal = roundMoney(annualSubtotal - annualDiscountAmount)
 
     const monthlySoftwareTotal = roundMoney(annualTotal / 12)
     const terminalsForPricing = terminalsCount >= 1 ? terminalsCount : 1
-    const hwQuote = hardwareFeeMonthly(terminalsForPricing)
-    if (hwQuote.special) {
-      return res.status(400).json({ error: ventasTooManyTerminalsErrorMessage() })
+    const formMaxTerminals = resolveFormMaxTerminals(businessRules)
+    if (terminalsForPricing > formMaxTerminals) {
+      return res.status(400).json({ error: ventasTooManyTerminalsErrorMessage(businessRules) })
     }
-    const monthlyHardwareFee = billingModality === 'monthly' ? hwQuote.fee : 0
+    const hwQuote = hardwareFeeMonthly(terminalsForPricing, businessRules, tierHardware)
+    if (hwQuote.special) {
+      return res.status(400).json({ error: ventasTooManyTerminalsErrorMessage(businessRules) })
+    }
+    const monthlyHardwareFeeList = shouldChargeHardwareContinuity(
+      billingModality,
+      employeesCount,
+      ruleOpts
+    )
+      ? hwQuote.fee
+      : 0
+    const monthlyHardwareFee = convertVentasMoney(
+      monthlyHardwareFeeList,
+      VENTAS_PRICE_LIST_CURRENCY,
+      listCurrency
+    )
+    const hwCharges = computeAnnualHardwareCharges({
+      modality: billingModality,
+      employeesCount,
+      terminalsCount: terminalsForPricing,
+      rules: businessRules,
+      tier: tierHardware,
+    })
+    const saleQuote = hwCharges.sale
+    const hardwareSaleTotalAmount = saleQuote
+      ? convertVentasMoney(saleQuote.total, VENTAS_PRICE_LIST_CURRENCY, listCurrency)
+      : 0
+    const hardwareSaleUnitPrice = saleQuote
+      ? convertVentasMoney(saleQuote.unitPrice, VENTAS_PRICE_LIST_CURRENCY, listCurrency)
+      : undefined
     const monthlyTotal = roundMoney(monthlySoftwareTotal + monthlyHardwareFee)
+    const hardwareMode = hwCharges.mode
 
-    const quote = {
-      currency,
+    const quoteList = {
+      currency: listCurrency,
       annual_subtotal: annualSubtotal,
       annual_discount_amount: annualDiscountAmount,
       annual_total: annualTotal,
       monthly_software_total: monthlySoftwareTotal,
       monthly_hardware_fee: monthlyHardwareFee,
       monthly_total: monthlyTotal,
+      hardware_sale_total: hardwareSaleTotalAmount,
+      hardware_sale_unit_price: hardwareSaleUnitPrice,
+      hardware_sale_discount_pct: saleQuote?.discountPct,
       coupon_applied: isCouponValid,
       discount_pct_applied: discountPctApplied,
-      tier: { min_employees: tier.min_employees, max_employees: tier.max_employees },
+      coupon_code_applied: couponCodeApplied,
+      tier: {
+        min_employees: tier.min_employees,
+        max_employees: tier.max_employees,
+        annual_terminal_mode: tierHardware.annual_terminal_mode,
+        included_terminals_max: tierHardware.included_terminals_max,
+      },
+      hardware_mode: hardwareMode,
+      business_rules: businessRules,
       billing_modality: billingModality,
       terminals_count: terminalsForPricing,
+      terminals_included_count: hwCharges.includedCount,
+      terminals_extra_count: hwCharges.extraCount,
+      employees_count: employeesCount,
     }
+
+    // Montos al cliente: dólares (SV), quetzales (GT), lempiras (HN).
+    const quote = localizeQuotationQuote(quoteList, listCurrency, displayCurrency)
 
     // Persist lead
     const meta = {
@@ -303,8 +391,15 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
       sector_rubro: sectorRubro || undefined,
       billing_modality: billingModality,
       terminals_count: terminalsForPricing,
-      monthly_hardware_fee: monthlyHardwareFee || undefined,
-      monthly_total: monthlyTotal || undefined,
+      terminals_included_count: hwCharges.includedCount,
+      terminals_extra_count: hwCharges.extraCount,
+      list_currency: listCurrency,
+      monthly_hardware_fee: quote.monthly_hardware_fee || undefined,
+      hardware_sale_total: quote.hardware_sale_total || undefined,
+      hardware_sale_unit_price: quote.hardware_sale_unit_price,
+      hardware_sale_discount_pct: saleQuote?.discountPct,
+      monthly_total: quote.monthly_total || undefined,
+      comparison_snapshot: buildModalityComparisonSnapshot(quote),
     }
 
     const { data: inserted, error: insertErr } = await (supabase as any)
@@ -319,15 +414,18 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
         coupon_code_submitted: couponSubmittedNorm || null,
         coupon_applied: isCouponValid,
         discount_pct_applied: discountPctApplied,
-        currency,
-        subtotal: annualSubtotal,
-        discount_amount: annualDiscountAmount,
-        total: annualTotal,
+        currency: quote.currency,
+        subtotal: quote.annual_subtotal,
+        discount_amount: quote.annual_discount_amount,
+        total: quote.annual_total,
         pricing_tier_id: pricingTierId,
         pricing_tier_snapshot: {
           min_employees: tier.min_employees,
           max_employees: tier.max_employees,
           price: Number(tier.price),
+          list_currency: listCurrency,
+          annual_terminal_mode: tierHardware.annual_terminal_mode,
+          included_terminals_max: tierHardware.included_terminals_max,
         },
         status: 'created',
         meta,
@@ -344,9 +442,21 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
     }
 
     const quoteId = inserted?.id as string
+
+    void enrollMarketingLead({
+      email: contactEmail,
+      source: 'ventas',
+      fullName: contactName || undefined,
+      phone: phoneNorm || undefined,
+    }).catch((err: unknown) => {
+      const message = err instanceof Error ? err.message : 'Unknown error'
+      logger.warn('Marketing enroll failed after ventas quote (non-blocking)', {
+        email: maskEmail(contactEmail),
+        error: message,
+      })
+    })
+
     const sentAt = new Date()
-    const quotedTotalForUrgency = billingModality === 'monthly' ? monthlyTotal : annualTotal
-    const urgencyOffer = computeUrgencyOffer({ quotedTotal: quotedTotalForUrgency, sentAt })
 
     const bankDetails = getVentasBankDetailsFromEnv()
 
@@ -361,6 +471,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
       terminalsCount: terminalsForPricing,
       couponCodeSubmitted: couponSubmittedNorm || undefined,
       countryLabel,
+      sentAt,
       bankDetails,
     })
 
@@ -382,9 +493,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
     })
     const subject = generateVentasQuotationEmailSubject({
       contactName,
-      discountAmount: urgencyOffer.discountAmount,
-      currency,
-      urgencyActive: urgencyOffer.isActive,
+      companyName,
     })
     const filename = `cotizacion-sisu-${quote.tier.min_employees}-${quote.tier.max_employees}.pdf`
 
@@ -399,11 +508,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
       return res.status(500).json({ error: 'Error de configuración del servicio de email' })
     }
 
-    const internal = process.env.VENTAS_NOTIFICATION_EMAIL
-    const toList = internal ? [contactEmail, internal] : [contactEmail]
-
     const result = await sendEmailWithResend({
-      to: toList,
+      to: contactEmail,
       subject,
       html,
       text,
@@ -429,13 +535,23 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
       .update({
         status: 'sent',
         email_message_id: (result as any)?.id || null,
-        meta: {
-          ...meta,
-          urgency_offer_expires_at: urgencyOffer.expiresAt.toISOString(),
-          urgency_offer_discount_pct: 0.2,
-        },
+        meta,
       })
       .eq('id', quoteId)
+
+    void sendLeadRegistroNotification({
+      source: 'ventas',
+      nombre: contactName || 'Contacto no especificado',
+      empresa: companyName || null,
+      email: contactEmail,
+      whatsapp: phoneNorm || null,
+      country_code: countryCode,
+      empleados: employeesCount,
+      quote_id: quoteId,
+      billing_modality: billingModality,
+      monthly_total: quote.monthly_total,
+      currency: quote.currency,
+    })
 
     // Activar entorno automáticamente (no romper cotización si falla).
     try {
@@ -458,6 +574,24 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
         quoteMeta: quoteMetaForCompany,
         countryCode,
       })
+
+      const frozenAmounts = computeFrozenQuoteAmounts({
+        billingModality,
+        monthlySoftwareTotal: quoteList.monthly_software_total,
+        monthlyHardwareFee: quoteList.monthly_hardware_fee,
+        annualTotal: quoteList.annual_total,
+        hardwareSaleTotal: quoteList.hardware_sale_total,
+      })
+
+      await (supabase as any)
+        .from('cotizaciones')
+        .update({
+          company_id: env.companyId,
+          expected_total_hnl: frozenAmounts.expectedTotalHnl,
+          expected_deposit_hnl: frozenAmounts.expectedDepositHnl,
+          payment_status: 'pending',
+        })
+        .eq('id', quoteId)
 
       const loginUrl = `${(process.env.NEXT_PUBLIC_SITE_URL || 'https://humanosisu.net').replace(/\/$/, '')}/app/login`
       const activationHtml = generateVentasActivationEmailHTML({
@@ -505,18 +639,32 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
       duration,
     })
 
+    const metaTracking = parseMetaTrackingPayload(body)
+    const leadValue =
+      quote.billing_modality === 'monthly' ? quote.monthly_total : quote.annual_total
+    sendMetaWebsiteConversionFireAndForget({
+      req,
+      eventName: 'SubmitApplication',
+      tracking: metaTracking,
+      userData: {
+        email: contactEmail,
+        phone: phoneNorm || undefined,
+        firstName: contactName || undefined,
+      },
+      customData: {
+        content_name: 'ventas',
+        content_category: countryCode,
+        value: leadValue,
+        currency: quote.currency,
+        status: billingModality,
+      },
+    })
+
     return res.status(200).json({
       success: true,
       message: 'Cotización enviada a su correo',
       quote_id: quoteId,
       quote,
-      urgency_offer: {
-        is_active: urgencyOffer.isActive,
-        quoted_total: urgencyOffer.quotedTotal,
-        discount_amount: urgencyOffer.discountAmount,
-        discounted_total: urgencyOffer.discountedTotal,
-        expires_at: urgencyOffer.expiresAt.toISOString(),
-      },
     })
   } catch (error: any) {
     const duration = Date.now() - startTime

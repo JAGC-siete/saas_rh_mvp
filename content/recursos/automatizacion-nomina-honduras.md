@@ -2,7 +2,7 @@
 title: Cómo automatizar la nómina en Honduras
 description: Guía práctica para MIPYMES que quieren dejar Excel y pasar a un sistema de nómina automatizado con IHSS, RAP e ISR.
 datePublished: 2025-02-03
-author: Humano SISU
+author: "Licenciado Jorge Arturo Gómez Coello"
 ---
 
 La nómina manual en Excel no solo consume horas cada mes: también aumenta el riesgo de errores en IHSS, RAP e ISR. En Honduras, automatizar el cálculo de deducciones y la generación de comprobantes es cada vez más accesible para las MIPYMES.

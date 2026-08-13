@@ -5,6 +5,7 @@ import { logger } from '../../../lib/logger'
 import { withRateLimit } from '../../../lib/deduction-validator/rate-limit-wrapper'
 import { calcularLiquidacionHonduras } from '../../../lib/payroll/cesantias'
 import { motivoSalidaEnum } from '../../../lib/payroll/cesantias-schema'
+import { parseDateYmd } from '../../../lib/payroll/thirteenth-fourteenth/calendar'
 
 const prestacionesRequestSchema = z
   .object({
@@ -34,8 +35,8 @@ const prestacionesRequestSchema = z
   })
   .superRefine((val, ctx) => {
     const { fechaIngreso, fechaEgreso } = val.datosManuales
-    const start = new Date(fechaIngreso)
-    const end = new Date(fechaEgreso)
+    const start = parseDateYmd(fechaIngreso)
+    const end = parseDateYmd(fechaEgreso)
 
     if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
       ctx.addIssue({

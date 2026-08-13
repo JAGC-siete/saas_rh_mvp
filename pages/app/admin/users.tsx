@@ -15,6 +15,10 @@ import {
 import {
   canonicalPermissionsForRole,
 } from '../../../lib/security/canonical-permissions'
+import {
+  CANCEL_DEDUCTION_PLANS_KEY,
+  canAccessDeduccionesModule,
+} from '../../../lib/security/deducciones-access'
 
 function PasswordStrengthHint({ password }: { password: string }) {
   const score = computePasswordStrength(password)
@@ -99,6 +103,8 @@ export default function UsersAdminPage() {
   const [savingFieldPerms, setSavingFieldPerms] = useState(false)
   const [fieldPermView, setFieldPermView] = useState<boolean | null>(null)
   const [fieldPermEdit, setFieldPermEdit] = useState<boolean | null>(null)
+  /** null = inherit (default allow when has Deducciones); false = deny cancel */
+  const [cancelDeductionPlans, setCancelDeductionPlans] = useState<boolean | null>(null)
 
   const buildUsersListQueryString = useCallback(
     (pageNum: number, size: number) => {
@@ -368,6 +374,13 @@ export default function UsersAdminPage() {
       setFieldPermEdit(
         raw.can_edit_salary === true ? true : raw.can_edit_salary === false ? false : null
       )
+      setCancelDeductionPlans(
+        raw[CANCEL_DEDUCTION_PLANS_KEY] === true
+          ? true
+          : raw[CANCEL_DEDUCTION_PLANS_KEY] === false
+            ? false
+            : null
+      )
     } catch (err: any) {
       addNotification({ type: 'error', title: 'Error', message: err.message || 'No se pudieron cargar los detalles' })
       setUserDetails(null)
@@ -381,6 +394,7 @@ export default function UsersAdminPage() {
     setUserDetails(null)
     setFieldPermView(null)
     setFieldPermEdit(null)
+    setCancelDeductionPlans(null)
   }
 
   const roleSalaryDefaults = useMemo(() => {
@@ -406,6 +420,8 @@ export default function UsersAdminPage() {
       else nextPermissions.can_view_salary = fieldPermView
       if (fieldPermEdit === null) delete nextPermissions.can_edit_salary
       else nextPermissions.can_edit_salary = fieldPermEdit
+      if (cancelDeductionPlans === null) delete nextPermissions[CANCEL_DEDUCTION_PLANS_KEY]
+      else nextPermissions[CANCEL_DEDUCTION_PLANS_KEY] = cancelDeductionPlans
 
       const res = await fetch(`/api/admin/users/${selectedUser.id}`, {
         method: 'PATCH',
@@ -416,7 +432,7 @@ export default function UsersAdminPage() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Error al guardar permisos')
 
-      addNotification({ type: 'success', title: 'Permisos actualizados', message: 'Campos sensibles guardados.' })
+      addNotification({ type: 'success', title: 'Permisos actualizados', message: 'Overrides de permisos guardados.' })
       setUserDetails((prev: any) => (prev ? { ...prev, permissions: nextPermissions } : prev))
     } catch (err: any) {
       addNotification({ type: 'error', title: 'Error', message: err.message || 'No se pudieron guardar los permisos' })
@@ -424,6 +440,11 @@ export default function UsersAdminPage() {
       setSavingFieldPerms(false)
     }
   }
+
+  const hasDeduccionesAccess = useMemo(() => {
+    if (!userDetails) return false
+    return canAccessDeduccionesModule(userDetails.role, userDetails.permissions)
+  }, [userDetails])
 
   return (
     <>
@@ -447,10 +468,10 @@ export default function UsersAdminPage() {
                   value={search}
                   onChange={(e) => { setPage(1); setSearch(e.target.value) }}
                   placeholder="Buscar por email, nombre o empresa"
-                  className="px-3 py-2 border border-white/20 rounded-md w-72 min-w-[12rem] bg-white/10 text-white placeholder:text-white/50 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-amber-300/50 focus:border-amber-300/50"
+                  className="input-glass w-72 min-w-[12rem] text-white placeholder:text-white/50 focus:ring-amber-300/50"
                 />
                 <select
-                  className="border border-white/20 rounded-md px-2 py-2 text-sm max-w-[14rem] truncate bg-white/10 text-white backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-amber-300/50 focus:border-amber-300/50"
+                  className="input-glass text-sm text-white focus:ring-amber-300/50"
                   value={companyFilter}
                   onChange={(e) => {
                     setPage(1)
@@ -471,7 +492,7 @@ export default function UsersAdminPage() {
                   ))}
                 </select>
                 <select 
-                  className="border border-white/20 rounded-md px-2 py-2 text-sm bg-white/10 text-white backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-amber-300/50 focus:border-amber-300/50" 
+                  className="input-glass text-sm text-white focus:ring-amber-300/50" 
                   value={role} 
                   onChange={(e) => { setPage(1); setRole(e.target.value) }}
                 >
@@ -483,7 +504,7 @@ export default function UsersAdminPage() {
                   <option value="employee" className="bg-slate-800">Empleado</option>
                 </select>
                 <select 
-                  className="border border-white/20 rounded-md px-2 py-2 text-sm bg-white/10 text-white backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-amber-300/50 focus:border-amber-300/50" 
+                  className="input-glass text-sm text-white focus:ring-amber-300/50" 
                   value={state} 
                   onChange={(e) => { setPage(1); setState(e.target.value) }}
                 >
@@ -495,7 +516,7 @@ export default function UsersAdminPage() {
               </div>
             </div>
 
-            <Card variant="glass" className="border-white/10">
+            <Card variant="liquid" className="border-white/10">
               <CardHeader>
                 <CardTitle className="text-base text-white">
                   Listado ({totalUsers})
@@ -511,12 +532,12 @@ export default function UsersAdminPage() {
               </CardHeader>
               <CardContent>
               {error && (
-                <Card variant="glass" className="mb-4 border-red-400/40 bg-red-500/10">
+                <Card variant="liquid" className="mb-4 border-red-400/40 bg-red-500/10">
                   <CardContent className="pt-4 text-red-100 text-sm">{error}</CardContent>
                 </Card>
               )}
               {showCreate && (
-                <Card variant="glass" className="mb-4 border-white/20">
+                <Card variant="liquid" className="mb-4 border-white/20">
                   <CardContent className="pt-4">
                     <form onSubmit={createUser} className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="md:col-span-2 rounded-md border border-white/15 bg-white/5 px-3 py-2 text-sm text-white/80">
@@ -529,7 +550,7 @@ export default function UsersAdminPage() {
                         <input 
                           type="email" 
                           required 
-                          className="w-full border border-white/20 rounded-md px-3 py-2 bg-white/10 text-white placeholder:text-white/50 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-amber-300/50 focus:border-amber-300/50" 
+                          className="input-glass w-full text-white placeholder:text-white/50 focus:ring-amber-300/50" 
                           value={form.email} 
                           onChange={(e) => setForm({ ...form, email: e.target.value })} 
                         />
@@ -554,7 +575,7 @@ export default function UsersAdminPage() {
                           required={useManualPasswordOnCreate}
                           minLength={8}
                           autoComplete="new-password"
-                          className="w-full border border-white/20 rounded-md px-3 py-2 bg-white/10 text-white placeholder:text-white/50 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-amber-300/50 focus:border-amber-300/50"
+                          className="input-glass w-full text-white placeholder:text-white/50 focus:ring-amber-300/50"
                           value={form.password}
                           onChange={(e) => setForm({ ...form, password: e.target.value })}
                         />
@@ -581,7 +602,7 @@ export default function UsersAdminPage() {
                           required={useManualPasswordOnCreate}
                           minLength={8}
                           autoComplete="new-password"
-                          className="w-full border border-white/20 rounded-md px-3 py-2 bg-white/10 text-white placeholder:text-white/50 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-amber-300/50 focus:border-amber-300/50"
+                          className="input-glass w-full text-white placeholder:text-white/50 focus:ring-amber-300/50"
                           value={form.passwordConfirm}
                           onChange={(e) => setForm({ ...form, passwordConfirm: e.target.value })}
                         />
@@ -591,7 +612,7 @@ export default function UsersAdminPage() {
                       <div>
                         <label className="block text-sm text-white/80 mb-1">Rol</label>
                         <select 
-                          className="w-full border border-white/20 rounded-md px-3 py-2 bg-white/10 text-white backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-amber-300/50 focus:border-amber-300/50" 
+                          className="input-glass w-full text-white placeholder:text-white/50 focus:ring-amber-300/50" 
                           value={form.role} 
                           onChange={(e) => setForm({ ...form, role: e.target.value })}
                         >
@@ -605,7 +626,7 @@ export default function UsersAdminPage() {
                         <label className="block text-sm text-white/80 mb-1">Empresa</label>
                         <select 
                           required 
-                          className="w-full border border-white/20 rounded-md px-3 py-2 bg-white/10 text-white backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-amber-300/50 focus:border-amber-300/50" 
+                          className="input-glass w-full text-white placeholder:text-white/50 focus:ring-amber-300/50" 
                           value={form.company_id} 
                           onChange={(e) => setForm({ ...form, company_id: e.target.value })}
                         >
@@ -633,7 +654,7 @@ export default function UsersAdminPage() {
                     {pageItems.map((u) => (
                       <Card 
                         key={u.id} 
-                        variant="glass" 
+                        variant="liquid" 
                         className="border-white/10 cursor-pointer hover:border-white/30 transition-colors"
                         onClick={() => openUserDetails(u)}
                       >
@@ -684,7 +705,7 @@ export default function UsersAdminPage() {
                       <Button variant="outline" size="sm" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="border-white/30 text-white hover:bg-white/10">Anterior</Button>
                       <Button variant="outline" size="sm" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="border-white/30 text-white hover:bg-white/10">Siguiente</Button>
                       <select 
-                        className="border border-white/20 rounded-md text-sm px-2 py-1 bg-white/10 text-white focus:outline-none focus:ring-2 focus:ring-amber-300/50 focus:border-amber-300/50" 
+                        className="input-glass text-sm text-white focus:ring-amber-300/50" 
                         value={pageSize} 
                         onChange={(e) => { setPage(1); setPageSize(Number(e.target.value)) }}
                       >
@@ -761,7 +782,7 @@ export default function UsersAdminPage() {
                       minLength={8}
                       autoComplete="new-password"
                       disabled={resetSubmitting}
-                      className="w-full border border-white/20 rounded-md px-3 py-2 bg-white/10 text-white placeholder:text-white/50 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-amber-300/50 focus:border-amber-300/50 disabled:opacity-50"
+                      className="input-glass w-full text-white placeholder:text-white/50 focus:ring-amber-300/50 disabled:opacity-50"
                       value={resetPassword}
                       onChange={(e) => setResetPassword(e.target.value)}
                     />
@@ -787,7 +808,7 @@ export default function UsersAdminPage() {
                       minLength={8}
                       autoComplete="new-password"
                       disabled={resetSubmitting}
-                      className="w-full border border-white/20 rounded-md px-3 py-2 bg-white/10 text-white placeholder:text-white/50 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-amber-300/50 focus:border-amber-300/50 disabled:opacity-50"
+                      className="input-glass w-full text-white placeholder:text-white/50 focus:ring-amber-300/50 disabled:opacity-50"
                       value={resetPasswordConfirm}
                       onChange={(e) => setResetPasswordConfirm(e.target.value)}
                     />
@@ -944,64 +965,103 @@ export default function UsersAdminPage() {
                   </div>
                   <div>
                     <label className="text-xs uppercase tracking-wider text-white/60 mb-2 block">
-                      Campos sensibles (override)
+                      Overrides de permisos
                     </label>
-                    <div className="bg-white/5 rounded-md p-4 border border-white/10 space-y-4">
-                      <p className="text-xs text-white/60">
-                        Default del rol{' '}
-                        <span className="text-white/80 font-medium">{userDetails.role}</span>: ver salario{' '}
-                        {roleSalaryDefaults.view ? 'sí' : 'no'}, editar{' '}
-                        {roleSalaryDefaults.edit ? 'sí' : 'no'}. Deje en &quot;Usar rol&quot; para no override.
-                      </p>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                          <label className="text-sm text-white/80 mb-1 block">Ver salario</label>
-                          <select
-                            value={
-                              fieldPermView === null ? 'inherit' : fieldPermView ? 'true' : 'false'
-                            }
-                            onChange={(e) => {
-                              const v = e.target.value
-                              setFieldPermView(v === 'inherit' ? null : v === 'true')
-                            }}
-                            className="w-full border border-white/20 rounded-md px-3 py-2 bg-white/10 text-white text-sm"
-                          >
-                            <option value="inherit" className="text-black">Usar rol</option>
-                            <option value="true" className="text-black">Permitir</option>
-                            <option value="false" className="text-black">Denegar</option>
-                          </select>
-                          {fieldPermView !== null && fieldPermView !== roleSalaryDefaults.view && (
-                            <p className="text-xs text-amber-300 mt-1">Override activo</p>
-                          )}
+                    <div className="bg-white/5 rounded-md p-4 border border-white/10 space-y-5">
+                      <div className="space-y-4">
+                        <p className="text-xs text-white/60">
+                          Salario — default del rol{' '}
+                          <span className="text-white/80 font-medium">{userDetails.role}</span>: ver{' '}
+                          {roleSalaryDefaults.view ? 'sí' : 'no'}, editar{' '}
+                          {roleSalaryDefaults.edit ? 'sí' : 'no'}. &quot;Usar rol&quot; = sin override.
+                        </p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div>
+                            <label className="text-sm text-white/80 mb-1 block">Ver salario</label>
+                            <select
+                              value={
+                                fieldPermView === null ? 'inherit' : fieldPermView ? 'true' : 'false'
+                              }
+                              onChange={(e) => {
+                                const v = e.target.value
+                                setFieldPermView(v === 'inherit' ? null : v === 'true')
+                              }}
+                              className="input-glass w-full text-white text-sm"
+                            >
+                              <option value="inherit" className="text-black">Usar rol</option>
+                              <option value="true" className="text-black">Permitir</option>
+                              <option value="false" className="text-black">Denegar</option>
+                            </select>
+                            {fieldPermView !== null && fieldPermView !== roleSalaryDefaults.view && (
+                              <p className="text-xs text-amber-300 mt-1">Override activo</p>
+                            )}
+                          </div>
+                          <div>
+                            <label className="text-sm text-white/80 mb-1 block">Editar salario</label>
+                            <select
+                              value={
+                                fieldPermEdit === null ? 'inherit' : fieldPermEdit ? 'true' : 'false'
+                              }
+                              onChange={(e) => {
+                                const v = e.target.value
+                                setFieldPermEdit(v === 'inherit' ? null : v === 'true')
+                              }}
+                              className="input-glass w-full text-white text-sm"
+                            >
+                              <option value="inherit" className="text-black">Usar rol</option>
+                              <option value="true" className="text-black">Permitir</option>
+                              <option value="false" className="text-black">Denegar</option>
+                            </select>
+                            {fieldPermEdit !== null && fieldPermEdit !== roleSalaryDefaults.edit && (
+                              <p className="text-xs text-amber-300 mt-1">Override activo</p>
+                            )}
+                          </div>
                         </div>
+                      </div>
+
+                      <div className="border-t border-white/10 pt-4 space-y-3">
+                        <p className="text-xs text-white/60">
+                          Deducciones — cancelar planes activos (adelanto salarial, etc.). Default: permitir
+                          si tiene el módulo.
+                          {!hasDeduccionesAccess && (
+                            <span className="block mt-1 text-amber-200/80">
+                              Sin acceso a Deducciones hoy; el flag aplica al habilitarlo.
+                            </span>
+                          )}
+                        </p>
                         <div>
-                          <label className="text-sm text-white/80 mb-1 block">Editar salario</label>
+                          <label className="text-sm text-white/80 mb-1 block">Cancelar planes</label>
                           <select
                             value={
-                              fieldPermEdit === null ? 'inherit' : fieldPermEdit ? 'true' : 'false'
+                              cancelDeductionPlans === null
+                                ? 'inherit'
+                                : cancelDeductionPlans
+                                  ? 'true'
+                                  : 'false'
                             }
                             onChange={(e) => {
                               const v = e.target.value
-                              setFieldPermEdit(v === 'inherit' ? null : v === 'true')
+                              setCancelDeductionPlans(v === 'inherit' ? null : v === 'true')
                             }}
-                            className="w-full border border-white/20 rounded-md px-3 py-2 bg-white/10 text-white text-sm"
+                            className="input-glass w-full max-w-xs text-white text-sm"
                           >
-                            <option value="inherit" className="text-black">Usar rol</option>
+                            <option value="inherit" className="text-black">Usar default (permitir)</option>
                             <option value="true" className="text-black">Permitir</option>
                             <option value="false" className="text-black">Denegar</option>
                           </select>
-                          {fieldPermEdit !== null && fieldPermEdit !== roleSalaryDefaults.edit && (
-                            <p className="text-xs text-amber-300 mt-1">Override activo</p>
+                          {cancelDeductionPlans === false && (
+                            <p className="text-xs text-amber-300 mt-1">Override activo: sin cancelar</p>
                           )}
                         </div>
                       </div>
+
                       <Button
                         type="button"
                         size="sm"
                         disabled={savingFieldPerms}
                         onClick={saveFieldPermissions}
                       >
-                        {savingFieldPerms ? 'Guardando…' : 'Guardar permisos de campo'}
+                        {savingFieldPerms ? 'Guardando…' : 'Guardar overrides'}
                       </Button>
                     </div>
                   </div>

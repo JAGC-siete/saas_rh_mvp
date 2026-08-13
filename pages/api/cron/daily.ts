@@ -2,6 +2,15 @@ import { NextApiRequest, NextApiResponse } from 'next'
 import { createAdminClient } from '../../../lib/supabase/server'
 import { sendTrialReminderEmail } from '../../../lib/emails/trial-reminder'
 import { calculateAttendanceHoursForDate } from '../../../lib/attendance/calculate-hours'
+import { runInfoAcceleratedPainPoints } from '../../../lib/cron/info-sequence-pain-points'
+import { runInfoDelayedSequenceWelcome } from '../../../lib/cron/info-sequence-welcome'
+import { runSuscripcionAcceleratedPainPoints } from '../../../lib/cron/suscripcion-sequence-pain-points'
+import { runSuscripcionDelayedSequenceWelcome } from '../../../lib/cron/suscripcion-sequence-welcome'
+import { runActivarAcceleratedPainPoints } from '../../../lib/cron/activar-sequence-pain-points'
+import { runActivarDelayedSequenceWelcome } from '../../../lib/cron/activar-sequence-welcome'
+import { runVentasAcceleratedPainPoints } from '../../../lib/cron/ventas-sequence-pain-points'
+import { runVentasDelayedSequenceWelcome } from '../../../lib/cron/ventas-sequence-welcome'
+import { runLateAttendanceReportCron } from '../../../lib/cron/late-attendance-report'
 import { runSequenceWatchman } from '../../../lib/cron/sequence-watchman'
 import { isBiMonthlyWatchDay } from '../../../lib/marketing/email-sequence-ledger'
 import { logger } from '../../../lib/logger'
@@ -37,12 +46,48 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // 4. Calculate attendance hours for yesterday (end of day batch)
     await calculateDailyAttendanceHours(supabase, now)
 
-    // 5. Marketing sequence watchman (bi-monthly windows: days 12–16 and 26–30)
+    // 5. /info delayed sequence welcome (24h after informational pack)
+    const infoWelcomeResult = await runInfoDelayedSequenceWelcome(now)
+    logger.info('Daily CRON: info delayed sequence welcome completed', infoWelcomeResult)
+
+    // 5b. /info accelerated pain points (48h cadence, bypasses bi-monthly watchman)
+    const infoPainPointsResult = await runInfoAcceleratedPainPoints(now)
+    logger.info('Daily CRON: info accelerated pain points completed', infoPainPointsResult)
+
+    // 5c. /suscripcion delayed welcome (24h after recibo pack)
+    const suscripcionWelcomeResult = await runSuscripcionDelayedSequenceWelcome(now)
+    logger.info('Daily CRON: suscripcion delayed sequence welcome completed', suscripcionWelcomeResult)
+
+    // 5d. /suscripcion accelerated pain points (48h cadence)
+    const suscripcionPainPointsResult = await runSuscripcionAcceleratedPainPoints(now)
+    logger.info('Daily CRON: suscripcion accelerated pain points completed', suscripcionPainPointsResult)
+
+    // 5e. /activar delayed welcome (24h after trial anchor)
+    const activarWelcomeResult = await runActivarDelayedSequenceWelcome(now)
+    logger.info('Daily CRON: activar delayed sequence welcome completed', activarWelcomeResult)
+
+    // 5f. /activar accelerated pain points (48h cadence)
+    const activarPainPointsResult = await runActivarAcceleratedPainPoints(now)
+    logger.info('Daily CRON: activar accelerated pain points completed', activarPainPointsResult)
+
+    // 5g. /ventas delayed welcome (24h after quote anchor)
+    const ventasWelcomeResult = await runVentasDelayedSequenceWelcome(now)
+    logger.info('Daily CRON: ventas delayed sequence welcome completed', ventasWelcomeResult)
+
+    // 5h. /ventas accelerated pain points (48h cadence)
+    const ventasPainPointsResult = await runVentasAcceleratedPainPoints(now)
+    logger.info('Daily CRON: ventas accelerated pain points completed', ventasPainPointsResult)
+
+    // 6. Marketing sequence watchman (bi-monthly windows: days 12–16 and 26–30; excludes accelerated)
     let watchmanResult: Awaited<ReturnType<typeof runSequenceWatchman>> | null = null
     if (isBiMonthlyWatchDay(now)) {
       watchmanResult = await runSequenceWatchman(now)
       logger.info('Daily CRON: sequence watchman completed', watchmanResult)
     }
+
+    // 7. Late attendance reports when a pay period closed yesterday
+    const lateReportResult = await runLateAttendanceReportCron(now)
+    logger.info('Daily CRON: late attendance report completed', lateReportResult)
 
     console.log('✅ Daily CRON job completed successfully')
 
@@ -50,7 +95,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       success: true,
       message: 'Daily CRON job completed',
       timestamp: now.toISOString(),
+      infoWelcome: infoWelcomeResult,
+      infoPainPoints: infoPainPointsResult,
+      suscripcionWelcome: suscripcionWelcomeResult,
+      suscripcionPainPoints: suscripcionPainPointsResult,
+      activarWelcome: activarWelcomeResult,
+      activarPainPoints: activarPainPointsResult,
+      ventasWelcome: ventasWelcomeResult,
+      ventasPainPoints: ventasPainPointsResult,
       watchman: watchmanResult,
+      lateAttendanceReport: lateReportResult,
     })
 
   } catch (error) {

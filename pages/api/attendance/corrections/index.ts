@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { requireCompanyAccess } from '../../../../lib/auth/api-auth-fixed'
+import { getAttendanceMarksValidationError } from '../../../../lib/attendance/validate-marks'
 import { createAdminClient } from '../../../../lib/supabase/server'
 
 type Status = 'pending' | 'approved' | 'rejected'
@@ -136,6 +137,23 @@ async function handleCreate(req: NextApiRequest, res: NextApiResponse) {
       .eq('employee_id', employeeId)
       .eq('date', date)
       .maybeSingle()
+
+    // Validar marcas propuestas (y el resultado efectivo vs registro existente)
+    const proposedErr = getAttendanceMarksValidationError({
+      check_in: proposed_check_in,
+      check_out: proposed_check_out,
+      lunch_start: proposed_lunch_start,
+      lunch_end: proposed_lunch_end,
+    })
+    if (proposedErr) return res.status(400).json({ error: proposedErr })
+
+    const effectiveErr = getAttendanceMarksValidationError({
+      check_in: proposed_check_in ?? existing?.check_in ?? null,
+      check_out: proposed_check_out ?? existing?.check_out ?? null,
+      lunch_start: proposed_lunch_start ?? existing?.lunch_start ?? null,
+      lunch_end: proposed_lunch_end ?? existing?.lunch_end ?? null,
+    })
+    if (effectiveErr) return res.status(400).json({ error: effectiveErr })
 
     const insertPayload: any = {
       company_id: effectiveCompanyId,

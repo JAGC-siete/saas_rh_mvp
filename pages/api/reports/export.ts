@@ -13,9 +13,16 @@ import { normalizeCountryCode, type CountryCode } from '../../../lib/country/sup
 import { reportFormatForCountry } from '../../../lib/country/payroll-labels'
 import { createEmployeeSalaryClient } from '../../../lib/security/employee-data-access'
 import { createAdminClient } from '../../../lib/supabase/server'
+import { fetchAttendanceReportDataForExport } from '../../../lib/reports/fetch-attendance-report-data'
 import { resolveFieldAccessContext } from '../../../lib/security/field-access'
-import { canExportReports, EXPORT_REPORTS_FORBIDDEN } from '../../../lib/security/permissions'
+import { canExportReports, canExportAttendanceReports, EXPORT_REPORTS_FORBIDDEN } from '../../../lib/security/permissions'
 import { applyFieldAccessToReportData } from '../../../lib/security/apply-field-access-to-report'
+import {
+  isExactHourlyPlanillaTablePayType,
+  resolvePlanillaRowPayType,
+} from '../../../lib/payroll/resolve-effective-pay-type'
+import { resolvePlanillaDaysWorked } from '../../../lib/payroll/planilla-from-run'
+import { resolveDisplayNet } from '../../../lib/payroll/resolve-display-net'
 
 interface ReportData {
   employees: any[]
@@ -47,24 +54,28 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     const { supabase, companyId, role, user: authUser, userProfile } = authResult
     user = authUser
 
-    if (!canExportReports(role, userProfile)) {
+    const body = req.body
+    format = body.format
+    dateFilter = body.dateFilter
+    reportType = body.reportType
+
+    if (reportType === 'attendance') {
+      if (!canExportAttendanceReports(role, userProfile)) {
+        return res.status(EXPORT_REPORTS_FORBIDDEN.status).json(EXPORT_REPORTS_FORBIDDEN.body)
+      }
+    } else if (!canExportReports(role, userProfile)) {
       return res.status(EXPORT_REPORTS_FORBIDDEN.status).json(EXPORT_REPORTS_FORBIDDEN.body)
     }
 
     const fieldCtx = await resolveFieldAccessContext(userProfile, createAdminClient())
 
-    console.log('🔐 Usuario autenticado para reportes:', { 
-      userId: user.id, 
-      role: role,
-      companyId: companyId 
+    console.log('🔐 Usuario autenticado para reportes:', {
+      userId: user.id,
+      role,
+      companyId,
     })
-
-    const body = req.body
-    format = body.format
-    dateFilter = body.dateFilter
-    reportType = body.reportType
     
-    // Validaciones
+    // Validaciones (reportType/format ya asignados arriba)
     if (!reportType || !['attendance', 'payroll', 'employees'].includes(reportType)) {
       return res.status(400).json({ error: 'Tipo de reporte inválido (permitidos: attendance, payroll, employees)' })
     }
@@ -592,56 +603,17 @@ function generateCSVReport(
 // ===== FUNCIONES PARA OBTENER DATOS ESPECÍFICOS =====
 
 async function generateAttendanceReportData(supabase: any, dateFilter: any, companyId: string | null) {
-  // Obtener empleados
-  let employeesQuery = supabase
-    .from('employees')
-    .select('id, name, dni, employee_code, department_id, departments:department_id(name), status')
-    .eq('status', 'active')
-    .order('name')
-
-  if (companyId) {
-    employeesQuery = employeesQuery.eq('company_id', companyId)
+  if (!companyId) {
+    return { employees: [], attendance: [], dateFilter }
   }
 
-  const { data: employees, error: empError } = await employeesQuery
-  if (empError) {
-    console.error('Error obteniendo empleados:', empError)
-    throw new Error(`Error obteniendo empleados: ${empError.message}`)
-  }
+  const { employees, attendance } = await fetchAttendanceReportDataForExport(
+    companyId,
+    dateFilter.startDate,
+    dateFilter.endDate
+  )
 
-  // Obtener IDs de empleados para filtrar asistencia
-  const employeeIds = (employees || []).map((e: any) => e.id)
-
-  // Obtener registros de asistencia con filtro por employee_ids de la empresa
-  let attendanceQuery = supabase
-    .from('attendance_records')
-    .select(`
-      *,
-      employees!attendance_records_employee_id_fkey(
-        id,
-        name,
-        employee_code,
-        company_id
-      )
-    `)
-    .gte('date', dateFilter.startDate)
-    .lte('date', dateFilter.endDate)
-
-  // Filtrar por employee_ids de la empresa (más seguro que usar !inner join)
-  if (companyId && employeeIds.length > 0) {
-    attendanceQuery = attendanceQuery.in('employee_id', employeeIds)
-  } else if (companyId && employeeIds.length === 0) {
-    // Si no hay empleados para la empresa, devolver array vacío
-    attendanceQuery = attendanceQuery.eq('employee_id', '__none__')
-  }
-
-  const { data: attendance, error: attError } = await attendanceQuery
-  if (attError) {
-    console.error('Error obteniendo registros de asistencia:', attError)
-    throw new Error(`Error obteniendo asistencia: ${attError.message}`)
-  }
-
-  return { employees: employees || [], attendance: attendance || [], dateFilter }
+  return { employees, attendance, dateFilter }
 }
 
 async function generatePayrollReportData(supabase: any, dateFilter: any, companyId: string | null) {
@@ -823,7 +795,10 @@ async function generateAttendanceExcel(
       if (r.late_minutes && r.late_minutes > 5) s.late++
     }
 
-    summary.forEach(s => summarySheet.addRow(s))
+    const summaryRows = Array.from(summary.values()).sort((a, b) =>
+      String(a.employee).localeCompare(String(b.employee), 'es', { sensitivity: 'base' })
+    )
+    summaryRows.forEach((s) => summarySheet.addRow(s))
     
     summarySheet.getRow(1).font = { bold: true }
     summarySheet.getRow(1).fill = {
@@ -1308,11 +1283,20 @@ async function generatePayrollPDF(
 
       const statutoryDeductions = (Number(line.eff_ihss) || 0) + (Number(line.eff_rap) || 0) + (Number(line.eff_isr) || 0)
       const totalDeductions = statutoryDeductions + customDeductions
-      const payType = line.employees?.pay_type || 'fixed'
+      const displayNet = resolveDisplayNet({
+        bruto: Number(line.eff_bruto) || 0,
+        totalDeductions,
+        customDeductions,
+        storedNeto: Number(line.eff_neto) || 0,
+      })
+      const payType = resolvePlanillaRowPayType({
+        employeePayType: line.employees?.pay_type,
+        metadataPayType: line.metadata?.pay_type,
+      })
       const totalHours = Number(line.eff_hours) || 0
-      const hourlyRate = payType === 'hourly' && totalHours > 0 
-        ? (Number(line.eff_bruto) || 0) / totalHours 
-        : 0
+      const showHourCols = isExactHourlyPlanillaTablePayType(payType)
+      const hourlyRate =
+        showHourCols && totalHours > 0 ? (Number(line.eff_bruto) || 0) / totalHours : 0
 
       return {
         id: line.employees?.dni || line.employees?.employee_code || '',
@@ -1321,7 +1305,7 @@ async function generatePayrollPDF(
         bank_account: line.employees?.bank_account || 'No especificado',
         department: line.employees?.departments?.name || 'Sin Departamento',
         monthly_salary: Number(line.employees?.base_salary) || 0,
-        days_worked: payType === 'hourly' ? (totalHours / 8) : (totalHours / 8),
+        days_worked: resolvePlanillaDaysWorked(payType, totalHours, line.metadata?.days_worked),
         days_absent: 0,
         late_days: 0,
         total_earnings: Number(line.eff_bruto) || 0,
@@ -1329,13 +1313,19 @@ async function generatePayrollPDF(
         RAP: Number(line.eff_rap) || 0,
         ISR: Number(line.eff_isr) || 0,
         total_deductions: totalDeductions,
-        total: Number(line.eff_neto) || 0,
+        total: displayNet,
         notes_on_ingress: line.edited ? 'Editado' : '',
         notes_on_deductions: deductionsNotes,
         metadata: line.metadata || {},
         pay_type: payType,
-        total_hours_worked: payType === 'hourly' ? totalHours : undefined,
-        hourly_rate: payType === 'hourly' ? hourlyRate : undefined
+        total_hours_worked: showHourCols ? totalHours : undefined,
+        hourly_rate: showHourCols ? hourlyRate : undefined,
+        ...(Number.isFinite(Number(line.metadata?.horas_extras)) && Number(line.metadata?.horas_extras) > 0
+          ? { horas_extras: Math.round(Number(line.metadata.horas_extras) * 100) / 100 }
+          : {}),
+        ...(Number.isFinite(Number(line.metadata?.overtime_pay)) && Number(line.metadata?.overtime_pay) > 0
+          ? { overtime_pay: Math.round(Number(line.metadata.overtime_pay) * 100) / 100 }
+          : {}),
       }
     })
   )
@@ -1360,14 +1350,12 @@ async function generatePayrollPDF(
     currency: (pdfMeta.currency as string) || undefined
   }
 
-  const planillaFixed = planillaAll.filter(p => (p as any).pay_type !== 'hourly')
-  const planillaHourly = planillaAll.filter(p => (p as any).pay_type === 'hourly')
+  const planillaFixed = planillaAll.filter(p => !isExactHourlyPlanillaTablePayType((p as any).pay_type))
+  const planillaHourly = planillaAll.filter(p => isExactHourlyPlanillaTablePayType((p as any).pay_type))
 
-  const reportVisual =
-    resolvedConfig?.branding?.primaryColor &&
-    /^#[0-9A-Fa-f]{6}$/.test(resolvedConfig.branding.primaryColor)
-      ? { primaryColor: resolvedConfig.branding.primaryColor }
-      : undefined
+  const reportVisual = resolvedConfig?.branding
+    ? { branding: resolvedConfig.branding, primaryColor: resolvedConfig.branding.primaryColor }
+    : undefined
 
   const pdf = await generateConsolidatedPayrollPDF(
     planillaFixed,
@@ -1379,7 +1367,18 @@ async function generatePayrollPDF(
     pdfCustomFieldsConfig,
     pdfPayrollLegal,
     undefined,
-    reportVisual
+    reportVisual,
+    resolvedConfig?.columns?.length
+      ? {
+          groupBy: 'none',
+          visibleColumnIds: resolvedConfig.columns.map((c) => c.id),
+          columnLabels: Object.fromEntries(resolvedConfig.columns.map((c) => [c.id, c.label])),
+          columnOrder: Object.fromEntries(
+            resolvedConfig.columns.map((c, i) => [c.id, c.order ?? i])
+          ),
+          includeCustomPayrollFields: resolvedConfig.includeCustomPayrollFields,
+        }
+      : { groupBy: 'none' }
   )
   res.setHeader('Content-Type', 'application/pdf')
   res.setHeader('Content-Disposition', `attachment; filename=planilla_${periodo}_q${quincena}.pdf`)

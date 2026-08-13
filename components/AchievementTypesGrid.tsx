@@ -54,7 +54,7 @@ export default memo(function AchievementTypesGrid() {
 
   if (loading) {
     return (
-      <Card variant="glass">
+      <Card variant="liquid">
         <CardHeader>
           <CardTitle className="text-white">Tipos de Logros</CardTitle>
           <CardDescription className="text-gray-300">Cargando configuración...</CardDescription>
@@ -70,7 +70,7 @@ export default memo(function AchievementTypesGrid() {
 
   if (error) {
     return (
-      <Card variant="glass">
+      <Card variant="liquid">
         <CardHeader>
           <CardTitle className="text-white">Tipos de Logros</CardTitle>
         </CardHeader>
@@ -90,7 +90,7 @@ export default memo(function AchievementTypesGrid() {
   }
 
   return (
-    <Card variant="glass">
+    <Card variant="liquid">
       <CardHeader>
         <CardTitle className="text-white">Tipos de Logros Disponibles</CardTitle>
         <CardDescription className="text-gray-300">Leídos desde `achievement_types`</CardDescription>

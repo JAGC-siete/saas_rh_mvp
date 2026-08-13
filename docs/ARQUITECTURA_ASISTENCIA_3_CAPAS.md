@@ -14,19 +14,22 @@
 | `attendance_hours_calculation` | ✅ | `total_hours`, `normal_hours`, `overtime_diurno/nocturno/feriado_hours`, `work_schedule_id` |
 | `employees.pay_type` | ✅ | `'fixed'` \| `'hourly'` — a nivel **empleado** |
 | `employees.work_schedule_id` | ✅ | Horario asignado (puede ser NULL) |
-| `work_schedules` | ✅ | Horarios por día de semana (fijos) |
+| `work_schedules` | ✅ | Horarios por día de semana (fijos o flexibles via `shift_type`) |
+| `employee_schedule_assignments` | ✅ | Asignaciones temporales por empleado/fecha (`valid_from`, `valid_to`, `repeat_weekly`, `repeat_weekdays`) |
 | `company_payroll_configs` | ⚠️ | `metadata` JSONB — no tiene flag explícito `pay_by_hour_mode` a nivel empresa |
 | `labor_laws` | ✅ | `legal_daily_hours` (8), `mandatory_break_minutes` |
 
-### 1.2 Gaps Identificados
+### 1.2 Implementaciones Recientes (Resueltas)
 
-1. **Capa Base:** La función `calculate_attendance_hours_batch` usa `v_expected_hours` del horario cuando existe. Si el horario indica 6h, se calculan 6h normales y 2h extra para 8h trabajadas. **Requerido:** Siempre usar 8h como tope de jornada regular (agnóstico de horario).
+1. **Capa Base 8h:** `calculate_attendance_hours_batch` usa `legal_daily_hours` (8h) como tope de jornada regular, agnóstico de horario. Migraciones: `20260218000001_attendance_capa_base_8h_universal.sql`, `20260522130001_calculate_hours_effective_schedule.sql`.
 
-2. **Webhook:** Empleados sin `work_schedule_id` son ignorados (`handleFixedEmployeeEvent` retorna early). No se procesan marcajes para empleados sin horario.
+2. **Webhook sin horario:** El webhook inserta `raw_punch` en `attendance_events` y dispara `generateDailyCloseReport` para todo empleado identificado por DNI, con o sin `work_schedule_id`. Procesamiento en `lib/attendance/daily-close.ts` via `mapPunchesToDay`.
 
-3. **Horarios rotativos:** No existe `employee_schedule_assignments` ni estructura para múltiples horarios por empleado/fecha. Solo `work_schedule_id` único por empleado.
+3. **Horarios rotativos / flexibles:** Tabla `employee_schedule_assignments` con resolución efectiva en `resolveEffectiveWorkScheduleId` y `loadEmployeeScheduleAssignments` (`lib/attendance/effective-work-schedule.ts`, `resolve-schedule-batch.ts`). Integrado en daily-close, `payroll/preview` y UI (`pages/app/attendance/scheduling.tsx`).
 
-4. **Pago por hora a nivel empresa:** `pay_type` está solo en `employees`. Falta opción en `company_payroll_configs` para indicar "modo por hora por defecto" cuando la compañía lo requiera.
+### 1.3 Gaps Pendientes
+
+1. **Pago por hora a nivel empresa:** `pay_type` está solo en `employees`. Falta opción en `company_payroll_configs` para indicar "modo por hora por defecto" cuando la compañía lo requiera.
 
 ---
 
@@ -57,7 +60,7 @@ overtime_hours = MAX(0, total_effective / 60 - 8)
 |-------|----------------|
 | Puntualidad | Comparar `check_in` vs `expected_check_in` del horario |
 | Diferenciales | `status`: `'late'`, `'early_departure'`, `'on_time'` |
-| Rotativos | Buscar horario que mejor coincida con el bloque de horas marcadas (requiere estructura nueva) |
+| Rotativos | Resolver horario efectivo via `employee_schedule_assignments` → fallback `employees.work_schedule_id` |
 
 **Importante:** La Capa 2 **no modifica** el cálculo de horas. Solo añade flags de cumplimiento. Las horas siguen la regla de 8h base.
 
@@ -71,13 +74,13 @@ overtime_hours = MAX(0, total_effective / 60 - 8)
 
 ---
 
-## 3. Cambios Propuestos
+## 3. Cambios de Arquitectura
 
-### 3.1 Migración: Capa Base en `calculate_attendance_hours_batch`
+### 3.1 ✅ Implementado: Capa Base en `calculate_attendance_hours_batch`
 
-**Archivo:** Nueva migración que reemplace la lógica actual.
+**Archivos:** `20260218000001_attendance_capa_base_8h_universal.sql`, `20260522130001_calculate_hours_effective_schedule.sql`.
 
-**Cambio clave:** Usar siempre `legal_daily_hours` (8) como tope de jornada regular, independientemente del horario:
+**Lógica:** Usar siempre `legal_daily_hours` (8) como tope de jornada regular, independientemente del horario:
 
 ```sql
 -- ANTES (actual):
@@ -109,17 +112,16 @@ Crear función o proceso que, **después** del cálculo de horas, actualice `att
 - `late_minutes`, `early_departure_minutes`
 - `expected_check_in`, `expected_check_out`
 
-Solo aplica cuando `work_schedule_id IS NOT NULL`. Puede ejecutarse en batch al final del día o al recalcular.
+Solo aplica cuando el horario efectivo resuelto no es NULL. Puede ejecutarse en batch al final del día o al recalcular.
 
-### 3.3 Webhook: Procesar Empleados Sin Horario
+### 3.3 ✅ Implementado: Webhook y Empleados Sin Horario
 
-Actualmente `handleFixedEmployeeEvent` retorna si `!employee.work_schedule_id`. Cambio propuesto:
+Flujo actual en `pages/api/webhooks/attendance.ts`:
 
-- Si `pay_type = 'fixed'` y **no** hay `work_schedule_id`: usar lógica simplificada:
-  - Primera marca del día → `check_in`
-  - Segunda marca del día → `check_out`
-  - Sin validación de ventanas (no hay horario de referencia)
-- Si `pay_type = 'hourly'`: ya existe `handleHourlyEmployeeEvent` (segunda marca = check_out dentro de 30h).
+1. Identificar empleado por DNI (sin filtrar por `work_schedule_id`).
+2. Insertar `raw_punch` en `attendance_events`.
+3. Ejecutar `generateDailyCloseReport` (`lib/attendance/daily-close.ts`), que mapea marcas del día via `mapPunchesToDay` — con o sin horario asignado.
+4. Sin horario: Capa 1 aplica (8h base); Capa 2 (late/early) no aplica.
 
 ### 3.4 Flag "Pago por Hora" a Nivel Empresa (Opcional)
 
@@ -134,17 +136,15 @@ ALTER TABLE company_payroll_configs ADD COLUMN IF NOT EXISTS
 
 Resolución: `employees.pay_type` > `company_payroll_configs.default_pay_mode` > `'attendance'`.
 
-### 3.5 Horarios Rotativos: ¿work_assignments o work_schedule_id?
+### 3.5 ✅ Implementado: Horarios Rotativos y Resolución Efectiva
 
-**Respuesta:** Depende del nivel de rotación que requieras.
-
-| Escenario | Estructura actual | Recomendación |
-|-----------|-------------------|---------------|
+| Escenario | Estructura | Estado |
+|-----------|------------|--------|
 | **Un horario por empleado con distintos días** (ej. Lun-Vie 8-17, Sáb 8-12) | `work_schedules` con monday_start...sunday_start | ✅ Suficiente. Un solo `work_schedule_id` por empleado. |
-| **Rotación semanal** (ej. semana A turno día, semana B turno noche) | `employees.work_schedule_id` único | ⚠️ Limitado. Best Fit ayuda pero no distingue semanas. |
-| **Rotación dinámica por fecha** (cambios frecuentes, múltiples horarios) | No soportado | ✅ Crear `employee_schedule_assignments (employee_id, work_schedule_id, valid_from, valid_to)` |
+| **Rotación semanal** (ej. semana A turno día, semana B turno noche) | `employee_schedule_assignments` con `repeat_weekly` + `repeat_weekdays` | ✅ Soportado. |
+| **Rotación dinámica por fecha** (cambios frecuentes, múltiples horarios) | `employee_schedule_assignments (employee_id, work_schedule_id, valid_from, valid_to)` | ✅ Soportado. Resolución: asignación activa → fallback `employees.work_schedule_id`. |
 
-**Conclusión:** Para la mayoría de casos, `work_schedule_id` + **Best Fit** (buscar el start_time más cercano en los 7 días del horario) es suficiente. Si necesitas rotación por semana o por rango de fechas explícito, conviene añadir `employee_schedule_assignments`.
+**Resolución en pipeline:** `resolveEffectiveWorkScheduleId` (consulta individual) y `loadEmployeeScheduleAssignments` + `resolveEffectiveWorkScheduleIdFromAssignments` (batch en daily-close y payroll/preview). RPC `resolve_effective_work_schedule_id` en Postgres para `calculate_attendance_hours_batch`.
 
 ---
 
@@ -158,7 +158,8 @@ Resolución: `employees.pay_type` > `company_payroll_configs.default_pay_mode` >
    - Segmentar overtime por tipo (diurno/nocturno/feriado)
    - Guardar en attendance_hours_calculation
 
-2. CAPA CUMPLIMIENTO (si work_schedule_id IS NOT NULL)
+2. CAPA CUMPLIMIENTO (si horario efectivo resuelto IS NOT NULL)
+   - Resolver horario via employee_schedule_assignments o employees.work_schedule_id
    - Obtener expected_check_in, expected_check_out del horario
    - Calcular late_minutes, early_departure_minutes
    - Actualizar attendance_records.status, late_minutes, early_departure_minutes
@@ -175,12 +176,19 @@ Resolución: `employees.pay_type` > `company_payroll_configs.default_pay_mode` >
 
 | Archivo | Estado |
 |---------|--------|
-| `supabase/migrations/20260218000001_attendance_capa_base_8h_universal.sql` | ✅ Creado — Capa Base 8h universal |
-| `pages/api/webhooks/attendance.ts` | ✅ Modificado — `handleFixedEmployeeNoSchedule` para empleados sin horario |
+| `supabase/migrations/20260218000001_attendance_capa_base_8h_universal.sql` | ✅ Capa Base 8h universal |
+| `supabase/migrations/20260425001000_attendance_schedule_assignments_and_flexible_shift.sql` | ✅ Tabla `employee_schedule_assignments` + turnos flexibles |
+| `supabase/migrations/20260522130000_resolve_effective_work_schedule.sql` | ✅ RPC `resolve_effective_work_schedule_id` |
+| `supabase/migrations/20260522130001_calculate_hours_effective_schedule.sql` | ✅ Batch hours con horario efectivo |
+| `lib/attendance/effective-work-schedule.ts` | ✅ Resolución individual de horario |
+| `lib/attendance/resolve-schedule-batch.ts` | ✅ Resolución batch (daily-close, preview) |
+| `lib/attendance/daily-close.ts` | ✅ Cierre diario con asignaciones y empleados sin horario |
+| `pages/api/webhooks/attendance.ts` | ✅ `raw_punch` + daily close (sin filtro por horario) |
+| `pages/app/attendance/scheduling.tsx` | ✅ UI de asignaciones temporales |
 | `lib/attendance/apply-compliance-layer.ts` | ⏳ Opcional — RPC o batch para actualizar status/late/early cuando hay horario |
-| `pages/api/payroll/calculate.ts` | ✅ Ya usa `pay_type` y `attendance_hours_calculation`; filtro por fechas correcto |
-| `pages/api/payroll/preview.ts` | ✅ Idem |
-| `company_payroll_configs.default_pay_mode` | ⏳ Opcional — migración si se requiere flag a nivel empresa |
+| `pages/api/payroll/calculate.ts` | ✅ Usa `pay_type` y `attendance_hours_calculation`; filtro por fechas correcto |
+| `pages/api/payroll/preview.ts` | ✅ Integra `loadEmployeeScheduleAssignments` |
+| `company_payroll_configs.default_pay_mode` | ⏳ Pendiente — flag a nivel empresa |
 
 ---
 

@@ -1,6 +1,18 @@
 /**
- * Plantillas de email para reportes de deducciones
+ * Plantillas de email para reportes de deducciones — Infraestructura Líquida.
  */
+
+import type { CountryCode } from '../country/supported'
+import { PUBLIC_CALCULATOR_CONFIGS } from '../public-calculator/config'
+import {
+  liquidCta,
+  liquidCtaWhatsApp,
+  liquidEmphasis,
+  liquidInfoBox,
+  liquidKeyValueTable,
+  liquidParagraph,
+  wrapLiquidEmail,
+} from '../emails/liquid-layout'
 
 export interface DeductionEmailData {
   year: number
@@ -14,102 +26,178 @@ export interface DeductionEmailData {
   isrPercentage: number
   totalDeductions: number
   netSalary: number
+  countryCode?: CountryCode
+  useGodfatherFunnel?: boolean
+  godfatherKeyword?: string
+  audience?: 'empleado' | 'empresa'
 }
 
-/**
- * Genera el HTML del email con el reporte de deducciones
- */
+const COUNTRY_META: Record<CountryCode, { legalName: string; deductionsPitch: string }> = {
+  HND: {
+    legalName: 'Honduras',
+    deductionsPitch: 'Seguro Social, RAP e ISR',
+  },
+  SLV: {
+    legalName: 'El Salvador',
+    deductionsPitch: 'ISSS, AFP e ISR',
+  },
+  GTM: {
+    legalName: 'Guatemala',
+    deductionsPitch: 'IGSS e ISR',
+  },
+}
+
+function formatMoney(country: CountryCode, value: number): string {
+  const cfg = PUBLIC_CALCULATOR_CONFIGS[country]
+  return new Intl.NumberFormat(cfg.locale, {
+    style: 'currency',
+    currency: cfg.currency,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(Number(value || 0))
+}
+
+function utmSource(country: CountryCode): string {
+  return `calculadora-deducciones-${country.toLowerCase()}`
+}
+
 export function generateDeductionEmailHTML(data: DeductionEmailData): string {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://humanosisu.net'
+  const country: CountryCode = data.countryCode ?? 'HND'
+  const meta = COUNTRY_META[country]
+  const source = utmSource(country)
+
+  const activarUrl = `${siteUrl}/activar?country=${country}&utm_source=${source}&utm_medium=email&utm_campaign=pdf-report`
+  const ventasUrl = `${siteUrl}/ventas?utm_source=${source}&utm_medium=email&utm_campaign=empresa-pdf`
+  const demoWhatsAppUrl = `https://wa.me/50432226773?text=${encodeURIComponent(
+    `Hola, calculé deducciones en Humano SISU (${meta.legalName}) y me gustaría una demo personalizada.`
+  )}`
   const supportWhatsAppUrl = `https://api.whatsapp.com/send/?phone=50432226773&text=${encodeURIComponent(
-    'Hola Jorge, tengo una consulta sobre la validación de deducciones de mi nómina.'
+    `Hola, tengo una consulta sobre la validación de deducciones de mi nómina (${meta.legalName}).`
   )}`
 
-  return `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-      <div style="background: linear-gradient(135deg, #0b4fa1 0%, #1976d2 100%); padding: 30px; text-align: center; color: white; border-radius: 8px 8px 0 0;">
-        <h1 style="margin: 0; font-size: 24px;">Humano SISU</h1>
-        <p style="margin: 10px 0 0 0; font-size: 14px; opacity: 0.9;">Reporte de Validación de Deducciones</p>
-      </div>
-      
-      <div style="background: #f8f9fa; padding: 30px; border-radius: 0 0 8px 8px;">
-        <p style="color: #333; margin-top: 0;">Estimado/a usuario,</p>
-        
-        <p style="color: #666; line-height: 1.6;">
-          Adjunto encontrará el reporte detallado de validación de deducciones de nómina para el año ${data.year}.
-        </p>
-        
-        <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #0b4fa1;">
-          <h3 style="color: #333; margin-top: 0;">Resumen del Cálculo:</h3>
-          <table style="width: 100%; border-collapse: collapse;">
-            <tr>
-              <td style="padding: 8px 0; color: #666;">Salario ${data.paymentModality === 'quincenal' ? 'Quincenal' : 'Mensual'}:</td>
-              <td style="padding: 8px 0; text-align: right; font-weight: bold; color: #333;">L. ${data.grossSalary.toFixed(2)}</td>
-            </tr>
-            <tr>
-              <td style="padding: 8px 0; color: #666;">IHSS:</td>
-              <td style="padding: 8px 0; text-align: right; color: #333;">L. ${data.ihss.toFixed(2)} (${data.ihssPercentage.toFixed(2)}%)</td>
-            </tr>
-            <tr>
-              <td style="padding: 8px 0; color: #666;">RAP:</td>
-              <td style="padding: 8px 0; text-align: right; color: #333;">L. ${data.rap.toFixed(2)} (${data.rapPercentage.toFixed(2)}%)</td>
-            </tr>
-            <tr>
-              <td style="padding: 8px 0; color: #666;">ISR:</td>
-              <td style="padding: 8px 0; text-align: right; color: #333;">L. ${data.isr.toFixed(2)} (${data.isrPercentage.toFixed(2)}%)</td>
-            </tr>
-            <tr style="border-top: 2px solid #ddd;">
-              <td style="padding: 12px 0; color: #666; font-weight: bold;">Total Deducciones:</td>
-              <td style="padding: 12px 0; text-align: right; font-weight: bold; color: #d32f2f;">L. ${data.totalDeductions.toFixed(2)}</td>
-            </tr>
-            <tr style="background: #e8f5e9;">
-              <td style="padding: 12px 0; color: #2e7d32; font-weight: bold;">Salario Neto:</td>
-              <td style="padding: 12px 0; text-align: right; font-weight: bold; color: #2e7d32;">L. ${data.netSalary.toFixed(2)}</td>
-            </tr>
-          </table>
-        </div>
-        
-        <div style="background: #fff3cd; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ffc107;">
-          <p style="margin: 0; color: #856404; font-size: 14px;">
-            <strong>Nota:</strong> Estos cálculos están basados en las leyes vigentes de Honduras para el año ${data.year}.
-          </p>
-        </div>
-        
-        <div style="text-align: center; margin: 30px 0;">
-          <p style="color: #666; font-size: 16px; margin-bottom: 15px;">
-            <strong>¿Automatizamos esto para tu empresa?</strong>
-          </p>
-          <a href="${siteUrl}/activar" 
-             style="background: #0b4fa1; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;">
-            Prueba Gratis 30 Días
-          </a>
-        </div>
-        
-        <p style="color: #666; font-size: 14px; margin-top: 30px;">
-          Si tiene alguna pregunta, no dude en contactarnos.<br>
-          <strong>Humano SISU</strong> — RRHH y nómina regional (El Salvador, Guatemala y Honduras)
-        </p>
+  const resultLabels = PUBLIC_CALCULATOR_CONFIGS[country].resultLabels
+  const summaryRows: Array<{ label: string; value: string; emphasize?: boolean }> = [
+    {
+      label: `Salario ${data.paymentModality === 'quincenal' ? 'Quincenal' : 'Mensual'}`,
+      value: formatMoney(country, data.grossSalary),
+    },
+    {
+      label: resultLabels.socialPrimary,
+      value: `${formatMoney(country, data.ihss)} (${data.ihssPercentage.toFixed(2)}%)`,
+    },
+  ]
 
-        <div style="text-align: center; margin: 20px 0;">
-          <a href="${supportWhatsAppUrl}" style="display: inline-block; padding: 12px 24px; background-color: #25D366; color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: bold; font-family: Arial, sans-serif;">
-            💬 Contactar vía WhatsApp
-          </a>
-        </div>
-      </div>
-      
-      <div style="background: #333; padding: 20px; text-align: center; color: #999; font-size: 12px; border-radius: 8px; margin-top: 20px;">
-        <p style="margin: 0;">© ${new Date().getFullYear()} Humano SISU. Todos los derechos reservados.</p>
-        <p style="margin: 5px 0 0 0;">
-          <a href="${siteUrl}" style="color: #999; text-decoration: none;">${siteUrl}</a>
-        </p>
-      </div>
-    </div>
-  `
+  if (
+    resultLabels.socialSecondary &&
+    (data.rap > 0 || country === 'HND' || country === 'SLV')
+  ) {
+    summaryRows.push({
+      label: resultLabels.socialSecondary,
+      value: `${formatMoney(country, data.rap)} (${data.rapPercentage.toFixed(2)}%)`,
+    })
+  }
+
+  summaryRows.push(
+    { label: 'ISR', value: `${formatMoney(country, data.isr)} (${data.isrPercentage.toFixed(2)}%)` },
+    { label: 'Total Deducciones', value: formatMoney(country, data.totalDeductions) },
+    { label: 'Salario Neto', value: formatMoney(country, data.netSalary), emphasize: true }
+  )
+
+  const summaryTable = liquidKeyValueTable(summaryRows)
+
+  const keyword = data.godfatherKeyword ?? 'MI CONSTANCIA TARDA UNA ETERNIDAD'
+  const isEmpresa = data.audience === 'empresa'
+
+  const godfatherBlocks =
+    data.useGodfatherFunnel && !isEmpresa
+      ? [
+          liquidParagraph('Tu desglose está adjunto. Pero aquí va la verdad:'),
+          liquidParagraph(
+            `Si me contestas este correo diciendo <strong>"${keyword}"</strong>, te voy a enviar un PDF de una sola página que puedes dejar "olvidado" en la impresora de tu oficina o enviárselo a tu jefe.`
+          ),
+          liquidParagraph(
+            'Es una comparativa de cuánto dinero está perdiendo tu empresa por no usar tecnología. Tú no pides nada, solo estás "ayudando" a la empresa a ser más rentable.'
+          ),
+          liquidParagraph(`<strong>P.D.</strong> ¿Cuánto tardan realmente en darte una constancia hoy?`),
+        ]
+      : []
+
+  const empresaPitch = isEmpresa
+    ? [
+        liquidParagraph(
+          `${liquidEmphasis('¿Validas deducciones de 1 empleado aquí, pero tienes toda una planilla?')}`
+        ),
+        liquidParagraph(
+          `Humano SISU automatiza ${meta.deductionsPitch} para todo tu equipo — desde asistencia biométrica hasta comprobantes.`
+        ),
+        liquidCta(ventasUrl, 'Agendar demo corta'),
+        liquidCta(activarUrl, 'Activar Humano SISU gratis'),
+      ]
+    : []
+
+  const employeeSharePitch =
+    data.useGodfatherFunnel && !isEmpresa
+      ? []
+      : !isEmpresa
+        ? [
+            liquidParagraph(`${liquidEmphasis('¿Tus compañeros también quieren validar su sueldo?')}`),
+            liquidCtaWhatsApp(demoWhatsAppUrl, 'Compartir calculadora por WhatsApp'),
+          ]
+        : []
+
+  const standardPitch =
+    data.useGodfatherFunnel || isEmpresa
+      ? []
+      : [
+          liquidParagraph(
+            `${liquidEmphasis('Deja de calcular en Excel.')} Humano SISU automatiza ${meta.deductionsPitch} con el mismo motor que usaste aquí.`
+          ),
+          liquidParagraph('Sin errores manuales — del reloj biométrico al comprobante de pago.'),
+          liquidCta(activarUrl, 'Activar gratis 30 días'),
+          liquidCtaWhatsApp(demoWhatsAppUrl, 'Agendar demo'),
+        ]
+
+  const bodyHtml = [
+    liquidParagraph('Estimado/a usuario,'),
+    liquidParagraph(
+      data.useGodfatherFunnel
+        ? `Adjunto encontrarás tu reporte de deducciones (${data.year}).`
+        : `Adjunto encontrará el reporte detallado de validación de deducciones de nómina para el año ${data.year}.`
+    ),
+    summaryTable,
+    liquidInfoBox(
+      `<strong>Nota:</strong> Estos cálculos están basados en las leyes vigentes de ${meta.legalName} para el año ${data.year}.`,
+      'warning'
+    ),
+    ...godfatherBlocks,
+    ...empresaPitch,
+    ...employeeSharePitch,
+    ...standardPitch,
+    ...(data.useGodfatherFunnel && !isEmpresa
+      ? [
+          liquidParagraph(
+            `<a href="${activarUrl}" style="color:#64748b;font-size:13px;">¿Gestionas planilla? Activar Humano SISU</a>`
+          ),
+        ]
+      : []),
+    liquidParagraph(
+      'Si tiene alguna pregunta, no dude en contactarnos.<br><strong>Humano SISU</strong> — RRHH y nómina regional (El Salvador, Guatemala y Honduras)'
+    ),
+    ...(data.useGodfatherFunnel && !isEmpresa ? [] : [liquidCtaWhatsApp(supportWhatsAppUrl, 'Contactar vía WhatsApp')]),
+  ].join('')
+
+  return wrapLiquidEmail({
+    title: data.useGodfatherFunnel ? 'Secreto enviado...' : 'Reporte de Validación de Deducciones',
+    subtitle: `Año fiscal ${data.year}`,
+    badge: 'Calculadora',
+    bodyHtml,
+  })
 }
 
-/**
- * Genera el asunto del email
- */
-export function generateDeductionEmailSubject(year: number): string {
+export function generateDeductionEmailSubject(year: number, useGodfatherFunnel?: boolean): string {
+  if (useGodfatherFunnel) {
+    return `Secreto enviado... — tu desglose ${year} | Humano SISU`
+  }
   return `Reporte de Deducciones de Nómina - ${year} - Humano SISU`
 }

@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react'
 interface AttendanceKPIs {
   presentes: number
   ausentes: number
+  permisos_pagados?: number
   tempranos: number
   tardes: number
   total_empleados?: number
@@ -46,7 +47,8 @@ interface AttendanceData {
 
 const DEFAULT_KPIS: AttendanceKPIs = { 
   presentes: 0, 
-  ausentes: 0, 
+  ausentes: 0,
+  permisos_pagados: 0,
   tempranos: 0, 
   tardes: 0,
   total_empleados: 0
@@ -223,9 +225,10 @@ export function calculateAttendanceRates(kpis: AttendanceKPIs) {
 
 // Utilidad para determinar severidad de llegadas
 export function getSeverityFromDelta(delta: number) {
+  // Align with KPI/RPC: late only when late_minutes > 5; early when < -5.
   if (delta <= -5) return { label: 'Temprano', tone: 'info', color: 'text-blue-400', bgColor: 'bg-blue-500/20' }
-  if (delta < 5) return { label: 'A tiempo', tone: 'ok', color: 'text-emerald-400', bgColor: 'bg-emerald-500/20' }
-  if (delta <= 10) return { label: 'Tarde 5–10', tone: 'warn', color: 'text-yellow-400', bgColor: 'bg-yellow-500/20' }
+  if (delta <= 5) return { label: 'A tiempo', tone: 'ok', color: 'text-emerald-400', bgColor: 'bg-emerald-500/20' }
+  if (delta <= 10) return { label: 'Tarde 6–10', tone: 'warn', color: 'text-yellow-400', bgColor: 'bg-yellow-500/20' }
   if (delta <= 20) return { label: 'Tarde 11–20', tone: 'alert', color: 'text-orange-400', bgColor: 'bg-orange-500/20' }
   return { label: 'Tarde >20', tone: 'danger', color: 'text-red-400', bgColor: 'bg-red-500/20' }
 }

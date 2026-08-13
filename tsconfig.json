@@ -27,6 +27,9 @@
   "exclude": [
     "node_modules",
     "supabase/functions/**/*",
-    "services/**/*"
+    "services/**/*",
+    "railway/**/*",
+    "scripts/**/*",
+    "tests/**/*"
   ]
 }
