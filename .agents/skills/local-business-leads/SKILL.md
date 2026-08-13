@@ -1,168 +1,150 @@
 ---
 name: local-business-leads
 description: >-
-  Busca, verifica y lista teléfonos y emails de comercios locales por ciudad y
-  rubro (ferreterías, agroferreterías, comercial ferretero u otros). Use when
-  the user asks for leads, contactos, teléfonos, emails, o lista de comercios
-  en una ciudad; también cuando pide prospección B2B local, verificación de
-  negocios reales, o JSON exportable para Super Admin → Prospección leads.
+  Busca, verifica y lista teléfonos/celulares comerciales y emails en Honduras.
+  Modo local: comercios por ciudad/rubro. Modo corporativo: empresas multi-ciudad
+  (~50+ empleados, presencia ≥2 ciudades) en escuelas, ferreterías, línea blanca,
+  electrodomésticos u otros. Use when the user asks for leads, contactos, emails,
+  celulares comerciales, prospección B2B, o JSON para Super Admin → Prospección.
 ---
 
 # Local Business Leads
 
-Skill paramétrica de prospección B2B local. Ciudad y rubro los define el usuario en cada uso.
+Skill paramétrica de prospección B2B en Honduras. El usuario define el **modo** y los filtros.
 
-## Parámetros
+## Modos
 
-Extraer del mensaje del usuario (si falta alguno, preguntar antes de buscar):
+### Modo A — Local (ciudad + rubro)
 
 | Parámetro | Obligatorio | Ejemplo |
 |-----------|-------------|---------|
 | `ciudad` | sí | Siguatepeque |
 | `departamento_o_region` | recomendado | Comayagua |
-| `rubros` | sí | ferreterías, agroferreterías, comercial ferretero |
+| `rubros` | sí | ferreterías, agroferreterías |
 | `pais` | default HN | Honduras |
 
-## Query canónica (usar verbatim cuando aplique)
+### Modo B — Corporativo multi-ciudad
 
-Si el usuario pide el caso Siguatepeque / ferretero, ejecutar exactamente este brief:
+Buscar **emails y celulares comerciales verificables** de empresas en Honduras que cumplan:
+
+| Filtro | Regla |
+|--------|--------|
+| Tamaño | Señales de **≥ ~50 empleados** (cadena, multi-sucursal, universidad, retail nacional) — no inventar headcount exacto; anotar evidencia |
+| Cobertura | Presencia en **≥ 2 ciudades** |
+| Sectores prioritarios | Escuelas / universidades; ferreterías; línea blanca; electrodomésticos; afines |
+| Contacto | Priorizar **email + celular/WhatsApp comercial** publicados en sitio oficial |
+| Verificación | ≥2 fuentes o 1 sitio oficial con página de contacto/tiendas |
+
+Si faltan filtros (sectores o umbral), preguntar. País default: Honduras.
+
+## Query canónica Modo A (Siguatepeque / ferretero)
 
 > i need you to search for contact number and mail of "ferreterias", "agroferreterias", "comercial ferretero" en Siguatepeque, Comayagua. haz una busqueda general. luego con verificacion cruzada intenta verificar que los comercios y contactos son reales. y tercero genera una lista de los principales comercios en la ciudad en ese sector o rubro.
 
-Para otros casos, adaptar el mismo brief sustituyendo rubros, ciudad y región.
+## Query canónica Modo B (corporativo)
+
+> Busca emails y números de celular comerciales en Honduras, priorizando verificables. Sectores: escuelas, ferreterías, comercios de línea blanca y electrodomésticos. En general empresas con más de 50 empleados y presencia en al menos 2 ciudades. No inventar contactos. Entregar tabla + JSON para Prospección.
 
 ## Workflow (3 fases obligatorias)
-
-Copiar y marcar progreso:
 
 ```
 Leads Progress:
 - [ ] Fase 1: Búsqueda general
 - [ ] Fase 2: Verificación cruzada
-- [ ] Fase 3: Lista de principales comercios
+- [ ] Fase 3: Lista de principales
 - [ ] Export JSON Super Admin
 ```
 
 ### Fase 1 — Búsqueda general
 
-1. Buscar en web (Google, Bing, directorios, Facebook/Instagram Business, Google Maps/Business, Páginas Amarillas, sitios .hn, marketplaces locales).
-2. Queries mínimas (variar en español):
-   - `"{rubro}" "{ciudad}" {departamento} teléfono`
-   - `"{rubro}" "{ciudad}" email OR correo OR "whatsapp"`
-   - `"{rubro}" "{ciudad}" "horario" OR dirección`
-   - `"comercial ferretero" "{ciudad}"` (y sinónimos del rubro)
-3. Recolectar candidatos crudos: nombre comercial, teléfono, email, dirección/barrio, URL fuente, notas.
-4. No inventar contactos. Si no hay teléfono/email, dejar celda vacía y marcar `sin_dato` **solo en la tabla markdown**.
+**Modo A:** Maps, directorios, sitios .hn. Queries:
+- `"{rubro}" "{ciudad}" {departamento} teléfono`
+- `"{rubro}" "{ciudad}" email OR correo OR whatsapp`
+- `"{rubro}" "{ciudad}" horario OR dirección`
+
+**Modo B:** sitios oficiales (`/tiendas`, `/contacto`, `/ubicanos`), campus/admisiones. Queries:
+- `"{marca}" Honduras WhatsApp OR celular ventas`
+- `"{marca}" email OR correo contacto sucursales`
+- `"{sector}" Tegucigalpa "San Pedro Sula" (sucursales OR tiendas OR campus)`
+
+Recolectar: comercio, sector, email, celular/WA, PBX, ciudades, fuentes, notas de tamaño. **No inventar.** En tabla markdown, faltantes = `sin_dato`.
 
 ### Fase 2 — Verificación cruzada
 
-Para cada candidato, cruzar **al menos 2 fuentes independientes** cuando sea posible:
+Cruzar ≥2 fuentes cuando sea posible. Confianza:
 
-| Señal | Ejemplos de fuente |
-|-------|--------------------|
-| Nombre + ubicación | Google Maps, Facebook, sitio propio |
-| Teléfono | Directorio + red social / sitio |
-| Email | Sitio / anuncio / directorio |
-| Actividad reciente | Posts, reseñas, horarios actualizados |
+- `alta` — ≥2 fuentes coherentes o sitio oficial de contacto + tiendas
+- `media` — 1 fuente sólida (sitio/Maps) o datos parciales
+- `baja` — solo agregador
+- `descartado` — contradicción / fuera de alcance
 
-Asignar `confianza`:
+Reglas extra Modo B:
 
-- `alta` — ≥2 fuentes coherentes (mismo nombre/ciudad + mismo teléfono o email)
-- `media` — 1 fuente sólida (Maps/sitio) o 2 fuentes con datos parciales
-- `baja` — solo mención en listado agregado / sin corroboración
-- `descartado` — contradicción fuerte, fuera de ciudad, o parece spam/agregador falso
+- Confirmar **≥2 ciudades**.
+- Preferir celular/WA comercial (ventas, admisiones, servicio) sobre solo PBX.
+- Preferir dominio propio; no emails de agregadores.
+- No usar emails personales de LinkedIn salvo pedido explícito.
+- Preferir números HN (`+504` / 8 dígitos locales).
 
-Reglas:
+### Fase 3 — Lista de principales
 
-- Preferir números HN (`+504` / `504` / locales 8 dígitos).
-- Descartar emails genéricos de agregadores si no aparecen en el comercio (`info@directorio...` sin presencia propia).
-- Si el teléfono/email no cuadra con el nombre/ciudad en otra fuente, bajar a `baja` o `descartado`.
-- Anotar en `fuentes` URLs o nombres de directorios usados (sin pegar PII sensible de terceros no públicos).
+Ordenar: confianza desc → email+celular → cobertura → nombre.
 
-### Fase 3 — Lista de principales comercios
-
-Seleccionar los principales del rubro en la ciudad según:
-
-1. Verificación `alta` o `media`
-2. Relevancia al rubro (no mezclar si no es ferretero/agroferretero/etc.)
-3. Señales de tamaño/presencia (sede, reseñas, cadena local, surtido amplio) cuando existan
-
-Ordenar: `confianza` desc, luego nombre A–Z.
+En `notas`: ciudades clave + evidencia de tamaño (p. ej. “13 campus”, “tiendas nacionales”).
 
 ## Formato de salida (tabla + JSON UI)
 
-Entregar **siempre** en este orden:
-
-1. Tabla markdown (lectura humana)
-2. Resumen corto
-3. Bloque JSON listo para pegar en Super Admin → Prospección leads → textarea de importación
-
-### 1) Tabla markdown
+Siempre: (1) tabla markdown (2) resumen (3) JSON copiable.
 
 ```markdown
 | # | Comercio | Rubro | Teléfono | Email | Dirección / zona | Confianza | Fuentes | Notas |
 |---|----------|-------|----------|-------|------------------|-----------|---------|-------|
-| 1 | ... | ferretería | +504... | ...@... | ... | alta | Maps; FB | ... |
+| 1 | ... | ... | +504... | ...@... | ... | alta | sitio | ... |
 ```
-
-En la tabla, si falta dato: `sin_dato`.
-
-### 2) Resumen
 
 ```markdown
 ### Resumen
-- Candidatos encontrados: N
-- Verificados alta/media: N
+- Candidatos: N
+- Alta/media: N
 - Sin teléfono: N
 - Sin email: N
-- Limitaciones: [qué no se pudo verificar]
+- Limitaciones: [...]
 ```
 
-### 3) JSON exportable (obligatorio)
-
-Bloque fenced `json` **copiable de un click**, schema exacto que acepta la UI:
+JSON (schema UI):
 
 ```json
 [
   {
-    "comercio": "Ferretería Ejemplo",
-    "rubro": "ferretería",
+    "comercio": "Ejemplo Cadena",
+    "rubro": "electrodomésticos",
     "telefono": "+504 9999-0000",
     "email": "ventas@ejemplo.hn",
-    "direccion": "Barrio Centro",
+    "direccion": "Multi-ciudad HN",
     "confianza": "alta",
-    "fuentes": "Maps; sitio propio",
-    "notas": "Verificado en 2 fuentes"
+    "fuentes": "sitio/contacto; sitio/tiendas",
+    "notas": "Ciudades: SPS, TGU. Cel/WA comercial. Evidencia tamaño: N sucursales"
   }
 ]
 ```
 
-Reglas del JSON (críticas para que cargue en la UI):
+Reglas JSON: array u `{ "candidates": [] }`; `confianza` ∈ alta|media|baja|descartado; faltantes = `null` (nunca `"sin_dato"`); solo alta/media salvo pedido; sin inventar.
 
-- Array de objetos (también válido: `{ "candidates": [ ... ] }`).
-- Campos: `comercio` (obligatorio), `rubro`, `telefono`, `email`, `direccion`, `confianza`, `fuentes`, `notas`.
-- `confianza`: solo `alta` | `media` | `baja` | `descartado`.
-- Sin teléfono/email: usar `null` (nunca string `"sin_dato"` en JSON).
-- Incluir solo filas de Fase 3 (preferir alta/media; baja solo si el usuario lo pide).
-- No inventar emails/teléfonos; omitir o `null` si no verificados.
-- JSON válido (comillas dobles, sin trailing commas, sin comentarios).
-- Tras el bloque, una línea de instrucción:
+> Pegar en Super Admin → Prospección leads → paso 1 → Cargar JSON pegado.
 
-> Pegar este JSON en Super Admin → Prospección leads → paso 1 (textarea) → Investigar contactos.
-
-Si el usuario pide **solo JSON** / **export UI** / **para Prospección**, entregar el bloque JSON primero (tabla opcional).
+Modo B en UI: corrida `ciudad=Honduras` / `departamento=Multi-ciudad`, o una corrida por sede.
 
 ## Herramientas
 
-- Usar búsqueda web y fetch de páginas públicas.
-- Si hay browser MCP disponible, usarlo para Maps/directorios cuando el snippet sea insuficiente.
-- No llamar ni mensajear comercios. Solo datos públicos.
-- No hardcodear ni exponer secretos; no inventar contactos.
+- Web search + fetch de páginas públicas; browser MCP si el snippet no basta.
+- No llamar ni mensajear comercios.
+- No hardcodear secretos; no inventar contactos.
 
 ## Anti-patrones
 
-- No devolver leads sin pasar por Fase 2.
-- No marcar `alta` con una sola mención de blog/SEO scraper.
+- No devolver leads sin Fase 2.
+- No marcar `alta` con una sola mención de scraper.
 - No rellenar email/teléfono “probable”.
-- No mezclar comercios de otras ciudades con el mismo nombre sin confirmar ubicación.
-- No entregar solo tabla markdown sin el JSON exportable (salvo que el usuario lo prohíba).
+- No mezclar sedes de otras ciudades sin confirmar.
+- No entregar solo tabla sin JSON (salvo que el usuario lo prohíba).
+- Modo B: no incluir empresas de una sola ciudad aunque tengan buen contacto.
