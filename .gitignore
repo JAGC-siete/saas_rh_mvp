@@ -135,3 +135,6 @@ insert_*.sql
 migrations-*.sql
 complete-*.sql
 copy-*.sql
+
+# Local git worktrees (never commit)
+.worktrees/
