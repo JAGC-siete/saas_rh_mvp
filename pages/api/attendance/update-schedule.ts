@@ -1,6 +1,9 @@
 import { NextApiRequest, NextApiResponse } from 'next'
+import { requireCompanyAccess } from '../../../lib/auth/api-auth-fixed'
 import { createAdminClient } from '../../../lib/supabase/server'
 import { getHondurasTimeISO } from '../../../lib/timezone'
+
+const SCHEDULE_ROLES = ['super_admin', 'company_admin', 'hr_manager']
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -8,6 +11,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
+    const { companyId, role } = await requireCompanyAccess(req, res)
+    if (!companyId) return res.status(400).json({ error: 'Company access required' })
+    if (!SCHEDULE_ROLES.includes(role)) {
+      return res.status(403).json({ error: 'Insufficient permissions' })
+    }
+
     const { employee_id, start_time, end_time } = req.body
 
     if (!employee_id || !start_time || !end_time) {
@@ -19,11 +28,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // First, check if employee exists
     const { data: employee, error: empError } = await supabase
       .from('employees')
-      .select('*')
+      .select('id, name, company_id, work_schedule_id')
       .eq('id', employee_id)
+      .eq('company_id', companyId)
       .single()
 
-    if (empError || !employee) {
+    if (empError || !employee || employee.company_id !== companyId) {
       return res.status(404).json({ error: 'Employee not found' })
     }
 
@@ -128,10 +138,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     })
 
   } catch (error) {
+    if (res.headersSent) return
     console.error('Error updating schedule:', error)
     res.status(500).json({ 
       error: 'Internal server error', 
       details: error instanceof Error ? error.message : 'Error desconocido'
     })
   }
-} 
+}

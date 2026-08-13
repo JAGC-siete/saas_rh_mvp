@@ -156,7 +156,6 @@ export function getAllPublicRoutes(): string[] {
     '/api/attendance/lookup',
     '/api/attendance/register',
     '/api/attendance/first-time-check',
-    '/api/attendance/update-schedule',
     '/api/activar',
     '/api/demo/verify-pin',
     '/api/health',
