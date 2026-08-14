@@ -17,6 +17,7 @@ import {
   isEnlaceCompany,
   resolveEnlaceEmployeeCode,
 } from '../../../lib/employees/enlace-employee-code'
+import { recordEmployeeSalaryChange } from '../../../lib/employees/salary-history'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -202,6 +203,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (insertError) {
       console.error('Error creating employee (admin):', insertError)
       return res.status(500).json({ error: 'Error creating employee' })
+    }
+
+    const createdSalary = Number(newEmployee?.base_salary)
+    if (Number.isFinite(createdSalary) && createdSalary > 0) {
+      await recordEmployeeSalaryChange(adminSupabase, {
+        employee_id: newEmployee.id,
+        company_id: companyId,
+        old_amount: null,
+        new_amount: createdSalary,
+        changed_by: user?.id ?? userProfile?.id ?? null,
+      })
     }
 
     // Increment usage meter

@@ -10,12 +10,12 @@ import { resolveReportConfig } from '../../../lib/reports/column-resolver'
 import {
   isExactHourlyPlanillaTablePayType,
   isMutablePayrollRunStatus,
-  linePayTypeDriftedFromEmployee,
   parseCompanyCalculationMode,
   PAYROLL_NEEDS_REGENERATE_CODE,
   PayrollNeedsRegenerateError,
   resolvePlanillaRowPayType,
 } from '../../../lib/payroll/resolve-effective-pay-type'
+import { payrollLineMasterDataDrifted, resolveSnapshotMonthlySalary } from '../../../lib/payroll/salary-snapshot'
 import { resolvePlanillaDaysWorked } from '../../../lib/payroll/planilla-from-run'
 import { resolveDisplayNet } from '../../../lib/payroll/resolve-display-net'
 
@@ -100,10 +100,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (isMutablePayrollRunStatus(payrollRun.status)) {
       for (const line of payrollLines) {
         if (
-          linePayTypeDriftedFromEmployee({
+          payrollLineMasterDataDrifted({
             employeePayType: line.employees?.pay_type,
             metadataPayType: line.metadata?.pay_type,
             companyCalculationMode,
+            liveBaseSalary: line.employees?.base_salary,
+            stampedBaseSalary: line.metadata?.base_salary_used,
           })
         ) {
           throw new PayrollNeedsRegenerateError()
@@ -163,7 +165,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           bank: line.employees?.bank_name || 'No especificado',
           bank_account: line.employees?.bank_account || 'No especificado',
           department: line.employees?.departments?.name || 'Sin Departamento',
-          monthly_salary: Number(line.employees?.base_salary) || 0,
+          monthly_salary: resolveSnapshotMonthlySalary(
+            line.employees?.base_salary,
+            line.metadata
+          ),
           days_worked: resolvePlanillaDaysWorked(
             payType,
             totalHours,

@@ -61,6 +61,8 @@ export interface PreviewResponse {
   planilla: PayrollLine[];
   warning?: string | null;
   status?: string;
+  frozen?: boolean;
+  salary_stale?: boolean;
   incompleteRecordsAlert?: { employee_id: string; employee_name: string; dates: string[] }[];
   noAttendanceWarning?: {
     message: string;

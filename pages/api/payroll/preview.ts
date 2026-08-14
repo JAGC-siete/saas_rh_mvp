@@ -26,7 +26,7 @@ import { calculateSeptimoDia } from '../../../lib/payroll/septimo-dia'
 import { HONDURAS_LABOR_FACTOR, HORAS_PERIODO_MENSUAL, HORAS_PERIODO_QUINCENAL } from '../../../lib/payroll/constants'
 import { buildAuthorizedPayrollPreviewPayload } from '../../../lib/payroll/preview-authorized-readonly'
 import { calculateEmployerContributions } from '../../../lib/payroll/employer-contributions'
-import { resolveEffectivePayType, parseCompanyCalculationMode, isHourBasedPayType } from '../../../lib/payroll/resolve-effective-pay-type'
+import { resolveEffectivePayType, parseCompanyCalculationMode, isHourBasedPayType, isFrozenPayrollRunStatus } from '../../../lib/payroll/resolve-effective-pay-type'
 import {
   hasValidPayrollAttendanceRecords,
   resolveFixedDaysWorkedForPayroll,
@@ -151,6 +151,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       if (x === 'quincenal' || x === 'biweekly') return 'biweekly'
       return 'biweekly'
     }
+    // Frecuencia efectiva del cálculo = config de empresa. employees.payment_frequency
+    // no alimenta el preview (ficha; Enlace paga quincenal a nivel empresa).
     const paymentFrequency = mapFreq(payrollConfig?.payment_frequency || payrollMetadata.payment_frequency || 'quincenal')
     const tipoParam = resolvePayrollDeductionMode(payrollMetadata, paymentFrequency)
     const hasCustomQuincena = !!(qcCol && (qcCol.first_start != null || qcCol.first_end != null || qcCol.second_start != null || qcCol.second_end != null))
@@ -262,7 +264,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
       // Corrida cerrada: devolver datos persistidos sin mutar estado ni líneas.
       // (Antes: se pasaba a draft y se borraban líneas en cada GET → contabilidad veía draft.)
-      if (existingRun.status === 'authorized' || existingRun.status === 'distributed') {
+      if (isFrozenPayrollRunStatus(existingRun.status)) {
         try {
           const payload = await buildAuthorizedPayrollPreviewPayload(supabase, companyId, {
             id: existingRun.id,
@@ -760,6 +762,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         const prevLine = existingLineByEmployee[emp.id]
         if (shouldPreservePayrollLineOnPreview(prevLine, {
           currentEffectivePayType: effectivePayType,
+          currentBaseSalary: base_salary,
         })) {
           preservedEditedLines += 1
           planilla_fixed.push(
@@ -1015,6 +1018,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         const prevLineHourly = existingLineByEmployee[emp.id]
         if (shouldPreservePayrollLineOnPreview(prevLineHourly, {
           currentEffectivePayType: effectivePayType,
+          currentBaseSalary: base_salary,
         })) {
           preservedEditedLines += 1
           const hourly_rate_preserved = base_salary / HONDURAS_LABOR_FACTOR

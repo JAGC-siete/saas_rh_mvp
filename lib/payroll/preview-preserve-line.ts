@@ -1,16 +1,21 @@
 /**
  * Rules for skipping preview recalculation when a payroll line was manually edited.
  *
- * If the employee's effective pay_type changed since the line was stamped
- * (`metadata.pay_type`), never preserve — force a full recalculation even when
- * `edited` / days / OT / statutory overrides are present (those edits were under
- * the old wage engine).
+ * Never preserve when master data drifted since the line stamp:
+ * - `metadata.pay_type` vs live effective pay_type
+ * - `metadata.base_salary_used` vs live `employees.base_salary`
+ * Force a full recalculation even when `edited` / days / OT / statutory overrides
+ * are present (those edits were under the old wage engine / old salary).
  */
 
 import {
   parseEmployeePayType,
   type EffectivePayType,
 } from './resolve-effective-pay-type'
+import {
+  lineBaseSalaryDriftedFromEmployee,
+  resolveSnapshotMonthlySalary,
+} from './salary-snapshot'
 
 export type PersistedPayrollLine = {
   id: string
@@ -28,6 +33,8 @@ export type PersistedPayrollLine = {
 export type ShouldPreservePayrollLineOptions = {
   /** Live effective pay type for this employee in the current preview pass. */
   currentEffectivePayType?: EffectivePayType | null
+  /** Live employees.base_salary (monthly). Drift vs metadata.base_salary_used skips preserve. */
+  currentBaseSalary?: number | null
 }
 
 export function shouldPreservePayrollLineOnPreview(
@@ -40,6 +47,15 @@ export function shouldPreservePayrollLineOnPreview(
   if (current === 'fixed' || current === 'hourly' || current === 'admin_floor') {
     const stamped = parseEmployeePayType(line.metadata?.pay_type)
     if (stamped != null && stamped !== current) return false
+  }
+
+  if (
+    lineBaseSalaryDriftedFromEmployee(
+      line.metadata?.base_salary_used,
+      options?.currentBaseSalary
+    )
+  ) {
+    return false
   }
 
   if (line.edited === true) return true
@@ -89,13 +105,10 @@ export function buildFixedPlanillaRowFromPersistedLine(ctx: BuildRowBase) {
   const effIsr = Number(prevLine.eff_isr) || 0
   const effNeto = Number(prevLine.eff_neto) || 0
   const totalDed = effBruto - effNeto
-  const heHours = resolvePreservedHorasExtras(
-    prevLine.metadata as Record<string, unknown> | null | undefined,
-    horasExtras
-  )
-  const metaOtPay = Number(
-    (prevLine.metadata as Record<string, unknown> | null | undefined)?.overtime_pay
-  )
+  const meta = prevLine.metadata as Record<string, unknown> | null | undefined
+  const displaySalary = resolveSnapshotMonthlySalary(emp.base_salary, meta)
+  const heHours = resolvePreservedHorasExtras(meta, horasExtras)
+  const metaOtPay = Number(meta?.overtime_pay)
 
   return {
     employee_id: emp.id,
@@ -104,8 +117,8 @@ export function buildFixedPlanillaRowFromPersistedLine(ctx: BuildRowBase) {
     bank: emp.bank_name || 'No especificado',
     bank_account: emp.bank_account || 'No especificado',
     department: departmentName,
-    base_salary: ctx.emp.base_salary,
-    monthly_salary: ctx.emp.base_salary,
+    base_salary: displaySalary,
+    monthly_salary: displaySalary,
     days_worked: effH,
     days_absent: Math.max(0, diasPeriodo - effH),
     horas_extras: heHours,
@@ -150,6 +163,10 @@ export function buildHourlyPlanillaRowFromPersistedLine(
   const effIsr = Number(prevLine.eff_isr) || 0
   const effNeto = Number(prevLine.eff_neto) || 0
   const totalDed = effBruto - effNeto
+  const displaySalary = resolveSnapshotMonthlySalary(
+    emp.base_salary,
+    prevLine.metadata as Record<string, unknown> | null | undefined
+  )
 
   return {
     employee_id: emp.id,
@@ -158,8 +175,8 @@ export function buildHourlyPlanillaRowFromPersistedLine(
     bank: emp.bank_name || 'No especificado',
     bank_account: emp.bank_account || 'No especificado',
     department: departmentName,
-    base_salary: emp.base_salary,
-    monthly_salary: emp.base_salary,
+    base_salary: displaySalary,
+    monthly_salary: displaySalary,
     days_worked: daysWorked,
     days_absent: Math.max(0, diasPeriodo - daysWorked),
     horas_extras: Math.round(horasExtras * 100) / 100,

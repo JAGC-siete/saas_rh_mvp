@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import {
   shouldPreservePayrollLineOnPreview,
   stripManualPayrollLineMetadata,
+  buildFixedPlanillaRowFromPersistedLine,
 } from '../lib/payroll/preview-preserve-line'
 
 describe('preview-preserve-line', () => {
@@ -53,7 +54,40 @@ describe('preview-preserve-line', () => {
     )
   })
 
-  it('still preserves edited line when pay_type matches', () => {
+  it('does not preserve when base_salary drifted even if edited', () => {
+    assert.equal(
+      shouldPreservePayrollLineOnPreview(
+        {
+          id: 'line-1',
+          edited: true,
+          metadata: {
+            pay_type: 'fixed',
+            base_salary_used: 15500,
+            days_adjusted_at: '2026-08-01T00:00:00.000Z',
+            ot_adjusted_at: '2026-08-01T00:00:00.000Z',
+          },
+        },
+        { currentEffectivePayType: 'fixed', currentBaseSalary: 16500 }
+      ),
+      false
+    )
+  })
+
+  it('still preserves edited line when salary matches stamp', () => {
+    assert.equal(
+      shouldPreservePayrollLineOnPreview(
+        {
+          id: 'line-1',
+          edited: true,
+          metadata: { pay_type: 'fixed', base_salary_used: 16500 },
+        },
+        { currentEffectivePayType: 'fixed', currentBaseSalary: 16500 }
+      ),
+      true
+    )
+  })
+
+  it('preserves edited line when salary stamp is missing', () => {
     assert.equal(
       shouldPreservePayrollLineOnPreview(
         {
@@ -61,7 +95,7 @@ describe('preview-preserve-line', () => {
           edited: true,
           metadata: { pay_type: 'fixed' },
         },
-        { currentEffectivePayType: 'fixed' }
+        { currentEffectivePayType: 'fixed', currentBaseSalary: 16500 }
       ),
       true
     )
@@ -111,5 +145,32 @@ describe('preview-preserve-line', () => {
         bono: 100,
       }
     )
+  })
+
+  it('preserved row displays stamped salary not live employee salary', () => {
+    const row = buildFixedPlanillaRowFromPersistedLine({
+      emp: {
+        id: 'emp-1',
+        name: 'Test',
+        base_salary: 16500,
+      },
+      departmentName: 'Ops',
+      prevLine: {
+        id: 'line-1',
+        edited: true,
+        eff_hours: 15,
+        eff_bruto: 7750,
+        eff_ihss: 0,
+        eff_rap: 0,
+        eff_isr: 0,
+        eff_neto: 7750,
+        metadata: { base_salary_used: 15500, overtime_pay: 100 },
+      },
+      horasExtras: 0,
+      diasPeriodo: 15,
+    })
+    assert.equal(row.base_salary, 15500)
+    assert.equal(row.monthly_salary, 15500)
+    assert.equal(row.total_earnings, 7750)
   })
 })

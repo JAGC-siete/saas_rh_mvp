@@ -8,6 +8,10 @@ import { Icon, IconName } from './Icon'
 import { formatCurrency } from '../lib/utils/currency'
 import { UnifiedRow, UnifiedResumen } from '../lib/payroll-unified'
 import {
+  isFrozenPayrollRunStatus,
+  PAYROLL_FROZEN_RUN_MESSAGE,
+} from '../lib/payroll/resolve-effective-pay-type'
+import {
   resolveStatutoryDeductionColumns,
   type CustomFieldConfigEntry
 } from '../lib/payroll/statutory-deduction-columns'
@@ -404,6 +408,17 @@ export default function UnifiedPayrollTable({
         </CardDescription>
       </CardHeader>
       <CardContent>
+        {isFrozenPayrollRunStatus(status) && (
+          <div className="mb-4 p-4 bg-sky-500/20 border border-sky-500/50 rounded-lg">
+            <div className="flex items-start gap-2">
+              <Icon name="alert" className="h-5 w-5 text-sky-300 flex-shrink-0 mt-0.5" />
+              <div>
+                <h4 className="font-semibold text-sky-200">Corrida congelada</h4>
+                <p className="text-sm text-sky-100/90 mt-1">{PAYROLL_FROZEN_RUN_MESSAGE}</p>
+              </div>
+            </div>
+          </div>
+        )}
         {/* Alerta de marcas incompletas (check-in sin check-out) */}
         {incompleteRecordsAlert.length > 0 && (
           <div className="mb-4 p-4 bg-amber-500/20 border border-amber-500/50 rounded-lg">

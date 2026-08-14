@@ -549,12 +549,15 @@ export const usePayrollManager = () => {
       console.log('🔍 DEBUG - RunId truthy:', !!response.run_id)
       
       dispatch({ type: 'SET_RUN_ID', payload: response.run_id })
-      dispatch({ type: 'SET_STATUS', payload: 'draft' })
+      dispatch({
+        type: 'SET_STATUS',
+        payload: (response.status ?? 'draft') as UIRunStatus,
+      })
       dispatch({ type: 'CLEAR_ERROR' }) // Limpiar cualquier error previo
       
       console.log('🔍 DEBUG - Estado después de dispatch:', {
         runId: response.run_id,
-        status: 'draft'
+        status: response.status ?? 'draft',
       })
       
       // ACTUALIZAR TABLA INMEDIATAMENTE con datos de la respuesta
@@ -584,7 +587,13 @@ export const usePayrollManager = () => {
       }
       
       // Mostrar mensaje apropiado según si es regeneración o no
-      if (response?.warning) {
+      if (response?.frozen || response?.salary_stale) {
+        toast.warning(
+          'Nómina congelada',
+          response.warning || response.message,
+          10000
+        )
+      } else if (response?.warning) {
         toast.warning(
           'Preview Regenerado',
           response.warning,
@@ -1037,7 +1046,11 @@ export const usePayrollManager = () => {
   }, [])
 
   // Computed Properties
-  const canPreview = state.status === 'idle' || state.status === 'draft' || state.status === 'error'
+  const canPreview =
+    state.status === 'idle' ||
+    state.status === 'draft' ||
+    state.status === 'edited' ||
+    state.status === 'error'
   const canEdit = state.status === 'draft' && !!state.runId
   const canAuthorize = (state.status === 'draft' || state.status === 'edited') && !!state.runId
   const canSend =

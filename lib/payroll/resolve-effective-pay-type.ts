@@ -10,8 +10,8 @@
  *   the frozen `eff_*` amounts. To change pay type + amounts, open a new draft
  *   run or recalculate before authorize.
  * - **Draft / edited runs:** amounts are also snapshots until preview regenerates.
- *   If live effective pay type drifts from `metadata.pay_type`, block PDF/planilla
- *   until the user regenerates preview ({@link linePayTypeDriftedFromEmployee}).
+ *   If live effective pay type or `employees.base_salary` drifts from the line stamp,
+ *   block PDF/planilla until the user regenerates preview.
  */
 
 export type CompanyCalculationMode = 'daily' | 'hourly' | 'admin_floor'
@@ -21,7 +21,13 @@ export type EmployeePayType = 'fixed' | 'hourly' | 'admin_floor' | null | undefi
 export const PAYROLL_NEEDS_REGENERATE_CODE = 'PAYROLL_NEEDS_REGENERATE'
 
 export const PAYROLL_NEEDS_REGENERATE_MESSAGE =
-  'Hay cambios en el tipo de pago de empleados que aún no están reflejados en esta nómina. Regenerá la vista previa para ver los últimos cambios.'
+  'Hay cambios en empleados (tipo de pago o salario) que aún no están reflejados en esta nómina. Regenerá la vista previa para ver los últimos cambios.'
+
+export const PAYROLL_FROZEN_RUN_MESSAGE =
+  'Esta nómina ya está autorizada y no cambia con actualizaciones de salario. Abrí una corrida nueva para el período vigente.'
+
+export const PAYROLL_FROZEN_SALARY_STALE_MESSAGE =
+  'El salario vigente en Empleados no se aplica a esta corrida autorizada. Abrí una corrida nueva para calcular con el salario nuevo.'
 
 export function isFrozenPayrollRunStatus(status: string | null | undefined): boolean {
   return status === 'authorized' || status === 'distributed' || status === 'paid'

@@ -6,6 +6,10 @@ import {
   buildEmployeeWritePayload,
   shapeEmployee,
 } from '../../../lib/security/shape-employee'
+import {
+  recordEmployeeSalaryChange,
+  salaryAmountsDiffer,
+} from '../../../lib/employees/salary-history'
 
 /**
  * Legacy route: PUT/PATCH/DELETE /api/employees/[id]
@@ -39,7 +43,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const { data: existing, error: fetchErr } = await supabase
       .from('employees')
-      .select('id, company_id')
+      .select('id, company_id, base_salary')
       .eq('id', employeeId)
       .single()
 
@@ -93,6 +97,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .single()
 
     if (updateError) throw updateError
+
+    if (
+      Object.prototype.hasOwnProperty.call(updateData, 'base_salary') &&
+      salaryAmountsDiffer(existing.base_salary, updatedEmployee.base_salary)
+    ) {
+      await recordEmployeeSalaryChange(supabase, {
+        employee_id: employeeId,
+        company_id: companyId,
+        old_amount: Number(existing.base_salary),
+        new_amount: Number(updatedEmployee.base_salary),
+        changed_by: auth.userProfile?.id ?? auth.user?.id ?? null,
+      })
+    }
+
     return res.json({ employee: shapeEmployee(updatedEmployee, fieldCtx) })
   } catch (error: unknown) {
     console.error('Employee API error:', error)

@@ -15,11 +15,11 @@ import type { PlanillaItem } from './report'
 import {
   isExactHourlyPlanillaTablePayType,
   isMutablePayrollRunStatus,
-  linePayTypeDriftedFromEmployee,
   parseCompanyCalculationMode,
   PayrollNeedsRegenerateError,
   resolvePlanillaRowPayType,
 } from './resolve-effective-pay-type'
+import { payrollLineMasterDataDrifted, resolveSnapshotMonthlySalary } from './salary-snapshot'
 import { resolveDisplayNet } from './resolve-display-net'
 
 /** eff_hours on payroll_run_lines stores days for fixed employees and clock hours for hour-based types. */
@@ -85,7 +85,7 @@ export type LoadedPlanillaFromRun = {
  * Identity fields (name, department, etc.) come from a live employee join.
  * Authorized/distributed runs keep every line — including later-inactive employees.
  * Draft/edited: throws {@link PayrollNeedsRegenerateError} if live employee pay_type
- * drifted from the line stamp (caller must ask user to regenerate preview).
+ * or base_salary drifted from the line stamp (caller must ask user to regenerate preview).
  * Draft sync removes orphans on preview regenerate (see findOrphanPayrollLineIds).
  */
 export async function loadPlanillaFromRun(
@@ -155,10 +155,12 @@ export async function loadPlanillaFromRun(
       const metadata = ((line as { metadata?: Record<string, unknown> | null }).metadata ||
         {}) as Record<string, unknown>
       if (
-        linePayTypeDriftedFromEmployee({
+        payrollLineMasterDataDrifted({
           employeePayType: employees?.pay_type,
           metadataPayType: metadata.pay_type,
           companyCalculationMode,
+          liveBaseSalary: employees?.base_salary,
+          stampedBaseSalary: metadata.base_salary_used,
         })
       ) {
         throw new PayrollNeedsRegenerateError()
@@ -217,7 +219,7 @@ export async function loadPlanillaFromRun(
         team: (employees?.team as string | null) ?? null,
         position: (employees?.role as string | null) ?? null,
         role: (employees?.role as string | null) ?? null,
-        monthly_salary: Number(employees?.base_salary) || 0,
+        monthly_salary: resolveSnapshotMonthlySalary(employees?.base_salary, metadata),
         days_worked: resolvePlanillaDaysWorked(payType, totalHours, metadata.days_worked),
         days_absent: 0,
         late_days: 0,

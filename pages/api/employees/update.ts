@@ -15,6 +15,10 @@ import {
 } from '../../../lib/security/shape-employee'
 import { parseAttendanceRequiredInput } from '../../../lib/payroll/payroll-attendance-inclusion'
 import { parseEmployeePayOvertimeInput } from '../../../lib/payroll/overtime-pay'
+import {
+  recordEmployeeSalaryChange,
+  salaryAmountsDiffer,
+} from '../../../lib/employees/salary-history'
 
 /** Solo columnas permitidas vía API (evita mass-assignment). */
 const ALLOWED_UPDATE_KEYS = new Set([
@@ -111,7 +115,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const { data: existing, error: fetchErr } = await supabase
       .from('employees')
-      .select('id, company_id, status, termination_reason_code, pay_type')
+      .select('id, company_id, status, termination_reason_code, pay_type, base_salary')
       .eq('id', employeeId)
       .single()
 
@@ -280,6 +284,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     secureLog('Employee updated successfully', { employeeId, companyId })
+
+    if (
+      Object.prototype.hasOwnProperty.call(updateData, 'base_salary') &&
+      salaryAmountsDiffer(existing.base_salary, updated.base_salary)
+    ) {
+      await recordEmployeeSalaryChange(supabase, {
+        employee_id: employeeId,
+        company_id: companyId,
+        old_amount: Number(existing.base_salary),
+        new_amount: Number(updated.base_salary),
+        changed_by: auth.userProfile?.id ?? auth.user?.id ?? null,
+      })
+    }
 
     res.on('finish', () => {
       addEmployeeSyncJob(updated.id)

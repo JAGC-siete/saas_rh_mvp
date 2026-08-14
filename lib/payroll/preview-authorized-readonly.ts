@@ -6,8 +6,14 @@
 import { HONDURAS_LABOR_FACTOR } from './constants'
 import {
   isHourBasedPayType,
+  PAYROLL_FROZEN_RUN_MESSAGE,
+  PAYROLL_FROZEN_SALARY_STALE_MESSAGE,
   resolvePlanillaRowPayType,
 } from './resolve-effective-pay-type'
+import {
+  lineBaseSalaryDriftedFromEmployee,
+  resolveSnapshotMonthlySalary,
+} from './salary-snapshot'
 
 export type AuthorizedRunRow = {
   id: string
@@ -64,6 +70,7 @@ export async function buildAuthorizedPayrollPreviewPayload(
 
   const planilla_fixed: Record<string, unknown>[] = []
   const planilla_hourly: Record<string, unknown>[] = []
+  let salaryStale = false
 
   for (const line of lines || []) {
     const emp = (line as { employees?: Record<string, unknown> }).employees
@@ -77,7 +84,10 @@ export async function buildAuthorizedPayrollPreviewPayload(
       employeePayType: emp.pay_type,
       metadataPayType: meta.pay_type,
     })
-    const base_salary = Number(emp.base_salary) || 0
+    if (lineBaseSalaryDriftedFromEmployee(meta.base_salary_used, emp.base_salary)) {
+      salaryStale = true
+    }
+    const base_salary = resolveSnapshotMonthlySalary(emp.base_salary, meta)
     const departmentName =
       (emp.departments as { name?: string } | undefined)?.name || 'Sin Departamento'
     const eff_bruto = Number((line as { eff_bruto?: unknown }).eff_bruto) || 0
@@ -162,11 +172,14 @@ export async function buildAuthorizedPayrollPreviewPayload(
   const totalNetoHourly = planilla_hourly.reduce((s, r) => s + (r.total as number), 0)
   const totalEmpleados = planilla_fixed.length + planilla_hourly.length
 
+  const frozenMessage = salaryStale
+    ? PAYROLL_FROZEN_SALARY_STALE_MESSAGE
+    : PAYROLL_FROZEN_RUN_MESSAGE
+
   return {
-    message:
-      run.status === 'distributed'
-        ? 'Planilla distribuida (solo lectura)'
-        : 'Planilla autorizada para este período (solo lectura)',
+    message: frozenMessage,
+    frozen: true,
+    salary_stale: salaryStale,
     run_id: run.id,
     status: run.status,
     year: run.year,
@@ -191,7 +204,7 @@ export async function buildAuthorizedPayrollPreviewPayload(
     warning:
       totalEmpleados === 0
         ? 'La corrida está autorizada pero no tiene líneas en base de datos.'
-        : null,
+        : frozenMessage,
     noAttendanceWarning: null,
     incompleteRecordsAlert: undefined
   }
