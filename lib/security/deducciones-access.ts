@@ -27,6 +27,29 @@ export function canAccessDeduccionesModule(role: unknown, permissions: unknown):
   return canonical.can_manage_deducciones === true
 }
 
+/**
+ * Manager (u otro rol sin nav de nómina) con Deducciones y el resto de módulos
+ * explícitamente apagados. No aplica si también tiene empleados/asistencia/etc.
+ */
+export function isDeduccionesOnlyAccess(role: unknown, permissions: unknown): boolean {
+  if (!canAccessDeduccionesModule(role, permissions)) return false
+  const canonical = normalizePermissionsToCanonical(
+    (role || '').toString().trim().toLowerCase(),
+    parseRawPermissions(permissions)
+  )
+  const hasBroaderAppAccess =
+    canonical.can_access_dashboard === true ||
+    canonical.can_view_employees === true ||
+    canonical.can_manage_employees === true ||
+    canonical.can_view_attendance === true ||
+    canonical.can_manage_attendance === true ||
+    canonical.can_view_departments === true ||
+    canonical.can_manage_departments === true ||
+    canonical.can_request_leave === true ||
+    canonical.can_approve_leave === true
+  return !hasBroaderAppAccess
+}
+
 /** Listado de empleados para asignar planes (sin abrir módulo Empleados en sidebar). */
 export function canSearchEmployeesForDeducciones(role: unknown, permissions: unknown): boolean {
   const normalizedRole = (role || '').toString().trim().toLowerCase()

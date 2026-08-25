@@ -5,6 +5,7 @@ import {
   canAccessDeduccionesModule,
   canCancelDeductionPlans,
   canSearchEmployeesForDeducciones,
+  isDeduccionesOnlyAccess,
   CANCEL_DEDUCTION_PLANS_KEY,
 } from '../lib/security/deducciones-access'
 import { normalizePermissionsToCanonical } from '../lib/security/canonical-permissions'
@@ -55,6 +56,36 @@ describe('deducciones access', () => {
     )
   })
 
+  it('does not treat manager with employees/attendance as deductions-only', () => {
+    assert.equal(
+      isDeduccionesOnlyAccess('manager', {
+        can_manage_deducciones: true,
+        can_view_employees: true,
+        can_manage_employees: true,
+        can_view_attendance: true,
+        can_manage_attendance: true,
+        can_access_dashboard: true,
+      }),
+      false
+    )
+  })
+
+  it('treats provisioned deductions-only manager as deductions-only', () => {
+    assert.equal(
+      isDeduccionesOnlyAccess('manager', {
+        can_manage_deducciones: true,
+        can_access_dashboard: false,
+        can_view_employees: false,
+        can_manage_employees: false,
+        can_view_attendance: false,
+        can_manage_attendance: false,
+        can_view_departments: false,
+        can_request_leave: false,
+        can_approve_leave: false,
+      }),
+      true
+    )
+  })
   it('denies cancel when can_cancel_deduction_plans is false', () => {
     assert.equal(
       canCancelDeductionPlans('manager', {

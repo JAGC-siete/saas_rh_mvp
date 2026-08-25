@@ -9,8 +9,7 @@ import { Input } from '../../components/ui/input'
 import { ArrowRight } from 'lucide-react'
 import Image from 'next/image'
 import { createClient } from '../../lib/supabase/client'
-import { canAccessPayrollNavigation } from '../../lib/auth/role-access'
-import { canAccessDeduccionesModule } from '../../lib/security/deducciones-access'
+import { isDeduccionesOnlyAccess } from '../../lib/security/deducciones-access'
 
 export default function LoginExisting() {
   const [email, setEmail] = useState('')
@@ -73,13 +72,10 @@ export default function LoginExisting() {
         router.push('/onboarding')
       } else if (
         data.userProfile &&
-        canAccessDeduccionesModule(data.userProfile.role, data.userProfile.permissions) &&
-        !canAccessPayrollNavigation(data.user.role)
+        isDeduccionesOnlyAccess(data.userProfile.role, data.userProfile.permissions)
       ) {
-        // Acceso limitado solo a Deducciones
         router.push('/app/deducciones')
       } else {
-        // Regular users go to dashboard
         router.push('/app/dashboard')
       }
     } catch (err: any) {

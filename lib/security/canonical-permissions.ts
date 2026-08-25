@@ -228,18 +228,23 @@ export function normalizePermissionsToCanonical(
     base.can_manage_deducciones = true
   }
 
-  // 4) Manager: sin nómina ni reportes generales; reportes de asistencia por defecto del rol
-  //    can_manage_deducciones queda si viene true en jsonb (acceso solo a Deducciones).
+  // 4) Manager: sin nómina ni reportes generales; reportes de asistencia por defecto del rol.
+  //    can_manage_deducciones / can_view_salary quedan si el jsonb los otorga (UI de usuarios).
   if (normalizeRole(role) === 'manager') {
     base.can_view_payroll = false
     base.can_manage_payroll = false
     base.can_authorize_payroll = false
     base.can_view_settings = false
     base.can_manage_settings = false
-    base.can_view_salary = false
     base.can_edit_salary = false
     base.can_view_reports = false
     base.can_export_reports = false
+
+    if (input.can_view_salary === true) {
+      base.can_view_salary = true
+    } else {
+      base.can_view_salary = false
+    }
 
     if (input.can_manage_deducciones === true) {
       base.can_manage_deducciones = true

@@ -8,7 +8,7 @@ import { useCompanyContext } from '../../lib/useCompanyContext'
 import { formatDateOnlyForHonduras } from '../../lib/timezone'
 import { useAuth } from '../../lib/auth'
 import { canAccessPayrollNavigation } from '../../lib/auth/role-access'
-import { canAccessDeduccionesModule } from '../../lib/security/deducciones-access'
+import { isDeduccionesOnlyAccess } from '../../lib/security/deducciones-access'
 
 interface DashboardStats {
   totalEmployees: number
@@ -55,10 +55,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (authLoading || !userProfile) return
-    if (
-      canAccessDeduccionesModule(userProfile.role, userProfile.permissions) &&
-      !canAccessPayrollNavigation(userProfile.role)
-    ) {
+    if (isDeduccionesOnlyAccess(userProfile.role, userProfile.permissions)) {
       router.replace('/app/deducciones')
     }
   }, [authLoading, userProfile, router])

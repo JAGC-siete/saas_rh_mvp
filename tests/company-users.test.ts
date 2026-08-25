@@ -16,6 +16,7 @@ import {
   roleCanEditSalary,
   stripPermissionsOutsidePlan,
 } from '../lib/company/users'
+import { normalizePermissionsToCanonical } from '../lib/security/canonical-permissions'
 
 describe('company-users salary rules', () => {
   it('company_admin and hr_manager always get view+edit salary', () => {
@@ -124,6 +125,16 @@ describe('company-users build permissions', () => {
     assert.equal(perms.can_edit_salary, false)
     assert.equal(perms.can_view_payroll, false)
     assert.equal(perms.can_manage_payroll, false)
+  })
+
+  it('runtime canonical keeps manager salary view when jsonb grants it', () => {
+    const canonical = normalizePermissionsToCanonical('manager', {
+      can_view_salary: true,
+      can_manage_employees: true,
+    })
+    assert.equal(canonical.can_view_salary, true)
+    assert.equal(canonical.can_edit_salary, false)
+    assert.equal(canonical.can_manage_employees, true)
   })
 
   it('does not grant performance when feature off', () => {
