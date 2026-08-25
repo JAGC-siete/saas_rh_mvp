@@ -1,5 +1,6 @@
 import { getMarketingSiteUrl } from './unsubscribe'
 import { buildMissionActivarUrl, buildMissionTextFooter } from './mission-config'
+import { PAZ_YOUTUBE_WATCH_URL, pazUnlockHref } from './paz-video'
 
 export const INFO_PACK_SUBJECT_FIELD =
   'Lo prometido: el documento para dejar de pelear con Recursos Humanos'
@@ -8,7 +9,11 @@ export const INFO_PACK_SUBJECT_FIELD =
 export const INFO_PACK_SUBJECT_VIERNES =
   'Lo prometido: cómo recuperar el viernes (y dejar de pelear con el cierre)'
 
-export type InfoPackVariant = 'default' | 'viernes'
+/** /paz entry: same Paper Bridge pack, opener with video + unlock link. */
+export const INFO_PACK_SUBJECT_PAZ =
+  'Lo prometido: el video para recuperar la paz al cerrar planilla'
+
+export type InfoPackVariant = 'default' | 'viernes' | 'paz'
 
 const INFO_FIELD_NOTE_SUBJECTS: Record<number, string> = {
   0: 'Clave #0: la guerra silenciosa que drena tu negocio',
@@ -40,7 +45,18 @@ export function buildInfoPackEmailBody(params: {
   const variant = params.variant ?? 'default'
 
   const opener =
-    variant === 'viernes'
+    variant === 'paz'
+      ? [
+          `Hola ${name},`,
+          '',
+          'Pediste el método revelado. Acá va el video — y el mismo enlace para verlo en la página si querés volver.',
+          '',
+          `→ Ver el video: ${PAZ_YOUTUBE_WATCH_URL}`,
+          `→ Revelarlo en /paz: ${pazUnlockHref(site)}`,
+          '',
+          'Unos minutos sobre cómo dejar de ser una máquina de Excel. El resto es el mismo puente de papel que hay que destruir.',
+        ]
+      : variant === 'viernes'
       ? [
           `Hola ${name},`,
           '',
@@ -73,7 +89,9 @@ export function buildInfoPackEmailBody(params: {
     '',
     variant === 'viernes'
       ? 'Te dejo esto por escrito para el próximo cierre — cuando el viernes (o el domingo) te vuelva a quitar la calma.'
-      : 'Te dejo esto por escrito para el próximo fin de mes, cuando la nómina te vuelva a quitar la calma.',
+      : variant === 'paz'
+        ? 'Te dejo el video y esto por escrito — para cuando la planilla te vuelva a quitar la paz.'
+        : 'Te dejo esto por escrito para el próximo fin de mes, cuando la nómina te vuelva a quitar la calma.',
     '',
     'Si tienes curiosidad de ver cómo RR.HH. se vuelve tu aliado estratégico cuando el dato viaja solo, te dejo estos dos enlaces:',
     `→ Mira cómo automatizar el dolor en 30 segundos: ${site}/activar`,
@@ -85,7 +103,9 @@ export function buildInfoPackEmailBody(params: {
     '',
     variant === 'viernes'
       ? 'PD: Mañana empieza la serie de claves para digitalizar y automatizar — la forma real de recuperar el viernes. La Clave #1 desarma la mentira más cara: "siempre lo hemos hecho así".'
-      : 'PD: Mañana te enviaré la Clave #1 sobre la mentira corporativa más peligrosa del mundo. Si quieres dejar de perder dinero en fricción interna, te sugiero leerla.',
+      : variant === 'paz'
+        ? 'PD: Mañana empieza la serie de claves. El video es el suspiro; las claves son cómo no volver a perder la paz el domingo.'
+        : 'PD: Mañana te enviaré la Clave #1 sobre la mentira corporativa más peligrosa del mundo. Si quieres dejar de perder dinero en fricción interna, te sugiero leerla.',
   ].join('\n')
 }
 

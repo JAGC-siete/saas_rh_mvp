@@ -60,16 +60,24 @@ describe('admin marketing KPIs helpers', () => {
         current_step: 0,
         created_at: '2026-08-01T16:00:00.000Z',
       },
+      {
+        id: '6',
+        source: 'paz',
+        status: 'active',
+        current_step: 0,
+        created_at: '2026-08-01T17:00:00.000Z',
+      },
     ]
 
     const result = aggregateLeadsInRange(rows)
-    assert.equal(result.total, 5)
+    assert.equal(result.total, 6)
     assert.equal(result.byKind.activar, 1)
     assert.equal(result.byKind.ventas, 1)
-    assert.equal(result.byKind.info, 2)
+    assert.equal(result.byKind.info, 3)
     assert.equal(result.byKind.suscripcion, 1)
     assert.equal(result.viernesLeads, 1)
-    assert.equal(result.byStatus.active, 3)
+    assert.equal(result.pazLeads, 1)
+    assert.equal(result.byStatus.active, 4)
     assert.equal(result.byStatus.completed, 1)
     assert.equal(result.byStatus.unsubscribed, 1)
   })

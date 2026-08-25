@@ -37,6 +37,11 @@ const SOURCE_LABELS: Record<
     subtitle: 'Lead pidió claves para recuperar el viernes',
     badge: 'Viernes',
   },
+  paz: {
+    title: 'Nuevo lead /paz en SISU',
+    subtitle: 'Lead pidió el video del método revelado',
+    badge: 'Paz',
+  },
 }
 
 function sourcePath(source: LeadRegistroSource): string {

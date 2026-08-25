@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { DateTime } from 'luxon'
 import {
+  isPazLeadEntry,
   isViernesLeadEntry,
   normalizeLeadSource,
   SEQUENCE_COMPLETE_STEP,
@@ -47,6 +48,7 @@ export type MarketingKpisPayload = {
     total: number
     byKind: LeadsByKind
     viernesLeads: number
+    pazLeads: number
     byStatus: LeadsByStatus
   }
   sequence: {
@@ -80,6 +82,7 @@ export function aggregateLeadsInRange(rows: MarketingLeadRow[]): {
   total: number
   byKind: LeadsByKind
   viernesLeads: number
+  pazLeads: number
   byStatus: LeadsByStatus
 } {
   const byKind = emptyLeadsByKind()
@@ -90,18 +93,20 @@ export function aggregateLeadsInRange(rows: MarketingLeadRow[]): {
     total: rows.length,
   }
   let viernesLeads = 0
+  let pazLeads = 0
 
   for (const row of rows) {
     const kind = normalizeLeadSource(row.source)
     byKind[kind] += 1
     if (isViernesLeadEntry(row.source)) viernesLeads += 1
+    if (isPazLeadEntry(row.source)) pazLeads += 1
 
     if (row.status === 'active') byStatus.active += 1
     else if (row.status === 'completed') byStatus.completed += 1
     else if (row.status === 'unsubscribed') byStatus.unsubscribed += 1
   }
 
-  return { total: rows.length, byKind, viernesLeads, byStatus }
+  return { total: rows.length, byKind, viernesLeads, pazLeads, byStatus }
 }
 
 export function buildDailyLeadSeries(
@@ -203,6 +208,7 @@ export async function fetchMarketingKpis(
       total: leads.total,
       byKind: leads.byKind,
       viernesLeads: leads.viernesLeads,
+      pazLeads: leads.pazLeads,
       byStatus: leads.byStatus,
     },
     sequence: {

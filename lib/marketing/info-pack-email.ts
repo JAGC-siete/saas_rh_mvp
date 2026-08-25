@@ -4,6 +4,7 @@ import { buildInfoPackEmailHtml } from './info-pack-email-html'
 import { appendUnsubscribeFooter } from './unsubscribe'
 import {
   INFO_PACK_SUBJECT_FIELD,
+  INFO_PACK_SUBJECT_PAZ,
   INFO_PACK_SUBJECT_VIERNES,
   buildInfoPackEmailBody,
   type InfoPackVariant,
@@ -21,7 +22,9 @@ export const INFO_PACK_SUBJECT_PREFIX = INFO_PACK_SUBJECT_FIELD
 export { INFO_SEQUENCE_WELCOME_DELAY_HOURS } from './info-sequence-timing'
 
 export function buildInfoPackSubject(variant: InfoPackVariant = 'default'): string {
-  return variant === 'viernes' ? INFO_PACK_SUBJECT_VIERNES : INFO_PACK_SUBJECT_FIELD
+  if (variant === 'viernes') return INFO_PACK_SUBJECT_VIERNES
+  if (variant === 'paz') return INFO_PACK_SUBJECT_PAZ
+  return INFO_PACK_SUBJECT_FIELD
 }
 
 export function buildInfoPackEmailText(params: {
@@ -42,7 +45,7 @@ export type SendInfoPackEmailInput = {
   to: string
   nombre?: string | null
   unsubscribeToken: string
-  /** /viernes uses same Paper Bridge pack with “recuperar el viernes” opener. */
+  /** /viernes and /paz use the same Paper Bridge pack with a distinct opener. */
   variant?: InfoPackVariant
   dryRun?: boolean
 }

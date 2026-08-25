@@ -15,8 +15,6 @@ export type HomeCopy = {
     lead: string
     ctaQuote: string
     ctaTrial: string
-    finePrint: string
-    nextPayday: string
     imageAlt: string
     imageCaption: string
   }
@@ -172,20 +170,17 @@ const byLocale: Record<LandingLocale, HomeCopy> = {
       badgeLaws: 'Adaptado a leyes de CA (HN, SV, GT)',
       badgeSpeed: 'Implementación rápida',
       badgeSupport: 'Soporte local',
-      title: 'SISU — Tecnología de Recursos Humanos integrada para MiPyMes en Centroamérica',
+      title: 'SISU — Tecnología de Recursos Humanos para MiPyMes',
       subtitle: 'Exclusivo para Honduras, El Salvador y Guatemala.',
       lead: 'Sistema de RRHH integrado. Del reloj biométrico de asistencia (huella o facial) a la planilla, sin intervención manual.',
       ctaQuote: 'Solicitar cotización',
       ctaTrial: 'Probar gratis',
-      finePrint: 'Cotización sin costo. Prueba con límites del trial según política vigente.',
-      nextPayday: 'Próximo cierre de planilla (referencia):',
       imageAlt: 'Profesional de RRHH en oficina, con café y libretas de trabajo',
       imageCaption: 'Contrata hoy tu nueva asistente de RRHH. Digital y Automatizado.',
     },
     socialProof: {
-      titleLead: 'Clientes de SISU lo certifican: ',
-      titleAccent:
-        'el control de asistencia con huella y el reloj biométrico integrados a la nómina son la ventaja verdadera',
+      titleLead: 'Clientes SISU certifican: ',
+      titleAccent: 'el reloj de asistencia integrado a la nómina son la diferencia',
       aria: 'Testimonios de clientes',
     },
     testimonials: testimonialsEs,
@@ -233,20 +228,17 @@ const byLocale: Record<LandingLocale, HomeCopy> = {
       badgeLaws: 'Built for CA labor rules (HN, SV, GT)',
       badgeSpeed: 'Fast implementation',
       badgeSupport: 'Local support',
-      title: 'SISU — Integrated HR technology for SMBs in Central America',
+      title: 'SISU — HR technology for SMBs',
       subtitle: 'Exclusive to Honduras, El Salvador, and Guatemala.',
       lead: 'Integrated HR system. From biometric attendance clock (fingerprint or facial) to payroll, without manual busywork.',
       ctaQuote: 'Request a quote',
       ctaTrial: 'Try free',
-      finePrint: 'No-cost quote. Trial limits follow the current policy.',
-      nextPayday: 'Next payroll close (reference):',
       imageAlt: 'HR professional in an office with coffee and notebooks',
       imageCaption: 'Hire your new digital HR assistant today. Automated.',
     },
     socialProof: {
-      titleLead: 'SISU customers confirm it: ',
-      titleAccent:
-        'fingerprint attendance control and a biometric clock tied to payroll are the real advantage',
+      titleLead: 'SISU customers certify: ',
+      titleAccent: 'the attendance clock integrated with payroll is the difference',
       aria: 'Customer testimonials',
     },
     testimonials: testimonialsEn,

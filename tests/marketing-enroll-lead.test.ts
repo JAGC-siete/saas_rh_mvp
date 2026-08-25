@@ -30,6 +30,9 @@ describe('marketing welcome greetings by source', () => {
     assert.equal(normalizeLeadSource('viernes'), 'info')
     assert.equal(normalizeLeadSource('info:viernes'), 'info')
     assert.equal(normalizeLeadSource('viernes:landing'), 'info')
+    assert.equal(normalizeLeadSource('paz'), 'info')
+    assert.equal(normalizeLeadSource('paz:landing'), 'info')
+    assert.equal(normalizeLeadSource('info:paz'), 'info')
     assert.equal(normalizeLeadSource(undefined), 'suscripcion')
   })
 

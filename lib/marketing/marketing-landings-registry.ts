@@ -68,12 +68,13 @@ export const MARKETING_LANDINGS: MarketingLandingEntry[] = [
     path: '/paz',
     pageFile: 'pages/paz.tsx',
     name: 'Paz (Railway Peace parodia)',
-    kind: 'viral-satire',
-    status: 'awareness-only',
-    purpose: 'Campaña satírica awareness; video + redes.',
-    primaryCta: '/activar (solo al final)',
+    kind: 'lead-magnet',
+    status: 'experimental',
+    purpose: 'Campaña satírica + gate de video (email → reveal + pack).',
+    primaryCta: 'Formulario email → video + pack info',
     launched: '2026-07',
-    notes: 'Sin captura de lead; video placeholder. Candidato a retiro o solo tráfico paid social.',
+    notes:
+      'Source DB: paz (kind info / Paper Bridge, opener video). Unlock query ?unlock=1. YouTube es público; el gate es UX + lead.',
   },
   {
     path: '/',

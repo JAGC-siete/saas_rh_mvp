@@ -3,6 +3,7 @@ import { logger } from '../logger'
 import {
   getWatchWindowKey,
   isMoreSpecificSource,
+  isPazLeadEntry,
   isViernesLeadEntry,
   normalizeLeadSource,
   SEQUENCE_COMPLETE_STEP,
@@ -12,6 +13,7 @@ import {
 } from './email-sequence-ledger'
 import { isMarketingExcluded } from './is-marketing-excluded'
 import { sendInfoPackEmail, buildInfoPackSubject, INFO_PACK_LEDGER_LABEL } from './info-pack-email'
+import type { InfoPackVariant } from './info-field-notes-email'
 import {
   sendSuscripcionPackEmail,
   buildSuscripcionPackSubject,
@@ -72,6 +74,12 @@ function usesAcceleratedPack(source: string): boolean {
 
 function usesAcceleratedOnboarding(source: string): boolean {
   return usesAcceleratedPack(source) || isActivarLeadSource(source) || isVentasLeadSource(source)
+}
+
+function infoPackVariantFromSource(source: string): InfoPackVariant {
+  if (isViernesLeadEntry(source)) return 'viernes'
+  if (isPazLeadEntry(source)) return 'paz'
+  return 'default'
 }
 
 async function hasWelcomeInLedger(
@@ -257,7 +265,7 @@ export async function enrollMarketingLead(
               to: trimmedEmail,
               nombre: displayName,
               unsubscribeToken: lead.unsubscribe_token,
-              variant: isViernesLeadEntry(source) ? 'viernes' : 'default',
+              variant: infoPackVariantFromSource(source),
             })
           } else {
             await sendSuscripcionPackEmail({
@@ -271,7 +279,7 @@ export async function enrollMarketingLead(
             ? INFO_PACK_LEDGER_LABEL
             : SUSCRIPCION_PACK_LEDGER_LABEL
           const packSubject = isInfoLeadSource(source)
-            ? buildInfoPackSubject(isViernesLeadEntry(source) ? 'viernes' : 'default')
+            ? buildInfoPackSubject(infoPackVariantFromSource(source))
             : buildSuscripcionPackSubject()
 
           await client

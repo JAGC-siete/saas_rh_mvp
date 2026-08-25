@@ -9,8 +9,8 @@ import { generateFAQPageSchema, generateWebPageSchema, generateBreadcrumbListSch
 import { useLandingPreferences } from './LandingPreferencesProvider'
 import { getCampaignsCopy } from '../../lib/i18n/landings/campaigns'
 import { LOCALE_SCHEMA_LANG } from '../../lib/i18n/locale'
-
-const PAZ_VIDEO_EMBED_SRC = 'https://www.youtube.com/embed/TTrBvcpDM3k?si=AdRkiKk1PpJ3WiJ6'
+import PazVideoGate from './PazVideoGate'
+import { trackCTAClick } from '../../lib/analytics/googleAds'
 
 const PAGE_TITLE = 'La forma pacífica de cerrar planilla | Humano SISU'
 const PAGE_DESCRIPTION =
@@ -91,6 +91,7 @@ const FAQS = [
 ]
 
 function scrollToVideo() {
+  trackCTAClick('paz_video_gate', 'paz_landing_hero')
   document.getElementById('paz-video')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
 }
 
@@ -183,19 +184,10 @@ export default function PazLanding() {
             <h2 className="paz-serif paz-section-title mb-4">Método revelado</h2>
             <p className="paz-lead max-w-xl mx-auto">
               Unos minutos de meditación sobre cómo cerrar planilla de manera pacífica, dirigida por
-              el viento y los servidores de SISU. Dale play. Tu herramienta nueva está aquí.
+              el viento y los servidores de SISU. Dejá tu correo. Tu herramienta nueva está aquí.
             </p>
           </div>
-          <div className="paz-video-frame">
-            <iframe
-              className="paz-video-embed"
-              src={PAZ_VIDEO_EMBED_SRC}
-              title="Método revelado — Humano SISU"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-              referrerPolicy="strict-origin-when-cross-origin"
-              allowFullScreen
-            />
-          </div>
+          <PazVideoGate />
           {/* Textual summary: Googlebot cannot index spoken video content */}
           <div className="max-w-2xl mx-auto mt-8 text-left">
             <h3 className="paz-serif text-lg font-semibold text-[var(--paz-ink)] mb-3">

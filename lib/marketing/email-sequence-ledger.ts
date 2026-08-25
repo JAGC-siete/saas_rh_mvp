@@ -80,6 +80,12 @@ export function isViernesLeadEntry(raw?: string | null): boolean {
   return s === 'viernes' || s.startsWith('viernes:') || s === 'info:viernes'
 }
 
+/** True when lead entered via /paz (same info sequence; video-pack opener + analytics). */
+export function isPazLeadEntry(raw?: string | null): boolean {
+  const s = (raw ?? '').trim().toLowerCase()
+  return s === 'paz' || s.startsWith('paz:') || s === 'info:paz'
+}
+
 /** Maps raw source strings (API, backfill, landing) to a greeting kind. */
 export function normalizeLeadSource(raw?: string | null): LeadSourceKind {
   const s = (raw ?? '').trim().toLowerCase()
@@ -90,11 +96,14 @@ export function normalizeLeadSource(raw?: string | null): LeadSourceKind {
   if (s === 'ventas' || s.startsWith('ventas:')) {
     return 'ventas'
   }
-  // /viernes + /secreto share the info (Paper Bridge) sequence; source string stays for analytics.
+  // /viernes + /paz + /secreto share the info (Paper Bridge) sequence; source string stays for analytics.
   if (
     s === 'viernes' ||
     s.startsWith('viernes:') ||
     s === 'info:viernes' ||
+    s === 'paz' ||
+    s.startsWith('paz:') ||
+    s === 'info:paz' ||
     s === 'info' ||
     s.startsWith('info:') ||
     s === 'info-page'

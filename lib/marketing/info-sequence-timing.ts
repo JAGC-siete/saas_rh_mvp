@@ -12,8 +12,9 @@ export const INFO_WELCOME_MISSION_TEASER =
 
 export function isInfoAcceleratedLead(source?: string | null): boolean {
   const s = (source ?? '').trim().toLowerCase()
-  // /viernes + /secreto share the Paper Bridge (info) accelerated sequence.
+  // /viernes + /paz + /secreto share the Paper Bridge (info) accelerated sequence.
   if (s === 'viernes' || s.startsWith('viernes:') || s === 'info:viernes') return true
+  if (s === 'paz' || s.startsWith('paz:') || s === 'info:paz') return true
   return s === 'info' || s.startsWith('info:') || s === 'info-page'
 }
 

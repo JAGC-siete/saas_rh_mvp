@@ -1,6 +1,7 @@
 import { VENTAS_BRAND as B } from '../ventas/brand-styles'
 import { MARKETING_UNSUBSCRIBE_FOOTER_TEXT, buildUnsubscribeUrl, getMarketingSiteUrl } from './unsubscribe'
 import type { InfoPackVariant } from './info-field-notes-email'
+import { PAZ_YOUTUBE_WATCH_URL, pazUnlockHref } from './paz-video'
 import {
   liquidBulletList,
   liquidInfoBox,
@@ -31,26 +32,48 @@ export function buildInfoPackEmailHtml(params: {
   const unsubscribeUrl = escapeHtml(buildUnsubscribeUrl(params.unsubscribeToken))
   const variant = params.variant ?? 'default'
   const isViernes = variant === 'viernes'
+  const isPaz = variant === 'paz'
+  const unlockUrl = pazUnlockHref(site)
+
+  const openerHtml = isPaz
+    ? [
+        liquidParagraph(`Hola ${greeting},`),
+        liquidParagraph(
+          escapeMultiline(
+            'Pediste el método revelado. Acá va el video — y el mismo enlace para verlo en la página si querés volver.'
+          )
+        ),
+        `<div style="text-align: center; margin: 18px 0;">
+      <a href="${PAZ_YOUTUBE_WATCH_URL}" style="display: inline-block; background: linear-gradient(135deg, ${B.emailAccent}, #2563eb); color: white; padding: 12px 22px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 14px; margin: 0 6px 10px 6px;">Ver el video</a>
+      <a href="${unlockUrl}" style="display: inline-block; background: transparent; color: ${B.emailAccent}; padding: 11px 22px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 14px; border: 2px solid ${B.emailAccent}; margin: 0 6px 10px 6px;">Revelarlo en /paz</a>
+    </div>`,
+        liquidParagraph(
+          'Unos minutos sobre cómo dejar de ser una máquina de Excel. El resto es el mismo <strong>puente de papel</strong> que hay que destruir.'
+        ),
+      ]
+    : [
+        liquidParagraph(`Hola ${greeting},`),
+        liquidParagraph(
+          escapeMultiline(
+            isViernes
+              ? 'Pediste recuperar el viernes. Eso empieza por mirar de frente el cierre que te lo está robando.'
+              : 'Acabas de hacer algo que el 99% de los líderes evita: mirar de frente el departamento que más canas verdes saca en la empresa.'
+          )
+        ),
+        liquidParagraph(
+          isViernes
+            ? 'La mayoría cree que RR.HH. es ineficiente por naturaleza: persiguiendo papeles, calculando mal la nómina, tardando días en un permiso. El domingo se va en Excel. Otra vez.'
+            : 'Si viste la pantalla, ya entiendes el problema real. La mayoría de los directores cree que su equipo de RR.HH. es ineficiente por naturaleza. Piensan: "Es que se la pasan persiguiendo papeles, calculando mal las nóminas y tardando días en responder un permiso".'
+        ),
+        liquidParagraph(
+          isViernes
+            ? 'Pero recuperar el viernes no es cambiar de personal. Es <strong>destruir el puente de papel</strong> — digitalizar de verdad y automatizar el dato.'
+            : 'Pero el secreto no es cambiar de personal. El secreto es <strong>destruir el puente de papel</strong>.'
+        ),
+      ]
 
   const bodyHtml = [
-    liquidParagraph(`Hola ${greeting},`),
-    liquidParagraph(
-      escapeMultiline(
-        isViernes
-          ? 'Pediste recuperar el viernes. Eso empieza por mirar de frente el cierre que te lo está robando.'
-          : 'Acabas de hacer algo que el 99% de los líderes evita: mirar de frente el departamento que más canas verdes saca en la empresa.'
-      )
-    ),
-    liquidParagraph(
-      isViernes
-        ? 'La mayoría cree que RR.HH. es ineficiente por naturaleza: persiguiendo papeles, calculando mal la nómina, tardando días en un permiso. El domingo se va en Excel. Otra vez.'
-        : 'Si viste la pantalla, ya entiendes el problema real. La mayoría de los directores cree que su equipo de RR.HH. es ineficiente por naturaleza. Piensan: "Es que se la pasan persiguiendo papeles, calculando mal las nóminas y tardando días en responder un permiso".'
-    ),
-    liquidParagraph(
-      isViernes
-        ? 'Pero recuperar el viernes no es cambiar de personal. Es <strong>destruir el puente de papel</strong> — digitalizar de verdad y automatizar el dato.'
-        : 'Pero el secreto no es cambiar de personal. El secreto es <strong>destruir el puente de papel</strong>.'
-    ),
+    ...openerHtml,
     liquidPanel(
       liquidBulletList([
         'RR.HH. captura una incidencia en un reloj checador.',
@@ -66,7 +89,9 @@ export function buildInfoPackEmailHtml(params: {
     liquidParagraph(
       isViernes
         ? 'Te dejo esto por escrito para el próximo cierre — cuando el viernes (o el domingo) te vuelva a quitar la calma.'
-        : 'Te dejo esto por escrito para el próximo fin de mes, cuando la nómina te vuelva a quitar la calma.'
+        : isPaz
+          ? 'Te dejo el video y esto por escrito — para cuando la planilla te vuelva a quitar la paz.'
+          : 'Te dejo esto por escrito para el próximo fin de mes, cuando la nómina te vuelva a quitar la calma.'
     ),
     liquidParagraph(
       'Si tienes curiosidad de ver cómo RR.HH. se vuelve tu aliado estratégico cuando el dato viaja solo, te dejo estos dos enlaces:'
@@ -79,7 +104,9 @@ export function buildInfoPackEmailHtml(params: {
     liquidInfoBox(
       isViernes
         ? 'Mañana empieza la serie de claves para digitalizar y automatizar — la forma real de recuperar el viernes. La Clave #1 desarma "siempre lo hemos hecho así".'
-        : 'Mañana te enviaré la Clave #1 sobre la mentira corporativa más peligrosa del mundo. Si quieres dejar de perder dinero en fricción interna, te sugiero leerla.',
+        : isPaz
+          ? 'Mañana empieza la serie de claves. El video es el suspiro; las claves son cómo no volver a perder la paz el domingo.'
+          : 'Mañana te enviaré la Clave #1 sobre la mentira corporativa más peligrosa del mundo. Si quieres dejar de perder dinero en fricción interna, te sugiero leerla.',
       'neutral'
     ),
     `<p style="margin: 0; text-align: center; font-size: 12px; color: ${B.emailTextMuted}; line-height: 1.55;">
@@ -92,8 +119,10 @@ export function buildInfoPackEmailHtml(params: {
     title: 'Humano SISU',
     subtitle: isViernes
       ? 'Recuperar el viernes · paces con RR.HH.'
-      : 'El documento para hacer las paces con RR.HH.',
-    badge: isViernes ? 'Recuperar el viernes' : 'El secreto',
+      : isPaz
+        ? 'Método revelado · paces con RR.HH.'
+        : 'El documento para hacer las paces con RR.HH.',
+    badge: isViernes ? 'Recuperar el viernes' : isPaz ? 'Método revelado' : 'El secreto',
     bodyHtml,
     footerNote: `Humano SISU · ${site}`,
   })

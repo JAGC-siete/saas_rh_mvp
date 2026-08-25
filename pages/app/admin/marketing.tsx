@@ -202,6 +202,12 @@ export default function MarketingKpisPage() {
                         {data.leads.viernesLeads.toLocaleString()}
                       </span>
                     </div>
+                    <div className="flex items-center justify-between text-sm pt-1">
+                      <span className="text-sky-200/90">De los cuales paz</span>
+                      <span className="font-semibold text-sky-200 tabular-nums">
+                        {data.leads.pazLeads.toLocaleString()}
+                      </span>
+                    </div>
                   </CardContent>
                 </Card>
 

@@ -1,7 +1,6 @@
 import Image from 'next/image'
 import { CheckCircleIcon, BoltIcon, UserGroupIcon } from '@heroicons/react/24/outline'
 import TrackedInternalCta from '../TrackedInternalCta'
-import { nowInHonduras } from '../../lib/timezone'
 import { getHomeCopy } from '../../lib/i18n/landings/home'
 import { useLandingPreferences } from './LandingPreferencesProvider'
 
@@ -9,13 +8,6 @@ export default function MagneticHero() {
   const { locale, href, tone } = useLandingPreferences()
   const copy = getHomeCopy(locale).hero
   const isLight = tone === 'light'
-  const now = nowInHonduras()
-  const y = now.getFullYear()
-  const m = now.getMonth()
-  const day = now.getDate()
-  const fifteenth = new Date(y, m, 15, 23, 59, 59)
-  const lastOfMonth = new Date(y, m + 1, 0, 23, 59, 59)
-  const nextPayday = day <= 15 ? fifteenth : lastOfMonth
   const secondaryCtaClass = isLight
     ? 'inline-flex items-center justify-center rounded-xl px-6 py-3 min-h-[48px] text-base font-medium border border-slate-300 text-slate-900 hover:bg-slate-100 transition-colors text-center'
     : 'inline-flex items-center justify-center rounded-xl px-6 py-3 min-h-[48px] text-base font-medium border border-white/25 text-white hover:bg-white/10 transition-colors text-center'
@@ -73,13 +65,6 @@ export default function MagneticHero() {
                 {copy.ctaTrial}
               </TrackedInternalCta>
             </div>
-            <p className="text-xs sm:text-sm landing-muted mt-3 font-medium">{copy.finePrint}</p>
-            <p className="text-sm landing-muted mt-4">
-              {copy.nextPayday}{' '}
-              <span className="landing-ink font-medium">
-                {nextPayday.toLocaleDateString(locale === 'en' ? 'en-US' : 'es-HN')}
-              </span>
-            </p>
           </div>
 
           <div className="w-full max-w-sm mx-auto lg:max-w-none lg:mx-0 min-w-0">
