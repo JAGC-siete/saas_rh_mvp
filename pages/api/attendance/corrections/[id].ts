@@ -1,5 +1,12 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { requireCompanyAccess } from '../../../../lib/auth/api-auth-fixed'
+import { getResolvedAttendanceConfig } from '../../../../lib/attendance/attendance-metadata'
+import {
+  buildApprovedAttendancePatch,
+  getCorrectionDateAnchorError,
+} from '../../../../lib/attendance/correction-marks'
+import { resolveEffectiveWorkScheduleId } from '../../../../lib/attendance/effective-work-schedule'
+import { getScheduleTimesForDate } from '../../../../lib/attendance/schedule-times'
 import {
   getAttendanceMarksValidationError,
   humanizeAttendanceHoursCalcError,
@@ -121,6 +128,15 @@ async function handlePatch(req: NextApiRequest, res: NextApiResponse, id: string
     const dateStr: string = corr.date
     const employeeId: string = corr.employee_id
 
+    const dateAnchorErr = getCorrectionDateAnchorError({
+      date: dateStr,
+      check_in: corr.proposed_check_in,
+      check_out: corr.proposed_check_out,
+      lunch_start: corr.proposed_lunch_start,
+      lunch_end: corr.proposed_lunch_end,
+    })
+    if (dateAnchorErr) return res.status(400).json({ error: dateAnchorErr })
+
     const { data: existing } = await admin
       .from('attendance_records')
       .select('id, employee_id, date, check_in, check_out, lunch_start, lunch_end, status, late_minutes, early_departure_minutes, flags')
@@ -128,15 +144,61 @@ async function handlePatch(req: NextApiRequest, res: NextApiResponse, id: string
       .eq('date', dateStr)
       .maybeSingle()
 
-    const patch: any = {
-      check_in: corr.proposed_check_in ?? existing?.check_in ?? null,
-      check_out: corr.proposed_check_out ?? existing?.check_out ?? null,
-      lunch_start: corr.proposed_lunch_start ?? existing?.lunch_start ?? null,
-      lunch_end: corr.proposed_lunch_end ?? existing?.lunch_end ?? null,
+    const { data: emp } = await admin
+      .from('employees')
+      .select('work_schedule_id')
+      .eq('id', employeeId)
+      .maybeSingle()
+
+    const { timezone } = await getResolvedAttendanceConfig(admin, effectiveCompanyId)
+    const effectiveSchedule = await resolveEffectiveWorkScheduleId({
+      supabase: admin,
+      companyId: effectiveCompanyId,
+      employeeId,
+      date: dateStr,
+      fallbackWorkScheduleId: emp?.work_schedule_id ?? null,
+    })
+
+    let expectedStart: string | null = null
+    let shiftType: string | null = null
+    if (effectiveSchedule.found) {
+      const { data: schedule } = await admin
+        .from('work_schedules')
+        .select(
+          'id, monday_start, monday_end, tuesday_start, tuesday_end, wednesday_start, wednesday_end, thursday_start, thursday_end, friday_start, friday_end, saturday_start, saturday_end, sunday_start, sunday_end, shift_config, shift_type'
+        )
+        .eq('id', effectiveSchedule.workScheduleId)
+        .maybeSingle()
+      if (schedule) {
+        expectedStart = getScheduleTimesForDate(schedule, dateStr).start
+        shiftType = typeof schedule.shift_type === 'string' ? schedule.shift_type : null
+      }
     }
 
-    const marksErr = getAttendanceMarksValidationError(patch)
+    const approved = buildApprovedAttendancePatch({
+      existing,
+      proposed: {
+        proposed_check_in: corr.proposed_check_in,
+        proposed_check_out: corr.proposed_check_out,
+        proposed_lunch_start: corr.proposed_lunch_start,
+        proposed_lunch_end: corr.proposed_lunch_end,
+      },
+      expectedStart,
+      shiftType,
+      timeZone: timezone,
+    })
+
+    const marksErr = getAttendanceMarksValidationError(approved.marks)
     if (marksErr) return res.status(400).json({ error: marksErr })
+
+    const patch = {
+      date: dateStr,
+      ...approved.marks,
+      status: approved.status,
+      late_minutes: approved.late_minutes,
+      expected_check_in: approved.expected_check_in,
+      flags: approved.flags,
+    }
 
     let recordId = existing?.id as string | undefined
     let afterSnapshot: any = null
@@ -146,7 +208,7 @@ async function handlePatch(req: NextApiRequest, res: NextApiResponse, id: string
         .from('attendance_records')
         .update(patch)
         .eq('id', recordId)
-        .select('id, employee_id, date, check_in, check_out, lunch_start, lunch_end, status, late_minutes, early_departure_minutes, flags')
+        .select('id, employee_id, date, check_in, check_out, lunch_start, lunch_end, status, late_minutes, early_departure_minutes, flags, expected_check_in')
         .single()
       if (updErr) return res.status(500).json({ error: updErr.message })
       afterSnapshot = upd
@@ -156,11 +218,9 @@ async function handlePatch(req: NextApiRequest, res: NextApiResponse, id: string
         .from('attendance_records')
         .insert({
           employee_id: employeeId,
-          date: dateStr,
           ...patch,
-          status: 'present',
         })
-        .select('id, employee_id, date, check_in, check_out, lunch_start, lunch_end, status, late_minutes, early_departure_minutes, flags')
+        .select('id, employee_id, date, check_in, check_out, lunch_start, lunch_end, status, late_minutes, early_departure_minutes, flags, expected_check_in')
         .single()
       if (insErr) return res.status(500).json({ error: insErr.message })
       afterSnapshot = ins

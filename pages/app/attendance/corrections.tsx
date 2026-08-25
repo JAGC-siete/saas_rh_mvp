@@ -3,6 +3,11 @@ import ProtectedRoute from '../../../components/ProtectedRoute'
 import DashboardLayout from '../../../components/DashboardLayout'
 import { Card } from '../../../components/ui/card'
 import { useAuth } from '../../../lib/auth'
+import {
+  composeCorrectionTimestamps,
+  formatCorrectionMarkDisplay,
+  getCorrectionDateAnchorError,
+} from '../../../lib/attendance/correction-marks'
 import { getAttendanceMarksValidationError } from '../../../lib/attendance/validate-marks'
 import { getTodayInHonduras } from '../../../lib/timezone'
 import { useNotificationContext } from '../../../components/NotificationProvider'
@@ -24,19 +29,19 @@ type CorrectionRow = {
   employees?: { id: string; name: string; employee_code?: string | null }
 }
 
-function isoForDatetimeLocal(iso: string | null | undefined): string {
-  if (!iso) return ''
-  const d = new Date(iso)
-  if (isNaN(d.getTime())) return ''
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
-}
-
-function datetimeLocalToIso(value: string): string | null {
-  if (!value.trim()) return null
-  const d = new Date(value)
-  if (isNaN(d.getTime())) return null
-  return d.toISOString()
+function composeFormMarks(date: string, times: {
+  checkIn: string
+  checkOut: string
+  lunchStart: string
+  lunchEnd: string
+}) {
+  return composeCorrectionTimestamps({
+    date,
+    checkInTime: times.checkIn,
+    checkOutTime: times.checkOut,
+    lunchStartTime: times.lunchStart,
+    lunchEndTime: times.lunchEnd,
+  })
 }
 
 export default function AttendanceCorrectionsPage() {
@@ -104,12 +109,13 @@ export default function AttendanceCorrectionsPage() {
   const submit = async () => {
     if (!canCreate) return
 
-    const marksErr = getAttendanceMarksValidationError({
-      check_in: datetimeLocalToIso(checkIn),
-      check_out: datetimeLocalToIso(checkOut),
-      lunch_start: datetimeLocalToIso(lunchStart),
-      lunch_end: datetimeLocalToIso(lunchEnd),
-    })
+    const marks = composeFormMarks(date, { checkIn, checkOut, lunchStart, lunchEnd })
+    const dateErr = getCorrectionDateAnchorError({ date, ...marks })
+    if (dateErr) {
+      addNotification({ type: 'error', title: 'Correcciones', message: dateErr })
+      return
+    }
+    const marksErr = getAttendanceMarksValidationError(marks)
     if (marksErr) {
       addNotification({ type: 'error', title: 'Correcciones', message: marksErr })
       return
@@ -120,10 +126,10 @@ export default function AttendanceCorrectionsPage() {
       const payload: any = {
         date,
         reason,
-        proposed_check_in: datetimeLocalToIso(checkIn),
-        proposed_check_out: datetimeLocalToIso(checkOut),
-        proposed_lunch_start: datetimeLocalToIso(lunchStart),
-        proposed_lunch_end: datetimeLocalToIso(lunchEnd),
+        proposed_check_in: marks.check_in,
+        proposed_check_out: marks.check_out,
+        proposed_lunch_start: marks.lunch_start,
+        proposed_lunch_end: marks.lunch_end,
       }
       if (!isEmployee) payload.employee_id = employeeId
 
@@ -248,7 +254,7 @@ export default function AttendanceCorrectionsPage() {
                   Entrada (propuesta)
                   <input
                     className="mt-1 w-full bg-gray-900/60 border border-white/10 rounded-lg px-3 py-2 text-white"
-                    type="datetime-local"
+                    type="time"
                     value={checkIn}
                     onChange={(e) => setCheckIn(e.target.value)}
                   />
@@ -257,7 +263,7 @@ export default function AttendanceCorrectionsPage() {
                   Salida (propuesta)
                   <input
                     className="mt-1 w-full bg-gray-900/60 border border-white/10 rounded-lg px-3 py-2 text-white"
-                    type="datetime-local"
+                    type="time"
                     value={checkOut}
                     onChange={(e) => setCheckOut(e.target.value)}
                   />
@@ -266,7 +272,7 @@ export default function AttendanceCorrectionsPage() {
                   Inicio almuerzo (opcional)
                   <input
                     className="mt-1 w-full bg-gray-900/60 border border-white/10 rounded-lg px-3 py-2 text-white"
-                    type="datetime-local"
+                    type="time"
                     value={lunchStart}
                     onChange={(e) => setLunchStart(e.target.value)}
                   />
@@ -275,7 +281,7 @@ export default function AttendanceCorrectionsPage() {
                   Fin almuerzo (opcional)
                   <input
                     className="mt-1 w-full bg-gray-900/60 border border-white/10 rounded-lg px-3 py-2 text-white"
-                    type="datetime-local"
+                    type="time"
                     value={lunchEnd}
                     onChange={(e) => setLunchEnd(e.target.value)}
                   />
@@ -283,7 +289,7 @@ export default function AttendanceCorrectionsPage() {
               </div>
 
               <p className="text-xs text-gray-400">
-                Si hay almuerzo: Entrada &lt; Inicio almuerzo &lt; Fin almuerzo &lt; Salida.
+                Las horas se aplican al día de Fecha (Honduras). Si la salida es antes que la entrada, se guarda al día siguiente (turno noche). Si hay almuerzo: Entrada &lt; Inicio almuerzo &lt; Fin almuerzo &lt; Salida.
               </p>
 
               <div className="flex justify-end">
@@ -327,10 +333,14 @@ export default function AttendanceCorrectionsPage() {
                           </div>
                           <div className="text-sm text-gray-300 mt-1">{r.reason}</div>
                           <div className="text-xs text-gray-400 mt-2 flex flex-wrap gap-2">
-                            <span>Entrada: {isoForDatetimeLocal(r.proposed_check_in)}</span>
-                            <span>Salida: {isoForDatetimeLocal(r.proposed_check_out)}</span>
-                            {r.proposed_lunch_start && <span>Almuerzo ini: {isoForDatetimeLocal(r.proposed_lunch_start)}</span>}
-                            {r.proposed_lunch_end && <span>Almuerzo fin: {isoForDatetimeLocal(r.proposed_lunch_end)}</span>}
+                            <span>Entrada: {formatCorrectionMarkDisplay(r.proposed_check_in, r.date)}</span>
+                            <span>Salida: {formatCorrectionMarkDisplay(r.proposed_check_out, r.date)}</span>
+                            {r.proposed_lunch_start && (
+                              <span>Almuerzo ini: {formatCorrectionMarkDisplay(r.proposed_lunch_start, r.date)}</span>
+                            )}
+                            {r.proposed_lunch_end && (
+                              <span>Almuerzo fin: {formatCorrectionMarkDisplay(r.proposed_lunch_end, r.date)}</span>
+                            )}
                           </div>
                           {marksWarning && status === 'pending' && (
                             <div className="text-xs text-amber-300 mt-2">{marksWarning}</div>

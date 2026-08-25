@@ -13,6 +13,11 @@ import {
   resolveEffectiveWorkScheduleIdFromAssignments,
 } from './resolve-schedule-batch'
 import { lateFieldsForAttendanceRecord } from './compute-late-minutes'
+import {
+  applyCorrectedMarkFields,
+  statusFromAttendanceMarks,
+  type CorrectionMarkTimes,
+} from './correction-marks'
 
 /** super_admin must pass explicit company_id (query/body). */
 export function resolveCompanyIdForDailyClose(
@@ -38,6 +43,7 @@ export type DailyCloseFlags = Record<string, unknown> & {
   close_state?: 'draft' | 'finalized'
   admin_override?: boolean
   daily_close_absent?: boolean
+  corrected_fields?: string[]
 }
 
 export interface AttendanceEventRow {
@@ -86,6 +92,7 @@ function mergeFlags(
     ...base,
     ...incoming,
     anomaly_types: incoming.anomaly_types ?? base.anomaly_types,
+    corrected_fields: base.corrected_fields ?? incoming.corrected_fields,
   }
   return merged
 }
@@ -333,6 +340,26 @@ export async function generateDailyCloseReport(params: {
     }
 
     const mapped = mapPunchesToDay(punches, biometric_mode)
+    const existingMarks: CorrectionMarkTimes | null = existing
+      ? {
+          check_in: (existing.check_in as string | null) ?? null,
+          check_out: (existing.check_out as string | null) ?? null,
+          lunch_start: (existing.lunch_start as string | null) ?? null,
+          lunch_end: (existing.lunch_end as string | null) ?? null,
+        }
+      : null
+    const mergedMarks = applyCorrectedMarkFields(
+      {
+        check_in: mapped.check_in,
+        check_out: mapped.check_out,
+        lunch_start: mapped.lunch_start,
+        lunch_end: mapped.lunch_end,
+      },
+      existingMarks,
+      existing?.flags
+    )
+    const derivedStatus = statusFromAttendanceMarks(mergedMarks)
+    const rowStatus = derivedStatus === 'absent' ? mapped.status : derivedStatus
     const hasAnomaly = mapped.anomalyTypes.length > 0
     if (hasAnomaly) anomalies++
 
@@ -349,12 +376,13 @@ export async function generateDailyCloseReport(params: {
       daily_close_at: nowIso,
       daily_close_version: prevVersion + 1,
     })
+    if (mergedMarks.check_in) closeFlags.daily_close_absent = false
 
     const effectiveScheduleId = effectiveScheduleIdByEmployee.get(employeeId) ?? null
     const schedule = effectiveScheduleId ? scheduleById.get(effectiveScheduleId) ?? null : null
     const expectedStart = getScheduleStartForDate(schedule, localDate)
     const lateFields = lateFieldsForAttendanceRecord({
-      checkInIso: mapped.check_in,
+      checkInIso: mergedMarks.check_in,
       expectedStart,
       shiftType: schedule?.shift_type,
       timeZone: timezone,
@@ -363,11 +391,11 @@ export async function generateDailyCloseReport(params: {
     const row = {
       employee_id: employeeId,
       date: localDate,
-      check_in: mapped.check_in,
-      check_out: mapped.check_out,
-      lunch_start: mapped.lunch_start,
-      lunch_end: mapped.lunch_end,
-      status: mapped.status,
+      check_in: mergedMarks.check_in,
+      check_out: mergedMarks.check_out,
+      lunch_start: mergedMarks.lunch_start,
+      lunch_end: mergedMarks.lunch_end,
+      status: rowStatus,
       flags: closeFlags,
       tz: timezone,
       tz_offset_minutes: -360,

@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { requireCompanyAccess } from '../../../../lib/auth/api-auth-fixed'
+import { getCorrectionDateAnchorError } from '../../../../lib/attendance/correction-marks'
 import { getAttendanceMarksValidationError } from '../../../../lib/attendance/validate-marks'
 import { createAdminClient } from '../../../../lib/supabase/server'
 
@@ -138,13 +139,17 @@ async function handleCreate(req: NextApiRequest, res: NextApiResponse) {
       .eq('date', date)
       .maybeSingle()
 
-    // Validar marcas propuestas (y el resultado efectivo vs registro existente)
-    const proposedErr = getAttendanceMarksValidationError({
+    const proposedMarks = {
       check_in: proposed_check_in,
       check_out: proposed_check_out,
       lunch_start: proposed_lunch_start,
       lunch_end: proposed_lunch_end,
-    })
+    }
+    const dateAnchorErr = getCorrectionDateAnchorError({ date, ...proposedMarks })
+    if (dateAnchorErr) return res.status(400).json({ error: dateAnchorErr })
+
+    // Validar marcas propuestas (y el resultado efectivo vs registro existente)
+    const proposedErr = getAttendanceMarksValidationError(proposedMarks)
     if (proposedErr) return res.status(400).json({ error: proposedErr })
 
     const effectiveErr = getAttendanceMarksValidationError({
