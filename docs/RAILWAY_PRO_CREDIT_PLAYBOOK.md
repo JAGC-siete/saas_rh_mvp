@@ -98,6 +98,7 @@ Servicios efímeros (arranque → HTTP POST → exit). Schedules en **UTC**.
 |---------------------|----------|--------------------------|----------|
 | `railway/cron-daily` | `0 12 * * *` | 06:00 | `/api/cron/daily` |
 | `railway/cron-communications-dispatch` | `0 13 * * *` | 07:00 | `/api/cron/communications-dispatch` |
+| `railway/cron-odoo-sync` | `*/5 * * * *` | cada 5 min | `/api/cron/odoo-sync` |
 | `railway/cron-late-attendance` | `0 13 * * *` | 07:00 | `/api/cron/late-attendance-report` |
 
 Cada carpeta incluye `Dockerfile` + `railway.toml` (`cronSchedule`, `restartPolicyType = NEVER`).

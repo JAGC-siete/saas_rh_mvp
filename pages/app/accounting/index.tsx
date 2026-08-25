@@ -4,6 +4,7 @@ import AppRoleGate from '../../../components/AppRoleGate'
 import DashboardLayout from '../../../components/DashboardLayout'
 import { PayrollDerivedConceptsTab } from '../../../components/accounting/PayrollDerivedConceptsTab'
 import { AccountingMappingTable } from '../../../components/accounting/AccountingMappingTable'
+import { OdooIntegrationTab } from '../../../components/accounting/OdooIntegrationTab'
 import { PAYROLL_NAV_ROLES } from '../../../lib/auth/role-access'
 import { useCompanyContext } from '../../../lib/useCompanyContext'
 import { CalculatorIcon } from '@heroicons/react/24/outline'
@@ -11,7 +12,7 @@ import { CalculatorIcon } from '@heroicons/react/24/outline'
 export default function AccountingPage() {
   const { companyId, loading: companyLoading, error: companyError } =
     useCompanyContext()
-  const [activeTab, setActiveTab] = React.useState<'mappings' | 'derived'>(
+  const [activeTab, setActiveTab] = React.useState<'mappings' | 'derived' | 'odoo'>(
     'mappings'
   )
 
@@ -78,12 +79,28 @@ export default function AccountingPage() {
                   >
                     Derivados de nómina
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('odoo')}
+                    className={`
+                    flex items-center gap-2 px-6 py-3 font-medium transition-all whitespace-nowrap
+                    ${
+                      activeTab === 'odoo'
+                        ? 'text-brand-400 border-b-2 border-brand-400 bg-white/5'
+                        : 'text-gray-400 hover:text-white hover:bg-white/5'
+                    }
+                  `}
+                  >
+                    Odoo
+                  </button>
                 </div>
 
                 {activeTab === 'mappings' ? (
                   <AccountingMappingTable companyId={companyId ?? null} />
-                ) : (
+                ) : activeTab === 'derived' ? (
                   <PayrollDerivedConceptsTab />
+                ) : (
+                  <OdooIntegrationTab companyId={companyId ?? null} />
                 )}
               </>
             )}

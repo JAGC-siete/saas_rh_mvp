@@ -10,6 +10,8 @@ import {
   recordEmployeeSalaryChange,
   salaryAmountsDiffer,
 } from '../../../lib/employees/salary-history'
+import { enqueueEmployeeOdooSync } from '../../../lib/integrations/odoo/outbox'
+import { employeeSyncFieldsChanged } from '../../../lib/integrations/odoo/employee-sync-fields'
 
 /**
  * Legacy route: PUT/PATCH/DELETE /api/employees/[id]
@@ -43,7 +45,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const { data: existing, error: fetchErr } = await supabase
       .from('employees')
-      .select('id, company_id, base_salary')
+      .select('id, company_id, base_salary, name, dni, email, status')
       .eq('id', employeeId)
       .single()
 
@@ -108,6 +110,32 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         old_amount: Number(existing.base_salary),
         new_amount: Number(updatedEmployee.base_salary),
         changed_by: auth.userProfile?.id ?? auth.user?.id ?? null,
+      })
+    }
+
+    if (
+      employeeSyncFieldsChanged(
+        {
+          name: existing.name,
+          dni: existing.dni,
+          email: existing.email,
+          status: existing.status,
+        },
+        {
+          name: updatedEmployee.name,
+          dni: updatedEmployee.dni,
+          email: updatedEmployee.email,
+          status: updatedEmployee.status,
+        }
+      )
+    ) {
+      void enqueueEmployeeOdooSync({
+        id: updatedEmployee.id,
+        company_id: updatedEmployee.company_id,
+        name: updatedEmployee.name,
+        dni: updatedEmployee.dni,
+        email: updatedEmployee.email,
+        status: updatedEmployee.status,
       })
     }
 

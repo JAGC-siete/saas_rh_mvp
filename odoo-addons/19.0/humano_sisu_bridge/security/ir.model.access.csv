@@ -1,0 +1,10 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_humano_sisu_bridge_bot,humano.sisu.bridge bot,model_humano_sisu_bridge,group_bridge,1,1,1,0
+access_sisu_hr_employee,hr.employee sisu bot,hr.model_hr_employee,group_bridge,1,1,1,0
+access_sisu_hr_version,hr.version sisu bot,hr.model_hr_version,group_bridge,1,1,1,0
+access_sisu_account_move,account.move sisu bot,account.model_account_move,group_bridge,1,1,1,0
+access_sisu_account_move_line,account.move.line sisu bot,account.model_account_move_line,group_bridge,1,1,1,0
+access_sisu_account_account,account.account sisu bot,account.model_account_account,group_bridge,1,0,0,0
+access_sisu_account_journal,account.journal sisu bot,account.model_account_journal,group_bridge,1,0,0,0
+access_sisu_res_currency,res.currency sisu bot,base.model_res_currency,group_bridge,1,0,0,0
+access_sisu_res_company,res.company sisu bot,base.model_res_company,group_bridge,1,0,0,0

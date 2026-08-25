@@ -4,6 +4,7 @@ import { requireUser } from '../../../lib/auth/requireUser'
 import { getHondurasTimestamp } from '../../../lib/timezone'
 import { requirePlanAndQuota, incrementUsage } from '../../../lib/billing/enforce'
 import { addEmployeeSyncJob } from '../../../lib/queues/employeeSyncQueue'
+import { enqueueEmployeeOdooSync } from '../../../lib/integrations/odoo/outbox'
 import { trace, context } from '@opentelemetry/api'
 import {
   isAllowedTerminationReasonCode,
@@ -235,9 +236,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Send the job to the queue after the response is sent
     res.on('finish', () => {
       if (newEmployee) {
-        addEmployeeSyncJob(newEmployee.id);
+        addEmployeeSyncJob(newEmployee.id)
+        void enqueueEmployeeOdooSync({
+          id: newEmployee.id,
+          company_id: newEmployee.company_id,
+          name: newEmployee.name,
+          dni: newEmployee.dni,
+          email: newEmployee.email,
+          status: newEmployee.status,
+        })
       }
-    });
+    })
 
     res.status(201).json({ employee: shapeEmployee(newEmployee, fieldCtx) })
 

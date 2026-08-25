@@ -5,6 +5,7 @@
 .git
 .gitignore
 .gitattributes
+.worktrees
 
 # Dependencies
 node_modules
@@ -208,3 +209,6 @@ scripts/
 
 # Services (separate microservices)
 services/
+
+# Odoo addons (installed on Odoo, not the Next.js runtime)
+odoo-addons/

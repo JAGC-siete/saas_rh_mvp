@@ -28,6 +28,7 @@ export function PayrollAccountingTab({
     useState<JournalStatutoryTraceBlock | null>(null)
   const [loading, setLoading] = useState(false)
   const [generating, setGenerating] = useState(false)
+  const [pushingOdoo, setPushingOdoo] = useState(false)
 
   const canGenerate =
     status === 'authorized' || status === 'distributed'
@@ -81,6 +82,29 @@ export function PayrollAccountingTab({
     const ids = entries.map((e) => e.id).join(',')
     const url = `/api/accounting/export?journal_entry_ids=${encodeURIComponent(ids)}&format=${format}`
     window.open(url, '_blank')
+  }
+
+  const handlePushOdoo = async () => {
+    if (!runId || !companyId) return
+    setPushingOdoo(true)
+    try {
+      const res = await fetch('/api/integrations/odoo/push-journals', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ run_id: runId, company_id: companyId }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        throw new Error(data.error || 'No se pudo enviar a Odoo')
+      }
+      toast.success('Odoo', `Asientos encolados: ${data.count ?? 0}`)
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Error enviando a Odoo'
+      toast.error('Odoo', msg, 8000)
+    } finally {
+      setPushingOdoo(false)
+    }
   }
 
   const journalStatus =
@@ -182,6 +206,21 @@ export function PayrollAccountingTab({
           >
             <DocumentArrowDownIcon className="h-4 w-4 mr-1" />
             Exportar JSON
+          </Button>
+          <Button
+            size="sm"
+            onClick={() => void handlePushOdoo()}
+            disabled={pushingOdoo}
+            className="bg-brand-600 hover:bg-brand-500 text-white"
+          >
+            {pushingOdoo ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Enviando...
+              </>
+            ) : (
+              'Enviar a Odoo'
+            )}
           </Button>
         </div>
       </div>

@@ -1,0 +1,9 @@
+# Drains SISU odoo_outbox every 5 minutes (UTC).
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+cronSchedule = "*/5 * * * *"
+restartPolicyType = "NEVER"
+startCommand = "bun run index.ts"

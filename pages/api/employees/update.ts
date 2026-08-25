@@ -3,6 +3,8 @@ import { createAdminClient } from '../../../lib/supabase/server'
 import { authenticateUser } from '../../../lib/auth-utils'
 import { getHondurasTimestamp } from '../../../lib/timezone'
 import { addEmployeeSyncJob } from '../../../lib/queues/employeeSyncQueue'
+import { employeeSyncFieldsChanged } from '../../../lib/integrations/odoo/employee-sync-fields'
+import { enqueueEmployeeOdooSync } from '../../../lib/integrations/odoo/outbox'
 import { secureLog, secureErrorLog } from '../../../lib/security/safe-logging'
 import {
   isAllowedTerminationReasonCode,
@@ -115,7 +117,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const { data: existing, error: fetchErr } = await supabase
       .from('employees')
-      .select('id, company_id, status, termination_reason_code, pay_type, base_salary')
+      .select('id, company_id, status, termination_reason_code, pay_type, base_salary, name, dni, email')
       .eq('id', employeeId)
       .single()
 
@@ -300,6 +302,31 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     res.on('finish', () => {
       addEmployeeSyncJob(updated.id)
+      if (
+        employeeSyncFieldsChanged(
+          {
+            name: existing.name,
+            dni: existing.dni,
+            email: existing.email,
+            status: existing.status,
+          },
+          {
+            name: updated.name,
+            dni: updated.dni,
+            email: updated.email,
+            status: updated.status,
+          }
+        )
+      ) {
+        void enqueueEmployeeOdooSync({
+          id: updated.id,
+          company_id: updated.company_id,
+          name: updated.name,
+          dni: updated.dni,
+          email: updated.email,
+          status: updated.status,
+        })
+      }
     })
 
     return res.status(200).json({ employee: shapeEmployee(updated, fieldCtx) })

@@ -62,6 +62,7 @@ export const env = {
   
   // External Services
   CRON_SECRET: getEnvVar('CRON_SECRET', ''),
+  ODOO_SECRETS_KEY: getEnvVar('ODOO_SECRETS_KEY', ''),
   RESEND_API_KEY: getEnvVar('RESEND_API_KEY', ''),
   
   // Supabase Auth External Providers

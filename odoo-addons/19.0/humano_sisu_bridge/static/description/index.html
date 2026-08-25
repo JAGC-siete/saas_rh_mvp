@@ -1,0 +1,15 @@
+<section class="oe_container">
+    <h2>Humano SISU Bridge</h2>
+    <p>
+        Humano SISU remains the payroll system of record (Honduras statutory).
+        This module receives employee cards and payroll journal entries as
+        <strong>draft</strong> <code>account.move</code>. It does not install
+        <code>hr.payroll</code> and does not post entries.
+    </p>
+    <p>
+        Assign group <strong>Humano SISU / Bridge bot</strong> to a dedicated
+        API user. Create an API key (max 90 days). SISU calls
+        <code>humano.sisu.bridge</code> methods
+        <code>upsert_employee</code> and <code>import_payroll_move</code>.
+    </p>
+</section>
