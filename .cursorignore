@@ -1,0 +1,19 @@
+# Explorer + indexing noise
+node_modules
+**/node_modules
+.next
+out
+coverage
+tmp
+temp
+.cache
+.turbo
+*.tsbuildinfo
+.DS_Store
+
+# Vendor / local SDKs
+WebSDK V3.3.1
+services/hikvision-proxy/node_modules
+
+# Historical docs
+docs/legacy

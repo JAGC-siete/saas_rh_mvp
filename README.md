@@ -132,7 +132,7 @@ npm run staging:check
 npm run staging:deploy
 ```
 
-📚 **Documentación completa**: Ver [STAGING_QUICK_START.md](./STAGING_QUICK_START.md) para guía detallada.
+📚 **Documentación completa**: Ver [docs/STAGING_QUICK_START.md](./docs/STAGING_QUICK_START.md) para guía detallada.
 
 ## 📱 Uso del Sistema
 

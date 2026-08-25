@@ -17,12 +17,18 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "preserve",
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ]
   },
   "include": [
     "next-env.d.ts",
     "**/*.ts",
-    "**/*.tsx"
+    "**/*.tsx",
+    ".next/types/**/*.ts"
   ],
   "exclude": [
     "node_modules",
@@ -30,6 +36,7 @@
     "services/**/*",
     "railway/**/*",
     "scripts/**/*",
-    "tests/**/*"
+    "tests/**/*",
+    ".worktrees"
   ]
 }

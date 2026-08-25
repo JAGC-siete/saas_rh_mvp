@@ -139,7 +139,7 @@ railway status
 ## 📚 Documentación Completa
 
 Para más detalles, consulta:
-- [Guía Completa de Staging](./docs/RAILWAY_STAGING_SETUP.md)
+- [Guía Completa de Staging](./RAILWAY_STAGING_SETUP.md)
 - [Guía de Deployment](./DEPLOYMENT.md)
 
 ## 🆘 Troubleshooting

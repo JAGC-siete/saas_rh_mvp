@@ -53,7 +53,7 @@ Production permanece always-on (`sleepApplication = false`).
 
 Next.js telemetry / pools de DB pueden impedir el sleep. Si staging no duerme, revisa métricas de red outbound ([Serverless docs](https://docs.railway.com/reference/app-sleeping)). Staging sigue siendo útil aunque consuma un poco más.
 
-Docs previas: `STAGING_QUICK_START.md`, `docs/RAILWAY_STAGING_SETUP.md`.
+Docs previas: `docs/STAGING_QUICK_START.md`, `docs/RAILWAY_STAGING_SETUP.md`.
 
 ---
 
@@ -151,4 +151,4 @@ Cómo: Settings → Scale → Replicas = 2 (solo production). Nota Railway: **no
 - [Plans](https://docs.railway.com/pricing/plans)
 - [Private networking](https://docs.railway.com/guides/private-networking)
 - [Config as code](https://docs.railway.com/guides/config-as-code) (`sleepApplication`, `cronSchedule`)
-- `DEPLOYMENT.md`
+- `docs/DEPLOYMENT.md`

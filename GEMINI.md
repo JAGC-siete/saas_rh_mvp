@@ -72,9 +72,9 @@
 ---
 
 ## 📑 Documentación de Referencia
-- `DOCUMENTATION.md`: Guía técnica general.
-- `README_LOGICA_ASISTENCIA.md`: Detalles del motor de asistencia.
-- `IMPLEMENTATION_PLAN_SUPERADMIN.md`: Hoja de ruta para funciones administrativas.
+- `docs/legacy/DOCUMENTATION.md`: Guía técnica general (histórico).
+- `docs/legacy/README_LOGICA_ASISTENCIA.md`: Detalles del motor de asistencia (histórico).
+- `docs/legacy/IMPLEMENTATION_PLAN_SUPERADMIN.md`: Hoja de ruta para funciones administrativas (histórico).
 - `docs/ARQUITECTURA_ASISTENCIA_3_CAPAS.md`: Diagrama del flujo de datos de asistencia.
 
 ---

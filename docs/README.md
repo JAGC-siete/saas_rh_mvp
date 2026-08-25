@@ -12,7 +12,8 @@ Este directorio contiene la documentación relevante y vigente del proyecto. Si 
 ## Deploy / Staging / Operación
 
 - **Staging en Railway (guía completa)**: `docs/RAILWAY_STAGING_SETUP.md`
-- **Staging en Railway (rápido)**: `STAGING_QUICK_START.md`
+- **Staging en Railway (rápido)**: `docs/STAGING_QUICK_START.md`
+- **Deploy**: `docs/DEPLOYMENT.md`, `docs/DEPLOYMENT_INSTRUCTIONS.md`
 - **CI/CD (estado y gaps)**: `docs/CI_CD_STATUS_REPORT.md` y `docs/RESUMEN_CI_CD.md`
 - **Config issues (riesgos conocidos en env/config)**: `docs/CRITICAL_CONFIG_ISSUES.md`
 
@@ -35,6 +36,7 @@ Estos documentos son útiles como contexto (incidentes, post-mortems, timelines)
 - `docs/*_ANALYSIS.md`
 - `docs/*_STATUS_REPORT.md`
 - `docs/*TROUBLESHOOTING*.md`
+- `docs/legacy/` — dumps que estaban en la raíz (`README_LOGICA_ASISTENCIA`, planes de auth, diagnósticos de timezone, etc.)
 
 ## Documentos removidos por estar desfasados
 

@@ -303,7 +303,7 @@ saas-proyecto/
 
 ## 14. Documentación Relacionada
 
-- `README_LOGICA_ASISTENCIA.md` — Lógica de asistencia
+- `docs/legacy/README_LOGICA_ASISTENCIA.md` — Lógica de asistencia (histórico)
 - `docs/ONBOARDING_SAAS_POR_CAPAS.md` — Capas de configuración
 - `docs/RAILWAY_STAGING_SETUP.md` — Staging en Railway
 - `docs/ONBOARDING_ASISTENCIA_ACTUAL.md` — Proceso asistencia
