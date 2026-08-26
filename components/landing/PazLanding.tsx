@@ -11,6 +11,7 @@ import { getCampaignsCopy } from '../../lib/i18n/landings/campaigns'
 import { LOCALE_SCHEMA_LANG } from '../../lib/i18n/locale'
 import PazVideoGate from './PazVideoGate'
 import { trackCTAClick } from '../../lib/analytics/googleAds'
+import { PAZ_CALENDAR_URL } from '../../lib/marketing/paz-video'
 
 const PAGE_TITLE = 'La forma pacífica de cerrar planilla | Humano SISU'
 const PAGE_DESCRIPTION =
@@ -148,9 +149,24 @@ export default function PazLanding() {
                     No eres una máquina de Excel.
                   </strong>
                 </p>
-                <div className="flex flex-col sm:flex-row flex-wrap items-center lg:items-start justify-center lg:justify-start gap-3">
-                  <button type="button" onClick={scrollToVideo} className="paz-btn paz-btn-primary">
-                    Revelar método
+                <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center lg:items-start justify-center lg:justify-start gap-3">
+                  <a
+                    href={PAZ_CALENDAR_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="paz-btn paz-btn-activar"
+                    data-analytics="cta_paz_hero_agendar"
+                    onClick={() => trackCTAClick('agendar_asesoria', 'paz_landing_hero')}
+                  >
+                    Agendar asesoría
+                  </a>
+                  <button
+                    type="button"
+                    onClick={scrollToVideo}
+                    className="paz-btn paz-btn-ghost"
+                    data-analytics="cta_paz_hero_revelar"
+                  >
+                    Revelar secreto
                   </button>
                 </div>
               </div>

@@ -6,6 +6,7 @@ export const PAZ_UNLOCK_STORAGE_KEY = 'hs_paz_video_unlock_v1'
 export const PAZ_YOUTUBE_VIDEO_ID = 'TTrBvcpDM3k'
 export const PAZ_YOUTUBE_WATCH_URL = `https://www.youtube.com/watch?v=${PAZ_YOUTUBE_VIDEO_ID}`
 export const PAZ_YOUTUBE_EMBED_SRC = `https://www.youtube.com/embed/${PAZ_YOUTUBE_VIDEO_ID}`
+export const PAZ_CALENDAR_URL = 'https://calendar.app.google/3dcPCggYeS3KuPir9'
 
 /** Copy shown after the email gate (page reveal + pack email). Not on the public teaser. */
 export const PAZ_METHOD_SUMMARY_TITLE = 'Resumen del método'
