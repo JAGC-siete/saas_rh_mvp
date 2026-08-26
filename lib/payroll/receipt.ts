@@ -3,6 +3,7 @@ import { formatPdfMoney, resolvePayrollDisplayCurrency, type DisplayCurrency } f
 import { statutoryDeductionLabels } from '../country/payroll-labels'
 import { normalizeCountryCode } from '../country/supported'
 import { formatPeriodRangeForDisplay } from './period-dates'
+import { formatDateTimeForHonduras, nowInHonduras } from '../timezone'
 import {
   formatVoucherCompanyName,
   type VoucherPdfOptions,

@@ -1,6 +1,7 @@
 // Componente para mostrar tabla de empleados por hora (hourly)
 import React from 'react'
 import { formatCurrency } from '../lib/utils/currency'
+import { statutoryUiLabels } from '../lib/country/display-money'
 import { UnifiedRow } from '../lib/payroll-unified'
 import { Button } from './ui/button'
 import { Icon } from './Icon'
@@ -18,6 +19,7 @@ interface PayrollHourlyTableProps {
   loading?: boolean
   hasCustom?: boolean
   statutoryDeductions?: { ihss: boolean; rap: boolean; isr: boolean }
+  countryCode?: string | null
 }
 
 export default function PayrollHourlyTable({
@@ -29,8 +31,11 @@ export default function PayrollHourlyTable({
   canResetLineRecalc = false,
   loading = false,
   hasCustom = false,
-  statutoryDeductions = { ihss: true, rap: true, isr: true }
+  statutoryDeductions = { ihss: true, rap: true, isr: true },
+  countryCode = null,
 }: PayrollHourlyTableProps) {
+  const money = (n: number) => formatCurrency(n, { countryCode })
+  const labels = statutoryUiLabels(countryCode)
   const summary = rows.reduce((acc, r) => {
     acc.totalBruto += r.total_earnings || 0
     acc.totalDeducciones += r.total_deducciones || 0
@@ -46,15 +51,15 @@ export default function PayrollHourlyTable({
       </h3>
       <div className="mb-4 grid grid-cols-4 gap-4">
         <div className="text-center p-3 bg-blue-500/20 rounded-lg border border-blue-500/20">
-          <div className="text-lg font-bold text-blue-200">{formatCurrency(summary.totalBruto)}</div>
+          <div className="text-lg font-bold text-blue-200">{money(summary.totalBruto)}</div>
           <div className="text-xs text-blue-200">Total Bruto</div>
         </div>
         <div className="text-center p-3 bg-red-500/20 rounded-lg border border-red-500/20">
-          <div className="text-lg font-bold text-red-200">{formatCurrency(summary.totalDeducciones)}</div>
+          <div className="text-lg font-bold text-red-200">{money(summary.totalDeducciones)}</div>
           <div className="text-xs text-red-200">Total Deducciones</div>
         </div>
         <div className="text-center p-3 bg-green-500/20 rounded-lg border border-green-500/20">
-          <div className="text-lg font-bold text-green-200">{formatCurrency(summary.totalNeto)}</div>
+          <div className="text-lg font-bold text-green-200">{money(summary.totalNeto)}</div>
           <div className="text-xs text-green-200">Total Neto</div>
         </div>
         <div className="text-center p-3 bg-purple-500/20 rounded-lg border border-purple-500/20">
@@ -101,27 +106,27 @@ export default function PayrollHourlyTable({
                       {(row.extras?.horas ?? 0) > 0 ? `${(row.extras?.horas ?? 0).toFixed(2)} h` : '—'}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-200">
-                      {formatCurrency(hourlyRate)}
+                      {money(hourlyRate)}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-green-300">
-                      {formatCurrency(row.total_earnings || 0)}
+                      {money(row.total_earnings || 0)}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-sm text-red-300">
                       <div className="text-xs space-y-0.5">
                         {statutoryDeductions.ihss && (
-                          <div>IHSS: {formatCurrency(row.IHSS || 0)}</div>
+                          <div>{labels.primarySocial}: {money(row.IHSS || 0)}</div>
                         )}
-                        {statutoryDeductions.rap && (
-                          <div>RAP: {formatCurrency(row.RAP || 0)}</div>
+                        {statutoryDeductions.rap && labels.secondarySocial !== '—' && (
+                          <div>{labels.secondarySocial}: {money(row.RAP || 0)}</div>
                         )}
                         {statutoryDeductions.isr && (
-                          <div>ISR: {formatCurrency(row.ISR || 0)}</div>
+                          <div>{labels.incomeTax}: {money(row.ISR || 0)}</div>
                         )}
-                        <div className="font-semibold mt-1">Total: {formatCurrency(row.total_deducciones || 0)}</div>
+                        <div className="font-semibold mt-1">Total: {money(row.total_deducciones || 0)}</div>
                       </div>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-sm font-bold text-white">
-                      {formatCurrency(row.total || 0)}
+                      {money(row.total || 0)}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-200">
                       <div className="flex items-center gap-2">

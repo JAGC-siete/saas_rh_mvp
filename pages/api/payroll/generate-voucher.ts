@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { requireCompanyAccess } from "../../../lib/auth/api-auth-fixed"
 import { generateEmployeeReceiptPDF } from '../../../lib/payroll/receipt'
-import { buildVoucherPdfOptions } from '../../../lib/payroll/voucher-pdf-options'
+import { buildVoucherPdfOptions, withCompanyMoneyOptions } from '../../../lib/payroll/voucher-pdf-options'
 import { resolveReportConfig } from '../../../lib/reports/column-resolver'
 import { getHondurasTimestamp } from '../../../lib/timezone'
 import { 
@@ -53,7 +53,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     // AUTENTICACIÓN REQUERIDA
     // AUTENTICACIÓN ESTANDARIZADA - Usar requireCompanyAccess
-    const { supabase, companyId, role, user } = await requireCompanyAccess(req, res)
+    const { supabase, companyId, role, user, companyCountryCode } = await requireCompanyAccess(req, res)
     const salaryClient = createEmployeeSalaryClient()
     
     // Verificar roles específicos para generar voucher
@@ -233,7 +233,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Si es generar PDF, crear el voucher definitivo
     if (req.body.action === 'generate') {
       const resolvedConfig = await resolveReportConfig(companyId, 'voucher', supabase)
-      const pdfOptions = buildVoucherPdfOptions(resolvedConfig)
+      const pdfOptions = withCompanyMoneyOptions(buildVoucherPdfOptions(resolvedConfig), companyCountryCode)
       const { data: company } = await supabase
         .from('companies')
         .select('name')

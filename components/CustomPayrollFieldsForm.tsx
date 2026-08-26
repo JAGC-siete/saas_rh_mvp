@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react'
 import { Button } from './ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
 import { formatCurrency } from '../lib/utils/currency'
+import { useCompanyMoney } from '../lib/hooks/useCompanyMoney'
 import { HONDURAS_LABOR_FACTOR } from '../lib/payroll/constants'
 import { evaluateFormulaSafe } from '../lib/utils/formula-evaluator'
 import { Plus, Calendar } from 'lucide-react'
@@ -33,7 +34,8 @@ function renderFieldInput(
   handleInputChange: (k: string, v: string | number) => void,
   customFields: Record<string, string>,
   isEarnings: boolean,
-  baseSalaryProp: number
+  baseSalaryProp: number,
+  countryCode?: string | null
 ) {
   const label = customFields[fieldName] || fieldDef?.label || fieldName
   const hasFormula = fieldDef?.formula && typeof fieldDef.formula === 'string'
@@ -71,7 +73,7 @@ function renderFieldInput(
         <div className="flex items-center gap-2 text-sm">
           <span className="text-gray-400">Resultado:</span>
           <span className={`font-mono font-medium ${isEarnings ? 'text-green-300' : 'text-red-300'}`}>
-            {formatCurrency(result)}
+            {formatCurrency(result, { countryCode })}
           </span>
           <span className="text-gray-500 text-xs">(solo lectura)</span>
         </div>
@@ -105,6 +107,7 @@ export default function CustomPayrollFieldsForm({
   onSave,
   onCancel
 }: CustomPayrollFieldsFormProps) {
+  const { countryCode, format } = useCompanyMoney()
   const [formData, setFormData] = useState<Record<string, unknown>>({})
   const [saving, setSaving] = useState(false)
   const [config, setConfig] = useState<any>(null)
@@ -403,13 +406,13 @@ export default function CustomPayrollFieldsForm({
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {earningsFields.map((fieldName) =>
-                renderFieldInput(fieldName, config.custom_fields[fieldName], formData, handleInputChange, customFields, true, baseSalary)
+                renderFieldInput(fieldName, config.custom_fields[fieldName], formData, handleInputChange, customFields, true, baseSalary, countryCode)
               )}
             </div>
             <div className="mt-4 p-3 bg-green-500/10 border border-green-500/30 rounded-lg">
               <div className="flex justify-between text-sm">
                 <span className="text-white font-medium">Total Ingresos Adicionales:</span>
-                <span className="text-green-300 font-bold">{formatCurrency(totalIngresos)}</span>
+                <span className="text-green-300 font-bold">{format(totalIngresos)}</span>
               </div>
             </div>
           </div>
@@ -429,7 +432,7 @@ export default function CustomPayrollFieldsForm({
 
                 return (
                   <div key={fieldName} className="space-y-2">
-                    {renderFieldInput(fieldName, fieldDef, formData, handleInputChange, customFields, false, baseSalary)}
+                    {renderFieldInput(fieldName, fieldDef, formData, handleInputChange, customFields, false, baseSalary, countryCode)}
                     {hasTrackPlazos && (
                       <div className="mt-2 p-2 bg-white/5 rounded-lg border border-white/10 space-y-2">
                         {fieldPlans.map((plan) => (
@@ -438,7 +441,7 @@ export default function CustomPayrollFieldsForm({
                               <Calendar className="h-3.5 w-3.5" />
                               {plan.plazos_aplicados}/{plan.plazos_totales} aplicadas,{' '}
                               {plan.plazos_totales - plan.plazos_aplicados} restantes ·{' '}
-                              {formatCurrency(plan.monto_por_plazo)}/plazo
+                              {format(plan.monto_por_plazo)}/plazo
                             </span>
                           </div>
                         ))}
@@ -461,7 +464,7 @@ export default function CustomPayrollFieldsForm({
             <div className="mt-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
               <div className="flex justify-between text-sm">
                 <span className="text-white font-medium">Total Deducciones Adicionales:</span>
-                <span className="text-red-300 font-bold">{formatCurrency(totalDeducciones)}</span>
+                <span className="text-red-300 font-bold">{format(totalDeducciones)}</span>
               </div>
             </div>
           </div>
@@ -470,7 +473,7 @@ export default function CustomPayrollFieldsForm({
             <div className="flex justify-between text-sm">
               <span className="text-white font-medium">Impacto Neto:</span>
               <span className={`font-bold ${totalIngresos - totalDeducciones >= 0 ? 'text-green-300' : 'text-red-300'}`}>
-                {formatCurrency(totalIngresos - totalDeducciones)}
+                {format(totalIngresos - totalDeducciones)}
               </span>
             </div>
           </div>

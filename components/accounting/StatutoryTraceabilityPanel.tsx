@@ -1,6 +1,6 @@
 import React from 'react'
 import { Card, CardContent } from '../ui/card'
-import { formatCurrency } from '../../lib/utils/currency'
+import { useCompanyMoney } from '../../lib/hooks/useCompanyMoney'
 import type { JournalStatutoryTraceBlock } from '../../lib/accounting/payroll-statutory-trace'
 import type { StatutoryDataSource } from '../../lib/tax/statutory-trace'
 import { LinkIcon } from '@heroicons/react/24/outline'
@@ -21,6 +21,7 @@ export function StatutoryTraceabilityPanel({
   statutory,
   className
 }: StatutoryTraceabilityPanelProps) {
+  const { labels, format } = useCompanyMoney()
   if (!statutory) {
     return (
       <Card className={className}>
@@ -96,9 +97,11 @@ export function StatutoryTraceabilityPanel({
             Retenciones (desde planilla)
           </p>
           <div className="flex flex-wrap gap-4 text-sm text-white">
-            <span>IHSS: {formatCurrency(retention_totals.ihss)}</span>
-            <span>RAP: {formatCurrency(retention_totals.rap)}</span>
-            <span>ISR: {formatCurrency(retention_totals.isr)}</span>
+            <span>{labels.primarySocial}: {format(retention_totals.ihss)}</span>
+            {labels.secondarySocial !== '—' && (
+              <span>{labels.secondarySocial}: {format(retention_totals.rap)}</span>
+            )}
+            <span>{labels.incomeTax}: {format(retention_totals.isr)}</span>
           </div>
         </div>
 

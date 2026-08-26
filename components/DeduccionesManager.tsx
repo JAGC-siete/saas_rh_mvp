@@ -12,6 +12,8 @@ import { formatDateOnlyForHonduras } from '../lib/timezone'
 import { canCancelDeductionPlans } from '../lib/security/deducciones-access'
 import { Loader2, Download, FileSignature, Ban } from 'lucide-react'
 
+import { useCompanyMoney } from '../lib/hooks/useCompanyMoney'
+
 interface DeductionType {
   key: string
   label: string
@@ -42,8 +44,6 @@ interface DeductionPlan {
   employee_code?: string
 }
 
-const formatCurrency = (n: number) =>
-  `L. ${Number(n).toLocaleString('es-HN', { minimumFractionDigits: 2 })}`
 const formatDate = (d: string | null) =>
   d ? (/^\d{4}-\d{2}-\d{2}$/.test(d) ? formatDateOnlyForHonduras(d) : new Date(d).toLocaleDateString('es-HN')) : '-'
 const formatFieldKey = (key: string) =>
@@ -51,6 +51,7 @@ const formatFieldKey = (key: string) =>
 
 export default function DeduccionesManager() {
   const { companyId, loading: companyLoading, error: companyError } = useCompanyContext()
+  const { format } = useCompanyMoney()
   const { userProfile } = useAuth()
   const toast = useToast()
   const allowCancelPlans = canCancelDeductionPlans(userProfile?.role, userProfile?.permissions)
@@ -558,7 +559,7 @@ export default function DeduccionesManager() {
                         </span>
                       </td>
                       <td className="py-3 px-4 text-right text-white">
-                        {formatCurrency(p.monto_total)}
+                        {format(p.monto_total)}
                       </td>
                       <td className="py-3 px-4 text-center text-gray-300">
                         {p.plazos_totales}

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/router'
 import ProtectedRoute from '../../../components/ProtectedRoute'
 import DashboardLayout from '../../../components/DashboardLayout'
@@ -7,6 +7,7 @@ import { Button } from '../../../components/ui/button'
 import CreateDepartmentModal from '../../../components/CreateDepartmentModal'
 import EditDepartmentModal from '../../../components/EditDepartmentModal'
 import DepartmentActionsMenu from '../../../components/DepartmentActionsMenu'
+import { useCompanyMoney } from '../../../lib/hooks/useCompanyMoney'
 
 interface Department {
   id: string
@@ -61,12 +62,7 @@ export default function DepartmentsPage() {
   const [editingDepartment, setEditingDepartment] = useState<Department | null>(null)
   const router = useRouter()
 
-  // Memo del formateador para evitar recrearlo por render
-  const currencyFormatter = useMemo(
-    () => new Intl.NumberFormat('es-HN', { style: 'currency', currency: 'HNL' }),
-    []
-  )
-  const formatCurrency = (amount?: number) => currencyFormatter.format(amount ?? 0)
+  const { format: formatCurrency } = useCompanyMoney()
 
   // Callback con cancelación via AbortSignal
   const fetchDepartmentsData = useCallback(async (signal?: AbortSignal) => {

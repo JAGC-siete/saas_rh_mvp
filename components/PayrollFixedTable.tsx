@@ -3,6 +3,7 @@ import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from
 import { createPortal } from 'react-dom'
 import { Info } from 'lucide-react'
 import { formatCurrency } from '../lib/utils/currency'
+import { statutoryUiLabels } from '../lib/country/display-money'
 import { UnifiedRow } from '../lib/payroll-unified'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
@@ -73,6 +74,7 @@ interface PayrollFixedTableProps {
   loading?: boolean
   hasCustom?: boolean
   statutoryDeductions?: { ihss: boolean; rap: boolean; isr: boolean }
+  countryCode?: string | null
 }
 
 export default function PayrollFixedTable({
@@ -91,8 +93,11 @@ export default function PayrollFixedTable({
   onZeroStatutory,
   loading = false,
   hasCustom = false,
-  statutoryDeductions = { ihss: true, rap: true, isr: true }
+  statutoryDeductions = { ihss: true, rap: true, isr: true },
+  countryCode = null,
 }: PayrollFixedTableProps) {
+  const money = (n: number) => formatCurrency(n, { countryCode })
+  const labels = statutoryUiLabels(countryCode)
   const [daysModal, setDaysModal] = useState<{
     runLineId: string
     employeeName: string
@@ -352,15 +357,18 @@ export default function PayrollFixedTable({
       alert('Indique un motivo (mín. 3 caracteres)')
       return
     }
-    const ihss = parseStatutoryInput(statutoryIhss, 'IHSS')
+    const ihss = parseStatutoryInput(statutoryIhss, labels.primarySocial)
     if (ihss === null) return
-    const rap = parseStatutoryInput(statutoryRap, 'RAP')
+    const rap = parseStatutoryInput(
+      statutoryRap,
+      labels.secondarySocial === '—' ? 'RAP' : labels.secondarySocial
+    )
     if (rap === null) return
-    const isr = parseStatutoryInput(statutoryIsr, 'ISR')
+    const isr = parseStatutoryInput(statutoryIsr, labels.incomeTax)
     if (isr === null) return
     if (
       !confirm(
-        `¿Guardar retenciones de ley para ${statutoryModal.employeeName}? IHSS ${ihss}, RAP ${rap}, ISR ${isr}. El bruto no cambia; el neto se recalcula.`
+        `¿Guardar retenciones de ley para ${statutoryModal.employeeName}? ${labels.primarySocial} ${ihss}${labels.secondarySocial !== '—' ? `, ${labels.secondarySocial} ${rap}` : ''}, ${labels.incomeTax} ${isr}. El bruto no cambia; el neto se recalcula.`
       )
     ) {
       return
@@ -397,15 +405,15 @@ export default function PayrollFixedTable({
       </h3>
       <div className="mb-4 grid grid-cols-3 gap-4">
         <div className="text-center p-3 bg-blue-500/20 rounded-lg border border-blue-500/20">
-          <div className="text-lg font-bold text-blue-200">{formatCurrency(summary.totalBruto)}</div>
+          <div className="text-lg font-bold text-blue-200">{money(summary.totalBruto)}</div>
           <div className="text-xs text-blue-200">Total Bruto</div>
         </div>
         <div className="text-center p-3 bg-red-500/20 rounded-lg border border-red-500/20">
-          <div className="text-lg font-bold text-red-200">{formatCurrency(summary.totalDeducciones)}</div>
+          <div className="text-lg font-bold text-red-200">{money(summary.totalDeducciones)}</div>
           <div className="text-xs text-red-200">Total Deducciones</div>
         </div>
         <div className="text-center p-3 bg-green-500/20 rounded-lg border border-green-500/20">
-          <div className="text-lg font-bold text-green-200">{formatCurrency(summary.totalNeto)}</div>
+          <div className="text-lg font-bold text-green-200">{money(summary.totalNeto)}</div>
           <div className="text-xs text-green-200">Total Neto</div>
         </div>
       </div>
@@ -473,7 +481,7 @@ export default function PayrollFixedTable({
                     </div>
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-200">
-                    {formatCurrency(row.base_salary || 0)}
+                    {money(row.base_salary || 0)}
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-200">
                     <div className="flex flex-wrap items-center gap-2">
@@ -530,20 +538,20 @@ export default function PayrollFixedTable({
                     </div>
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-green-300">
-                    {formatCurrency(row.total_earnings || 0)}
+                    {money(row.total_earnings || 0)}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-red-300">
                     <div className="text-xs space-y-0.5">
-                      {statutoryDeductions.ihss && (
-                        <div>IHSS: {formatCurrency(row.IHSS || 0)}</div>
-                      )}
-                      {statutoryDeductions.rap && (
-                        <div>RAP: {formatCurrency(row.RAP || 0)}</div>
-                      )}
-                      {statutoryDeductions.isr && (
-                        <div>ISR: {formatCurrency(row.ISR || 0)}</div>
-                      )}
-                      <div className="font-semibold mt-1">Total: {formatCurrency(row.total_deducciones || 0)}</div>
+                        {statutoryDeductions.ihss && (
+                          <div>{labels.primarySocial}: {money(row.IHSS || 0)}</div>
+                        )}
+                        {statutoryDeductions.rap && labels.secondarySocial !== '—' && (
+                          <div>{labels.secondarySocial}: {money(row.RAP || 0)}</div>
+                        )}
+                        {statutoryDeductions.isr && (
+                          <div>{labels.incomeTax}: {money(row.ISR || 0)}</div>
+                        )}
+                      <div className="font-semibold mt-1">Total: {money(row.total_deducciones || 0)}</div>
                       {canZeroStatutory && onZeroStatutory && row.line_id ? (
                         <Button
                           type="button"
@@ -552,7 +560,7 @@ export default function PayrollFixedTable({
                           onClick={() => openStatutoryModal(row)}
                           disabled={loading}
                           className="mt-1.5 h-7 border-amber-400/30 bg-amber-500/10 px-2 text-[10px] text-amber-100 hover:bg-amber-500/20"
-                          title="Editar IHSS/RAP/ISR en este período (valores ≥ 0)"
+                          title={`Editar ${labels.primarySocial}/${labels.secondarySocial !== '—' ? `${labels.secondarySocial}/` : ''}${labels.incomeTax} en este período (valores ≥ 0)`}
                         >
                           <Icon name="edit" className="mr-1 h-3 w-3" />
                           Editar retenciones
@@ -561,7 +569,7 @@ export default function PayrollFixedTable({
                     </div>
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm font-bold text-white">
-                    {formatCurrency(row.total || 0)}
+                    {money(row.total || 0)}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-200">
                     <div className="flex items-center gap-2">
@@ -736,7 +744,7 @@ export default function PayrollFixedTable({
               const pay = calculateOvertimePayFromAhc(overtime, rate)
               return (
                 <p className="mt-2 text-sm text-emerald-300">
-                  Vista previa HE: {formatCurrency(pay)}
+                  Vista previa HE: {money(pay)}
                 </p>
               )
             })()}
@@ -794,13 +802,13 @@ export default function PayrollFixedTable({
             <h3 className="text-lg font-semibold">Editar retenciones de ley</h3>
             <p className="mt-1 text-sm text-gray-300">{statutoryModal.employeeName}</p>
             <p className="mt-2 text-xs text-amber-200/90">
-              Ajuste IHSS, RAP e ISR (≥ 0) en esta corrida. El bruto no cambia; el neto se
+              Ajuste {labels.primarySocial}{labels.secondarySocial !== '—' ? `, ${labels.secondarySocial}` : ''} e {labels.incomeTax} (≥ 0) en esta corrida. El bruto no cambia; el neto se
               recalcula. Use 0 cuando esas retenciones se apliquen en finiquito u otro proceso.
             </p>
-            <div className="mt-4 grid grid-cols-3 gap-3">
+            <div className={`mt-4 grid gap-3 ${statutoryDeductions.rap && labels.secondarySocial !== '—' ? 'grid-cols-3' : 'grid-cols-2'}`}>
               <div>
                 <label htmlFor="statutory-ihss" className="block text-xs font-medium text-gray-200">
-                  IHSS
+                  {labels.primarySocial}
                 </label>
                 <Input
                   id="statutory-ihss"
@@ -812,9 +820,10 @@ export default function PayrollFixedTable({
                   className="mt-1 border-white/20 bg-white/10 text-white"
                 />
               </div>
+              {statutoryDeductions.rap && labels.secondarySocial !== '—' && (
               <div>
                 <label htmlFor="statutory-rap" className="block text-xs font-medium text-gray-200">
-                  RAP
+                  {labels.secondarySocial}
                 </label>
                 <Input
                   id="statutory-rap"
@@ -826,9 +835,10 @@ export default function PayrollFixedTable({
                   className="mt-1 border-white/20 bg-white/10 text-white"
                 />
               </div>
+              )}
               <div>
                 <label htmlFor="statutory-isr" className="block text-xs font-medium text-gray-200">
-                  ISR
+                  {labels.incomeTax}
                 </label>
                 <Input
                   id="statutory-isr"

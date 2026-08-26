@@ -9,6 +9,13 @@ import {
   type TaxConstants,
 } from '../tax/honduras-tax'
 import {
+  currencyNounForCountry,
+  formatPdfMoney,
+  resolvePayrollDisplayCurrency,
+  statutoryUiLabels,
+} from '../country/display-money'
+import { normalizeCountryCode } from '../country/supported'
+import {
   defaultPdfPrimaryColor,
   drawBrandedReceiptHeader,
   drawLiquidFooter,
@@ -47,6 +54,7 @@ export interface WorkCertificatePayload {
 export interface WorkCertificatePdfOptions {
   branding?: BrandingConfig
   includeDeductions?: boolean
+  countryCode?: string | null
 }
 
 const PAGE_WIDTH = 595.28
@@ -57,8 +65,8 @@ const PAD = 12
 const ROW_H = 14
 const TABLE_HEADER_H = 20
 
-function formatHNL(n: number): string {
-  return `L. ${Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+function formatCertificateMoney(n: number, countryCode?: string | null): string {
+  return formatPdfMoney(n, resolvePayrollDisplayCurrency(countryCode))
 }
 
 function formatDateInWords(date: Date): string {
@@ -228,6 +236,10 @@ export async function generateWorkCertificatePDFBuffer(
   options?: WorkCertificatePdfOptions
 ): Promise<Buffer> {
   const includeDeductions = options?.includeDeductions ?? true
+  const country = normalizeCountryCode(options?.countryCode)
+  const labels = statutoryUiLabels(country)
+  const currencyNoun = currencyNounForCountry(country)
+  const money = (n: number) => formatCertificateMoney(n, country)
   const primaryColor = defaultPdfPrimaryColor(options?.branding?.primaryColor)
   const logoBuffer = await resolveCompanyLogoBuffer(options?.branding)
   const legalCompanyName = formatVoucherCompanyName(
@@ -236,20 +248,26 @@ export async function generateWorkCertificatePDFBuffer(
   )
   const generatedAt = formatDateTimeForHonduras(nowInHonduras())
   const periodText = buildPeriodText(certificateData.employee)
-  const salaryFormatted = formatHNL(certificateData.employee.base_salary)
+  const salaryFormatted = money(certificateData.employee.base_salary)
   const salaryInWords = numberToWords(certificateData.employee.base_salary)
+  const showHndStatutory = includeDeductions && country === 'HND'
 
-  let mainText = `Por medio de la presente, ${legalCompanyName.toUpperCase()} certifica que ${certificateData.employee.name}, con Documento Nacional de Identificación No. ${certificateData.employee.dni}, se desempeña en esta empresa bajo contrato permanente, ocupando el cargo de "${certificateData.employee.position}" ${periodText}, con un salario mensual de ${salaryFormatted} (${salaryInWords} lempiras exactos)`
-  if (includeDeductions) {
+  let mainText = `Por medio de la presente, ${legalCompanyName.toUpperCase()} certifica que ${certificateData.employee.name}, con Documento Nacional de Identificación No. ${certificateData.employee.dni}, se desempeña en esta empresa bajo contrato permanente, ocupando el cargo de "${certificateData.employee.position}" ${periodText}, con un salario mensual de ${salaryFormatted} (${salaryInWords} ${currencyNoun} exactos)`
+  if (showHndStatutory) {
     mainText += ', con las siguientes deducciones:'
   } else {
     mainText += '.'
   }
 
-  const ihssMonthly = Math.round(calculateIHSS(certificateData.employee.base_salary, taxConstants) * 100) / 100
-  const rapMonthly = Math.round(calculateRAP(certificateData.employee.base_salary, taxConstants) * 100) / 100
+  let ihssMonthly = 0
+  let rapMonthly = 0
+  if (showHndStatutory) {
+    ihssMonthly = Math.round(calculateIHSS(certificateData.employee.base_salary, taxConstants) * 100) / 100
+    rapMonthly = Math.round(calculateRAP(certificateData.employee.base_salary, taxConstants) * 100) / 100
+  }
   const totalDeductions = ihssMonthly + rapMonthly
   const netSalary = certificateData.employee.base_salary - totalDeductions
+  const showDeductionBreakdown = includeDeductions && (country === 'HND' || totalDeductions > 0)
 
   const contentWidth = PAGE_WIDTH - MARGIN * 2
 
@@ -263,7 +281,7 @@ export async function generateWorkCertificatePDFBuffer(
       const bodyPanelH = Math.max(72, mainTextHeight)
 
       let layoutY = 92 + 16 + 6 * ROW_H + 12 + 14 + bodyPanelH + 12
-      if (includeDeductions) {
+      if (showDeductionBreakdown) {
         layoutY += 14 + 90 + 14 + 42 + 12
       }
       layoutY += 60 + FOOTER_BLOCK + MARGIN
@@ -324,9 +342,13 @@ export async function generateWorkCertificatePDFBuffer(
       })
       yPos += bodyPanelH + 12
 
-      if (includeDeductions) {
+      if (showDeductionBreakdown) {
         drawLiquidSectionTitle(doc, 'Desglose salarial', MARGIN, yPos)
         yPos += 14
+        const deductionLabel =
+          labels.secondarySocial !== '—'
+            ? `Deducciones (${labels.secondarySocial} / ${labels.primarySocial})`
+            : `Deducciones (${labels.primarySocial})`
         yPos =
           drawLineItemPanel(
             doc,
@@ -335,9 +357,9 @@ export async function generateWorkCertificatePDFBuffer(
             contentWidth,
             [
               { label: 'Salario base', amount: salaryFormatted },
-              { label: 'Deducciones (RAP / IHSS)', amount: formatHNL(totalDeductions) },
+              { label: deductionLabel, amount: money(totalDeductions) },
             ],
-            { label: 'Salario neto mensual', amount: formatHNL(netSalary) }
+            { label: 'Salario neto mensual', amount: money(netSalary) }
           ) + 14
 
         const netBoxH = 40
@@ -345,7 +367,7 @@ export async function generateWorkCertificatePDFBuffer(
         doc.font('Helvetica-Bold').fontSize(10).fillColor(PDF.successText)
         doc.text('Total neto mensual', MARGIN + PAD, yPos + 10, { lineBreak: false })
         doc.fontSize(14).fillColor(PDF.success)
-        doc.text(formatHNL(netSalary), MARGIN + PAD, yPos + 10, {
+        doc.text(money(netSalary), MARGIN + PAD, yPos + 10, {
           width: contentWidth - PAD * 2,
           align: 'right',
           lineBreak: false,

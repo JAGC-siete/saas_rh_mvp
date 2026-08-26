@@ -1,5 +1,6 @@
 import React from 'react'
 import { formatCurrency } from '../../lib/utils/currency'
+import { useCompanyMoney } from '../../lib/hooks/useCompanyMoney'
 import { cn } from '../../lib/utils'
 import { Card, CardContent } from '../ui/card'
 
@@ -32,12 +33,12 @@ const COST_CENTER_LABELS: Record<string, string> = {
   produccion: 'Producción'
 }
 
-function formatAmount(n: number): string {
-  if (n <= 0) return ''
-  return formatCurrency(n, { showSymbol: false })
-}
-
 export function JournalEntryTable({ entries, className }: JournalEntryTableProps) {
+  const { countryCode } = useCompanyMoney()
+  const formatAmount = (n: number) => {
+    if (n <= 0) return ''
+    return formatCurrency(n, { countryCode, showSymbol: false })
+  }
   let totalDebe = 0
   let totalHaber = 0
 
@@ -112,10 +113,10 @@ export function JournalEntryTable({ entries, className }: JournalEntryTableProps
               )}
             >
               <span className="text-white/80">
-                Total Debe: <strong className="text-white">{formatCurrency(totalDebe)}</strong>
+                Total Debe: <strong className="text-white">{formatCurrency(totalDebe, { countryCode })}</strong>
               </span>
               <span className="text-white/80">
-                Total Haber: <strong className="text-white">{formatCurrency(totalHaber)}</strong>
+                Total Haber: <strong className="text-white">{formatCurrency(totalHaber, { countryCode })}</strong>
               </span>
               {!balanced && (
                 <span className="text-red-400 font-medium">¡Descuadre detectado!</span>

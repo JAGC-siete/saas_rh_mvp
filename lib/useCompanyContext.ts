@@ -107,7 +107,7 @@ export function useCompanyContext() {
           // El usuario puede seguir usando la app aunque no se cargue la info completa de la empresa
         } else {
           console.log('✅ [CompanyContext] Empresa encontrada:', companyData)
-          setCompany(companyData)
+          setCompany(companyData as unknown as CompanyInfo)
         }
 
       } catch (err) {

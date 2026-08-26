@@ -3,8 +3,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui
 import { Button } from '../ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select'
 import { useCompanyContext } from '../../lib/useCompanyContext'
+import { useCompanyMoney } from '../../lib/hooks/useCompanyMoney'
 import { use1314SalarioManager, type Tipo1314, type Salario1314Row } from '../../lib/hooks/use1314SalarioManager'
-import { formatCurrency } from '../../lib/utils/currency'
 import { Loader2, Gift, Users, DollarSign } from 'lucide-react'
 
 function getRowAmount(row: Salario1314Row): number {
@@ -17,6 +17,7 @@ function getRowDaysWorked(row: Salario1314Row): number {
 
 export default function ThirteenthFourteenthManager() {
   const { companyId, company, loading: companyLoading, error: companyError } = useCompanyContext()
+  const { format: formatCurrency } = useCompanyMoney()
   const {
     year,
     tipo,

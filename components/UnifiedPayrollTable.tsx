@@ -5,7 +5,7 @@ import React, { useState, useMemo, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
 import { Button } from './ui/button'
 import { Icon, IconName } from './Icon'
-import { formatCurrency } from '../lib/utils/currency'
+import { useCompanyMoney } from '../lib/hooks/useCompanyMoney'
 import { UnifiedRow, UnifiedResumen } from '../lib/payroll-unified'
 import {
   isFrozenPayrollRunStatus,
@@ -123,6 +123,7 @@ export default function UnifiedPayrollTable({
   companyId,
   payrollApiConfig = null
 }: UnifiedPayrollTableProps) {
+  const { countryCode, format } = useCompanyMoney()
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set())
   const [currentPageFixed, setCurrentPageFixed] = useState(1)
   const [currentPageHourly, setCurrentPageHourly] = useState(1)
@@ -180,9 +181,10 @@ export default function UnifiedPayrollTable({
       resolveStatutoryDeductionColumns(
         payrollApiConfig?.legal_deductions ?? null,
         (payrollApiConfig?.custom_fields as Record<string, CustomFieldConfigEntry> | undefined) ??
-          null
+          null,
+        countryCode
       ),
-    [payrollApiConfig]
+    [payrollApiConfig, countryCode]
   )
 
   // Get unique departments for filter
@@ -402,8 +404,8 @@ export default function UnifiedPayrollTable({
         </CardTitle>
         <CardDescription className="text-gray-200 text-base">
           {fixedRows.length} empleados fijos • {hourlyRows.length} empleados por hora • 
-          Total Bruto: {formatCurrency(resumen.total_bruto)} • 
-          Total Neto: {formatCurrency(resumen.total_neto)} • 
+          Total Bruto: {format(resumen.total_bruto)} •
+          Total Neto: {format(resumen.total_neto)} •
           Período: {periodLabel}
         </CardDescription>
       </CardHeader>
@@ -449,19 +451,19 @@ export default function UnifiedPayrollTable({
           </div>
           
           <div className="text-center p-4 bg-green-500/30 rounded-lg border border-green-500/20">
-            <div className="text-2xl font-bold text-green-200">{formatCurrency(resumen.total_bruto)}</div>
+            <div className="text-2xl font-bold text-green-200">{format(resumen.total_bruto)}</div>
             <div className="text-sm font-semibold text-green-200">Total Bruto</div>
           </div>
           
           <div className="text-center p-4 bg-red-500/30 rounded-lg border border-red-500/20">
             <div className="text-2xl font-bold text-red-200">
-              {formatCurrency(Object.values(resumen.total_deducciones).reduce((a, b) => a + b, 0))}
+              {format(Object.values(resumen.total_deducciones).reduce((a, b) => a + b, 0))}
             </div>
             <div className="text-sm font-semibold text-red-200">Total Deducciones</div>
           </div>
           
           <div className="text-center p-4 bg-purple-500/30 rounded-lg border border-purple-500/20">
-            <div className="text-2xl font-bold text-purple-200">{formatCurrency(resumen.total_neto)}</div>
+            <div className="text-2xl font-bold text-purple-200">{format(resumen.total_neto)}</div>
             <div className="text-sm font-semibold text-purple-200">Total Neto</div>
           </div>
         </div>
@@ -545,6 +547,7 @@ export default function UnifiedPayrollTable({
             loading={loading}
             hasCustom={hasCustom}
             statutoryDeductions={statutoryDeductionColumns}
+            countryCode={countryCode}
           />
             {/* Paginación independiente para empleados fijos */}
             {totalPagesFixed > 1 && (
@@ -574,6 +577,7 @@ export default function UnifiedPayrollTable({
             loading={loading}
             hasCustom={hasCustom}
             statutoryDeductions={statutoryDeductionColumns}
+            countryCode={countryCode}
           />
             {/* Paginación independiente para empleados por hora */}
             {totalPagesHourly > 1 && (

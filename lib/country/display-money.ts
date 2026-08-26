@@ -61,3 +61,10 @@ export function moneyMaskForCountry(countryCode: CountryCode | string | null | u
 export function statutoryUiLabels(countryCode: CountryCode | string | null | undefined) {
   return statutoryDeductionLabels(normalizeCountryCode(countryCode))
 }
+
+export function currencyNounForCountry(countryCode: CountryCode | string | null | undefined): string {
+  const currency = currencyForCountryCode(normalizeCountryCode(countryCode))
+  if (currency === 'USD') return 'dólares'
+  if (currency === 'GTQ') return 'quetzales'
+  return 'lempiras'
+}

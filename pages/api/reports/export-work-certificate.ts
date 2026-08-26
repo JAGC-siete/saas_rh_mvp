@@ -17,6 +17,12 @@ import {
   getTaxBracketsForYear,
   type TaxConstants
 } from '../../../lib/tax/honduras-tax'
+import {
+  formatPdfMoney,
+  resolvePayrollDisplayCurrency,
+  statutoryUiLabels,
+} from '../../../lib/country/display-money'
+import { normalizeCountryCode } from '../../../lib/country/supported'
 
 type WorkCertificateData = WorkCertificatePayload
 
@@ -27,7 +33,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     // Autenticación y autorización usando el mismo método que payroll
-    const { supabase, companyId, role, userProfile } = await requireCompanyAccess(req, res)
+    const { supabase, companyId, role, userProfile, companyCountryCode } = await requireCompanyAccess(req, res)
 
     const { 
       employeeId, 
@@ -97,6 +103,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const pdf = await generateWorkCertificatePDFBuffer(certificateData, taxConstants, {
         branding: resolvedConfig?.branding,
         includeDeductions,
+        countryCode: companyCountryCode,
       })
       res.setHeader('Content-Type', 'application/pdf')
       res.setHeader(
@@ -105,7 +112,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       )
       res.send(pdf)
     } else {
-      generateWorkCertificateCSV(res, certificateData, includeDeductions, taxConstants, resolvedConfig?.branding)
+      generateWorkCertificateCSV(res, certificateData, includeDeductions, taxConstants, resolvedConfig?.branding, companyCountryCode)
     }
 
   } catch (error) {
@@ -290,9 +297,13 @@ function generateWorkCertificateCSV(
   certificateData: WorkCertificateData,
   includeDeductions: boolean = true,
   taxConstants: TaxConstants,
-  branding?: { legalName?: string; useLegalSuffix?: boolean }
+  branding?: { legalName?: string; useLegalSuffix?: boolean },
+  countryCode?: string | null
 ) {
   try {
+    const country = normalizeCountryCode(countryCode)
+    const money = (n: number) => formatPdfMoney(n, resolvePayrollDisplayCurrency(country))
+    const labels = statutoryUiLabels(country)
     const legalCompanyName = formatVoucherCompanyName(branding, certificateData.employee.company_name)
     let csvContent = 'CONSTANCIA LABORAL\n\n'
     
@@ -327,20 +338,22 @@ function generateWorkCertificateCSV(
       periodText = `desde el ${formatDateInWords(hireDate)} de ${hireDate.getFullYear()} hasta la fecha`
     }
     csvContent += `Período de empleo,${periodText}\n`
-    csvContent += `Salario mensual,L. ${certificateData.employee.base_salary.toFixed(2).replace('.', ',')}\n\n`
+    csvContent += `Salario mensual,${money(certificateData.employee.base_salary)}\n\n`
     
-    // Desglose salarial (solo si includeDeductions es true)
-    if (includeDeductions) {
-      // Calcular deducciones mensuales (igual que en PDF)
+    if (includeDeductions && country === 'HND') {
       const ihssMonthly = calcularIHSSConstancia(certificateData.employee.base_salary, taxConstants)
       const rapMonthly = calcularRAPConstancia(certificateData.employee.base_salary, taxConstants)
       const totalDeductions = ihssMonthly + rapMonthly
       const netSalary = certificateData.employee.base_salary - totalDeductions
+      const deductionLabel =
+        labels.secondarySocial !== '—'
+          ? `Deducciones (${labels.secondarySocial} / ${labels.primarySocial})`
+          : `Deducciones (${labels.primarySocial})`
       
       csvContent += 'DESGLOSE SALARIAL\n'
-      csvContent += `Salario base,L ${certificateData.employee.base_salary.toFixed(2).replace('.', ',')}\n`
-      csvContent += `Deducciones (RAP / IHSS),L ${totalDeductions.toFixed(2).replace('.', ',')}\n`
-      csvContent += `Total,L ${netSalary.toFixed(2).replace('.', ',')}\n\n`
+      csvContent += `Salario base,${money(certificateData.employee.base_salary)}\n`
+      csvContent += `${deductionLabel},${money(totalDeductions)}\n`
+      csvContent += `Total,${money(netSalary)}\n\n`
     }
     
     // Información de la constancia

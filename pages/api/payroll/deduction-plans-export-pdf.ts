@@ -10,7 +10,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   }
 
   try {
-    const { supabase, companyId: authCompanyId, role, user, userProfile } = await requireCompanyAccess(req, res)
+    const { supabase, companyId: authCompanyId, role, user, userProfile, companyCountryCode } = await requireCompanyAccess(req, res)
     const companyId = authCompanyId ?? (req.query.company_id as string)
 
     if (!companyId) {
@@ -91,7 +91,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     const pdf = await generateDeductionPlansReportPDF(
       pdfItems,
       company?.name,
-      user?.email
+      user?.email,
+      companyCountryCode
     )
 
     const filename = `reporte_deducciones_${new Date().toISOString().split('T')[0]}.pdf`

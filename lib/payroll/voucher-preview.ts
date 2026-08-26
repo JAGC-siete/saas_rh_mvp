@@ -1,3 +1,4 @@
+import { statutoryUiLabels } from '../country/display-money'
 import { formatPeriodRangeForDisplay } from './period-dates'
 import { overtimePayReceiptLabel, type EmployeeReceiptInput } from './receipt'
 import { formatVoucherCompanyName, type VoucherPdfOptions } from './voucher-pdf-options'
@@ -113,22 +114,23 @@ export function buildVoucherPreviewPayload(
     })
   }
 
+  const dedLabels = statutoryUiLabels(options?.countryCode)
   const deductions: VoucherPreviewAmountLine[] = []
   if (sectionVisible('ihss', options)) {
     deductions.push({
-      label: fieldLabel('ihss', 'IHSS', options),
+      label: fieldLabel('ihss', dedLabels.primarySocial, options),
       amount: record.social_security,
     })
   }
-  if (sectionVisible('rap', options)) {
+  if (sectionVisible('rap', options) && dedLabels.secondarySocial !== '—') {
     deductions.push({
-      label: fieldLabel('rap', 'RAP', options),
+      label: fieldLabel('rap', dedLabels.secondarySocial, options),
       amount: record.professional_tax,
     })
   }
   if (sectionVisible('isr', options)) {
     deductions.push({
-      label: fieldLabel('isr', 'ISR', options),
+      label: fieldLabel('isr', dedLabels.incomeTax, options),
       amount: record.income_tax,
     })
   }

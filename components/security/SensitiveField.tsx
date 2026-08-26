@@ -8,6 +8,7 @@ type SensitiveFieldProps = {
   formatValue?: (value: number) => string
   className?: string
   valueClassName?: string
+  mask?: string
 }
 
 const DEFAULT_MASK = 'L. *******'
@@ -20,6 +21,7 @@ export default function SensitiveField({
   formatValue,
   className = '',
   valueClassName = 'text-green-400 font-medium',
+  mask = DEFAULT_MASK,
 }: SensitiveFieldProps) {
   if (masked && displayMode === 'hidden') {
     return null
@@ -38,11 +40,11 @@ export default function SensitiveField({
       {masked ? (
         displayMode === 'locked' ? (
           <div className={`${valueClassName} flex items-center gap-2 blur-sm select-none`} aria-hidden="true">
-            <span>{DEFAULT_MASK}</span>
+            <span>{mask}</span>
             <span title="Campo restringido" className="text-white/50 text-xs not-blur">🔒</span>
           </div>
         ) : (
-          <div className={valueClassName}>{DEFAULT_MASK}</div>
+          <div className={valueClassName}>{mask}</div>
         )
       ) : (
         <div className={valueClassName}>{formatted ?? '—'}</div>

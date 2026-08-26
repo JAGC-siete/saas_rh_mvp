@@ -10,6 +10,7 @@ import {
   sanitizeFilename
 } from '../../../lib/security/export-security'
 import { canExportReports, EXPORT_REPORTS_FORBIDDEN } from '../../../lib/security/permissions'
+import { formatPdfMoney, resolvePayrollDisplayCurrency, statutoryUiLabels } from '../../../lib/country/display-money'
 
 // Aplicar seguridad de exportación
 const handlerWithSecurity = withExportSecurity(exportPayrollHandler)
@@ -18,7 +19,7 @@ export default handlerWithSecurity
 
 async function exportPayrollHandler(req: NextApiRequest, res: NextApiResponse) {
   try {
-    const { supabase, companyId, role, userProfile } = await requireCompanyAccess(req, res)
+    const { supabase, companyId, role, userProfile, companyCountryCode } = await requireCompanyAccess(req, res)
 
     if (!companyId) {
       return res.status(400).json({ error: 'Company ID is required' })
@@ -50,9 +51,9 @@ async function exportPayrollHandler(req: NextApiRequest, res: NextApiResponse) {
     const reportData = await generatePayrollReportData(supabase, reportType, periodo, companyId)
 
     if (format === 'pdf') {
-      return generatePayrollPDFReport(res, reportData, reportType, periodo)
+      return generatePayrollPDFReport(res, reportData, reportType, periodo, companyCountryCode)
     } else {
-      return generatePayrollCSVReport(res, reportData, reportType, periodo)
+      return generatePayrollCSVReport(res, reportData, reportType, periodo, companyCountryCode)
     }
 
   } catch (error: any) {
@@ -159,7 +160,15 @@ async function generatePayrollReportData(supabase: any, reportType: string, peri
   }
 }
 
-function generatePayrollPDFReport(res: NextApiResponse, reportData: any, reportType: string, periodo: string) {
+function generatePayrollPDFReport(
+  res: NextApiResponse,
+  reportData: any,
+  reportType: string,
+  periodo: string,
+  countryCode?: string | null
+) {
+  const money = (n: number) => formatPdfMoney(n, resolvePayrollDisplayCurrency(countryCode))
+  const labels = statutoryUiLabels(countryCode)
   try {
     const PDFDocument = require('pdfkit')
     const doc = new PDFDocument({ 
@@ -212,26 +221,28 @@ function generatePayrollPDFReport(res: NextApiResponse, reportData: any, reportT
     doc.fontSize(10).text(reportData.stats.totalEmployees.toString(), 200, 200)
     
     doc.fontSize(10).text('Nómina Bruta Total:', 40, 215)
-    doc.fontSize(10).text(`L. ${reportData.stats.totalGrossSalary.toFixed(2)}`, 200, 215)
+    doc.fontSize(10).text(money(reportData.stats.totalGrossSalary), 200, 215)
     
     doc.fontSize(10).text('Deducciones Totales:', 40, 230)
-    doc.fontSize(10).text(`L. ${reportData.stats.totalDeductions.toFixed(2)}`, 200, 230)
+    doc.fontSize(10).text(money(reportData.stats.totalDeductions), 200, 230)
     
     doc.fontSize(10).text('Nómina Neta Total:', 40, 245)
-    doc.fontSize(10).text(`L. ${reportData.stats.totalNetSalary.toFixed(2)}`, 200, 245)
+    doc.fontSize(10).text(money(reportData.stats.totalNetSalary), 200, 245)
     
     doc.fontSize(10).text('Salario Promedio:', 40, 260)
-    doc.fontSize(10).text(`L. ${reportData.stats.averageSalary.toFixed(2)}`, 200, 260)
+    doc.fontSize(10).text(money(reportData.stats.averageSalary), 200, 260)
     
     // Detalle de deducciones
-    doc.fontSize(10).text('ISR Total:', 300, 200)
-    doc.fontSize(10).text(`L. ${reportData.stats.totalISR.toFixed(2)}`, 450, 200)
+    doc.fontSize(10).text(`${labels.incomeTax} Total:`, 300, 200)
+    doc.fontSize(10).text(money(reportData.stats.totalISR), 450, 200)
     
-    doc.fontSize(10).text('IHSS Total:', 300, 215)
-    doc.fontSize(10).text(`L. ${reportData.stats.totalIHSS.toFixed(2)}`, 450, 215)
+    doc.fontSize(10).text(`${labels.primarySocial} Total:`, 300, 215)
+    doc.fontSize(10).text(money(reportData.stats.totalIHSS), 450, 215)
     
-    doc.fontSize(10).text('RAP Total:', 300, 230)
-    doc.fontSize(10).text(`L. ${reportData.stats.totalRAP.toFixed(2)}`, 450, 230)
+    if (labels.secondarySocial !== '—') {
+      doc.fontSize(10).text(`${labels.secondarySocial} Total:`, 300, 230)
+      doc.fontSize(10).text(money(reportData.stats.totalRAP), 450, 230)
+    }
     
     // ===== PÁGINA 2: ESTADÍSTICAS POR DEPARTAMENTO =====
     doc.addPage()
@@ -265,9 +276,9 @@ function generatePayrollPDFReport(res: NextApiResponse, reportData: any, reportT
       const values = [
         deptId,
         stats.employeeCount.toString(),
-        `L. ${stats.totalGross.toFixed(2)}`,
-        `L. ${stats.totalDeductions.toFixed(2)}`,
-        `L. ${stats.totalNet.toFixed(2)}`
+        money(stats.totalGross),
+        money(stats.totalDeductions),
+        money(stats.totalNet)
       ]
       
       values.forEach((val: any, i: number) => {
@@ -309,9 +320,9 @@ function generatePayrollPDFReport(res: NextApiResponse, reportData: any, reportT
       const values = [
         record.employees?.name || 'N/A',
         `${formatDateOnlyForHonduras(record.period_start)} - ${formatDateOnlyForHonduras(record.period_end)}`,
-        `L. ${(record.gross_salary || 0).toFixed(2)}`,
-        `L. ${(record.total_deductions || 0).toFixed(2)}`,
-        `L. ${(record.net_salary || 0).toFixed(2)}`,
+        money(record.gross_salary || 0),
+        money(record.total_deductions || 0),
+        money(record.net_salary || 0),
         record.status
       ]
       
@@ -334,8 +345,16 @@ function generatePayrollPDFReport(res: NextApiResponse, reportData: any, reportT
   }
 }
 
-function generatePayrollCSVReport(res: NextApiResponse, reportData: any, reportType: string, periodo: string) {
+function generatePayrollCSVReport(
+  res: NextApiResponse,
+  reportData: any,
+  reportType: string,
+  periodo: string,
+  countryCode?: string | null
+) {
   try {
+    const money = (n: number) => formatPdfMoney(n, resolvePayrollDisplayCurrency(countryCode))
+    const labels = statutoryUiLabels(countryCode)
     let csvContent = ''
     
     // Header del reporte
@@ -348,19 +367,22 @@ function generatePayrollCSVReport(res: NextApiResponse, reportData: any, reportT
     csvContent += 'RESUMEN EJECUTIVO\n'
     csvContent += 'Métrica,Valor\n'
     csvContent += `Total Empleados,${reportData.stats.totalEmployees}\n`
-    csvContent += `Nómina Bruta Total,L. ${reportData.stats.totalGrossSalary.toFixed(2)}\n`
-    csvContent += `Deducciones Totales,L. ${reportData.stats.totalDeductions.toFixed(2)}\n`
-    csvContent += `Nómina Neta Total,L. ${reportData.stats.totalNetSalary.toFixed(2)}\n`
-    csvContent += `Salario Promedio,L. ${reportData.stats.averageSalary.toFixed(2)}\n`
-    csvContent += `ISR Total,L. ${reportData.stats.totalISR.toFixed(2)}\n`
-    csvContent += `IHSS Total,L. ${reportData.stats.totalIHSS.toFixed(2)}\n`
-    csvContent += `RAP Total,L. ${reportData.stats.totalRAP.toFixed(2)}\n\n`
+    csvContent += `Nómina Bruta Total,${money(reportData.stats.totalGrossSalary)}\n`
+    csvContent += `Deducciones Totales,${money(reportData.stats.totalDeductions)}\n`
+    csvContent += `Nómina Neta Total,${money(reportData.stats.totalNetSalary)}\n`
+    csvContent += `Salario Promedio,${money(reportData.stats.averageSalary)}\n`
+    csvContent += `${labels.incomeTax} Total,${money(reportData.stats.totalISR)}\n`
+    csvContent += `${labels.primarySocial} Total,${money(reportData.stats.totalIHSS)}\n`
+    if (labels.secondarySocial !== '—') {
+      csvContent += `${labels.secondarySocial} Total,${money(reportData.stats.totalRAP)}\n`
+    }
+    csvContent += '\n'
     
     // Estadísticas por departamento
     csvContent += 'ESTADÍSTICAS POR DEPARTAMENTO\n'
     csvContent += 'Departamento,Empleados,Nómina Bruta,Deducciones,Nómina Neta\n'
     Object.entries(reportData.departmentStats).forEach(([deptId, stats]: [string, any]) => {
-      csvContent += `"${deptId}",${stats.employeeCount},L. ${stats.totalGross.toFixed(2)},L. ${stats.totalDeductions.toFixed(2)},L. ${stats.totalNet.toFixed(2)}\n`
+      csvContent += `"${deptId}",${stats.employeeCount},${money(stats.totalGross)},${money(stats.totalDeductions)},${money(stats.totalNet)}\n`
     })
     csvContent += '\n'
     
@@ -368,7 +390,7 @@ function generatePayrollCSVReport(res: NextApiResponse, reportData: any, reportT
     csvContent += 'DETALLE DE NÓMINA\n'
     csvContent += 'Empleado,Período Inicio,Período Fin,Bruto,Deducciones,Neto,Estado\n'
     reportData.payrollRecords.forEach((record: any) => {
-      csvContent += `"${record.employees?.name || 'N/A'}","${record.period_start}","${record.period_end}",L. ${(record.gross_salary || 0).toFixed(2)},L. ${(record.total_deductions || 0).toFixed(2)},L. ${(record.net_salary || 0).toFixed(2)},${record.status}\n`
+      csvContent += `"${record.employees?.name || 'N/A'}","${record.period_start}","${record.period_end}",${money(record.gross_salary || 0)},${money(record.total_deductions || 0)},${money(record.net_salary || 0)},${record.status}\n`
     })
     
     // Configurar respuesta CSV

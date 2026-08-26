@@ -1,6 +1,7 @@
 import { Buffer } from 'buffer'
 import { formatDateForHonduras, nowInHonduras, formatDateOnlyForHonduras } from '../timezone'
 import { PDF, drawLiquidPdfHeader } from '../pdf/liquid-theme'
+import { formatPdfMoney, resolvePayrollDisplayCurrency } from '../country/display-money'
 
 export interface DeductionPlanPDFItem {
   field_key: string
@@ -23,13 +24,14 @@ export interface DeductionPlanPDFItem {
 export async function generateDeductionPlansReportPDF(
   plans: DeductionPlanPDFItem[],
   companyName?: string,
-  generatedByEmail?: string
+  generatedByEmail?: string,
+  countryCode?: string | null
 ): Promise<Buffer> {
   return new Promise<Buffer>((resolve, reject) => {
     try {
       const PDFDocument = require('pdfkit')
       const formatCurrency = (n: number) =>
-        `L. ${Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+        formatPdfMoney(n, resolvePayrollDisplayCurrency(countryCode))
       const formatDate = (d: string | null) =>
         d ? (/^\d{4}-\d{2}-\d{2}$/.test(d) ? formatDateOnlyForHonduras(d) : formatDateForHonduras(d)) : '-'
 

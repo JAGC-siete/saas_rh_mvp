@@ -6,6 +6,7 @@ import {
   resolveEmployeeAndCompanyId,
 } from '../../../../lib/employee-portal/company-settings'
 import { createEmployeeSalaryClient } from '../../../../lib/security/employee-data-access'
+import { normalizeCountryCode } from '../../../../lib/country/supported'
 
 interface PayrollResponse {
   records: any[]
@@ -20,6 +21,7 @@ interface PayrollResponse {
     totalRecords: number
     lastPayment?: string
     lastAmount?: number
+    countryCode?: string
   }
 }
 
@@ -143,6 +145,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
       })
     }
 
+    const { data: companyRow } = await supabase
+      .from('companies')
+      .select('country_code')
+      .eq('id', ctx.companyId)
+      .maybeSingle()
+    const countryCode = normalizeCountryCode(companyRow?.country_code)
+
     // Build response with available data
     const response: PayrollResponse = {
       records: payrollRecords || [],
@@ -156,7 +165,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
       summary: {
         totalRecords: (payrollRecords?.length || 0) + (runLines?.length || 0),
         lastPayment: payrollRecords?.[0]?.paid_at || runLines?.[0]?.created_at,
-        lastAmount: payrollRecords?.[0]?.net_salary || runLines?.[0]?.eff_neto
+        lastAmount: payrollRecords?.[0]?.net_salary || runLines?.[0]?.eff_neto,
+        countryCode,
       }
     }
 

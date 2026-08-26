@@ -8,6 +8,7 @@ import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select'
 import { CesantiasRequestInput, motivoSalidaEnum } from '../../lib/payroll/cesantias-schema'
+import { useCompanyMoney } from '../../lib/hooks/useCompanyMoney'
 
 type LiquidacionResponse = import('../../lib/payroll/cesantias').LiquidacionResult
 type ZodValidationError = {
@@ -27,6 +28,7 @@ const MOTIVO_SALIDA_OPTIONS: { value: CesantiasRequestInput['parametrosCalculo']
 ]
 
 export default function CesantiasPage() {
+  const { format: formatCurrency } = useCompanyMoney()
   const [incomeInputMode, setIncomeInputMode] = useState<'BASE' | 'PROMEDIO' | 'ULTIMOS_6'>('BASE')
   const [salariosUltimos6MesesRaw, setSalariosUltimos6MesesRaw] = useState('')
 
@@ -224,11 +226,6 @@ export default function CesantiasPage() {
     setFieldErrors({})
     setResult(null)
   }
-
-  const formatCurrency = (value: number) =>
-    new Intl.NumberFormat('es-HN', { style: 'currency', currency: 'HNL' }).format(
-      Number.isFinite(value) ? value : 0
-    )
 
   return (
     <ProtectedRoute>

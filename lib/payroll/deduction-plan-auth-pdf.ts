@@ -13,6 +13,7 @@ import {
   drawLiquidSectionTitle,
   PDF,
 } from '../pdf/liquid-theme'
+import { formatPdfMoney, resolvePayrollDisplayCurrency } from '../country/display-money'
 
 const PAGE_WIDTH = 595.28
 const PAGE_HEIGHT = 841.89
@@ -38,13 +39,11 @@ export interface DeductionPlanAuthPdfInput {
   activo?: boolean
   logoBuffer?: Buffer | null
   primaryColor?: string
+  countryCode?: string | null
 }
 
-function formatCurrency(n: number): string {
-  return `L. ${Number(n || 0).toLocaleString('en-US', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`
+function formatCurrency(n: number, countryCode?: string | null): string {
+  return formatPdfMoney(n, resolvePayrollDisplayCurrency(countryCode))
 }
 
 function formatPlanDate(d: string | null | undefined): string {
@@ -147,8 +146,8 @@ export async function generateDeductionPlanAuthPDF(
       const planBoxH = 110
       drawLiquidPanel(doc, MARGIN, yPos, CONTENT_WIDTH, planBoxH)
       kvRow(doc, 'Concepto:', concept, MARGIN + PAD, yPos + 12)
-      kvRow(doc, 'Monto total:', formatCurrency(montoTotal), MARGIN + PAD, yPos + 28)
-      kvRow(doc, 'Monto por plazo:', formatCurrency(montoPorPlazo), MARGIN + PAD, yPos + 44)
+      kvRow(doc, 'Monto total:', formatCurrency(montoTotal, input.countryCode), MARGIN + PAD, yPos + 28)
+      kvRow(doc, 'Monto por plazo:', formatCurrency(montoPorPlazo, input.countryCode), MARGIN + PAD, yPos + 44)
       kvRow(doc, 'Número de plazos:', String(plazos), MARGIN + PAD, yPos + 60)
       kvRow(doc, 'Fecha de inicio:', formatPlanDate(input.fecha_inicio), MARGIN + PAD, yPos + 76)
       if (input.fecha_fin) {
@@ -163,8 +162,8 @@ export async function generateDeductionPlanAuthPDF(
       const authText =
         `Por medio del presente documento, yo ${employeeName}, empleado(a) de ${companyName}, ` +
         `declaro conocer y aceptar el plan de deducción por concepto de «${concept}» por un monto total de ` +
-        `${formatCurrency(montoTotal)}, el cual será descontado de mi salario en ${plazos} plazo(s) de ` +
-        `${formatCurrency(montoPorPlazo)} cada uno, a partir de ${formatPlanDate(input.fecha_inicio)}, ` +
+        `${formatCurrency(montoTotal, input.countryCode)}, el cual será descontado de mi salario en ${plazos} plazo(s) de ` +
+        `${formatCurrency(montoPorPlazo, input.countryCode)} cada uno, a partir de ${formatPlanDate(input.fecha_inicio)}, ` +
         `en el día de pago correspondiente a cada período de nómina.\n\n` +
         `Autorizo expresamente a ${companyName} a realizar dichos descuentos mediante nómina hasta completar ` +
         `el monto total indicado, o hasta la cancelación del plan conforme a las políticas de la empresa.\n\n` +

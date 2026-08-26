@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { formatCurrency } from '../../lib/utils/currency'
+import { useCompanyMoney } from '../../lib/hooks/useCompanyMoney'
 import type { PlanillaPreviewData, PlanillaPreviewEmployeeRow } from '../../lib/payroll/planilla-preview'
 import type { PayrollPdfGroupBy } from '../../lib/payroll/pdf-layout'
 import { Button } from '../ui/button'
@@ -49,11 +49,13 @@ function EmployeeTable({
   rows,
   dedLabels,
   showHours,
+  money,
 }: {
   title: string
   rows: PlanillaPreviewEmployeeRow[]
   dedLabels: PlanillaPreviewData['dedLabels']
   showHours?: boolean
+  money: (n: number) => string
 }) {
   if (!rows.length) return null
   return (
@@ -73,7 +75,9 @@ function EmployeeTable({
               </th>
               <th className="px-3 py-2 font-medium text-right">Bruto</th>
               <th className="px-3 py-2 font-medium text-right">{dedLabels.primarySocial}</th>
-              <th className="px-3 py-2 font-medium text-right">{dedLabels.secondarySocial}</th>
+              {dedLabels.secondarySocial !== '—' && (
+                <th className="px-3 py-2 font-medium text-right">{dedLabels.secondarySocial}</th>
+              )}
               <th className="px-3 py-2 font-medium text-right">{dedLabels.incomeTax}</th>
               <th className="px-3 py-2 font-medium text-right">Neto</th>
             </tr>
@@ -88,12 +92,14 @@ function EmployeeTable({
                     ? (row.hoursWorked ?? 0).toFixed(2)
                     : row.daysWorked.toFixed(1)}
                 </td>
-                <td className="px-3 py-2.5 text-right tabular-nums">{formatCurrency(row.gross)}</td>
-                <td className="px-3 py-2.5 text-right tabular-nums">{formatCurrency(row.ihss)}</td>
-                <td className="px-3 py-2.5 text-right tabular-nums">{formatCurrency(row.rap)}</td>
-                <td className="px-3 py-2.5 text-right tabular-nums">{formatCurrency(row.isr)}</td>
+                <td className="px-3 py-2.5 text-right tabular-nums">{money(row.gross)}</td>
+                <td className="px-3 py-2.5 text-right tabular-nums">{money(row.ihss)}</td>
+                {dedLabels.secondarySocial !== '—' && (
+                  <td className="px-3 py-2.5 text-right tabular-nums">{money(row.rap)}</td>
+                )}
+                <td className="px-3 py-2.5 text-right tabular-nums">{money(row.isr)}</td>
                 <td className="px-3 py-2.5 text-right tabular-nums font-semibold text-emerald-300">
-                  {formatCurrency(row.net)}
+                  {money(row.net)}
                 </td>
               </tr>
             ))}
@@ -113,6 +119,7 @@ export default function PlanillaPreviewModal({
   onClose,
   onDownload,
 }: PlanillaPreviewModalProps) {
+  const { format } = useCompanyMoney()
   const [pdfGroupBy, setPdfGroupBy] = useState<PayrollPdfGroupBy>('none')
 
   useEffect(() => {
@@ -203,14 +210,14 @@ export default function PlanillaPreviewModal({
             <>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <SummaryCard label="Empleados" value={String(data.summary.employees)} />
-                <SummaryCard label="Total bruto" value={formatCurrency(data.summary.totalGross)} />
+                <SummaryCard label="Total bruto" value={format(data.summary.totalGross)} />
                 <SummaryCard
                   label="Total deducciones"
-                  value={formatCurrency(data.summary.totalDeductions)}
+                  value={format(data.summary.totalDeductions)}
                 />
                 <SummaryCard
                   label="Total neto"
-                  value={formatCurrency(data.summary.totalNet)}
+                  value={format(data.summary.totalNet)}
                   highlight
                 />
               </div>
@@ -219,12 +226,14 @@ export default function PlanillaPreviewModal({
                 title="Empleados fijos"
                 rows={data.fixedRows}
                 dedLabels={data.dedLabels}
+                money={format}
               />
               <EmployeeTable
                 title="Empleados por hora"
                 rows={data.hourlyRows}
                 dedLabels={data.dedLabels}
                 showHours
+                money={format}
               />
 
               {data.isDraftPreview && (

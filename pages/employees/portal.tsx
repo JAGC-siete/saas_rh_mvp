@@ -32,6 +32,7 @@ import { clientLogger } from '../../lib/logger-client'
 import EmployeePermissionForm from '../../components/employee-portal/EmployeePermissionForm'
 import EmployeePermissionHistory from '../../components/employee-portal/EmployeePermissionHistory'
 import { formatTimeDisplay, parseDateOnlyAsHonduras, formatDateOnlyForHonduras, HONDURAS_TIMEZONE } from '../../lib/timezone'
+import { formatMoneyForCountry, statutoryUiLabels } from '../../lib/country/display-money'
 import NotificationBell from '../../components/ui/NotificationBell'
 import EmployeePortalShell from '../../components/employee-portal/EmployeePortalShell'
 
@@ -226,6 +227,9 @@ function PayrollSection({
   const [payrollData, setPayrollData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [generatingPDF, setGeneratingPDF] = useState(false)
+  const countryCode = payrollData?.summary?.countryCode
+  const money = (n: number) => formatMoneyForCountry(n, countryCode)
+  const labels = statutoryUiLabels(countryCode)
 
   useEffect(() => {
     if (!employeeId) return
@@ -342,7 +346,7 @@ function PayrollSection({
           <div className="text-sm text-gray-400 mb-1">Último Monto</div>
           <div className="text-white font-medium">
             {payrollData.summary.lastAmount 
-              ? `L. ${Number(payrollData.summary.lastAmount).toLocaleString('es-HN', { minimumFractionDigits: 2 })}`
+              ? money(Number(payrollData.summary.lastAmount))
               : 'No disponible'
             }
           </div>
@@ -404,15 +408,15 @@ function PayrollSection({
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                   <div>
                     <div className="text-gray-400">Salario Bruto</div>
-                    <div className="text-white">L. {Number(record.gross_salary || 0).toLocaleString('es-HN')}</div>
+                    <div className="text-white">{money(Number(record.gross_salary || 0))}</div>
                   </div>
                   <div>
                     <div className="text-gray-400">Deducciones</div>
-                    <div className="text-red-300">-L. {Number(record.total_deductions || 0).toLocaleString('es-HN')}</div>
+                    <div className="text-red-300">-{money(Number(record.total_deductions || 0))}</div>
                   </div>
                   <div>
                     <div className="text-gray-400">Salario Neto</div>
-                    <div className="text-green-300 font-medium">L. {Number(record.net_salary || 0).toLocaleString('es-HN')}</div>
+                    <div className="text-green-300 font-medium">{money(Number(record.net_salary || 0))}</div>
                   </div>
                   <div>
                     <div className="text-gray-400">Fecha Pago</div>
@@ -493,19 +497,21 @@ function PayrollSection({
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                   <div>
                     <div className="text-gray-400">Bruto</div>
-                    <div className="text-white">L. {Number(line.eff_bruto || 0).toLocaleString('es-HN')}</div>
+                    <div className="text-white">{money(Number(line.eff_bruto || 0))}</div>
                   </div>
                   <div>
-                    <div className="text-gray-400">IHSS</div>
-                    <div className="text-red-300">-L. {Number(line.eff_ihss || 0).toLocaleString('es-HN')}</div>
+                    <div className="text-gray-400">{labels.primarySocial}</div>
+                    <div className="text-red-300">-{money(Number(line.eff_ihss || 0))}</div>
                   </div>
+                  {labels.secondarySocial !== '—' && (
                   <div>
-                    <div className="text-gray-400">RAP</div>
-                    <div className="text-red-300">-L. {Number(line.eff_rap || 0).toLocaleString('es-HN')}</div>
+                    <div className="text-gray-400">{labels.secondarySocial}</div>
+                    <div className="text-red-300">-{money(Number(line.eff_rap || 0))}</div>
                   </div>
+                  )}
                   <div>
                     <div className="text-gray-400">Neto</div>
-                    <div className="text-green-300 font-medium">L. {Number(line.eff_neto || 0).toLocaleString('es-HN')}</div>
+                    <div className="text-green-300 font-medium">{money(Number(line.eff_neto || 0))}</div>
                   </div>
                 </div>
                 <div className="mt-4 flex justify-end">

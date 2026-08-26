@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react'
-import { formatCurrency } from '../../lib/utils/currency'
+import { useCompanyMoney } from '../../lib/hooks/useCompanyMoney'
 import type { VoucherPreviewData } from '../../lib/payroll/voucher-preview'
 import { Button } from '../ui/button'
 import { Icon } from '../Icon'
@@ -20,7 +20,17 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
   )
 }
 
-function AmountRow({ label, amount, bold }: { label: string; amount: number; bold?: boolean }) {
+function AmountRow({
+  label,
+  amount,
+  bold,
+  money,
+}: {
+  label: string
+  amount: number
+  bold?: boolean
+  money: (n: number) => string
+}) {
   return (
     <div
       className={`flex items-center justify-between gap-4 py-2 border-b border-white/10 last:border-0 ${
@@ -29,7 +39,7 @@ function AmountRow({ label, amount, bold }: { label: string; amount: number; bol
     >
       <span className="text-sm">{label}</span>
       <span className={`text-sm tabular-nums ${bold ? 'text-emerald-300' : ''}`}>
-        {formatCurrency(amount)}
+        {money(amount)}
       </span>
     </div>
   )
@@ -58,6 +68,7 @@ export default function VoucherPreviewModal({
   onClose,
   onDownload,
 }: VoucherPreviewModalProps) {
+  const { format } = useCompanyMoney()
   useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => {
@@ -136,7 +147,7 @@ export default function VoucherPreviewModal({
                 <section className="rounded-xl border border-white/15 bg-white/5 p-4">
                   <SectionTitle>Detalle de ingresos</SectionTitle>
                   {data.earnings.map((line) => (
-                    <AmountRow key={line.label} label={line.label} amount={line.amount} />
+                    <AmountRow key={line.label} label={line.label} amount={line.amount} money={format} />
                   ))}
                 </section>
               )}
@@ -145,10 +156,10 @@ export default function VoucherPreviewModal({
                 <section className="rounded-xl border border-white/15 bg-white/5 p-4">
                   <SectionTitle>Detalle de deducciones</SectionTitle>
                   {data.deductions.map((line) => (
-                    <AmountRow key={line.label} label={line.label} amount={line.amount} />
+                    <AmountRow key={line.label} label={line.label} amount={line.amount} money={format} />
                   ))}
                   {data.totalDeductions != null && (
-                    <AmountRow label="Total deducciones" amount={data.totalDeductions} bold />
+                    <AmountRow label="Total deducciones" amount={data.totalDeductions} bold money={format} />
                   )}
                 </section>
               )}
@@ -158,7 +169,7 @@ export default function VoucherPreviewModal({
                 <div className="flex items-center justify-between gap-4">
                   <span className="text-sm font-semibold text-emerald-100">Total a recibir</span>
                   <span className="text-2xl font-bold tabular-nums text-emerald-300">
-                    {formatCurrency(data.netSalary)}
+                    {format(data.netSalary)}
                   </span>
                 </div>
               </section>
@@ -171,7 +182,7 @@ export default function VoucherPreviewModal({
                     <div className="mt-3 flex items-center justify-between border-t border-white/10 pt-3">
                       <span className="text-sm text-brand-200/90">Monto a transferir</span>
                       <span className="text-sm font-semibold tabular-nums text-white">
-                        {formatCurrency(data.transferAmount)}
+                        {format(data.transferAmount)}
                       </span>
                     </div>
                   )}

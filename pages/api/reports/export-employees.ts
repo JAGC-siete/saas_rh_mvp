@@ -9,6 +9,7 @@ import {
   fileFormatSchema
 } from '../../../lib/security/export-security'
 import { canExportReports, EXPORT_REPORTS_FORBIDDEN } from '../../../lib/security/permissions'
+import { formatPdfMoney, resolvePayrollDisplayCurrency } from '../../../lib/country/display-money'
 import { createAdminClient } from '../../../lib/supabase/server'
 import { resolveFieldAccessContext } from '../../../lib/security/field-access'
 import { createEmployeeSalaryClient } from '../../../lib/security/employee-data-access'
@@ -75,7 +76,7 @@ export default handlerWithSecurity
 
 async function exportEmployeesHandler(req: NextApiRequest, res: NextApiResponse) {
   try {
-    const { supabase, companyId, role, userProfile } = await requireCompanyAccess(req, res)
+    const { supabase, companyId, role, userProfile, companyCountryCode } = await requireCompanyAccess(req, res)
 
     if (!companyId) {
       return res.status(400).json({ error: 'Company ID is required' })
@@ -110,11 +111,11 @@ async function exportEmployeesHandler(req: NextApiRequest, res: NextApiResponse)
     const exportFormat = format === 'xlsx' ? 'excel' : format
 
     if (exportFormat === 'pdf') {
-      return generateEmployeePDFReport(res, reportData, resolvedConfig)
+      return generateEmployeePDFReport(res, reportData, resolvedConfig, companyCountryCode)
     } else if (exportFormat === 'excel') {
-      return generateEmployeeExcelReport(res, reportData, resolvedConfig)
+      return generateEmployeeExcelReport(res, reportData, resolvedConfig, companyCountryCode)
     } else {
-      return generateEmployeeCSVReport(res, reportData, resolvedConfig)
+      return generateEmployeeCSVReport(res, reportData, resolvedConfig, companyCountryCode)
     }
 
   } catch (error: any) {
@@ -220,7 +221,7 @@ async function generateEmployeeReportData(companyId: string, filters?: {
   }
 }
 
-function generateEmployeePDFReport(res: NextApiResponse, reportData: any, resolvedConfig: ResolvedReportConfig) {
+function generateEmployeePDFReport(res: NextApiResponse, reportData: any, resolvedConfig: ResolvedReportConfig, countryCode?: string | null) {
   try {
     const PDFDocument = require('pdfkit')
     const doc = new PDFDocument({ 
@@ -338,7 +339,7 @@ function generateEmployeePDFReport(res: NextApiResponse, reportData: any, resolv
     doc.roundedRect(30, metricsY, pageWidth - 60, 60, 8).fill(colors.lightGray).stroke(colors.borderGray)
     doc.fontSize(11).font('Helvetica-Bold').fillColor('#475569').text('MÉTRICAS FINANCIERAS', 40, metricsY + 8)
     
-    const formatHNL = (n: number) => `L. ${Number(n || 0).toLocaleString('es-HN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    const formatHNL = (n: number) => formatPdfMoney(n, resolvePayrollDisplayCurrency(countryCode))
     const metricColWidth = (pageWidth - 100) / 2
     doc.fontSize(9).font('Helvetica').fillColor('#0f172a')
     doc.text(`Salario Total:`, 40, metricsY + 25)
@@ -535,10 +536,9 @@ function generateEmployeePDFReport(res: NextApiResponse, reportData: any, resolv
   }
 }
 
-async function generateEmployeeExcelReport(res: NextApiResponse, reportData: any, resolvedConfig: ResolvedReportConfig) {
+async function generateEmployeeExcelReport(res: NextApiResponse, reportData: any, resolvedConfig: ResolvedReportConfig, countryCode?: string | null) {
   try {
-    const formatHNL = (n: number) =>
-      `L. ${Number(n || 0).toLocaleString('es-HN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    const formatHNL = (n: number) => formatPdfMoney(n, resolvePayrollDisplayCurrency(countryCode))
 
     const workbook = new ExcelJS.Workbook()
     
@@ -638,8 +638,9 @@ async function generateEmployeeExcelReport(res: NextApiResponse, reportData: any
   }
 }
 
-function generateEmployeeCSVReport(res: NextApiResponse, reportData: any, resolvedConfig: ResolvedReportConfig) {
+function generateEmployeeCSVReport(res: NextApiResponse, reportData: any, resolvedConfig: ResolvedReportConfig, countryCode?: string | null) {
   try {
+    const money = (n: number) => formatPdfMoney(n, resolvePayrollDisplayCurrency(countryCode))
     const escapeCSV = (val: string | number) => {
       const s = String(val ?? '')
       if (s.includes(',') || s.includes('"') || s.includes('\n')) {
@@ -676,8 +677,8 @@ function generateEmployeeCSVReport(res: NextApiResponse, reportData: any, resolv
     csvContent += `Empleados Activos,${reportData.stats.activeEmployees}\n`
     csvContent += `Empleados Inactivos,${reportData.stats.inactiveEmployees}\n`
     csvContent += `Empleados Terminados,${reportData.stats.terminatedEmployees}\n`
-    csvContent += `Salario Total,L. ${reportData.stats.totalSalary.toLocaleString('es-HN')}\n`
-    csvContent += `Salario Promedio,L. ${reportData.stats.averageSalary.toLocaleString('es-HN')}\n\n`
+    csvContent += `Salario Total,${money(reportData.stats.totalSalary)}\n`
+    csvContent += `Salario Promedio,${money(reportData.stats.averageSalary)}\n\n`
     
     csvContent += 'LISTA DE EMPLEADOS\n'
     csvContent += headers.map(escapeCSV).join(',') + '\n'
@@ -694,7 +695,7 @@ function generateEmployeeCSVReport(res: NextApiResponse, reportData: any, resolv
         csvContent += `${stat.department.name},`
         csvContent += `${stat.employeeCount},`
         csvContent += `${stat.activeCount},`
-        csvContent += `L. ${stat.totalSalary.toLocaleString('es-HN')}\n`
+        csvContent += `${money(stat.totalSalary)}\n`
       })
     }
     

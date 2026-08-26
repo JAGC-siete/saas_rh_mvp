@@ -10,7 +10,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   }
 
   try {
-    const { supabase, companyId: authCompanyId, role, userProfile } = await requireCompanyAccess(req, res)
+    const { supabase, companyId: authCompanyId, role, userProfile, companyCountryCode } = await requireCompanyAccess(req, res)
     const companyId = authCompanyId ?? (req.query.company_id as string)
     const planId = typeof req.query.plan_id === 'string' ? req.query.plan_id : ''
 
@@ -142,6 +142,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       fecha_inicio: plan.fecha_inicio || '',
       fecha_fin: plan.fecha_fin || null,
       activo: !!plan.activo,
+      countryCode: companyCountryCode,
     })
 
     const safeConcept = fieldLabel

@@ -41,6 +41,8 @@ import {
 } from '../lib/payroll/deduction-mode'
 import type { TipoCalculo } from '../types/payroll'
 import { cn } from '../lib/utils'
+import { useCompanyMoney } from '../lib/hooks/useCompanyMoney'
+import type { DisplayCurrency } from '../lib/country/display-money'
 
 const ORDINARY_HOURS_PRESETS = [7, 7.5, 8, 8.5, 9] as const
 
@@ -65,7 +67,7 @@ interface CustomField {
 interface PayrollConfig {
   // Configuración básica de payroll
   payment_frequency: 'monthly' | 'biweekly' | 'weekly' // mensual, quincenal o semanal
-  currency: 'HNL' | 'USD' // Lempiras o Dólares
+  currency: DisplayCurrency
   calculation_mode?: 'daily' | 'hourly' | 'admin_floor' // Default empresa
   semanal_proration?: 'proportional' | 'fixed' // Semanal: proporcional a días o monto fijo (mensual/4)
   incomplete_record_default_hours?: number | null // Horas por defecto si falta check_out (solo hourly)
@@ -112,22 +114,19 @@ interface PayrollConfigEditorProps {
 
 export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfigEditorProps) {
   console.log('🚀 PayrollConfigEditor: Component mounted/rendered', { companyId })
+  const { countryCode, currency: countryCurrency, labels: statutoryLabels } = useCompanyMoney()
+  const hideRap = countryCode === 'GTM' || statutoryLabels.secondarySocial === '—'
   
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState(false)
-  
-  const [config, setConfig] = useState<PayrollConfig>({
+  const emptyConfig = (): PayrollConfig => ({
     payment_frequency: 'biweekly',
-    currency: 'HNL',
+    currency: countryCurrency,
     calculation_mode: 'daily',
     incomplete_record_default_hours: null,
     ordinary_hours_override: null,
     pay_overtime: true,
     legal_deductions: {
       ihss: true,
-      rap: true,
+      rap: !hideRap,
       isr: true,
       infop: false
     },
@@ -144,6 +143,13 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
     calculation_config: {},
     calculation_script: null
   })
+
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState(false)
+  
+  const [config, setConfig] = useState<PayrollConfig>(emptyConfig)
 
   const [initialConfig, setInitialConfig] = useState<PayrollConfig | null>(null)
   const [hasChangesState, setHasChangesState] = useState(false)
@@ -280,7 +286,7 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
   const buildPayrollConfigFromApiResponse = (apiConfig: any): PayrollConfig => {
     return {
       payment_frequency: apiConfig.payment_frequency || 'biweekly',
-      currency: apiConfig.currency || 'HNL',
+      currency: apiConfig.currency || countryCurrency,
       calculation_mode: apiConfig.calculation_mode || 'daily',
       incomplete_record_default_hours: apiConfig.incomplete_record_default_hours ?? null,
       ordinary_hours_override:
@@ -289,7 +295,7 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
           : null,
       legal_deductions: {
         ihss: apiConfig.legal_deductions?.ihss ?? true,
-        rap: apiConfig.legal_deductions?.rap ?? true,
+        rap: hideRap ? false : (apiConfig.legal_deductions?.rap ?? true),
         isr: apiConfig.legal_deductions?.isr ?? true,
         infop: apiConfig.legal_deductions?.infop ?? false
       },
@@ -342,34 +348,7 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
         } else {
           // No config exists yet, use defaults
           console.log('ℹ️ PayrollConfigEditor: No config found, using defaults')
-          const defaultConfig: PayrollConfig = {
-            payment_frequency: 'biweekly',
-            currency: 'HNL',
-            calculation_mode: 'daily',
-            incomplete_record_default_hours: null,
-            ordinary_hours_override: null,
-            legal_deductions: {
-              ihss: true,
-              rap: true,
-              isr: true,
-              infop: false
-            },
-            payroll_deduction_mode: 'CON',
-            payment_cut_dates: {
-              biweekly_type: 'standard',
-              biweekly_first_start: 1,
-              biweekly_first_end: 15,
-              biweekly_second_start: 16,
-              biweekly_second_end: 30,
-              monthly_type: 'standard',
-              monthly_start: 1,
-              monthly_end: 30
-            },
-            custom_fields: {},
-            calculation_config: {},
-            calculation_script: null,
-            pay_overtime: true
-          }
+          const defaultConfig = emptyConfig()
           setConfig(defaultConfig)
           setInitialConfig(defaultConfig)
           setOrdinaryHoursDraft('')
@@ -378,34 +357,7 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
         // No config exists yet, use defaults
         const errorData = await response.json().catch(() => ({}))
         console.log('⚠️ PayrollConfigEditor: API returned non-OK status, using defaults:', errorData)
-        const defaultConfig: PayrollConfig = {
-          payment_frequency: 'biweekly',
-          currency: 'HNL',
-          calculation_mode: 'daily',
-          incomplete_record_default_hours: null,
-          ordinary_hours_override: null,
-          legal_deductions: {
-            ihss: true,
-            rap: true,
-            isr: true,
-            infop: false
-          },
-          payroll_deduction_mode: 'CON',
-          payment_cut_dates: {
-            biweekly_type: 'standard',
-            biweekly_first_start: 1,
-            biweekly_first_end: 15,
-            biweekly_second_start: 16,
-            biweekly_second_end: 30,
-            monthly_type: 'standard',
-            monthly_start: 1,
-            monthly_end: 30
-          },
-          custom_fields: {},
-          calculation_config: {},
-          calculation_script: null,
-          pay_overtime: true
-        }
+        const defaultConfig = emptyConfig()
         setConfig(defaultConfig)
         setInitialConfig(defaultConfig)
         setOrdinaryHoursDraft('')
@@ -613,8 +565,13 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
     }
     
     if (cfg.currency !== initialConfig.currency) {
-      const oldCurr = initialConfig.currency === 'HNL' ? 'Lempiras' : 'Dólares'
-      const newCurr = cfg.currency === 'HNL' ? 'Lempiras' : 'Dólares'
+      const currencyNoun: Record<DisplayCurrency, string> = {
+        HNL: 'Lempiras',
+        USD: 'Dólares',
+        GTQ: 'Quetzales',
+      }
+      const oldCurr = currencyNoun[initialConfig.currency] || initialConfig.currency
+      const newCurr = currencyNoun[cfg.currency] || cfg.currency
       changes.push(`moneda de ${oldCurr} a ${newCurr}`)
     }
     
@@ -1052,7 +1009,7 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
                     name="currency"
                     value="HNL"
                     checked={config.currency === 'HNL'}
-                    onChange={(e) => setConfig(prev => ({ ...prev, currency: e.target.value as 'HNL' | 'USD' }))}
+                    onChange={(e) => setConfig(prev => ({ ...prev, currency: e.target.value as DisplayCurrency }))}
                     className="w-4 h-4 text-blue-600"
                   />
                   <DollarSign className="h-4 w-4 text-green-300" />
@@ -1064,11 +1021,23 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
                     name="currency"
                     value="USD"
                     checked={config.currency === 'USD'}
-                    onChange={(e) => setConfig(prev => ({ ...prev, currency: e.target.value as 'HNL' | 'USD' }))}
+                    onChange={(e) => setConfig(prev => ({ ...prev, currency: e.target.value as DisplayCurrency }))}
                     className="w-4 h-4 text-blue-600"
                   />
                   <DollarSign className="h-4 w-4 text-blue-300" />
                   <span className="text-white">Dólares (USD)</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer p-3 glass border border-white/20 rounded-lg hover:border-blue-400/50 transition-colors">
+                  <input
+                    type="radio"
+                    name="currency"
+                    value="GTQ"
+                    checked={config.currency === 'GTQ'}
+                    onChange={(e) => setConfig(prev => ({ ...prev, currency: e.target.value as DisplayCurrency }))}
+                    className="w-4 h-4 text-blue-600"
+                  />
+                  <DollarSign className="h-4 w-4 text-emerald-300" />
+                  <span className="text-white">Quetzales (GTQ)</span>
                 </label>
                 </div>
               </div>
@@ -1108,8 +1077,9 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
                     }))}
                     className="w-4 h-4 text-purple-600 rounded"
                   />
-                  <span className="text-white">IHSS</span>
+                  <span className="text-white">{statutoryLabels.primarySocial}</span>
                 </label>
+                {!hideRap && (
                 <label className="flex items-center gap-2 cursor-pointer p-3 glass border border-white/20 rounded-lg hover:border-purple-400/50 transition-colors">
                   <input
                     type="checkbox"
@@ -1120,8 +1090,9 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
                     }))}
                     className="w-4 h-4 text-purple-600 rounded"
                   />
-                  <span className="text-white">RAP</span>
+                  <span className="text-white">{statutoryLabels.secondarySocial}</span>
                 </label>
+                )}
                 <label className="flex items-center gap-2 cursor-pointer p-3 glass border border-white/20 rounded-lg hover:border-purple-400/50 transition-colors">
                   <input
                     type="checkbox"
@@ -1132,7 +1103,7 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
                     }))}
                     className="w-4 h-4 text-purple-600 rounded"
                   />
-                  <span className="text-white">ISR</span>
+                  <span className="text-white">{statutoryLabels.incomeTax}</span>
                 </label>
                 <label className="flex items-center gap-2 cursor-pointer p-3 glass border border-white/20 rounded-lg hover:border-purple-400/50 transition-colors">
                   <input

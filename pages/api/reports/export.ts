@@ -11,6 +11,7 @@ import { getCustomFields, calculatePayroll } from '../../../lib/payroll-client-s
 import { getBiweeklyPeriodDates } from '../../../lib/payroll/period-dates'
 import { normalizeCountryCode, type CountryCode } from '../../../lib/country/supported'
 import { reportFormatForCountry } from '../../../lib/country/payroll-labels'
+import { formatPdfMoney, resolvePayrollDisplayCurrency } from '../../../lib/country/display-money'
 import { createEmployeeSalaryClient } from '../../../lib/security/employee-data-access'
 import { createAdminClient } from '../../../lib/supabase/server'
 import { fetchAttendanceReportDataForExport } from '../../../lib/reports/fetch-attendance-report-data'
@@ -122,6 +123,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     
     const companyCountry = normalizeCountryCode(company?.country_code)
     reportData.reportFmt = reportFormatForCountry(companyCountry)
+    reportData.countryCode = companyCountry
     if (company) {
       reportData.companyName = company.name
     }
@@ -164,7 +166,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       } else if (reportType === 'employees') {
         return generateEmployeesPDF(res, reportData, company?.name, resolvedConfig)
       } else {
-        return generatePDFReport(res, reportData, dateFilter, company?.name)
+        return generatePDFReport(res, reportData, dateFilter, company?.name, companyCountry)
       }
     } else {
       return generateCSVReport(res, reportData, dateFilter, reportType, resolvedConfig)
@@ -292,9 +294,10 @@ async function generateReportData(supabase: any, dateFilter: any, companyId: str
   }
 }
 
-function generatePDFReport(res: NextApiResponse, reportData: ReportData, dateFilter: any, companyName?: string) {
+function generatePDFReport(res: NextApiResponse, reportData: ReportData, dateFilter: any, companyName?: string, countryCode?: CountryCode) {
   try {
     const PDFDocument = require('pdfkit')
+    const money = (n: number) => formatPdfMoney(n, resolvePayrollDisplayCurrency(countryCode))
     const doc = new PDFDocument({ 
       size: 'A4', 
       layout: 'portrait', 
@@ -308,8 +311,7 @@ function generatePDFReport(res: NextApiResponse, reportData: ReportData, dateFil
       }
     })
     
-    const formatHNL = (n: number) => `L. ${Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-    
+    const formatHNL = (n: number) => money(n)
     let buffers: Buffer[] = []
 
     doc.on('data', (chunk: Buffer) => buffers.push(chunk))
@@ -512,14 +514,20 @@ function generateAttendanceCSV(
 
 function generatePayrollCSV(
   res: NextApiResponse,
-  reportData: { payroll: any[]; dateFilter: any; reportFmt?: import('../../../lib/country/payroll-labels').ReportFormatContext },
+  reportData: {
+    payroll: any[]
+    dateFilter: any
+    reportFmt?: import('../../../lib/country/payroll-labels').ReportFormatContext
+    countryCode?: string
+  },
   resolvedConfig: ResolvedReportConfig
 ) {
   const { columns } = resolvedConfig
   const employees = (reportData.payroll || []).map((r: any) => r.employees).filter(Boolean)
   const headers = columns.map((c) => c.label)
   const rows = renderPayrollRows(reportData.payroll || [], employees, columns, reportData.reportFmt)
-  const formatHNL = (n: number) => `L. ${Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+  const formatHNL = (n: number) =>
+    formatPdfMoney(n, resolvePayrollDisplayCurrency(reportData.countryCode))
   let csvContent = `Reporte de Nómina\n`
   csvContent += `Período: ${reportData.dateFilter.startDate} - ${reportData.dateFilter.endDate}\n`
   csvContent += `Fecha de generación: ${formatDateForHonduras(nowInHonduras())}\n`
@@ -574,7 +582,8 @@ function generateCSVReport(
       return generateEmployeesCSV(res, reportData, resolvedConfig)
     }
     // Fallback: general report (backward compatibility when reportData has stats)
-    const formatHNL = (n: number) => `L. ${Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    const formatHNL = (n: number) =>
+      formatPdfMoney(n, resolvePayrollDisplayCurrency(reportData.countryCode))
     let csvContent = 'REPORTE DE ESTADÍSTICAS\n'
     csvContent += `Período: ${dateFilter?.startDate || ''} - ${dateFilter?.endDate || ''}\n`
     csvContent += `Fecha de generación: ${formatDateForHonduras(nowInHonduras())}\n\n`
@@ -870,7 +879,8 @@ async function generatePayrollExcel(
       { header: 'Valor', key: 'value', width: 15 }
     ]
 
-    const formatHNL = (n: number) => `L. ${Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    const formatHNL = (n: number) =>
+      formatPdfMoney(n, resolvePayrollDisplayCurrency(reportData.countryCode))
     const totalBruto = reportData.payroll.reduce((sum: number, r: any) => sum + (r.gross_salary || 0), 0)
     const totalDeducciones = reportData.payroll.reduce((sum: number, r: any) => sum + (r.total_deductions || 0), 0)
     const totalNeto = reportData.payroll.reduce((sum: number, r: any) => sum + (r.net_salary || 0), 0)

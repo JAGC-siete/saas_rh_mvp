@@ -7,6 +7,8 @@ import {
   validatePayrollDeductionModeForFrequency,
 } from '../../../lib/payroll/deduction-mode'
 import { userCanAccessFullSettings } from '../../../lib/security/settings-access'
+import { normalizeCountryCode } from '../../../lib/country/supported'
+import { resolvePayrollDisplayCurrency } from '../../../lib/country/display-money'
 
 /**
  * API para gestionar configuraciones de payroll por empresa
@@ -155,16 +157,24 @@ async function getPayrollConfig(
           monthly_start: 1,
           monthly_end: 30
         }
+    const { data: companyRow } = await supabase
+      .from('companies')
+      .select('country_code')
+      .eq('id', companyId)
+      .maybeSingle()
+    const country = normalizeCountryCode(companyRow?.country_code)
+
     const configResponse = {
       ...data,
       payment_frequency: mapFreqToFrontend(paymentFrequency),
-      currency: metadata.currency || 'HNL',
+      currency: resolvePayrollDisplayCurrency(country, metadata.currency),
+      country_code: country,
       calculation_mode: data.calculation_mode ?? metadata.calculation_mode ?? 'daily',
       incomplete_record_default_hours: data.incomplete_record_default_hours ?? metadata.incomplete_record_default_hours ?? null,
       semanal_proration: metadata.semanal_proration || 'proportional',
       legal_deductions: metadata.legal_deductions || {
         ihss: true,
-        rap: true,
+        rap: country !== 'GTM',
         isr: true,
         infop: false
       },
@@ -312,13 +322,21 @@ async function upsertPayrollConfig(
       payment_frequency || (mergedMetaFromBody.payment_frequency as string) || 'biweekly'
     const metaPaymentFrequency = mapFreqToMeta(resolvedPaymentFrequency)
 
+    const { data: companyRow } = await supabase
+      .from('companies')
+      .select('country_code')
+      .eq('id', companyId)
+      .maybeSingle()
+    const country = normalizeCountryCode(companyRow?.country_code)
+
     const payrollMetadata: Record<string, unknown> = {
       ...mergedMetaFromBody,
       payment_frequency: metaPaymentFrequency,
-      currency: currency || 'HNL',
+      country_code: country,
+      currency: resolvePayrollDisplayCurrency(country, currency),
       legal_deductions: legal_deductions || {
         ihss: true,
-        rap: true,
+        rap: country !== 'GTM',
         isr: true,
         infop: false
       },

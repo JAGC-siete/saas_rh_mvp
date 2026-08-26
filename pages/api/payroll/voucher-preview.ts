@@ -2,7 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import { requireCompanyAccess } from '../../../lib/auth/api-auth-fixed'
 import { buildVoucherFromRunLine } from '../../../lib/payroll/voucher-from-run-line'
 import { resolveCanonicalVoucherRunLineId } from '../../../lib/payroll/resolve-voucher-run-line'
-import { buildVoucherPdfOptions } from '../../../lib/payroll/voucher-pdf-options'
+import { buildVoucherPdfOptions, withCompanyMoneyOptions } from '../../../lib/payroll/voucher-pdf-options'
 import { buildVoucherPreviewPayload } from '../../../lib/payroll/voucher-preview'
 import { resolveReportConfig } from '../../../lib/reports/column-resolver'
 import { createSuccessResponse, createErrorResponse } from '../../../lib/security/api-responses'
@@ -13,7 +13,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const { supabase, companyId, role } = await requireCompanyAccess(req, res)
+    const { supabase, companyId, role, companyCountryCode } = await requireCompanyAccess(req, res)
 
     if (!companyId) {
       return res.status(400).json(createErrorResponse('Company ID es requerido', 'VALIDATION_ERROR'))
@@ -33,7 +33,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const canonicalRunLineId = await resolveCanonicalVoucherRunLineId(supabase, companyId, runLineId)
     const voucherData = await buildVoucherFromRunLine(supabase, companyId, canonicalRunLineId)
     const resolvedConfig = await resolveReportConfig(companyId, 'voucher', supabase)
-    const pdfOptions = buildVoucherPdfOptions(resolvedConfig)
+    const pdfOptions = withCompanyMoneyOptions(buildVoucherPdfOptions(resolvedConfig), companyCountryCode)
     const preview = buildVoucherPreviewPayload(canonicalRunLineId, voucherData, pdfOptions)
 
     return res.status(200).json(createSuccessResponse({ preview }))

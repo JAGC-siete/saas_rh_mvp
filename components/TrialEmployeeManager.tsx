@@ -3,6 +3,7 @@ import { formatDateOnlyForHonduras } from '../lib/timezone'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
 import { Button } from './ui/button'
 import { EyeIcon, BuildingOfficeIcon, UserIcon, CurrencyDollarIcon, TrophyIcon } from '@heroicons/react/24/outline'
+import { useCompanyMoney } from '../lib/hooks/useCompanyMoney'
 
 interface TrialEmployee {
   id: string
@@ -27,6 +28,7 @@ interface TrialEmployeeManagerProps {
 }
 
 export default function TrialEmployeeManager({ tenant }: TrialEmployeeManagerProps) {
+  const { format } = useCompanyMoney()
   const [employees, setEmployees] = useState<TrialEmployee[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -56,10 +58,7 @@ export default function TrialEmployeeManager({ tenant }: TrialEmployeeManagerPro
   }
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('es-HN', {
-      style: 'currency',
-      currency: 'HNL'
-    }).format(amount)
+    return format(amount)
   }
 
   const formatDate = (dateString: string) => {

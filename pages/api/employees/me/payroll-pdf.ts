@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { requireUser } from '../../../../lib/auth/requireUser'
 import { generateEmployeeReceiptPDF } from '../../../../lib/payroll/receipt'
-import { buildVoucherPdfOptions } from '../../../../lib/payroll/voucher-pdf-options'
+import { buildVoucherPdfOptions, withCompanyMoneyOptions } from '../../../../lib/payroll/voucher-pdf-options'
 import { resolveReportConfig } from '../../../../lib/reports/column-resolver'
 import { calculatePeriodBaseSalary, normalizeFrequency } from '../../../../lib/payroll/calculate-period-base-salary'
 import { loadOvertimeDailyBreakdownSheet } from '../../../../lib/payroll/overtime-daily-breakdown'
@@ -127,12 +127,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const resolvedConfig = await resolveReportConfig(userProfile.company_id, 'voucher', supabase)
-    const pdfOptions = buildVoucherPdfOptions(resolvedConfig)
     const { data: company } = await supabase
       .from('companies')
-      .select('name')
+      .select('name, country_code')
       .eq('id', userProfile.company_id)
       .single()
+    const pdfOptions = withCompanyMoneyOptions(buildVoucherPdfOptions(resolvedConfig), company?.country_code)
 
     const pdf = await generateEmployeeReceiptPDF({
       employee_code: record.employees?.employee_code,

@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/
 import { Input } from './ui/input'
 import { useAuth } from '../lib/auth'
 import { useCompanyContext } from '../lib/useCompanyContext'
+import { useCompanyMoney } from '../lib/hooks/useCompanyMoney'
 import { EmployeeShaped, isSalaryMasked } from '../lib/types/employee-shaped'
 import { useSalaryFieldAccess } from '../lib/hooks/useSalaryFieldAccess'
 import SensitiveField from './security/SensitiveField'
@@ -69,10 +70,6 @@ const INITIAL_FORM_DATA = {
   termination_reason_detail: ''
 }
 
-const HNL_CURRENCY_FORMATTER = new Intl.NumberFormat('es-HN', {
-  style: 'currency',
-  currency: 'HNL'
-})
 const EMPLOYEE_DETAIL_TABS = [
   { id: 'personal', label: 'Información Personal' },
   { id: 'contract', label: 'Información Contractual' },
@@ -94,11 +91,6 @@ const ATTENDANCE_STATUS_LABEL: Record<'present' | 'absent' | 'late' | 'not_regis
   late: 'Tardanza',
   not_registered: 'No registrado',
   unknown: 'No disponible'
-}
-
-const formatCurrency = (value?: number | null) => {
-  if (value === null || value === undefined) return 'No especificado'
-  return HNL_CURRENCY_FORMATTER.format(value)
 }
 
 const formatDateDisplay = (value?: string | null) => {
@@ -197,6 +189,11 @@ function employeeSectionHeading(sortBy: Exclude<EmployeeListSortBy, 'name'>, gke
 export default function EmployeeManager({ companyId: propCompanyId }: { companyId?: string }) {
   const { user, loading: sessionLoading, userProfile } = useAuth()
   const { companyId: contextCompanyId, loading: companyLoading } = useCompanyContext()
+  const { format: formatMoney, mask: salaryMask } = useCompanyMoney()
+  const formatCurrency = (value?: number | null) => {
+    if (value === null || value === undefined) return 'No especificado'
+    return formatMoney(value)
+  }
   
   // Usar companyId de props si está disponible, sino del contexto
   const companyId = propCompanyId || contextCompanyId
@@ -1693,6 +1690,7 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
                         masked={isSalaryMasked(selectedEmployee) || !canViewSalary}
                         displayMode={salaryDisplayMode}
                         formatValue={formatCurrency}
+                        mask={salaryMask}
                       />
                       <div>
                         <label className="text-sm font-medium text-gray-400">Banco</label>

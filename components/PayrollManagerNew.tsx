@@ -3,6 +3,7 @@ import { Card, CardContent } from './ui/card'
 import { Button } from './ui/button'
 import { Icon } from './Icon'
 import { usePayrollManager } from '../lib/hooks/usePayrollManager'
+import { useCompanyMoney } from '../lib/hooks/useCompanyMoney'
 import UnifiedPayrollTable from './UnifiedPayrollTable'
 import ConfigNomina from './ConfigNomina'
 import CustomPayrollFieldsForm from './CustomPayrollFieldsForm'
@@ -22,6 +23,7 @@ interface ModalState {
 export default function PayrollManagerNew({ companyId: propCompanyId }: { companyId?: string }) {
   // Use the new unified payroll manager
   const payroll = usePayrollManager()
+  const { format } = useCompanyMoney()
   
   // Modal state for editing custom fields - combined into single state object
   const [showCustomFieldsModal, setShowCustomFieldsModal] = useState(false)
@@ -449,7 +451,7 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
                   {payroll.loading ? (
                     <div className="animate-pulse bg-white/20 h-8 w-16 rounded"></div>
                   ) : (
-                    payroll.unifiedData?.resumen.total_bruto ? `L. ${payroll.unifiedData.resumen.total_bruto.toLocaleString('es-HN')}` : 'L. 0'
+                    payroll.unifiedData?.resumen.total_bruto ? format(payroll.unifiedData.resumen.total_bruto) : format(0)
                   )}
                 </p>
               </div>
@@ -470,7 +472,7 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
                   {payroll.loading ? (
                     <div className="animate-pulse bg-white/20 h-8 w-16 rounded"></div>
                   ) : (
-                    `L. ${totalDeducciones.toLocaleString('es-HN')}`
+                    format(totalDeducciones)
                   )}
                 </p>
               </div>
@@ -491,7 +493,7 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
                   {payroll.loading ? (
                     <div className="animate-pulse bg-white/20 h-8 w-16 rounded"></div>
                   ) : (
-                    payroll.unifiedData?.resumen.total_neto ? `L. ${payroll.unifiedData.resumen.total_neto.toLocaleString('es-HN')}` : 'L. 0'
+                    payroll.unifiedData?.resumen.total_neto ? format(payroll.unifiedData.resumen.total_neto) : format(0)
                   )}
                 </p>
               </div>

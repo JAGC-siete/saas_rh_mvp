@@ -7,6 +7,11 @@ import {
   transactionalParagraph,
   wrapTransactionalEmail,
 } from './transactional-layout'
+import {
+  formatPdfMoney,
+  resolvePayrollDisplayCurrency,
+  statutoryUiLabels,
+} from '../country/display-money'
 
 export interface PayrollReceiptEmailData {
   employeeName: string
@@ -17,10 +22,11 @@ export interface PayrollReceiptEmailData {
   rap: number
   isr: number
   netSalary: number
+  countryCode?: string | null
 }
 
-function formatLempiras(amount: number): string {
-  return `L. ${amount.toFixed(2)}`
+function money(amount: number, countryCode?: string | null): string {
+  return formatPdfMoney(amount, resolvePayrollDisplayCurrency(countryCode))
 }
 
 export function buildPayrollReceiptEmailSubject(periodLabel: string): string {
@@ -28,6 +34,7 @@ export function buildPayrollReceiptEmailSubject(periodLabel: string): string {
 }
 
 export function buildPayrollReceiptEmailText(data: PayrollReceiptEmailData): string {
+  const labels = statutoryUiLabels(data.countryCode)
   const lines = [
     `Estimado/a ${data.employeeName},`,
     '',
@@ -39,12 +46,14 @@ export function buildPayrollReceiptEmailText(data: PayrollReceiptEmailData): str
   if (data.hoursWorked != null) {
     lines.push(`• Horas trabajadas: ${data.hoursWorked}`)
   }
+  lines.push(`• Salario bruto: ${money(data.grossSalary, data.countryCode)}`)
+  lines.push(`• ${labels.primarySocial}: ${money(data.ihss, data.countryCode)}`)
+  if (labels.secondarySocial !== '—') {
+    lines.push(`• ${labels.secondarySocial}: ${money(data.rap, data.countryCode)}`)
+  }
   lines.push(
-    `• Salario bruto: ${formatLempiras(data.grossSalary)}`,
-    `• IHSS: ${formatLempiras(data.ihss)}`,
-    `• RAP: ${formatLempiras(data.rap)}`,
-    `• ISR: ${formatLempiras(data.isr)}`,
-    `• Salario neto: ${formatLempiras(data.netSalary)}`,
+    `• ${labels.incomeTax}: ${money(data.isr, data.countryCode)}`,
+    `• Salario neto: ${money(data.netSalary, data.countryCode)}`,
     '',
     'Si tiene alguna pregunta, contacte a su manager de recursos humanos.',
     '',
@@ -56,18 +65,21 @@ export function buildPayrollReceiptEmailText(data: PayrollReceiptEmailData): str
 }
 
 export function buildPayrollReceiptEmailHtml(data: PayrollReceiptEmailData): string {
-  const rows = []
+  const labels = statutoryUiLabels(data.countryCode)
+  const rows: Array<{ label: string; value: string; emphasize?: boolean }> = []
 
   if (data.hoursWorked != null) {
     rows.push({ label: 'Horas trabajadas', value: String(data.hoursWorked) })
   }
 
+  rows.push({ label: 'Salario bruto', value: money(data.grossSalary, data.countryCode) })
+  rows.push({ label: labels.primarySocial, value: money(data.ihss, data.countryCode) })
+  if (labels.secondarySocial !== '—') {
+    rows.push({ label: labels.secondarySocial, value: money(data.rap, data.countryCode) })
+  }
   rows.push(
-    { label: 'Salario bruto', value: formatLempiras(data.grossSalary) },
-    { label: 'IHSS', value: formatLempiras(data.ihss) },
-    { label: 'RAP', value: formatLempiras(data.rap) },
-    { label: 'ISR', value: formatLempiras(data.isr) },
-    { label: 'Salario neto', value: formatLempiras(data.netSalary), emphasize: true }
+    { label: labels.incomeTax, value: money(data.isr, data.countryCode) },
+    { label: 'Salario neto', value: money(data.netSalary, data.countryCode), emphasize: true }
   )
 
   const bodyHtml = [
@@ -146,3 +158,4 @@ export function buildVoucherLinkEmailHtml(data: VoucherLinkEmailData): string {
     footerNote: 'Correo automático de nómina. No responda a este mensaje.',
   })
 }
+

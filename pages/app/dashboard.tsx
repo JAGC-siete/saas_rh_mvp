@@ -1,10 +1,11 @@
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/router'
 import ProtectedRoute from '../../components/ProtectedRoute'
 import DashboardLayout from '../../components/DashboardLayout'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
 import { useCompanyContext } from '../../lib/useCompanyContext'
+import { useCompanyMoney } from '../../lib/hooks/useCompanyMoney'
 import { formatDateOnlyForHonduras } from '../../lib/timezone'
 import { useAuth } from '../../lib/auth'
 import { canAccessPayrollNavigation } from '../../lib/auth/role-access'
@@ -60,12 +61,7 @@ export default function Dashboard() {
     }
   }, [authLoading, userProfile, router])
 
-  // Memo: evitar recrear el formateador en cada render/llamada
-  const currencyFormatter = useMemo(
-    () => new Intl.NumberFormat('es-HN', { style: 'currency', currency: 'HNL' }),
-    []
-  )
-  const formatCurrency = (amount: number) => currencyFormatter.format(amount ?? 0)
+  const { format } = useCompanyMoney()
 
   // useCallback con soporte para AbortSignal; no cambia firma pública del componente
   const fetchDashboardData = useCallback(async (signal?: AbortSignal) => {
@@ -203,9 +199,9 @@ export default function Dashboard() {
                 <span className="text-2xl"></span>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-white">{formatCurrency(stats.totalPayroll)}</div>
+                <div className="text-2xl font-bold text-white">{format(stats.totalPayroll)}</div>
                 <p className="text-xs text-gray-300">
-                  Promedio: {formatCurrency(stats.averageSalary)}
+                  Promedio: {format(stats.averageSalary)}
                 </p>
               </CardContent>
             </Card>
@@ -313,7 +309,7 @@ export default function Dashboard() {
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className="font-medium text-white">{formatCurrency(payroll.net_salary ?? 0)}</div>
+                        <div className="font-medium text-white">{format(payroll.net_salary ?? 0)}</div>
                         <div className="text-sm text-gray-300 capitalize">{payroll.status}</div>
                       </div>
                     </div>

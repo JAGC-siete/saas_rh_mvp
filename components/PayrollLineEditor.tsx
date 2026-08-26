@@ -6,6 +6,7 @@ import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Textarea } from './ui/textarea'
 import { PayrollLine, EditField } from '../types/payroll'
+import { useCompanyMoney } from '../lib/hooks/useCompanyMoney'
 
 interface PayrollLineEditorProps {
   line: PayrollLine
@@ -13,20 +14,23 @@ interface PayrollLineEditorProps {
   isEditing: boolean
 }
 
-const EDITABLE_FIELDS: { key: EditField; label: string; type: 'number' | 'currency' }[] = [
-  { key: 'days_worked', label: 'Días Trabajados', type: 'number' },
-  { key: 'total_earnings', label: 'Salario Quincenal', type: 'currency' },
-  { key: 'IHSS', label: 'IHSS', type: 'currency' },
-  { key: 'RAP', label: 'RAP', type: 'currency' },
-  { key: 'ISR', label: 'ISR', type: 'currency' },
-  { key: 'total', label: 'Salario Neto', type: 'currency' }
-]
-
 export const PayrollLineEditor: React.FC<PayrollLineEditorProps> = ({
   line,
   onEdit,
   isEditing
 }) => {
+  const { countryCode, labels, format } = useCompanyMoney()
+  const EDITABLE_FIELDS: { key: EditField; label: string; type: 'number' | 'currency' }[] = [
+    { key: 'days_worked', label: 'Días Trabajados', type: 'number' },
+    { key: 'total_earnings', label: 'Salario Quincenal', type: 'currency' },
+    { key: 'IHSS', label: labels.primarySocial, type: 'currency' },
+    { key: 'RAP', label: labels.secondarySocial === '—' ? 'RAP' : labels.secondarySocial, type: 'currency' },
+    { key: 'ISR', label: labels.incomeTax, type: 'currency' },
+    { key: 'total', label: 'Salario Neto', type: 'currency' }
+  ]
+  const visibleFields = countryCode === 'GTM'
+    ? EDITABLE_FIELDS.filter((f) => f.key !== 'RAP')
+    : EDITABLE_FIELDS
   const [editingField, setEditingField] = useState<EditField | null>(null)
   const [newValue, setNewValue] = useState<string>('')
   const [reason, setReason] = useState<string>('')
@@ -70,11 +74,7 @@ export const PayrollLineEditor: React.FC<PayrollLineEditorProps> = ({
 
   const formatValue = (value: number, type: 'number' | 'currency') => {
     if (type === 'currency') {
-      return new Intl.NumberFormat('es-HN', {
-        style: 'currency',
-        currency: 'HNL',
-        minimumFractionDigits: 2
-      }).format(value)
+      return format(value)
     }
     return value.toString()
   }
@@ -93,7 +93,7 @@ export const PayrollLineEditor: React.FC<PayrollLineEditorProps> = ({
     <>
       {/* Inline display with edit buttons */}
       <div className="space-y-2">
-        {EDITABLE_FIELDS.map(({ key, label, type }) => (
+        {visibleFields.map(({ key, label, type }) => (
           <div key={key} className="flex items-center justify-between p-2 border rounded">
             <div className="flex-1">
               <label className="text-sm font-medium text-gray-700">{label}</label>
@@ -126,7 +126,7 @@ export const PayrollLineEditor: React.FC<PayrollLineEditorProps> = ({
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
             <h3 className="text-lg font-medium mb-4">
-              Editar {EDITABLE_FIELDS.find(f => f.key === editingField)?.label}
+              Editar {visibleFields.find(f => f.key === editingField)?.label}
             </h3>
             
             <div className="space-y-4">

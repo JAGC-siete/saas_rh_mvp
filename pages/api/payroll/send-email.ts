@@ -21,7 +21,7 @@ import {
 import { generateEmployeeReceiptPDF } from '../../../lib/payroll/receipt'
 import { buildVoucherFromRunLine } from '../../../lib/payroll/voucher-from-run-line'
 import { resolveCanonicalVoucherRunLineId } from '../../../lib/payroll/resolve-voucher-run-line'
-import { buildVoucherPdfOptions } from '../../../lib/payroll/voucher-pdf-options'
+import { buildVoucherPdfOptions, withCompanyMoneyOptions } from '../../../lib/payroll/voucher-pdf-options'
 import { resolveReportConfig } from '../../../lib/reports/column-resolver'
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -148,7 +148,15 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     console.log(`Enviando ${lines.length} vouchers por email`)
 
     const voucherReportConfig = await resolveReportConfig(userProfile.company_id, 'voucher', supabase)
-    const voucherPdfOptions = buildVoucherPdfOptions(voucherReportConfig)
+    const { data: mailCompany } = await supabase
+      .from('companies')
+      .select('country_code')
+      .eq('id', userProfile.company_id)
+      .maybeSingle()
+    const voucherPdfOptions = withCompanyMoneyOptions(
+      buildVoucherPdfOptions(voucherReportConfig),
+      mailCompany?.country_code
+    )
 
     const results = []
 
@@ -190,6 +198,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           rap: line.eff_rap,
           isr: line.eff_isr,
           netSalary: line.eff_neto,
+          countryCode: mailCompany?.country_code,
         }
 
         const emailResult = await emailService.sendEmail(notificationConfig, {
