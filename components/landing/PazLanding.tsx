@@ -133,7 +133,7 @@ export default function PazLanding() {
         {/* Mismo patrón que MagneticHero: Tailwind grid + next/image en flujo (no fill). */}
         <section className="relative pt-8 sm:pt-12 pb-14 overflow-hidden">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,7fr)_minmax(0,3fr)] gap-8 lg:gap-12 items-center">
+            <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,7fr)_minmax(0,3fr)] gap-8 lg:gap-12 items-start">
               <div className="min-w-0 flex flex-col items-center lg:items-start text-center lg:text-left">
                 <span className="paz-badge">Remedio inmediato</span>
                 <h1 className="paz-serif paz-hero-title mb-6">
@@ -193,14 +193,7 @@ export default function PazLanding() {
 
         <hr className="paz-divider" />
 
-        <section id="paz-video" className="paz-section">
-          <div className="text-center mb-8">
-            <h2 className="paz-serif paz-section-title mb-4">Método revelado</h2>
-            <p className="paz-lead max-w-xl mx-auto">
-              Unos minutos de meditación sobre cómo cerrar planilla de manera pacífica, dirigida por
-              el viento y los servidores de SISU. Dejá tu correo. Tu herramienta nueva está aquí.
-            </p>
-          </div>
+        <section id="paz-video" className="paz-section" aria-label="Video del método">
           <PazVideoGate />
         </section>
 

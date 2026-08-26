@@ -1,5 +1,4 @@
 import { FormEvent, useEffect, useState } from 'react'
-import Image from 'next/image'
 import { useRouter } from 'next/router'
 import { LockClosedIcon, PlayIcon } from '@heroicons/react/24/solid'
 import { trackCTAClick } from '../../lib/analytics/googleAds'
@@ -132,23 +131,8 @@ export default function PazVideoGate() {
         {showTeaser ? (
           <div className="paz-video-teaser">
             <div className="paz-video-poster-wrap" aria-hidden>
-              <Image
-                src="/images/paz/cta-stress.jpg"
-                alt=""
-                fill
-                priority
-                sizes="(max-width: 832px) calc(100vw - 3rem), 52rem"
-                className="paz-video-poster paz-video-poster-stress"
-                style={{ objectFit: 'cover', objectPosition: 'center 38%' }}
-              />
-              <Image
-                src="/images/paz/cta-peace.jpg"
-                alt=""
-                fill
-                sizes="(max-width: 832px) calc(100vw - 3rem), 52rem"
-                className="paz-video-poster paz-video-poster-peace"
-                style={{ objectFit: 'cover', objectPosition: 'center 38%' }}
-              />
+              <div className="paz-video-poster paz-video-poster-stress" />
+              <div className="paz-video-poster paz-video-poster-peace" />
             </div>
             <div className="paz-video-teaser-scrim" aria-hidden />
             <div className="paz-video-teaser-body">

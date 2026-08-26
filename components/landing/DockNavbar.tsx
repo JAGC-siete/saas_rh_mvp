@@ -67,7 +67,7 @@ export default function DockNavbar({
   const topStyle = { top: `${16 + topOffsetPx}px` }
 
   const navSurface = isLight
-    ? 'bg-white/85 backdrop-blur-md border border-slate-200/80 shadow-sm'
+    ? 'bg-white border border-slate-200/80 shadow-sm isolate'
     : 'glass-modern border border-white/10'
   const linkClass = isLight
     ? 'text-slate-600 hover:text-slate-900 px-2.5 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-colors whitespace-nowrap'
@@ -93,7 +93,7 @@ export default function DockNavbar({
 
   return (
     <header
-      className="fixed left-0 right-0 z-50 px-4 pointer-events-none"
+      className="fixed left-0 right-0 z-[100] px-4 pointer-events-none isolate"
       style={topStyle}
     >
       <motion.nav
