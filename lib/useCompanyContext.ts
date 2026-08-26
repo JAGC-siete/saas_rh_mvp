@@ -5,6 +5,8 @@ import { useAuth } from './auth'
 interface CompanyInfo {
   id: string
   name: string
+  country_code?: string
+  timezone?: string
   settings?: any
 }
 
@@ -89,7 +91,7 @@ export function useCompanyContext() {
         
         const { data: companyData, error: companyError } = await supabase
           .from('companies')
-          .select('id, name, settings')
+          .select('id, name, country_code, timezone, settings')
           .eq('id', currentCompanyId)
           .single()
         

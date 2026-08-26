@@ -1,6 +1,7 @@
 import { Buffer } from 'buffer'
 import { normalizeCountryCode } from '../country/supported'
 import { statutoryDeductionLabels } from '../country/payroll-labels'
+import { formatPdfMoney, resolvePayrollDisplayCurrency } from '../country/display-money'
 import { formatDateForHonduras, formatDateTimeForHonduras } from '../timezone'
 import { formatPeriodRangeForDisplay } from './period-dates'
 import {
@@ -163,7 +164,8 @@ export async function generateConsolidatedPayrollPDF(
       const columnOrder = layout?.columnOrder ?? null
 
       // Configuración de payroll con valores por defecto
-      const currency = payrollConfig?.currency || 'HNL'
+      const jurisdictionCountry = normalizeCountryCode(payrollConfig?.country_code)
+      const currency = resolvePayrollDisplayCurrency(jurisdictionCountry, payrollConfig?.currency)
       const paymentFrequency = payrollConfig?.payment_frequency || 'biweekly'
       const paymentCutDates = payrollConfig?.payment_cut_dates || {
         biweekly_type: 'standard',
@@ -178,20 +180,8 @@ export async function generateConsolidatedPayrollPDF(
       
       const pdfText = (v: unknown) => (v == null ? '' : String(v))
 
-      const jurisdictionCountry = normalizeCountryCode(payrollConfig?.country_code)
       const dedLabels = statutoryDeductionLabels(jurisdictionCountry)
-
-      // Formateo dinámico de currency
-      const formatCurrency = (n: number) => {
-        const formatted = Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-        if (currency === 'USD') {
-          return `$${formatted}`
-        }
-        if (currency === 'GTQ') {
-          return `Q ${formatted}`
-        }
-        return `L. ${formatted}`
-      }
+      const formatCurrency = (n: number) => formatPdfMoney(n, currency)
       
       // Título dinámico según payment_frequency
       const payrollTitle = paymentFrequency === 'monthly' ? 'Planilla Mensual' : paymentFrequency === 'weekly' ? 'Planilla Semanal' : 'Planilla Quincenal'

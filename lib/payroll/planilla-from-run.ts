@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { normalizeCountryCode, type CountryCode } from '../country/supported'
+import { resolvePayrollDisplayCurrency } from '../country/display-money'
 import { calculatePayroll, getCustomFields } from '../payroll-client-specific'
 import {
   buildCustomDeductionsList,
@@ -296,7 +297,7 @@ export async function loadPlanillaFromRun(
           monthly_end: 30,
         }
 
-  const currency = String(payrollMetadata.currency || 'HNL')
+  const currency = resolvePayrollDisplayCurrency(company?.country_code, String(payrollMetadata.currency || ''))
   const pfRaw = payrollConfig?.payment_frequency ?? payrollMetadata.payment_frequency ?? 'biweekly'
   const paymentFrequency =
     pfRaw === 'mensual'

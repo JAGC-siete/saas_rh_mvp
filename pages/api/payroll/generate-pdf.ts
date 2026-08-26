@@ -2,6 +2,8 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 // import { createClient } from '../../../lib/supabase/server'
 import { requireUser } from '../../../lib/auth/requireUser'
 import { generateConsolidatedPayrollPDF, type PlanillaItem } from '../../../lib/payroll/report'
+import { normalizeCountryCode } from '../../../lib/country/supported'
+import { resolvePayrollDisplayCurrency } from '../../../lib/country/display-money'
 import {
   parsePayrollPdfGroupByQuery,
   payrollPdfGroupByFilenameSuffix
@@ -95,8 +97,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         ISR: Number(row.isr) || 0,
         total_deductions: Number(row.total_deductions) || 0,
         total: Number(row.net_salary) || 0,
-        notes_on_ingress: row.adj_bonus ? `Bono: L. ${row.adj_bonus.toFixed(2)}` : '',
-        notes_on_deductions: row.adj_discount ? `Descuento: L. ${row.adj_discount.toFixed(2)}` : '',
+        notes_on_ingress: row.adj_bonus ? `Bono: ${Number(row.adj_bonus).toFixed(2)}` : '',
+        notes_on_deductions: row.adj_discount ? `Descuento: ${Number(row.adj_discount).toFixed(2)}` : '',
         pay_type: payType,
         total_hours_worked: showHourCols ? totalHours : undefined,
         hourly_rate: showHourCols ? hourlyRate : undefined,
@@ -154,7 +156,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             monthly_start: 1,
             monthly_end: 30
           }
-    const currency = payrollMetadata.currency || 'HNL'
+    const { data: company } = await supabase
+      .from('companies')
+      .select('name, country_code')
+      .eq('id', companyId)
+      .single()
+
+    const country = normalizeCountryCode(company?.country_code)
+    const currency = resolvePayrollDisplayCurrency(country, payrollMetadata.currency)
     const pfRaw = payrollConfig?.payment_frequency ?? payrollMetadata.payment_frequency ?? 'biweekly'
     const paymentFrequency = pfRaw === 'mensual' ? 'monthly' : pfRaw === 'quincenal' ? 'biweekly' : pfRaw === 'semanal' ? 'weekly' : pfRaw
 
@@ -165,22 +174,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const legalDeductions = payrollMetadata.legal_deductions || {
       ihss: true,
-      rap: true,
+      rap: country !== 'GTM',
       isr: true
     }
-
-    const { data: company } = await supabase
-      .from('companies')
-      .select('name, country_code')
-      .eq('id', companyId)
-      .single()
 
     const pdfPayrollConfig = {
       currency,
       payment_frequency: paymentFrequency,
       payment_cut_dates: paymentCutDates,
       legal_deductions: legalDeductions,
-      country_code: company?.country_code || 'HND'
+      country_code: country
     }
 
     // Separate fixed and hourly employees (detalle UI: solo exact hourly → por hora)

@@ -2,17 +2,19 @@ import type { CountryCode } from '../country/supported'
 
 /**
  * Server-side flags to enable payroll engines beyond Honduras.
- * Set PAYROLL_COUNTRY_SLV_ENABLED=1 and PAYROLL_COUNTRY_GTM_ENABLED=1 when ready.
+ * SLV/GTM default ON (statutory JSON + fail-fast). Set =0 / false to disable.
  */
+function envFlagEnabled(value: string | undefined, defaultOn: boolean): boolean {
+  if (value == null || value.trim() === '') return defaultOn
+  const v = value.trim().toLowerCase()
+  if (v === '0' || v === 'false' || v === 'off') return false
+  if (v === '1' || v === 'true' || v === 'on') return true
+  return defaultOn
+}
+
 export function isPayrollCountryEngineEnabled(country: CountryCode): boolean {
   if (country === 'HND') return true
-  if (country === 'SLV') {
-    const v = process.env.PAYROLL_COUNTRY_SLV_ENABLED
-    return v === '1' || v === 'true'
-  }
-  if (country === 'GTM') {
-    const v = process.env.PAYROLL_COUNTRY_GTM_ENABLED
-    return v === '1' || v === 'true'
-  }
+  if (country === 'SLV') return envFlagEnabled(process.env.PAYROLL_COUNTRY_SLV_ENABLED, true)
+  if (country === 'GTM') return envFlagEnabled(process.env.PAYROLL_COUNTRY_GTM_ENABLED, true)
   return false
 }

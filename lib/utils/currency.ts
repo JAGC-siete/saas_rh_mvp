@@ -1,47 +1,66 @@
-// Centralized currency formatting utilities
-// Consistent formatting across the entire application
+import type { CountryCode } from '../country/supported'
+import { currencyForCountryCode, normalizeCountryCode } from '../country/supported'
+import { localeForCountry } from '../country/payroll-labels'
+import { formatMoneyForCountry, type DisplayCurrency } from '../country/display-money'
 
-export const formatCurrency = (value: number, options?: {
+export type FormatCurrencyOptions = {
   minimumFractionDigits?: number
   maximumFractionDigits?: number
   showSymbol?: boolean
-}): string => {
+  currency?: DisplayCurrency
+  locale?: string
+  countryCode?: CountryCode | string | null
+}
+
+export const formatCurrency = (value: number, options?: FormatCurrencyOptions): string => {
   const {
     minimumFractionDigits = 2,
     maximumFractionDigits = 2,
-    showSymbol = true
+    showSymbol = true,
+    countryCode,
+    currency: currencyOpt,
+    locale: localeOpt,
   } = options || {}
 
-  return new Intl.NumberFormat('es-HN', {
+  if (countryCode != null) {
+    return formatMoneyForCountry(value, countryCode, { minimumFractionDigits, maximumFractionDigits })
+  }
+
+  const currency = currencyOpt ?? 'HNL'
+  const locale = localeOpt ?? (currency === 'USD' ? 'es-SV' : currency === 'GTQ' ? 'es-GT' : 'es-HN')
+
+  return new Intl.NumberFormat(locale, {
     style: 'currency',
-    currency: 'HNL',
+    currency,
     minimumFractionDigits,
     maximumFractionDigits,
-    ...(showSymbol ? {} : { currencyDisplay: 'code' })
+    ...(showSymbol ? {} : { currencyDisplay: 'code' }),
   }).format(value)
 }
 
-// Short currency format for cards and metrics
-export const formatCurrencyShort = (value: number): string => {
-  return formatCurrency(value, {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0
-  })
+export const formatCurrencyShort = (value: number, countryCode?: CountryCode | string | null): string => {
+  if (countryCode != null) {
+    return formatMoneyForCountry(value, countryCode, { minimumFractionDigits: 0, maximumFractionDigits: 0 })
+  }
+  return formatCurrency(value, { minimumFractionDigits: 0, maximumFractionDigits: 0 })
 }
 
-// Long currency format for detailed tables
-export const formatCurrencyLong = (value: number): string => {
-  return formatCurrency(value, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  })
+export const formatCurrencyLong = (value: number, countryCode?: CountryCode | string | null): string => {
+  if (countryCode != null) {
+    return formatMoneyForCountry(value, countryCode)
+  }
+  return formatCurrency(value, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
-// Currency without symbol (for calculations)
-export const formatCurrencyValue = (value: number): string => {
-  return formatCurrency(value, {
+export const formatCurrencyValue = (value: number, countryCode?: CountryCode | string | null): string => {
+  const country = countryCode != null ? normalizeCountryCode(countryCode) : null
+  const currency = country ? currencyForCountryCode(country) : 'HNL'
+  const locale = country ? localeForCountry(country) : 'es-HN'
+  return new Intl.NumberFormat(locale, {
+    style: 'currency',
+    currency,
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-    showSymbol: false
-  })
+    currencyDisplay: 'code',
+  }).format(value)
 }

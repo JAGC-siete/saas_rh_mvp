@@ -1,5 +1,7 @@
 import { Buffer } from 'buffer'
-import { formatDateTimeForHonduras, nowInHonduras } from '../timezone'
+import { formatPdfMoney, resolvePayrollDisplayCurrency, type DisplayCurrency } from '../country/display-money'
+import { statutoryDeductionLabels } from '../country/payroll-labels'
+import { normalizeCountryCode } from '../country/supported'
 import { formatPeriodRangeForDisplay } from './period-dates'
 import {
   formatVoucherCompanyName,
@@ -243,8 +245,7 @@ function writeAmount(
   if (options?.bold) doc.font('Helvetica')
 }
 
-const formatHnlAmount = (n: number) =>
-  `L. ${Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+const formatHnlAmount = (n: number, currency: DisplayCurrency = 'HNL') => formatPdfMoney(n, currency)
 
 function formatHrsCell(hrs: number): string {
   if (!(hrs > 0)) return '—'
@@ -262,8 +263,10 @@ function drawOvertimeDailyBreakdownPage(
   primaryColor: string,
   companyName: string,
   periodDisplay: string,
-  logoBuffer?: Buffer | null
+  logoBuffer?: Buffer | null,
+  currency: DisplayCurrency = 'HNL'
 ) {
+  const formatHnlAmount = (n: number) => formatPdfMoney(n, currency)
   const LAND_W = 841.89
   const LAND_H = 595.28
   doc.addPage({ size: [LAND_W, LAND_H], margin: MARGIN })
@@ -515,8 +518,9 @@ export async function generateEmployeeReceiptPDF(
   return new Promise<Buffer>((resolve, reject) => {
     try {
       const PDFDocument = require('pdfkit')
-      const formatHNL = (n: number) =>
-        `L. ${Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+      const currency = resolvePayrollDisplayCurrency(options?.countryCode, options?.currency)
+      const formatAmount = (n: number) => formatPdfMoney(n, currency)
+      const dedLabels = statutoryDeductionLabels(normalizeCountryCode(options?.countryCode))
       const periodRangeText = formatPeriodRangeForDisplay(record.period_start, record.period_end)
       const periodDisplay = periodLabel ? `${periodLabel}: ${periodRangeText}` : periodRangeText
       const contentWidth = PAGE_WIDTH - MARGIN * 2
@@ -615,19 +619,19 @@ export async function generateEmployeeReceiptPDF(
         if (layout.showBaseSalary) {
           items.push({
             label: `${fieldLabel('base_salary', 'Salario base', options)}`,
-            amount: formatHNL(record.base_salary),
+            amount: formatAmount(record.base_salary),
           })
         }
         if (layout.hasSeptimoDia) {
           items.push({
             label: `${fieldLabel('septimo_dia', 'Séptimo día', options)}`,
-            amount: formatHNL(record.septimo_dia!),
+            amount: formatAmount(record.septimo_dia!),
           })
         }
         if (layout.hasOvertimePay) {
           items.push({
             label: overtimePayReceiptLabel(record, options),
-            amount: formatHNL(record.overtime_pay!),
+            amount: formatAmount(record.overtime_pay!),
           })
         }
 
@@ -641,32 +645,32 @@ export async function generateEmployeeReceiptPDF(
         const items: Array<{ label: string; amount: string }> = []
         if (sectionVisible('ihss', options)) {
           items.push({
-            label: `${fieldLabel('ihss', 'IHSS', options)}`,
-            amount: formatHNL(record.social_security),
+            label: `${fieldLabel('ihss', dedLabels.primarySocial, options)}`,
+            amount: formatAmount(record.social_security),
           })
         }
         if (sectionVisible('rap', options)) {
           items.push({
-            label: `${fieldLabel('rap', 'RAP', options)}`,
-            amount: formatHNL(record.professional_tax),
+            label: `${fieldLabel('rap', dedLabels.secondarySocial, options)}`,
+            amount: formatAmount(record.professional_tax),
           })
         }
         if (sectionVisible('isr', options)) {
           items.push({
             label: `${fieldLabel('isr', 'ISR', options)}`,
-            amount: formatHNL(record.income_tax),
+            amount: formatAmount(record.income_tax),
           })
         }
         if (shouldShowCustomDeductionLines(record, options) && record.custom_deductions?.length) {
           record.custom_deductions.forEach((ded) => {
-            items.push({ label: ded.name, amount: formatHNL(ded.amount) })
+            items.push({ label: ded.name, amount: formatAmount(ded.amount) })
           })
         }
 
         const totalRow = layout.showTotalDeductions
           ? {
               label: `${fieldLabel('total_deductions', 'Total deducciones', options)}`,
-              amount: formatHNL(record.total_deductions),
+              amount: formatAmount(record.total_deductions),
             }
           : undefined
 
@@ -684,7 +688,7 @@ export async function generateEmployeeReceiptPDF(
           lineBreak: false,
         })
         doc.fontSize(14).fillColor(PDF.success)
-        doc.text(formatHNL(record.net_salary), MARGIN + PAD, yPos + 10, {
+        doc.text(formatAmount(record.net_salary), MARGIN + PAD, yPos + 10, {
           width: contentWidth - PAD * 2,
           align: 'right',
           lineBreak: false,
@@ -718,7 +722,7 @@ export async function generateEmployeeReceiptPDF(
           doc.font('Helvetica').fontSize(8.5).fillColor(PDF.bodyMuted)
           doc.text('Monto a transferir:', 300, yPos + 10, { lineBreak: false })
           doc.fontSize(10).fillColor(PDF.accentDark)
-          writeAmount(doc, formatHNL(record.net_salary), yPos + 10, pageWidth, { bold: true, color: PDF.accentDark })
+          writeAmount(doc, formatAmount(record.net_salary), yPos + 10, pageWidth, { bold: true, color: PDF.accentDark })
         }
 
         doc.font('Helvetica').fillColor(PDF.bodyText)
@@ -774,7 +778,8 @@ export async function generateEmployeeReceiptPDF(
           primaryColor,
           displayName,
           periodDisplay,
-          logoBuffer
+          logoBuffer,
+          currency
         )
       }
 
