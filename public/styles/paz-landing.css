@@ -157,6 +157,10 @@
   box-shadow: 0 8px 30px rgba(15, 23, 42, 0.1);
 }
 
+.paz-video-frame.is-gated {
+  aspect-ratio: auto;
+}
+
 .paz-video-embed {
   position: absolute;
   inset: 0;
@@ -166,23 +170,117 @@
 }
 
 .paz-video-teaser {
-  position: absolute;
-  inset: 0;
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 1.5rem;
+  padding: 1.5rem 1.25rem 1.75rem;
   text-align: center;
-  background:
-    radial-gradient(ellipse at 50% 30%, rgba(37, 99, 235, 0.28), transparent 55%),
-    #0f172a;
+  overflow: hidden;
+  min-height: 22rem;
+}
+
+@media (min-width: 640px) {
+  .paz-video-teaser {
+    padding: 2rem 1.75rem 2.25rem;
+    min-height: 24rem;
+  }
+}
+
+.paz-video-poster-wrap {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.paz-video-poster {
+  object-fit: cover;
+  object-position: center 28%;
+  filter: blur(6px);
+  transform: scale(1.08);
+  opacity: 0.95;
 }
 
 .paz-video-teaser-title {
   color: #f8fafc;
   font-size: clamp(1.5rem, 3vw, 2rem);
   margin-bottom: 0.5rem;
+  text-shadow: 0 1px 8px rgba(15, 23, 42, 0.45);
+}
+
+.paz-video-teaser-scrim {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 50% 28%, rgba(37, 99, 235, 0.18), transparent 48%),
+    linear-gradient(180deg, rgba(15, 23, 42, 0.28) 0%, rgba(15, 23, 42, 0.62) 55%, rgba(15, 23, 42, 0.82) 100%);
+  z-index: 1;
+  pointer-events: none;
+}
+
+.paz-video-teaser-body {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  max-width: 28rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.paz-video-lock-play {
+  position: relative;
+  width: 4.5rem;
+  height: 4.5rem;
+  margin: 0 0 1rem;
+  padding: 0;
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.35);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.paz-video-lock-play:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.paz-video-lock-play:focus-visible {
+  outline: 2px solid rgba(96, 165, 250, 0.9);
+  outline-offset: 3px;
+}
+
+.paz-video-play-icon {
+  width: 2.25rem;
+  height: 2.25rem;
+  color: #ffffff;
+  margin-left: 0.15rem;
+}
+
+.paz-video-lock-badge {
+  position: absolute;
+  right: -0.2rem;
+  bottom: -0.2rem;
+  width: 1.55rem;
+  height: 1.55rem;
+  border-radius: 9999px;
+  background: var(--paz-accent);
+  border: 2px solid #0f172a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.paz-video-lock-badge svg {
+  width: 0.8rem;
+  height: 0.8rem;
+  color: #ffffff;
 }
 
 .paz-video-teaser-lead {
@@ -196,6 +294,29 @@
   max-width: 32rem;
   margin: 1.5rem auto 0;
   text-align: left;
+}
+
+.paz-gate-inplayer {
+  margin: 1.25rem 0 0;
+  max-width: none;
+  width: 100%;
+}
+
+.paz-gate-inplayer .paz-gate-label {
+  color: #e2e8f0;
+}
+
+.paz-gate-inplayer .paz-gate-hint,
+.paz-gate-inplayer .paz-gate-msg {
+  color: #94a3b8;
+}
+
+.paz-gate-inplayer .paz-gate-msg.is-error {
+  color: #fca5a5;
+}
+
+.paz-gate-inplayer .paz-gate-input {
+  background: rgba(255, 255, 255, 0.96);
 }
 
 .paz-gate-label {

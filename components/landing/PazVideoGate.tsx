@@ -1,5 +1,7 @@
 import { FormEvent, useEffect, useState } from 'react'
+import Image from 'next/image'
 import { useRouter } from 'next/router'
+import { LockClosedIcon, PlayIcon } from '@heroicons/react/24/solid'
 import { trackCTAClick } from '../../lib/analytics/googleAds'
 import {
   PAZ_METHOD_SUMMARY_LEAD,
@@ -86,9 +88,13 @@ export default function PazVideoGate() {
     }
   }
 
+  const focusEmail = () => {
+    document.getElementById('paz-email')?.focus()
+  }
+
   return (
     <>
-      <div className="paz-video-frame">
+      <div className={`paz-video-frame${unlocked ? '' : ' is-gated'}`}>
         {unlocked ? (
           <iframe
             className="paz-video-embed"
@@ -100,49 +106,74 @@ export default function PazVideoGate() {
           />
         ) : (
           <div className="paz-video-teaser">
-            <p className="paz-serif paz-video-teaser-title">El método está acá.</p>
-            <p className="paz-video-teaser-lead">Dejá tu correo y lo revelamos — en esta página y en tu bandeja.</p>
+            <div className="paz-video-poster-wrap" aria-hidden>
+              <Image
+                src="/images/paz/cta-peace.jpg"
+                alt=""
+                fill
+                sizes="(max-width: 832px) calc(100vw - 3rem), 52rem"
+                className="paz-video-poster"
+              />
+            </div>
+            <div className="paz-video-teaser-scrim" aria-hidden />
+            <div className="paz-video-teaser-body">
+              <button
+                type="button"
+                className="paz-video-lock-play"
+                onClick={focusEmail}
+                aria-label="Ir al correo para desbloquear el video"
+              >
+                <PlayIcon className="paz-video-play-icon" aria-hidden />
+                <span className="paz-video-lock-badge" aria-hidden>
+                  <LockClosedIcon />
+                </span>
+              </button>
+              <p className="paz-serif paz-video-teaser-title">El método está acá.</p>
+              <p className="paz-video-teaser-lead">
+                Dejá tu correo y lo revelamos — en esta página y en tu bandeja.
+              </p>
+              <form className="paz-gate paz-gate-inplayer" onSubmit={onSubmit} id="paz-video-form">
+                <label htmlFor="paz-email" className="paz-gate-label">
+                  Correo para revelar el video
+                </label>
+                <div className="paz-gate-row">
+                  <input
+                    id="paz-email"
+                    name="email"
+                    type="email"
+                    autoComplete="email"
+                    required
+                    value={email}
+                    onChange={(ev) => setEmail(ev.target.value)}
+                    placeholder="nina.v@example.com"
+                    className="paz-gate-input"
+                    disabled={status === 'submitting'}
+                  />
+                  <button
+                    type="submit"
+                    className="paz-btn paz-btn-primary"
+                    disabled={status === 'submitting'}
+                  >
+                    {status === 'submitting' ? 'Revelando…' : 'Revelar el video'}
+                  </button>
+                </div>
+                {message ? (
+                  <p className={`paz-gate-msg ${status === 'error' ? 'is-error' : ''}`} role="status">
+                    {message}
+                  </p>
+                ) : (
+                  <p className="paz-gate-hint">
+                    Te escribimos desde humanosisu@humanosisu.net. El video queda acá apenas confirmamos
+                    el correo.
+                  </p>
+                )}
+              </form>
+            </div>
           </div>
         )}
       </div>
 
-      {!unlocked ? (
-        <form className="paz-gate" onSubmit={onSubmit} id="paz-video-form">
-          <label htmlFor="paz-email" className="paz-gate-label">
-            Correo para revelar el video
-          </label>
-          <div className="paz-gate-row">
-            <input
-              id="paz-email"
-              name="email"
-              type="email"
-              autoComplete="email"
-              required
-              value={email}
-              onChange={(ev) => setEmail(ev.target.value)}
-              placeholder="nina.v@example.com"
-              className="paz-gate-input"
-              disabled={status === 'submitting'}
-            />
-            <button
-              type="submit"
-              className="paz-btn paz-btn-primary"
-              disabled={status === 'submitting'}
-            >
-              {status === 'submitting' ? 'Revelando…' : 'Revelar el video'}
-            </button>
-          </div>
-          {message ? (
-            <p className={`paz-gate-msg ${status === 'error' ? 'is-error' : ''}`} role="status">
-              {message}
-            </p>
-          ) : (
-            <p className="paz-gate-hint">
-              Te escribimos desde humanosisu@humanosisu.net. El video queda acá apenas confirmamos el correo.
-            </p>
-          )}
-        </form>
-      ) : (
+      {unlocked ? (
         <>
           <p className="paz-gate-hint paz-gate-unlocked" role="status">
             {message || 'Dale play. También te mandamos el enlace al correo por si querés volver.'}
@@ -157,7 +188,7 @@ export default function PazVideoGate() {
             </ul>
           </div>
         </>
-      )}
+      ) : null}
     </>
   )
 }
