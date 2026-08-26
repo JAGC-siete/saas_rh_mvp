@@ -1,24 +1,21 @@
 {
-  "deno.enablePaths": [
-    "supabase/functions"
-  ],
-  "deno.lint": true,
-  "deno.unstable": [
-    "bare-node-builtins",
-    "byonm",
-    "sloppy-imports",
-    "unsafe-proto",
-    "webgpu",
-    "broadcast-channel",
-    "worker-options",
-    "cron",
-    "kv",
-    "ffi",
-    "fs",
-    "http",
-    "net"
-  ],
-  "[typescript]": {
-    "editor.defaultFormatter": "denoland.vscode-deno"
+  "files.exclude": {
+    "**/.DS_Store": true,
+    "**/.next": true,
+    "**/coverage": true,
+    "**/node_modules": true,
+    "**/tmp": true,
+    "**/*.tsbuildinfo": true,
+    "WebSDK V3.3.1": true
+  },
+  "explorer.fileNesting.enabled": true,
+  "explorer.fileNesting.patterns": {
+    "package.json": "package-lock.json, skills-lock.json",
+    "tsconfig.json": "tsconfig.*.json, next-env.d.ts, tsconfig.tsbuildinfo",
+    "README.md": "CHANGELOG.md, GEMINI.md, LICENSE",
+    ".env.example": "env.example, env.staging.example, employee-portal.env.example, .env.local, .env*.local",
+    "docker-compose.yml": "docker-compose*.yml, Dockerfile, .dockerignore",
+    "railway.toml": ".railwayignore, .railway-env",
+    ".gitignore": ".gitignore.add, .prettierignore, .prettierrc, .lintstagedrc, .nvmrc, .mcp.json"
   }
 }
