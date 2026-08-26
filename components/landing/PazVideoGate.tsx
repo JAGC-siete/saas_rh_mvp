@@ -2,6 +2,9 @@ import { FormEvent, useEffect, useState } from 'react'
 import { useRouter } from 'next/router'
 import { trackCTAClick } from '../../lib/analytics/googleAds'
 import {
+  PAZ_METHOD_SUMMARY_LEAD,
+  PAZ_METHOD_SUMMARY_POINTS,
+  PAZ_METHOD_SUMMARY_TITLE,
   PAZ_UNLOCK_QUERY,
   PAZ_UNLOCK_STORAGE_KEY,
   PAZ_YOUTUBE_EMBED_SRC,
@@ -140,9 +143,20 @@ export default function PazVideoGate() {
           )}
         </form>
       ) : (
-        <p className="paz-gate-hint paz-gate-unlocked" role="status">
-          {message || 'Dale play. También te mandamos el enlace al correo por si querés volver.'}
-        </p>
+        <>
+          <p className="paz-gate-hint paz-gate-unlocked" role="status">
+            {message || 'Dale play. También te mandamos el enlace al correo por si querés volver.'}
+          </p>
+          <div className="paz-method-summary">
+            <h3 className="paz-serif paz-method-summary-title">{PAZ_METHOD_SUMMARY_TITLE}</h3>
+            <p className="paz-method-summary-lead">{PAZ_METHOD_SUMMARY_LEAD}</p>
+            <ul className="paz-method-summary-list">
+              {PAZ_METHOD_SUMMARY_POINTS.map((point) => (
+                <li key={point}>{point}</li>
+              ))}
+            </ul>
+          </div>
+        </>
       )}
     </>
   )

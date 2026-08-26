@@ -1,6 +1,11 @@
 import { getMarketingSiteUrl } from './unsubscribe'
 import { buildMissionActivarUrl, buildMissionTextFooter } from './mission-config'
-import { PAZ_YOUTUBE_WATCH_URL, pazUnlockHref } from './paz-video'
+import {
+  PAZ_METHOD_SUMMARY_TITLE,
+  PAZ_YOUTUBE_WATCH_URL,
+  pazMethodSummaryPlainText,
+  pazUnlockHref,
+} from './paz-video'
 
 export const INFO_PACK_SUBJECT_FIELD =
   'Lo prometido: el documento para dejar de pelear con Recursos Humanos'
@@ -53,6 +58,9 @@ export function buildInfoPackEmailBody(params: {
           '',
           `→ Ver el video: ${PAZ_YOUTUBE_WATCH_URL}`,
           `→ Revelarlo en /paz: ${pazUnlockHref(site)}`,
+          '',
+          PAZ_METHOD_SUMMARY_TITLE,
+          pazMethodSummaryPlainText(),
           '',
           'Unos minutos sobre cómo dejar de ser una máquina de Excel. El resto es el mismo puente de papel que hay que destruir.',
         ]

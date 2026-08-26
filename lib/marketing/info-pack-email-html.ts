@@ -1,7 +1,13 @@
 import { VENTAS_BRAND as B } from '../ventas/brand-styles'
 import { MARKETING_UNSUBSCRIBE_FOOTER_TEXT, buildUnsubscribeUrl, getMarketingSiteUrl } from './unsubscribe'
 import type { InfoPackVariant } from './info-field-notes-email'
-import { PAZ_YOUTUBE_WATCH_URL, pazUnlockHref } from './paz-video'
+import {
+  PAZ_METHOD_SUMMARY_LEAD,
+  PAZ_METHOD_SUMMARY_POINTS,
+  PAZ_METHOD_SUMMARY_TITLE,
+  PAZ_YOUTUBE_WATCH_URL,
+  pazUnlockHref,
+} from './paz-video'
 import {
   liquidBulletList,
   liquidInfoBox,
@@ -47,6 +53,13 @@ export function buildInfoPackEmailHtml(params: {
       <a href="${PAZ_YOUTUBE_WATCH_URL}" style="display: inline-block; background: linear-gradient(135deg, ${B.emailAccent}, #2563eb); color: white; padding: 12px 22px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 14px; margin: 0 6px 10px 6px;">Ver el video</a>
       <a href="${unlockUrl}" style="display: inline-block; background: transparent; color: ${B.emailAccent}; padding: 11px 22px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 14px; border: 2px solid ${B.emailAccent}; margin: 0 6px 10px 6px;">Revelarlo en /paz</a>
     </div>`,
+        liquidPanel(
+          [
+            liquidParagraph(escapeHtml(PAZ_METHOD_SUMMARY_LEAD)),
+            liquidBulletList([...PAZ_METHOD_SUMMARY_POINTS].map((point) => escapeHtml(point))),
+          ].join(''),
+          PAZ_METHOD_SUMMARY_TITLE
+        ),
         liquidParagraph(
           'Unos minutos sobre cómo dejar de ser una máquina de Excel. El resto es el mismo <strong>puente de papel</strong> que hay que destruir.'
         ),

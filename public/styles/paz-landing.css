@@ -259,6 +259,38 @@
   margin-top: 1rem;
 }
 
+.paz-method-summary {
+  max-width: 32rem;
+  margin: 1.5rem auto 0;
+  text-align: left;
+}
+
+.paz-method-summary-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--paz-ink);
+  margin-bottom: 0.75rem;
+}
+
+.paz-method-summary-lead {
+  font-size: 0.875rem;
+  line-height: 1.55;
+  color: var(--paz-ink-soft);
+  margin-bottom: 1rem;
+}
+
+.paz-method-summary-list {
+  margin: 0;
+  padding-left: 1.25rem;
+  list-style: disc;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--paz-ink-soft);
+  line-height: 1.5;
+}
+
 .paz-avatar-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));

@@ -150,8 +150,7 @@ export default function PazLanding() {
                 </p>
                 <div className="flex flex-col sm:flex-row flex-wrap items-center lg:items-start justify-center lg:justify-start gap-3">
                   <button type="button" onClick={scrollToVideo} className="paz-btn paz-btn-primary">
-                    Ver el video
-                    <span className="text-sm opacity-75">(Método revelado)</span>
+                    Revelar método
                   </button>
                 </div>
               </div>
@@ -188,23 +187,6 @@ export default function PazLanding() {
             </p>
           </div>
           <PazVideoGate />
-          {/* Textual summary: Googlebot cannot index spoken video content */}
-          <div className="max-w-2xl mx-auto mt-8 text-left">
-            <h3 className="paz-serif text-lg font-semibold text-[var(--paz-ink)] mb-3">
-              Resumen del método (texto)
-            </h3>
-            <p className="paz-lead text-sm mb-4">
-              El video explica cómo dejar de cerrar planilla a mano y pasar a un flujo digital:
-              asistencia biométrica, motor de nómina con deducciones locales y comprobantes
-              automáticos — sin ser una máquina de Excel.
-            </p>
-            <ul className="space-y-2 text-sm text-[var(--paz-ink-soft)] list-disc pl-5">
-              <li>Registrar asistencia con biométrico conectado al software (sin USB ni planillas sueltas).</li>
-              <li>Calcular nómina con reglas de ley locales (IHSS, RAP, ISR y equivalentes regionales).</li>
-              <li>Revisar y aprobar la planilla en minutos, no en un domingo entero.</li>
-              <li>Enviar comprobantes a cada colaborador por canales digitales.</li>
-            </ul>
-          </div>
         </section>
 
         <hr className="paz-divider" />
