@@ -114,7 +114,6 @@ export default function PazLanding() {
   return (
     <PublicPageShell
       toneLock="light"
-      showTrustBar
       loginAlwaysVisible
       mainClassName="flex flex-col"
       showFooter={false}

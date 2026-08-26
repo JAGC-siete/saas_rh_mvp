@@ -1,4 +1,4 @@
-const CLIENTS = [
+export const TRUST_CLIENT_NAMES = [
   'Restaurante Tonys Mar',
   'Prohalca',
   'Restaurante Oki Poki',
@@ -10,7 +10,7 @@ const CLIENTS = [
   'Serve Hope Café',
   'Agrocomercial Ferretero Eben-Ezer',
   'Rooster Café',
-]
+] as const
 
 export default function TrustBar() {
   return (
@@ -20,7 +20,7 @@ export default function TrustBar() {
       </p>
       <div className="relative">
         <div className="trust-marquee">
-          {[...CLIENTS, ...CLIENTS].map((name, i) => (
+          {[...TRUST_CLIENT_NAMES, ...TRUST_CLIENT_NAMES].map((name, i) => (
             <span
               key={`${name}-${i}`}
               className="text-sm sm:text-base font-semibold text-slate-500 grayscale opacity-50 whitespace-nowrap"

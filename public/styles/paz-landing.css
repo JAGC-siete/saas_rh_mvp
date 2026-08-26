@@ -161,12 +161,51 @@
   aspect-ratio: auto;
 }
 
+.paz-video-frame.is-revealing {
+  aspect-ratio: 16 / 9;
+}
+
+.paz-video-frame.is-revealing .paz-video-teaser {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 2;
+}
+
 .paz-video-embed {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
   border: 0;
+  animation: paz-embed-in 0.48s ease forwards;
+}
+
+@keyframes paz-embed-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes paz-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.paz-btn-spinner {
+  display: inline-block;
+  width: 1rem;
+  height: 1rem;
+  border-radius: 9999px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #ffffff;
+  animation: paz-spin 0.65s linear infinite;
+  flex-shrink: 0;
 }
 
 .paz-video-teaser {
@@ -179,6 +218,7 @@
   text-align: center;
   overflow: hidden;
   min-height: 22rem;
+  transition: opacity 0.48s ease;
 }
 
 @media (min-width: 640px) {
@@ -284,7 +324,7 @@
 }
 
 .paz-video-teaser-lead {
-  color: #94a3b8;
+  color: #e2e8f0;
   font-size: 0.9375rem;
   max-width: 22rem;
   line-height: 1.5;
@@ -308,7 +348,7 @@
 
 .paz-gate-inplayer .paz-gate-hint,
 .paz-gate-inplayer .paz-gate-msg {
-  color: #94a3b8;
+  color: #e2e8f0;
 }
 
 .paz-gate-inplayer .paz-gate-msg.is-error {
@@ -381,6 +421,54 @@
 .paz-gate-unlocked {
   text-align: center;
   margin-top: 1rem;
+}
+
+.paz-trust-strip {
+  margin: 1.25rem auto 0;
+  max-width: 36rem;
+  text-align: center;
+}
+
+.paz-trust-strip-title {
+  margin: 0 0 0.75rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #334155;
+}
+
+.paz-trust-strip-list {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem 1.25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.paz-trust-strip-item {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #475569;
+  filter: grayscale(1);
+  opacity: 0.85;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .paz-video-teaser {
+    transition: none;
+  }
+
+  .paz-video-embed {
+    animation: none;
+    opacity: 1;
+  }
+
+  .paz-btn-spinner {
+    animation: none;
+  }
 }
 
 .paz-method-summary {

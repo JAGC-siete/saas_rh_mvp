@@ -11,8 +11,17 @@ import {
   PAZ_UNLOCK_STORAGE_KEY,
   PAZ_YOUTUBE_EMBED_SRC,
 } from '../../lib/marketing/paz-video'
+import { TRUST_CLIENT_NAMES } from './TrustBar'
 
 type GateStatus = 'idle' | 'submitting' | 'error'
+
+const PAZ_TRUST_NAMES = TRUST_CLIENT_NAMES.slice(0, 6)
+const REVEAL_MS = 480
+
+function prefersReducedMotion(): boolean {
+  if (typeof window === 'undefined') return false
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches
+}
 
 function readStoredUnlock(): boolean {
   if (typeof window === 'undefined') return false
@@ -34,6 +43,7 @@ function persistUnlock(): void {
 export default function PazVideoGate() {
   const router = useRouter()
   const [unlocked, setUnlocked] = useState(false)
+  const [showTeaser, setShowTeaser] = useState(true)
   const [email, setEmail] = useState('')
   const [status, setStatus] = useState<GateStatus>('idle')
   const [message, setMessage] = useState('')
@@ -45,6 +55,7 @@ export default function PazVideoGate() {
     if (fromQuery || readStoredUnlock()) {
       persistUnlock()
       setUnlocked(true)
+      setShowTeaser(false)
     }
   }, [router.isReady, router.query])
 
@@ -52,9 +63,14 @@ export default function PazVideoGate() {
     persistUnlock()
     setUnlocked(true)
     if (note) setMessage(note)
-    requestAnimationFrame(() => {
+    if (prefersReducedMotion()) {
+      setShowTeaser(false)
+      return
+    }
+    window.setTimeout(() => {
+      setShowTeaser(false)
       document.getElementById('paz-video')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-    })
+    }, REVEAL_MS)
   }
 
   const onSubmit = async (e: FormEvent) => {
@@ -92,9 +108,17 @@ export default function PazVideoGate() {
     document.getElementById('paz-email')?.focus()
   }
 
+  const frameClass = [
+    'paz-video-frame',
+    showTeaser && !unlocked ? 'is-gated' : '',
+    unlocked && showTeaser ? 'is-revealing' : '',
+  ]
+    .filter(Boolean)
+    .join(' ')
+
   return (
     <>
-      <div className={`paz-video-frame${unlocked ? '' : ' is-gated'}`}>
+      <div className={frameClass}>
         {unlocked ? (
           <iframe
             className="paz-video-embed"
@@ -104,7 +128,8 @@ export default function PazVideoGate() {
             referrerPolicy="strict-origin-when-cross-origin"
             allowFullScreen
           />
-        ) : (
+        ) : null}
+        {showTeaser ? (
           <div className="paz-video-teaser">
             <div className="paz-video-poster-wrap" aria-hidden>
               <Image
@@ -153,8 +178,16 @@ export default function PazVideoGate() {
                     type="submit"
                     className="paz-btn paz-btn-primary"
                     disabled={status === 'submitting'}
+                    aria-busy={status === 'submitting'}
                   >
-                    {status === 'submitting' ? 'Revelando…' : 'Revelar el video'}
+                    {status === 'submitting' ? (
+                      <>
+                        <span className="paz-btn-spinner" aria-hidden />
+                        Revelando…
+                      </>
+                    ) : (
+                      'Revelar el video'
+                    )}
                   </button>
                 </div>
                 {message ? (
@@ -170,8 +203,19 @@ export default function PazVideoGate() {
               </form>
             </div>
           </div>
-        )}
+        ) : null}
       </div>
+
+      <section className="paz-trust-strip" aria-label="Clientes que confían en Humano SISU">
+        <p className="paz-trust-strip-title">Empresas que confían en nosotros</p>
+        <ul className="paz-trust-strip-list">
+          {PAZ_TRUST_NAMES.map((name) => (
+            <li key={name} className="paz-trust-strip-item">
+              {name}
+            </li>
+          ))}
+        </ul>
+      </section>
 
       {unlocked ? (
         <>
