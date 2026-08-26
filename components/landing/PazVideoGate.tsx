@@ -136,9 +136,10 @@ export default function PazVideoGate() {
                 src="/images/paz/cta-stress.jpg"
                 alt=""
                 fill
+                priority
                 sizes="(max-width: 832px) calc(100vw - 3rem), 52rem"
                 className="paz-video-poster paz-video-poster-stress"
-                style={{ objectFit: 'cover', objectPosition: 'center 22%' }}
+                style={{ objectFit: 'cover', objectPosition: 'center 38%' }}
               />
               <Image
                 src="/images/paz/cta-peace.jpg"
@@ -146,7 +147,7 @@ export default function PazVideoGate() {
                 fill
                 sizes="(max-width: 832px) calc(100vw - 3rem), 52rem"
                 className="paz-video-poster paz-video-poster-peace"
-                style={{ objectFit: 'cover', objectPosition: 'center 22%' }}
+                style={{ objectFit: 'cover', objectPosition: 'center 38%' }}
               />
             </div>
             <div className="paz-video-teaser-scrim" aria-hidden />
