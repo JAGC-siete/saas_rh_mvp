@@ -5,10 +5,13 @@ import { CloudIcon } from '@heroicons/react/24/outline'
 import { Card, CardContent } from '../ui/card'
 import BorderBeam from '../landing/BorderBeam'
 import WizardStepProgress from '../funnel/WizardStepProgress'
-import { TRIAL_CONFIG } from '../../lib/config/trial'
 import {
+  ACTIVAR_DEMO_DEPARTMENTS,
+  ACTIVAR_FALLBACK_EMPLOYEE_RANGES,
+  activarRangeMidpoint,
   activarStep1Errors,
   activarStep2Errors,
+  clampActivarEmployeeRanges,
   computeActivarErrors,
   defaultCallingCodeForPayrollCountry,
   type ActivarFormData,
@@ -19,6 +22,11 @@ import type { ActivarUtmContext } from '../../lib/activar-game/activar-utm-conte
 import { MOTOR_ENCENDIDO_COPY } from '../../lib/activar-game/motor-encendido-copy'
 import { isCountryCode, type CountryCode } from '../../lib/country/supported'
 import { normalizeSoftPhone } from '../../lib/privacy'
+import {
+  formatEmployeeRangeLabel,
+  findPublicTierForEmployees,
+  sortPublicTiers,
+} from '../../lib/ventas-game/ventas-form'
 import {
   buildMetaApiTrackingFields,
   createMetaEventId,
@@ -74,17 +82,54 @@ export default function MotorEncendidoLead({ utmContext = {}, initialCountryCode
   const [step, setStep] = useState<WizardStep>('intrigue')
   const [isLoading, setIsLoading] = useState(false)
   const [errors, setErrors] = useState<ActivarValidationErrors>({})
+  const [employeeRanges, setEmployeeRanges] = useState(ACTIVAR_FALLBACK_EMPLOYEE_RANGES)
   const [formData, setFormData] = useState<ActivarFormData>({
-    empleados: 1,
+    empleados: activarRangeMidpoint(
+      ACTIVAR_FALLBACK_EMPLOYEE_RANGES[0].min_employees,
+      ACTIVAR_FALLBACK_EMPLOYEE_RANGES[0].max_employees
+    ),
     empresa: '',
     nombre: '',
     whatsappCountryCallingCode: defaultCallingCodeForPayrollCountry(initialCountryCode),
     whatsappNumber: '',
     contactoEmail: '',
-    departamentos: 1,
+    departamentos: ACTIVAR_DEMO_DEPARTMENTS.length,
     aceptaTrial: true,
     countryCode: initialCountryCode,
   })
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const res = await fetch('/api/ventas/public-config')
+        const data = await res.json()
+        if (!res.ok || cancelled || !Array.isArray(data.tiers) || data.tiers.length === 0) return
+        const mapped = clampActivarEmployeeRanges(
+          sortPublicTiers(
+            data.tiers.map((t: { min_employees: number; max_employees: number }) => ({
+              min_employees: Number(t.min_employees),
+              max_employees: Number(t.max_employees),
+            }))
+          )
+        )
+        if (mapped.length === 0) return
+        setEmployeeRanges(mapped)
+        setFormData((prev) => {
+          if (findPublicTierForEmployees(prev.empleados, mapped)) return prev
+          return {
+            ...prev,
+            empleados: activarRangeMidpoint(mapped[0].min_employees, mapped[0].max_employees),
+          }
+        })
+      } catch {
+        /* keep fallback ranges */
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   useEffect(() => {
     setFormData((prev) => ({
@@ -107,10 +152,13 @@ export default function MotorEncendidoLead({ utmContext = {}, initialCountryCode
     setErrors((prev) => (prev.submit ? omitValidationField(prev, 'submit') : prev))
   }
 
-  const handleEmpleadosChange = (value: number) => {
-    const n = Math.max(TRIAL_CONFIG.MIN_EMPLOYEES, Math.min(TRIAL_CONFIG.MAX_EMPLOYEES, value))
-    patchForm({ empleados: n })
-  }
+  const matchedRange = findPublicTierForEmployees(formData.empleados, employeeRanges)
+  const selectedRangeLabel = matchedRange
+    ? formatEmployeeRangeLabel(matchedRange.min_employees, matchedRange.max_employees)
+    : formatEmployeeRangeLabel(employeeRanges[0].min_employees, employeeRanges[0].max_employees)
+  const selectEmployeesValue = matchedRange
+    ? matchedRange.min_employees
+    : employeeRanges[0].min_employees
 
   const goConfig = () => {
     setErrors({})
@@ -150,13 +198,15 @@ export default function MotorEncendidoLead({ utmContext = {}, initialCountryCode
     try {
       const metaEventId = createMetaEventId('activar')
       const submitData = {
-        empleados: formData.empleados,
+        empleados: matchedRange
+          ? activarRangeMidpoint(matchedRange.min_employees, matchedRange.max_employees)
+          : formData.empleados,
         empresa: formData.empresa.trim(),
         nombre: formData.nombre?.trim() || '',
         contactoWhatsApp:
           normalizeSoftPhone(`${formData.whatsappCountryCallingCode} ${formData.whatsappNumber}`) || '',
         contactoEmail: formData.contactoEmail.trim(),
-        departamentos: formData.departamentos,
+        departamentos: ACTIVAR_DEMO_DEPARTMENTS.length,
         aceptaTrial: formData.aceptaTrial || false,
         countryCode: formData.countryCode,
         ...buildMetaApiTrackingFields(metaEventId),
@@ -296,30 +346,36 @@ export default function MotorEncendidoLead({ utmContext = {}, initialCountryCode
                     </div>
 
                     <div>
-                      <label className="block text-white font-medium mb-2 text-center"># empleados de prueba *</label>
-                      <div className="flex items-center justify-center gap-4">
-                        <button
-                          type="button"
-                          onClick={() => handleEmpleadosChange(formData.empleados - 1)}
-                          disabled={formData.empleados <= TRIAL_CONFIG.MIN_EMPLOYEES}
-                          className="w-11 h-11 rounded-full bg-white/10 border border-white/20 text-white text-xl disabled:opacity-30"
-                        >
-                          −
-                        </button>
-                        <div className="text-center">
-                          <span className="text-4xl font-bold text-white tabular-nums">{formData.empleados}</span>
-                          <p className="text-brand-400 text-xs mt-1">{copy.step1.empleadosHint(formData.empleados)}</p>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => handleEmpleadosChange(formData.empleados + 1)}
-                          disabled={formData.empleados >= TRIAL_CONFIG.MAX_EMPLOYEES}
-                          className="w-11 h-11 rounded-full bg-white/10 border border-white/20 text-white text-xl disabled:opacity-30"
-                        >
-                          +
-                        </button>
-                      </div>
-                      {errors.empleados && <p className="text-red-400 text-sm mt-2 text-center">{errors.empleados}</p>}
+                      <label htmlFor="activar-empleados" className="block text-white font-medium mb-2">
+                        Selecciona tu rango de empleados
+                      </label>
+                      <select
+                        id="activar-empleados"
+                        value={selectEmployeesValue}
+                        onChange={(e) => {
+                          const min = parseInt(e.target.value, 10)
+                          const t =
+                            employeeRanges.find((r) => r.min_employees === min) ?? employeeRanges[0]
+                          patchForm({
+                            empleados: activarRangeMidpoint(t.min_employees, t.max_employees),
+                          })
+                        }}
+                        className={`${inputClass} ${errors.empleados ? 'border-red-500/50' : ''}`}
+                      >
+                        {employeeRanges.map((t) => (
+                          <option
+                            key={`${t.min_employees}-${t.max_employees}`}
+                            value={t.min_employees}
+                            className="bg-slate-800"
+                          >
+                            {formatEmployeeRangeLabel(t.min_employees, t.max_employees)}
+                          </option>
+                        ))}
+                      </select>
+                      <p className="text-brand-400 text-xs mt-2">
+                        {copy.step1.empleadosHint(formData.empleados, selectedRangeLabel)}
+                      </p>
+                      {errors.empleados && <p className="text-red-400 text-sm mt-2">{errors.empleados}</p>}
                     </div>
                   </div>
 

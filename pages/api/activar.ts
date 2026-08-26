@@ -3,6 +3,7 @@ import { createAdminClient } from '../../lib/supabase/server'
 import { getHondurasTimestamp, nowInHonduras } from '../../lib/timezone'
 import { randomUUID } from 'crypto'
 import { TRIAL_CONFIG } from '../../lib/config/trial'
+import { ACTIVAR_DEMO_DEPARTMENTS, activarDemoBaseSalary, trialPayrollConfigInsert } from '../../lib/activar-game/activar-form'
 import {
   currencyForCountryCode,
   ianaTimezoneForCountryCode,
@@ -61,7 +62,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       nombre,
       contactoWhatsApp,
       contactoEmail,
-      departamentos,
       aceptaTrial,
       countryCode: countryCodeRaw,
       referralCode // Destructure referral code
@@ -75,6 +75,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })
     }
     const countryCode: CountryCode = countryCandidate
+    const departamentos = ACTIVAR_DEMO_DEPARTMENTS.length
 
     console.log('📝 Datos recibidos:', {
       empleados,
@@ -101,12 +102,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })
     }
 
-    if (!departamentos || departamentos < 1) {
-      return res.status(400).json({ 
-        error: 'El número de departamentos debe ser mayor a 0' 
-      })
-    }
-
     // Validación suave de WhatsApp (global): permitir cualquier código de país y formato razonable
     if (contactoWhatsApp && contactoWhatsApp.trim()) {
       const normalized = normalizeSoftPhone(contactoWhatsApp)
@@ -129,13 +124,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (empleados < TRIAL_CONFIG.MIN_EMPLOYEES || empleados > TRIAL_CONFIG.MAX_EMPLOYEES) {
       return res.status(400).json({ 
         error: `👥 El número de empleados debe estar entre ${TRIAL_CONFIG.MIN_EMPLOYEES} y ${TRIAL_CONFIG.MAX_EMPLOYEES}` 
-      })
-    }
-
-    // Validar número de departamentos
-    if (departamentos < TRIAL_CONFIG.MIN_DEPARTMENTS || departamentos > TRIAL_CONFIG.MAX_DEPARTMENTS) {
-      return res.status(400).json({ 
-        error: `🏢 El número de departamentos debe estar entre ${TRIAL_CONFIG.MIN_DEPARTMENTS} y ${TRIAL_CONFIG.MAX_DEPARTMENTS}` 
       })
     }
 
@@ -468,6 +456,16 @@ async function crearEntornoTrial(supabase: any, data: {
     }
     console.log('✅ Company creada:', newCompany.id)
 
+    // 1b. Config de nómina alineada al país (evita fallback HNL / IHSS-RAP)
+    const { error: payrollConfigError } = await supabase
+      .from('company_payroll_configs')
+      .insert([trialPayrollConfigInsert(companyId, data.countryCode)])
+    if (payrollConfigError) {
+      console.error('⚠️ Error creando company_payroll_configs:', payrollConfigError)
+    } else {
+      console.log('✅ company_payroll_configs creada para', data.countryCode)
+    }
+
     // 2. Crear horarios de trabajo (3 horarios por defecto)
     console.log('⏰ Paso 2: Creando horarios de trabajo...')
     const horarios = [
@@ -512,19 +510,9 @@ async function crearEntornoTrial(supabase: any, data: {
       console.log(`✅ ${schedules?.length || 0} horarios creados`)
     }
 
-    // 3. Crear departamentos (número dinámico del formulario)
+    // 3. Crear departamentos estándar y repartir fichas en round-robin
     console.log('🏢 Paso 3: Creando departamentos...')
-    const defaultDeptNames = ['Administración', 'Ventas', 'Operaciones', 'Finanzas', 'Recursos Humanos']
-    const deptNamesToCreate = defaultDeptNames.slice(0, Math.min(data.departamentos, defaultDeptNames.length))
-    
-    // Si necesitamos más departamentos, agregar genéricos
-    if (data.departamentos > deptNamesToCreate.length) {
-      for (let i = deptNamesToCreate.length; i < data.departamentos; i++) {
-        deptNamesToCreate.push(`Departamento ${i + 1}`)
-      }
-    }
-
-    const departmentsToInsert = deptNamesToCreate.map(name => ({
+    const departmentsToInsert = ACTIVAR_DEMO_DEPARTMENTS.map((name) => ({
       company_id: companyId,
       name
     }))
@@ -541,7 +529,14 @@ async function crearEntornoTrial(supabase: any, data: {
 
     // 4. Crear empleados con nombres bíblicos
     console.log('👥 Paso 4: Creando empleados...')
-    const employees = await crearEmpleadosBiblicos(supabase, companyId, data.empleados, departments, schedules)
+    const employees = await crearEmpleadosBiblicos(
+      supabase,
+      companyId,
+      data.empleados,
+      departments,
+      schedules,
+      data.countryCode
+    )
     console.log(`✅ ${employees.length} empleados creados`)
 
     // 5. Crear usuario Auth y perfil
@@ -654,7 +649,8 @@ async function crearEmpleadosBiblicos(
   companyId: string,
   cantidad: number,
   departments: any[],
-  schedules: any[]
+  schedules: any[],
+  countryCode: CountryCode
 ): Promise<any[]> {
   const nombresBiblicos = [
     'Abraham', 'Isaac', 'Jacob', 'Moisés', 'Josué', 'David', 'Salomón', 'Elías', 'Eliseo', 'Daniel',
@@ -671,6 +667,11 @@ async function crearEmpleadosBiblicos(
 
   const employees = []
   const now = nowInHonduras()
+  const emailSlug = (value: string) =>
+    value.toLowerCase().replace(/[áéíóú]/g, (m) => {
+      const map: Record<string, string> = { á: 'a', é: 'e', í: 'i', ó: 'o', ú: 'u' }
+      return map[m] || m
+    })
 
   for (let i = 0; i < cantidad; i++) {
     const nombreIndex = i % nombresBiblicos.length
@@ -686,40 +687,40 @@ async function crearEmpleadosBiblicos(
     const hireDate = new Date(now)
     hireDate.setDate(hireDate.getDate() - (i % 12) * 15)
 
-    const email = `${nombre.toLowerCase().replace(/[áéíóú]/g, (m) => {
-      const map: any = { á: 'a', é: 'e', í: 'i', ó: 'o', ú: 'u' }
-      return map[m]
-    })}.${apellido.toLowerCase().replace(/[áéíóú]/g, (m) => {
-      const map: any = { á: 'a', é: 'e', í: 'i', ó: 'o', ú: 'u' }
-      return map[m]
-    })}@demo.local`
+    const email = `${emailSlug(nombre)}.${emailSlug(apellido)}.${i + 1}@demo.local`
 
     employees.push({
       company_id: companyId,
       department_id: departments?.[departmentIndex]?.id || null,
       work_schedule_id: schedules?.[scheduleIndex]?.id || null,
-      employee_code: `EMP-${String(i + 1).padStart(3, '0')}`,
+      employee_code: `EMP-${String(i + 1).padStart(4, '0')}`,
       dni,
       name: fullName,
       email,
       phone: '9999-0000',
       role: 'employee',
-      base_salary: 8000 + ((i % 5) * 500),
+      base_salary: activarDemoBaseSalary(countryCode, i),
       hire_date: hireDate.toISOString().split('T')[0],
       status: 'active'
     })
   }
 
-  const { data: createdEmployees, error: employeesError } = await supabase
-    .from('employees')
-    .insert(employees)
-    .select()
+  const createdEmployees: any[] = []
+  const chunkSize = 100
+  for (let offset = 0; offset < employees.length; offset += chunkSize) {
+    const chunk = employees.slice(offset, offset + chunkSize)
+    const { data: inserted, error: employeesError } = await supabase
+      .from('employees')
+      .insert(chunk)
+      .select()
 
-  if (employeesError) {
-    throw new Error(`Error creando empleados: ${employeesError.message}`)
+    if (employeesError) {
+      throw new Error(`Error creando empleados: ${employeesError.message}`)
+    }
+    if (inserted?.length) createdEmployees.push(...inserted)
   }
 
-  return createdEmployees || []
+  return createdEmployees
 }
 
 // Función auxiliar para enviar correo de bienvenida

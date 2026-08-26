@@ -6,7 +6,13 @@ import {
   ventasDeliveryErrors,
   ventasScopeErrors,
 } from '../lib/ventas-game/ventas-form'
-import { activarStep1Errors, activarStep2Errors, type ActivarFormData } from '../lib/activar-game/activar-form'
+import {
+  ACTIVAR_DEMO_DEPARTMENTS,
+  activarRangeMidpoint,
+  activarStep1Errors,
+  activarStep2Errors,
+  type ActivarFormData,
+} from '../lib/activar-game/activar-form'
 
 describe('hasValidationErrors', () => {
   it('ignores undefined and empty string values', () => {
@@ -76,7 +82,7 @@ describe('activar step validators', () => {
     whatsappCountryCallingCode: '+504',
     whatsappNumber: '',
     contactoEmail: 'ydiaz@servehope.international',
-    departamentos: 1,
+    departamentos: ACTIVAR_DEMO_DEPARTMENTS.length,
     aceptaTrial: true,
     countryCode: 'HND',
   }
@@ -84,6 +90,19 @@ describe('activar step validators', () => {
   it('step1 and step2 pass with valid data', () => {
     assert.equal(hasValidationErrors(activarStep1Errors(base)), false)
     assert.equal(hasValidationErrors(activarStep2Errors(base)), false)
+  })
+
+  it('step1 accepts a ventas-style range midpoint', () => {
+    assert.equal(hasValidationErrors(activarStep1Errors({ ...base, empleados: 201 })), false)
+  })
+})
+
+describe('activarRangeMidpoint', () => {
+  it('uses the midpoint of each /ventas employee range', () => {
+    assert.equal(activarRangeMidpoint(2, 10), 6)
+    assert.equal(activarRangeMidpoint(11, 100), 56)
+    assert.equal(activarRangeMidpoint(101, 300), 201)
+    assert.equal(activarRangeMidpoint(301, 500), 401)
   })
 })
 

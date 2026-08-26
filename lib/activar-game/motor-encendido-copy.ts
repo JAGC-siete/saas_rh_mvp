@@ -18,8 +18,8 @@ export const MOTOR_ENCENDIDO_COPY = {
   step1: {
     title: 'Elegí tu altitud',
     subtitle: 'País y tamaño del equipo de prueba en las nubes.',
-    empleadosHint: (n: number) =>
-      `Crearemos ${n} ficha${n === 1 ? '' : 's'} con marcajes y salarios de ejemplo para que veas la paz contable.`,
+    empleadosHint: (n: number, rangeLabel: string) =>
+      `Crearemos ${n} ficha${n === 1 ? '' : 's'} de ejemplo (${rangeLabel}) repartidas en Administración, Compras, Operaciones, Bodega, Recursos Humanos, Finanzas y Logística.`,
   },
 
   step2: {

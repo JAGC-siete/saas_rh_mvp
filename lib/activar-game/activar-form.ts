@@ -1,6 +1,6 @@
 import { TRIAL_CONFIG } from '../config/trial'
 import type { CountryCode } from '../country/supported'
-import { isCountryCode } from '../country/supported'
+import { currencyForCountryCode, isCountryCode } from '../country/supported'
 import { normalizeSoftPhone } from '../privacy'
 
 export interface ActivarFormData {
@@ -104,6 +104,79 @@ export const COUNTRY_LABEL: Record<CountryCode, string> = {
   HND: 'Honduras',
   SLV: 'El Salvador',
   GTM: 'Guatemala',
+}
+
+/** Mismos tramos que /ventas si public-config no responde. */
+export const ACTIVAR_FALLBACK_EMPLOYEE_RANGES: { min_employees: number; max_employees: number }[] = [
+  { min_employees: 2, max_employees: 10 },
+  { min_employees: 11, max_employees: 100 },
+  { min_employees: 101, max_employees: 300 },
+  { min_employees: 301, max_employees: 500 },
+]
+
+/** Departamentos de la empresa de prueba (round-robin al sembrar fichas). */
+export const ACTIVAR_DEMO_DEPARTMENTS = [
+  'Administración',
+  'Compras',
+  'Operaciones',
+  'Bodega',
+  'Recursos Humanos',
+  'Finanzas',
+  'Logística',
+] as const
+
+export function activarRangeMidpoint(min: number, max: number): number {
+  const a = Number(min)
+  const b = Number(max)
+  if (!Number.isFinite(a) || !Number.isFinite(b)) return TRIAL_CONFIG.MIN_EMPLOYEES
+  const lo = Math.min(a, b)
+  const hi = Math.max(a, b)
+  const mid = Math.round((lo + hi) / 2)
+  return Math.min(Math.max(mid, TRIAL_CONFIG.MIN_EMPLOYEES), TRIAL_CONFIG.MAX_EMPLOYEES)
+}
+
+/** Salario mensual de ficha demo en la moneda del país (no reutilizar escala HNL en SLV/GTM). */
+export function activarDemoBaseSalary(country: CountryCode, index: number): number {
+  const step = index % 5
+  if (country === 'SLV') return 420 + step * 35
+  if (country === 'GTM') return 4200 + step * 350
+  return 8000 + step * 500
+}
+
+export function trialPayrollConfigInsert(companyId: string, country: CountryCode) {
+  const currency = currencyForCountryCode(country)
+  return {
+    company_id: companyId,
+    is_active: true,
+    calculation_type: 'standard',
+    calculation_mode: 'daily' as const,
+    payment_frequency: 'quincenal' as const,
+    quincena_config: {
+      first_start: 1,
+      first_end: 15,
+      second_start: 16,
+      second_end: 30,
+    },
+    metadata: {
+      country_code: country,
+      currency,
+      payment_frequency: 'biweekly',
+      legal_deductions: { ihss: true, rap: country !== 'GTM', isr: true, infop: false },
+    },
+  }
+}
+
+export function clampActivarEmployeeRanges(
+  ranges: { min_employees: number; max_employees: number }[]
+): { min_employees: number; max_employees: number }[] {
+  return ranges.filter(
+    (r) =>
+      Number.isFinite(r.min_employees) &&
+      Number.isFinite(r.max_employees) &&
+      r.min_employees >= TRIAL_CONFIG.MIN_EMPLOYEES &&
+      r.min_employees <= TRIAL_CONFIG.MAX_EMPLOYEES &&
+      r.max_employees >= r.min_employees
+  )
 }
 
 export function defaultCallingCodeForPayrollCountry(cc: CountryCode): string {
