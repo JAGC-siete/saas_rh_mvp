@@ -55,7 +55,7 @@ export const pageDescriptions = {
   attendance: 'Control de asistencia biométrico y digital. Registra checadas, gestiona horarios y genera reportes.',
   reports: 'Reportes y análisis detallados de tu empresa. Visualiza estadísticas de asistencia, nómina y más.',
   // New strategic pages (aligned with Google Ads hero messaging)
-  alternativaOdoo: 'Olvida las hojas de cálculo. Deducciones de ley (IHSS, RAP, INFOP) con activación inmediata y soporte en tu país. Prueba gratis ahora.',
+  alternativaOdoo: 'Humano SISU complementa Odoo: asistencia biométrica y nómina local (HN, SV, GT) con integración disponible para clientes Odoo. Prueba gratis.',
   biometricoNomina: 'Integra tus biométricos con software regional. Automatiza deducciones y nómina local. Sin cálculos manuales, sin errores. Activar gratis hoy.',
   implementacion48h: 'Activación inmediata y biométrico en 72 h. Migración, capacitación y garantía de 30 días incluidas. Humano SISU.',
   deduccionesHonduras: 'Integra biométricos con Humano SISU. Automatiza IHSS, RAP, ISR en Honduras. Sin cálculos manuales. Activar gratis hoy, sin tarjeta.',

@@ -62,7 +62,7 @@ export const pageTitles = {
   attendance: 'Asistencia | Control de Asistencia | Humano SISU',
   reports: 'Reportes y Análisis | Humano SISU',
   // New strategic pages (aligned with Google Ads hero messaging)
-  alternativaOdoo: 'Software RH regional | Biométrico, nómina y ley local | Humano SISU',
+  alternativaOdoo: 'Complemento a Odoo | Nómina local, biométrico e integración | Humano SISU',
   biometricoNomina: 'Sistema biométrico + nómina | HN, SV y GT | Humano SISU',
   ventas: 'Cotización nómina y asistencia | PDF al instante | Humano SISU',
   ventasGracias: 'Propuesta enviada | PDF y acceso | Humano SISU',

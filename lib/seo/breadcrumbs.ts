@@ -48,7 +48,7 @@ function formatSegmentName(segment: string): string {
     'domingos-sin-planilla': 'Domingos sin planilla',
     'politica-de-privacidad': 'Política de privacidad',
     'terminos-de-servicio': 'Términos de servicio',
-    'alternativa-odoo-honduras': 'Software RH regional',
+    'alternativa-odoo-honduras': 'Complemento a Odoo',
     'sistema-biometrico-nomina': 'Sistema biométrico con nómina',
     'implementacion-48-horas': 'Implementación express',
     'deducciones-honduras-ihss-rap-isr': 'Deducciones IHSS RAP ISR',

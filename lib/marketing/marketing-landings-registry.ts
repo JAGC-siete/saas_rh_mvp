@@ -129,10 +129,10 @@ export const MARKETING_LANDINGS: MarketingLandingEntry[] = [
   },
   {
     path: '/alternativa-odoo-honduras',
-    name: 'Alternativa Odoo',
+    name: 'Complemento Odoo',
     kind: 'seo',
     status: 'active',
-    purpose: 'SEO comparativo.',
+    purpose: 'SEO: SISU como complemento RH de Odoo + integración.',
     primaryCta: '/activar',
   },
   {

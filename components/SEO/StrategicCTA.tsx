@@ -42,7 +42,7 @@ const ctaConfigs: Record<string, CTAConfig> = {
     whatsappText: 'Hola, quiero una demo personalizada de Humano SISU'
   },
   'compara-odoo': {
-    text: 'Compara con Odoo Gratis',
+    text: 'Complemento a Odoo',
     href: '/alternativa-odoo-honduras'
   }
 }

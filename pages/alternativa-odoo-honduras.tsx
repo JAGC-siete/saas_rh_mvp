@@ -93,7 +93,7 @@ export default function AlternativaOdooPage() {
               {copy.heroCta.primary}
             </TrackedInternalCta>
             <TrackedWhatsAppLink
-              href="https://wa.me/50432226773?text=Hola,%20quiero%20comparar%20Humano%20SISU%20con%20Odoo"
+              href="https://wa.me/50432226773?text=Hola,%20quiero%20conectar%20Humano%20SISU%20con%20mi%20Odoo"
               target="_blank"
               rel="noopener noreferrer"
               className="px-5 sm:px-6 py-2.5 sm:py-3 bg-green-600 text-white rounded-xl font-semibold text-sm sm:text-base hover:bg-green-700 transition-colors shadow-sm"
@@ -205,7 +205,7 @@ export default function AlternativaOdooPage() {
               {copy.ctaSection.primary}
             </TrackedInternalCta>
             <TrackedWhatsAppLink
-              href="https://wa.me/50432226773?text=Hola,%20quiero%20saber%20más%20sobre%20Humano%20SISU%20vs%20Odoo"
+              href="https://wa.me/50432226773?text=Hola,%20quiero%20la%20integración%20SISU%20con%20Odoo"
               target="_blank"
               rel="noopener noreferrer"
               className="px-6 sm:px-8 py-3 sm:py-4 bg-green-600 text-white rounded-xl font-semibold text-base sm:text-lg hover:bg-green-700 transition-colors shadow-sm"
@@ -231,7 +231,7 @@ export default function AlternativaOdooPage() {
               ))}
             </ul>
             <TrackedWhatsAppLink
-              href="https://wa.me/50432226773?text=Hola,%20quiero%20migrar%20desde%20Odoo%20a%20Humano%20SISU"
+              href="https://wa.me/50432226773?text=Hola,%20soy%20cliente%20Odoo%20y%20quiero%20activar%20la%20integración%20con%20Humano%20SISU"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-block px-6 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-colors shadow-sm"

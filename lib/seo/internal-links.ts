@@ -31,8 +31,8 @@ export const GUIDE_LINKS: Record<string, GuideLink> = {
   },
   alternativaOdoo: {
     href: '/alternativa-odoo-honduras',
-    label: 'Alternativa a Odoo',
-    description: 'Compara Humano SISU con Odoo para RH regional'
+    label: 'Complemento a Odoo',
+    description: 'Nómina local y biométrico integrados con Odoo'
   },
   domingosSinPlanilla: {
     href: '/domingos-sin-planilla',
