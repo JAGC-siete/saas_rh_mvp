@@ -103,7 +103,7 @@ export default function MagneticHero() {
                     <p className="text-[10px] font-medium uppercase tracking-wide landing-muted">
                       {copy.overlayTitle}
                     </p>
-                    <p className="text-[10px] font-semibold text-brand-300">{copy.overlayStatus}</p>
+                    <p className="text-[10px] font-semibold text-green-400">{copy.overlayStatus}</p>
                   </div>
                   <p className="text-[11px] landing-muted">{copy.overlayNetLabel}</p>
                   <p className="text-lg font-semibold landing-ink tabular-nums leading-tight">
