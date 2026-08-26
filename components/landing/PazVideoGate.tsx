@@ -133,11 +133,20 @@ export default function PazVideoGate() {
           <div className="paz-video-teaser">
             <div className="paz-video-poster-wrap" aria-hidden>
               <Image
+                src="/images/paz/cta-stress.jpg"
+                alt=""
+                fill
+                sizes="(max-width: 832px) calc(100vw - 3rem), 52rem"
+                className="paz-video-poster paz-video-poster-stress"
+                style={{ objectFit: 'cover', objectPosition: 'center 22%' }}
+              />
+              <Image
                 src="/images/paz/cta-peace.jpg"
                 alt=""
                 fill
                 sizes="(max-width: 832px) calc(100vw - 3rem), 52rem"
-                className="paz-video-poster"
+                className="paz-video-poster paz-video-poster-peace"
+                style={{ objectFit: 'cover', objectPosition: 'center 22%' }}
               />
             </div>
             <div className="paz-video-teaser-scrim" aria-hidden />
