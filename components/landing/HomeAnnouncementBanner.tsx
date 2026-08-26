@@ -11,8 +11,9 @@ type Props = {
 
 export default function HomeAnnouncementBanner({ onVisibilityChange }: Props) {
   const [visible, setVisible] = useState<boolean | null>(null)
-  const { locale, href } = useLandingPreferences()
+  const { locale, href, tone } = useLandingPreferences()
   const copy = getHomeCopy(locale)
+  const isLight = tone === 'light'
 
   useEffect(() => {
     try {
@@ -43,15 +44,29 @@ export default function HomeAnnouncementBanner({ onVisibilityChange }: Props) {
     <div
       role="region"
       aria-label={copy.bannerAria}
-      className="fixed top-0 inset-x-0 z-[60] border-b border-violet-800/60 bg-violet-950"
+      className={
+        isLight
+          ? 'fixed top-0 inset-x-0 z-[60] border-b border-slate-200/80 bg-white'
+          : 'fixed top-0 inset-x-0 z-[60] border-b border-white/10 bg-[#020617]'
+      }
     >
       <div className="relative mx-auto flex min-h-9 items-center justify-center px-10 py-2 sm:min-h-10 sm:px-12">
-        <p className="text-center text-xs sm:text-sm text-violet-200/90 leading-snug">
+        <p
+          className={
+            isLight
+              ? 'text-center text-xs sm:text-sm text-slate-600 leading-snug'
+              : 'text-center text-xs sm:text-sm text-slate-300 leading-snug'
+          }
+        >
           {copy.bannerText}{' '}
           <Link
             prefetch={false}
             href={href('/paz')}
-            className="underline underline-offset-2 decoration-violet-300/70 hover:text-white transition-colors"
+            className={
+              isLight
+                ? 'underline underline-offset-2 decoration-slate-400 hover:text-slate-900 transition-colors'
+                : 'underline underline-offset-2 decoration-slate-400 hover:text-white transition-colors'
+            }
           >
             {copy.bannerCta}
           </Link>
@@ -60,7 +75,11 @@ export default function HomeAnnouncementBanner({ onVisibilityChange }: Props) {
           type="button"
           onClick={dismiss}
           aria-label={copy.bannerClose}
-          className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-md text-violet-200/80 hover:text-white hover:bg-white/10 transition-colors"
+          className={
+            isLight
+              ? 'absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-md text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors'
+              : 'absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-md text-slate-300 hover:text-white hover:bg-white/10 transition-colors'
+          }
         >
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
             <path

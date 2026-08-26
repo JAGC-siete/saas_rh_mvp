@@ -26,6 +26,15 @@
   to { transform: translateX(-33.333%); }
 }
 
+@keyframes hero-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+.hero-float {
+  animation: hero-float 5.5s ease-in-out infinite;
+}
+
 .bg-mesh {
   background-color: #020617;
   background-image:
@@ -186,7 +195,8 @@
   .radar-pulse::after,
   .flags-marquee,
   .trust-marquee,
-  .testimonials-marquee {
+  .testimonials-marquee,
+  .hero-float {
     animation: none;
   }
 }

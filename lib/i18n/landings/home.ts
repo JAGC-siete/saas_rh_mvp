@@ -17,6 +17,11 @@ export type HomeCopy = {
     ctaTrial: string
     imageAlt: string
     imageCaption: string
+    overlayTitle: string
+    overlayStatus: string
+    overlayNetLabel: string
+    overlayNetValue: string
+    overlayTeam: string
   }
   socialProof: {
     titleLead: string
@@ -175,8 +180,13 @@ const byLocale: Record<LandingLocale, HomeCopy> = {
       lead: 'Sistema de RRHH integrado. Del reloj biométrico de asistencia (huella o facial) a la planilla, sin intervención manual.',
       ctaQuote: 'Solicitar cotización',
       ctaTrial: 'Probar gratis',
-      imageAlt: 'Profesional de RRHH en oficina, con café y libretas de trabajo',
+      imageAlt: 'Profesional de RRHH con café y libretas de trabajo',
       imageCaption: 'Contrata hoy tu nueva asistente de RRHH. Digital y Automatizado.',
+      overlayTitle: 'Planilla quincenal',
+      overlayStatus: 'Cerrada',
+      overlayNetLabel: 'Neto a pagar',
+      overlayNetValue: 'L 248,390',
+      overlayTeam: '12 colaboradores',
     },
     socialProof: {
       titleLead: 'Clientes SISU certifican: ',
@@ -233,8 +243,13 @@ const byLocale: Record<LandingLocale, HomeCopy> = {
       lead: 'Integrated HR system. From biometric attendance clock (fingerprint or facial) to payroll, without manual busywork.',
       ctaQuote: 'Request a quote',
       ctaTrial: 'Try free',
-      imageAlt: 'HR professional in an office with coffee and notebooks',
+      imageAlt: 'HR professional with coffee and notebooks',
       imageCaption: 'Hire your new digital HR assistant today. Automated.',
+      overlayTitle: 'Biweekly payroll',
+      overlayStatus: 'Closed',
+      overlayNetLabel: 'Net pay',
+      overlayNetValue: 'L 248,390',
+      overlayTeam: '12 employees',
     },
     socialProof: {
       titleLead: 'SISU customers certify: ',
