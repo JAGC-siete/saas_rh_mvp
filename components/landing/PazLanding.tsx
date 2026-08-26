@@ -10,6 +10,7 @@ import { useLandingPreferences } from './LandingPreferencesProvider'
 import { getCampaignsCopy } from '../../lib/i18n/landings/campaigns'
 import { LOCALE_SCHEMA_LANG } from '../../lib/i18n/locale'
 import PazVideoGate from './PazVideoGate'
+import TrustBar from './TrustBar'
 import { trackCTAClick } from '../../lib/analytics/googleAds'
 import { PAZ_CALENDAR_URL } from '../../lib/marketing/paz-video'
 
@@ -139,7 +140,7 @@ export default function PazLanding() {
                 <h1 className="paz-serif paz-hero-title mb-6">
                   ¿Conocés a alguien que perdió la paz con Recursos Humanos?
                   <br />
-                  <span className="italic">¿Esa persona?</span>
+                  <span className="italic">¿Acaso eres esa persona?</span>
                 </h1>
                 <p className="paz-mantra mb-8 w-full">
                   Ayudamos a Dueños de Negocio y Jefes de Personal a encontrar una forma más pacífica
@@ -196,6 +197,8 @@ export default function PazLanding() {
         <section id="paz-video" className="paz-section" aria-label="Video del método">
           <PazVideoGate />
         </section>
+
+        <TrustBar />
 
         <hr className="paz-divider" />
 

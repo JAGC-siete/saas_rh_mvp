@@ -10,11 +10,9 @@ import {
   PAZ_UNLOCK_STORAGE_KEY,
   PAZ_YOUTUBE_EMBED_SRC,
 } from '../../lib/marketing/paz-video'
-import { TRUST_CLIENT_NAMES } from './TrustBar'
 
 type GateStatus = 'idle' | 'submitting' | 'error'
 
-const PAZ_TRUST_NAMES = TRUST_CLIENT_NAMES.slice(0, 6)
 const REVEAL_MS = 480
 
 function prefersReducedMotion(): boolean {
@@ -188,28 +186,12 @@ export default function PazVideoGate() {
                   <p className={`paz-gate-msg ${status === 'error' ? 'is-error' : ''}`} role="status">
                     {message}
                   </p>
-                ) : (
-                  <p className="paz-gate-hint">
-                    Te escribimos desde humanosisu@humanosisu.net. El video queda acá apenas confirmamos
-                    el correo.
-                  </p>
-                )}
+                ) : null}
               </form>
             </div>
           </div>
         ) : null}
       </div>
-
-      <section className="paz-trust-strip" aria-label="Clientes que confían en Humano SISU">
-        <p className="paz-trust-strip-title">Empresas que confían en nosotros</p>
-        <ul className="paz-trust-strip-list">
-          {PAZ_TRUST_NAMES.map((name) => (
-            <li key={name} className="paz-trust-strip-item">
-              {name}
-            </li>
-          ))}
-        </ul>
-      </section>
 
       {unlocked ? (
         <>
