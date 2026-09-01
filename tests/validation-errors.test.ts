@@ -8,11 +8,13 @@ import {
 } from '../lib/ventas-game/ventas-form'
 import {
   ACTIVAR_DEMO_DEPARTMENTS,
+  ACTIVAR_FALLBACK_EMPLOYEE_RANGES,
   activarRangeMidpoint,
   activarStep1Errors,
   activarStep2Errors,
   type ActivarFormData,
 } from '../lib/activar-game/activar-form'
+import { FALLBACK_VENTAS_TIERS } from '../lib/ventas/load-ventas-config'
 
 describe('hasValidationErrors', () => {
   it('ignores undefined and empty string values', () => {
@@ -93,16 +95,29 @@ describe('activar step validators', () => {
   })
 
   it('step1 accepts a ventas-style range midpoint', () => {
-    assert.equal(hasValidationErrors(activarStep1Errors({ ...base, empleados: 201 })), false)
+    assert.equal(hasValidationErrors(activarStep1Errors({ ...base, empleados: 150 })), false)
   })
 })
 
 describe('activarRangeMidpoint', () => {
   it('uses the midpoint of each /ventas employee range', () => {
     assert.equal(activarRangeMidpoint(2, 10), 6)
-    assert.equal(activarRangeMidpoint(11, 100), 56)
-    assert.equal(activarRangeMidpoint(101, 300), 201)
-    assert.equal(activarRangeMidpoint(301, 500), 401)
+    assert.equal(activarRangeMidpoint(11, 50), 31)
+    assert.equal(activarRangeMidpoint(51, 100), 76)
+    assert.equal(activarRangeMidpoint(101, 200), 151)
+    assert.equal(activarRangeMidpoint(201, 300), 251)
+  })
+})
+
+describe('activar employee ranges', () => {
+  it('fallback mirrors FALLBACK_VENTAS_TIERS', () => {
+    assert.deepEqual(
+      ACTIVAR_FALLBACK_EMPLOYEE_RANGES,
+      FALLBACK_VENTAS_TIERS.map((t) => ({
+        min_employees: t.min_employees,
+        max_employees: t.max_employees,
+      }))
+    )
   })
 })
 

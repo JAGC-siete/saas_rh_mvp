@@ -70,13 +70,16 @@ function parseIncludedTerminalsMax(raw: unknown): number | null {
 }
 
 function tierRows(config_id: string, tiersInput: TierInput[]) {
-  return tiersInput.map((t, i) => ({
+  const sorted = [...tiersInput].sort(
+    (a, b) => asNumber(a.min_employees) - asNumber(b.min_employees)
+  )
+  return sorted.map((t, i) => ({
     config_id,
     min_employees: Math.trunc(asNumber(t.min_employees)),
     max_employees: Math.trunc(asNumber(t.max_employees)),
     price: asNumber(t.price),
     is_active: true,
-    sort_order: Number.isFinite(asNumber(t.sort_order)) ? Math.trunc(asNumber(t.sort_order)) : (i + 1) * 10,
+    sort_order: (i + 1) * 10,
     annual_terminal_mode: normalizeAnnualTerminalMode(t.annual_terminal_mode),
     included_terminals_max: parseIncludedTerminalsMax(t.included_terminals_max),
   }))

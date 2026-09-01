@@ -15,12 +15,18 @@ export function clampInt(n: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, v))
 }
 
+export function sortVentasTiersByEmployees<T extends { min_employees: number }>(tiers: T[]): T[] {
+  return [...(tiers || [])].sort((a, b) => a.min_employees - b.min_employees)
+}
+
 export function resolveTierByEmployees(
   tiers: VentasPricingTier[],
   employeesCount: number
 ): VentasPricingTier | null {
   const n = employeesCount
-  const active = (tiers || []).filter((t) => (t?.is_active ?? true) === true)
+  const active = sortVentasTiersByEmployees(
+    (tiers || []).filter((t) => (t?.is_active ?? true) === true)
+  )
   for (const tier of active) {
     if (n >= tier.min_employees && n <= tier.max_employees) return tier
   }

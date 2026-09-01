@@ -12,7 +12,8 @@ import {
   type VentasAnnualTerminalMode,
   type VentasBusinessRules,
 } from '../../../lib/ventas/business-rules'
-import { normalizeCouponCode } from '../../../lib/ventas/pricing'
+import { normalizeCouponCode, sortVentasTiersByEmployees } from '../../../lib/ventas/pricing'
+import { FALLBACK_VENTAS_TIERS } from '../../../lib/ventas/load-ventas-config'
 
 type TierRow = {
   min_employees: number
@@ -31,40 +32,14 @@ type PromoRow = {
 }
 
 function defaultTiers(): TierRow[] {
-  return [
-    {
-      min_employees: 1,
-      max_employees: 30,
-      price: 65000,
-      sort_order: 10,
-      annual_terminal_mode: 'auto',
-      included_terminals_max: '',
-    },
-    {
-      min_employees: 31,
-      max_employees: 50,
-      price: 74000,
-      sort_order: 20,
-      annual_terminal_mode: 'auto',
-      included_terminals_max: '',
-    },
-    {
-      min_employees: 51,
-      max_employees: 100,
-      price: 85000,
-      sort_order: 30,
-      annual_terminal_mode: 'auto',
-      included_terminals_max: '',
-    },
-    {
-      min_employees: 101,
-      max_employees: 200,
-      price: 97450,
-      sort_order: 40,
-      annual_terminal_mode: 'auto',
-      included_terminals_max: '',
-    },
-  ]
+  return FALLBACK_VENTAS_TIERS.map((t, idx) => ({
+    min_employees: t.min_employees,
+    max_employees: t.max_employees,
+    price: t.price,
+    sort_order: t.sort_order ?? (idx + 1) * 10,
+    annual_terminal_mode: t.annual_terminal_mode ?? 'auto',
+    included_terminals_max: t.included_terminals_max ?? '',
+  }))
 }
 
 function defaultPromos(): PromoRow[] {
@@ -138,19 +113,21 @@ export default function VentasConfigPage() {
 
       if (rows.length > 0) {
         setTiers(
-          rows.map((r: any, idx: number) => ({
-            min_employees: Number(r.min_employees) || 1,
-            max_employees: Number(r.max_employees) || 1,
-            price: Number(r.price) || 0,
-            sort_order: Number(r.sort_order) || (idx + 1) * 10,
-            annual_terminal_mode: (['auto', 'included', 'sale'].includes(r.annual_terminal_mode)
-              ? r.annual_terminal_mode
-              : 'auto') as VentasAnnualTerminalMode,
-            included_terminals_max:
-              r.included_terminals_max == null || r.included_terminals_max === ''
-                ? ''
-                : Number(r.included_terminals_max),
-          }))
+          sortVentasTiersByEmployees(
+            rows.map((r: any, idx: number) => ({
+              min_employees: Number(r.min_employees) || 1,
+              max_employees: Number(r.max_employees) || 1,
+              price: Number(r.price) || 0,
+              sort_order: Number(r.sort_order) || (idx + 1) * 10,
+              annual_terminal_mode: (['auto', 'included', 'sale'].includes(r.annual_terminal_mode)
+                ? r.annual_terminal_mode
+                : 'auto') as VentasAnnualTerminalMode,
+              included_terminals_max:
+                r.included_terminals_max == null || r.included_terminals_max === ''
+                  ? ''
+                  : Number(r.included_terminals_max),
+            }))
+          )
         )
       }
     } catch (e: any) {
@@ -286,7 +263,7 @@ export default function VentasConfigPage() {
   }
 
   const runtimePreviews = useMemo(() => {
-    const samples = [10, 40, 60, 150, 350]
+    const samples = [8, 30, 80, 150, 250]
     return samples.map((emps) => {
       const tier = tiers.find((t) => emps >= t.min_employees && emps <= t.max_employees)
       const tierHints = tier

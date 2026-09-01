@@ -2,6 +2,7 @@ import { TRIAL_CONFIG } from '../config/trial'
 import type { CountryCode } from '../country/supported'
 import { currencyForCountryCode, isCountryCode } from '../country/supported'
 import { normalizeSoftPhone } from '../privacy'
+import { FALLBACK_VENTAS_TIERS } from '../ventas/load-ventas-config'
 
 export interface ActivarFormData {
   empleados: number
@@ -106,13 +107,12 @@ export const COUNTRY_LABEL: Record<CountryCode, string> = {
   GTM: 'Guatemala',
 }
 
-/** Mismos tramos que /ventas si public-config no responde. */
-export const ACTIVAR_FALLBACK_EMPLOYEE_RANGES: { min_employees: number; max_employees: number }[] = [
-  { min_employees: 2, max_employees: 10 },
-  { min_employees: 11, max_employees: 100 },
-  { min_employees: 101, max_employees: 300 },
-  { min_employees: 301, max_employees: 500 },
-]
+/** Mismos tramos que /ventas (FALLBACK_VENTAS_TIERS) si public-config no responde. */
+export const ACTIVAR_FALLBACK_EMPLOYEE_RANGES: { min_employees: number; max_employees: number }[] =
+  FALLBACK_VENTAS_TIERS.map((t) => ({
+    min_employees: t.min_employees,
+    max_employees: t.max_employees,
+  }))
 
 /** Departamentos de la empresa de prueba (round-robin al sembrar fichas). */
 export const ACTIVAR_DEMO_DEPARTMENTS = [

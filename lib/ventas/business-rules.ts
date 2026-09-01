@@ -17,7 +17,7 @@ export const VENTAS_MONTHLY_MIN_EMPLOYEES = 21
  */
 export const VENTAS_ANNUAL_TERMINALS_INCLUDED_MIN_EMPLOYEES = 51
 
-/** Precio de lista por terminal biométrica (venta, plan anual < 51 emp). */
+/** Precio de lista por terminal biométrica (venta one-shot, plan anual modo sale). */
 export const VENTAS_HARDWARE_SALE_UNIT_PRICE = 6500
 
 /** Máximo de terminales en cotización automática del formulario web. */

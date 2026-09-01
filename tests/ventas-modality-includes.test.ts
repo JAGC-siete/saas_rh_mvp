@@ -8,7 +8,12 @@ import {
   ventasTooManyTerminalsErrorMessage,
   VENTAS_MAX_AUTO_QUOTE_TERMINALS,
 } from '../lib/ventas/modality-includes'
-import { buildQuotationPlanSummary } from '../lib/ventas/quote-display'
+import {
+  annualPaymentIntroText,
+  buildQuotationPlanSummary,
+  getContractIncludesLabels,
+} from '../lib/ventas/quote-display'
+import { formatTerminalSelectLabel } from '../lib/ventas-game/ventas-form'
 import { generateVentasQuotationEmailText } from '../lib/ventas/email-template'
 import type { QuotationQuote } from '../lib/ventas/types'
 
@@ -140,6 +145,139 @@ describe('ventas modality includes', () => {
     assert.ok(summary.lines.some((l) => /adicionales/i.test(l.label) && /−20%/.test(l.label)))
     assert.match(summary.totalLabel, /compromiso/i)
     assert.match(summary.totalValue, /57,000\.41/)
+  })
+
+  it('plan summary anual 11–50 cap 2 con extras suma terminales al compromiso', () => {
+    const quote: QuotationQuote = {
+      tier: {
+        min_employees: 11,
+        max_employees: 50,
+        annual_terminal_mode: 'included',
+        included_terminals_max: 2,
+      },
+      billing_modality: 'annual',
+      currency: 'HNL',
+      annual_subtotal: 35000.77,
+      annual_discount_amount: 0,
+      annual_total: 35000.77,
+      monthly_software_total: 2916.73,
+      monthly_hardware_fee: 0,
+      monthly_total: 2916.73,
+      hardware_sale_total: 15600,
+      hardware_sale_unit_price: 6500,
+      hardware_sale_discount_pct: 0.2,
+      coupon_applied: false,
+      discount_pct_applied: 0,
+      terminals_count: 5,
+      employees_count: 40,
+      hardware_mode: 'included',
+      terminals_included_count: 2,
+      terminals_extra_count: 3,
+    }
+    const summary = buildQuotationPlanSummary({ quote })
+    assert.ok(summary.lines.some((l) => /adicionales/i.test(l.label) && /−20%/.test(l.label)))
+    assert.match(summary.totalLabel, /compromiso/i)
+    assert.match(summary.totalValue, /50,600\.77/)
+  })
+
+  it('PDF includes copy: cap 2 sin extras vs extras', () => {
+    const withCap = getContractIncludesLabels({
+      isAnnual: true,
+      terminalsCount: 2,
+      includesTerminals: true,
+      hardwareMode: 'included',
+      includedCount: 2,
+      extraCount: 0,
+      includedCap: 2,
+    })
+    assert.ok(withCap.some((l) => /Hasta 2 terminales biométricas incluidas/i.test(l)))
+
+    const withExtras = getContractIncludesLabels({
+      isAnnual: true,
+      terminalsCount: 5,
+      includesTerminals: true,
+      hardwareMode: 'included',
+      includedCount: 2,
+      extraCount: 3,
+      includedCap: 2,
+    })
+    assert.ok(withExtras.some((l) => /2 terminales incluidas \+ 3 adicionales/i.test(l)))
+  })
+
+  it('PDF payment intro: venta vs incluidas vs extras', () => {
+    assert.match(
+      annualPaymentIntroText({ includesTerminals: false, hardwareSaleTotal: 12350 }),
+      /licencia anual \+ terminales en venta/
+    )
+    assert.match(
+      annualPaymentIntroText({ includesTerminals: true, hardwareSaleTotal: 15600 }),
+      /terminales adicionales/
+    )
+    assert.match(
+      annualPaymentIntroText({ includesTerminals: true, hardwareSaleTotal: 0 }),
+      /50% anticipo \(licencia anual\)/
+    )
+  })
+
+  it('form terminal labels: sale, included cap 2, extras', () => {
+    assert.equal(
+      formatTerminalSelectLabel({ n: 1, hardwareMode: 'sale', includedCap: 5 }),
+      '1 terminal (venta aparte)'
+    )
+    assert.equal(
+      formatTerminalSelectLabel({ n: 2, hardwareMode: 'sale', includedCap: 5 }),
+      '2 terminales (venta, −5%)'
+    )
+    assert.equal(
+      formatTerminalSelectLabel({ n: 2, hardwareMode: 'included', includedCap: 2 }),
+      '2 terminales (incluidas)'
+    )
+    assert.equal(
+      formatTerminalSelectLabel({ n: 4, hardwareMode: 'included', includedCap: 2 }),
+      '4 terminales (2 incluidas + 2 adicionales)'
+    )
+    assert.equal(
+      formatTerminalSelectLabel({ n: 4, hardwareMode: 'included', includedCap: 3 }),
+      '4 terminales (3 incluidas + 1 adicional)'
+    )
+  })
+
+  it('email anual 2–10 venta aparte muestra línea de terminales en venta', () => {
+    const quote: QuotationQuote = {
+      tier: {
+        min_employees: 2,
+        max_employees: 10,
+        annual_terminal_mode: 'sale',
+        included_terminals_max: 5,
+      },
+      billing_modality: 'annual',
+      currency: 'HNL',
+      annual_subtotal: 17507.7,
+      annual_discount_amount: 0,
+      annual_total: 17507.7,
+      monthly_software_total: 1458.98,
+      monthly_hardware_fee: 0,
+      monthly_total: 1458.98,
+      hardware_sale_total: 6500,
+      hardware_sale_unit_price: 6500,
+      hardware_sale_discount_pct: 0,
+      coupon_applied: false,
+      discount_pct_applied: 0,
+      terminals_count: 1,
+      employees_count: 8,
+      hardware_mode: 'sale',
+      terminals_included_count: 0,
+      terminals_extra_count: 1,
+    }
+    const text = generateVentasQuotationEmailText({
+      quote,
+      countryLabel: 'Honduras',
+      sentAt: new Date('2026-05-22T12:00:00.000Z'),
+      now: new Date('2026-05-22T12:00:00.000Z'),
+    })
+    assert.match(text, /venta/)
+    assert.match(text, /2 a 10 empleados/)
+    assert.match(text, /24,007\.70/)
   })
 
   it('plan summary anual <51 muestra venta de terminales', () => {

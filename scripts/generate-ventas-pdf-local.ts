@@ -7,9 +7,8 @@ import { mkdirSync, writeFileSync } from 'fs'
 import { createAdminClient } from '../lib/supabase/server'
 import { hardwareFeeMonthly } from '../lib/ventas/modality-includes'
 import {
-  hardwareSaleTotal,
+  computeAnnualHardwareCharges,
   shouldChargeHardwareContinuity,
-  shouldChargeHardwareSale,
 } from '../lib/ventas/business-rules'
 import { resolveTierByEmployees, roundMoney } from '../lib/ventas/pricing'
 import { generateVentasQuotationPDF } from '../lib/ventas/pdf'
@@ -25,22 +24,39 @@ const TERMINALS_COUNT = 1
 
 async function main() {
   const supabase = createAdminClient()
-  const { configId, currency, tiers, promoCodes } = await loadActiveVentasConfig(supabase as any)
+  const { configId, currency, tiers, promoCodes, businessRules } = await loadActiveVentasConfig(
+    supabase as any
+  )
   const tier = resolveTierByEmployees(tiers, EMPLOYEES_COUNT)
   if (!tier) throw new Error(`No pricing tier for ${EMPLOYEES_COUNT} employees`)
+
+  const tierHardware = {
+    annual_terminal_mode: tier.annual_terminal_mode ?? 'auto',
+    included_terminals_max: tier.included_terminals_max ?? null,
+  }
+  const ruleOpts = { rules: businessRules, tier: tierHardware }
 
   const promo = resolveSubmittedPromo({ promoCodes, submittedRaw: COUPON_SUBMITTED })
   const annualSubtotal = roundMoney(Number(tier.price))
   const annualDiscountAmount = roundMoney(annualSubtotal * promo.discountPctApplied)
   const annualTotal = roundMoney(annualSubtotal - annualDiscountAmount)
   const monthlySoftwareTotal = roundMoney(annualTotal / 12)
-  const hw = hardwareFeeMonthly(TERMINALS_COUNT)
-  const monthlyHardwareFee = shouldChargeHardwareContinuity(BILLING_MODALITY, EMPLOYEES_COUNT)
+  const hw = hardwareFeeMonthly(TERMINALS_COUNT, businessRules, tierHardware)
+  const monthlyHardwareFee = shouldChargeHardwareContinuity(
+    BILLING_MODALITY,
+    EMPLOYEES_COUNT,
+    ruleOpts
+  )
     ? hw.fee
     : 0
-  const sale = shouldChargeHardwareSale(BILLING_MODALITY, EMPLOYEES_COUNT)
-    ? hardwareSaleTotal(TERMINALS_COUNT)
-    : null
+  const hwCharges = computeAnnualHardwareCharges({
+    modality: BILLING_MODALITY,
+    employeesCount: EMPLOYEES_COUNT,
+    terminalsCount: TERMINALS_COUNT,
+    rules: businessRules,
+    tier: tierHardware,
+  })
+  const sale = hwCharges.sale
   const monthlyTotal = roundMoney(monthlySoftwareTotal + monthlyHardwareFee)
 
   const quote = {
@@ -57,9 +73,18 @@ async function main() {
     coupon_applied: promo.isCouponValid,
     discount_pct_applied: promo.discountPctApplied,
     coupon_code_applied: promo.couponCodeApplied,
-    tier: { min_employees: tier.min_employees, max_employees: tier.max_employees },
+    tier: {
+      min_employees: tier.min_employees,
+      max_employees: tier.max_employees,
+      annual_terminal_mode: tierHardware.annual_terminal_mode,
+      included_terminals_max: tierHardware.included_terminals_max,
+    },
+    hardware_mode: hwCharges.mode,
+    business_rules: businessRules,
     billing_modality: BILLING_MODALITY,
     terminals_count: TERMINALS_COUNT,
+    terminals_included_count: hwCharges.includedCount,
+    terminals_extra_count: hwCharges.extraCount,
     employees_count: EMPLOYEES_COUNT,
   }
 
@@ -84,7 +109,9 @@ async function main() {
   console.log('=== Live config_ventas (active) ===')
   console.log(`  id: ${configId ?? 'fallback'}`)
   console.log(`  promo codes: ${promoCodes.map((p) => p.code).join(', ') || 'legacy'}`)
-  console.log(`  tier for ${EMPLOYEES_COUNT} employees: ${tier.min_employees}–${tier.max_employees} @ ${tier.price}`)
+  console.log(
+    `  tier for ${EMPLOYEES_COUNT} employees: ${tier.min_employees}–${tier.max_employees} @ ${tier.price} (${tierHardware.annual_terminal_mode}, cap ${tierHardware.included_terminals_max ?? 'form'})`
+  )
   console.log('')
   console.log('=== Quote dry-run ===')
   console.log(`  coupon submitted: ${COUPON_SUBMITTED}`)
@@ -92,6 +119,8 @@ async function main() {
   console.log(`  subtotal: ${annualSubtotal}`)
   console.log(`  discount: ${annualDiscountAmount}`)
   console.log(`  annual total: ${annualTotal}`)
+  console.log(`  hardware mode: ${hwCharges.mode}`)
+  console.log(`  hardware sale: ${sale?.total ?? 0}`)
   console.log('')
   console.log(`Saved: ${OUT_PATH} (${pdf.length} bytes)`)
 }

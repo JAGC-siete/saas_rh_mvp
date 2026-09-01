@@ -7,7 +7,7 @@ import { logger } from '../../lib/logger'
 import { maskEmail, normalizeSoftPhone } from '../../lib/privacy'
 import { notificationManager } from '../../lib/notification-providers'
 import { getResendFromContact } from '../../lib/resend-from'
-import type { QuotationRequest, QuotationResponse, VentasPricingTier, CurrencyCode } from '../../lib/ventas/types'
+import type { QuotationRequest, QuotationResponse, CurrencyCode } from '../../lib/ventas/types'
 import { clampInt, resolveTierByEmployees, roundMoney } from '../../lib/ventas/pricing'
 import { hardwareFeeMonthly } from '../../lib/ventas/modality-includes'
 import {
@@ -19,7 +19,11 @@ import {
   ventasMonthlyUnavailableMessage,
   ventasTooManyTerminalsErrorMessage,
 } from '../../lib/ventas/business-rules'
-import { loadActiveVentasConfig, resolveSubmittedPromo } from '../../lib/ventas/load-ventas-config'
+import {
+  FALLBACK_VENTAS_TIERS,
+  loadActiveVentasConfig,
+  resolveSubmittedPromo,
+} from '../../lib/ventas/load-ventas-config'
 import { generateVentasQuotationPDF } from '../../lib/ventas/pdf'
 import { generateVentasQuotationEmailHTML, generateVentasQuotationEmailSubject, generateVentasQuotationEmailText } from '../../lib/ventas/email-template'
 import { generateVentasActivationEmailHTML, generateVentasActivationEmailSubject } from '../../lib/ventas/activation-email'
@@ -52,12 +56,6 @@ import { getHondurasTimestamp } from '../../lib/timezone'
 import { addDays } from 'date-fns'
 
 const FALLBACK_CURRENCY: CurrencyCode = 'HNL'
-const FALLBACK_TIERS: VentasPricingTier[] = [
-  { min_employees: 1, max_employees: 30, price: 65000, is_active: true, sort_order: 10 },
-  { min_employees: 31, max_employees: 50, price: 74000, is_active: true, sort_order: 20 },
-  { min_employees: 51, max_employees: 100, price: 85000, is_active: true, sort_order: 30 },
-  { min_employees: 101, max_employees: 200, price: 97450, is_active: true, sort_order: 40 },
-]
 
 function normalizeBillingModality(v: unknown): 'annual' | 'monthly' {
   const raw = typeof v === 'string' ? v.trim().toLowerCase() : ''
@@ -270,7 +268,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
       ventasConfig = {
         configId: null,
         currency: FALLBACK_CURRENCY,
-        tiers: FALLBACK_TIERS,
+        tiers: FALLBACK_VENTAS_TIERS,
         promoCodes: [],
         businessRules: DEFAULT_VENTAS_BUSINESS_RULES,
       }

@@ -4,12 +4,13 @@ import {
   buildQuotationPlanSummary,
   employeesCountFromQuote,
   getContractIncludesLabels,
+  annualPaymentIntroText,
 } from './quote-display'
 import type { VentasBankDetails } from './bank-details'
 import { buildModalityComparison } from './modality-comparison'
 import { getVentasModalityDefinition } from './modality-includes'
 import { buildTerminalsDisplayLabel, buildVentasRefLabel } from './brand-styles'
-import { quoteIncludesBiometricTerminals, resolveHardwareMode } from './business-rules'
+import { quoteIncludesBiometricTerminals, resolveHardwareMode, resolveIncludedTerminalsCap } from './business-rules'
 import { convertVentasMoney, pricesInCurrencyFooter, VENTAS_PRICE_LIST_CURRENCY } from './currency'
 import { PDF_TYPE as TYPE, VENTAS_PDF_THEME as T } from './pdf-theme'
 
@@ -52,6 +53,7 @@ export async function generateVentasQuotationPDF(params: {
     quoteIncludesBiometricTerminals(quote.billing_modality, employees, ruleOpts)
   const hardwareMode =
     quote.hardware_mode || resolveHardwareMode(quote.billing_modality, employees, ruleOpts)
+  const includedCap = resolveIncludedTerminalsCap(quote.business_rules, ruleOpts.tier)
   const planSummary = buildQuotationPlanSummary({ quote, sentAt })
   const modalityComparison = buildModalityComparison({ quote, sentAt })
   const modalityDef = getVentasModalityDefinition(quote.billing_modality, {
@@ -118,6 +120,7 @@ export async function generateVentasQuotationPDF(params: {
         currency: quote.currency,
         includedCount: quote.terminals_included_count,
         extraCount: quote.terminals_extra_count,
+        includedCap,
         hardwareSaleUnitPrice:
           quote.hardware_sale_unit_price ??
           (quote.business_rules?.hardware_sale_unit_price != null
@@ -155,6 +158,7 @@ export async function generateVentasQuotationPDF(params: {
         bankDetails,
         isAnnual,
         includesTerminals,
+        hardwareSaleTotal: quote.hardware_sale_total || 0,
         currency: quote.currency,
       })
 
@@ -281,6 +285,7 @@ function drawFeaturesRow(
     currency: QuotationQuote['currency']
     includedCount?: number
     extraCount?: number
+    includedCap?: number
     hardwareSaleUnitPrice?: number
   }
 ): number {
@@ -294,6 +299,7 @@ function drawFeaturesRow(
     currency,
     includedCount,
     extraCount,
+    includedCap,
     hardwareSaleUnitPrice,
   } = params
   const labels = getContractIncludesLabels({
@@ -304,6 +310,7 @@ function drawFeaturesRow(
     currency,
     includedCount,
     extraCount,
+    includedCap,
     hardwareSaleUnitPrice,
   })
   const colGap = 16
@@ -402,10 +409,11 @@ function drawFooter(
     bankDetails?: VentasBankDetails | null
     isAnnual: boolean
     includesTerminals: boolean
+    hardwareSaleTotal?: number
     currency: QuotationQuote['currency']
   }
 ) {
-  const { y, contentW, bankDetails, isAnnual, includesTerminals, currency } = params
+  const { y, contentW, bankDetails, isAnnual, includesTerminals, hardwareSaleTotal, currency } = params
   const boxW = (contentW - 14) / 2
   const boxH = 128
 
@@ -415,9 +423,10 @@ function drawFooter(
     : 'Entrega en 3 a 5 días hábiles tras confirmar el depósito.'
 
   const paymentIntro = isAnnual
-    ? includesTerminals
-      ? '50% anticipo (licencia anual) para programar la instalación y enlace de las terminales y 50% únicamente contra la instalación y enlace efectivos con el sistema.'
-      : 'Anticipo del 50% sobre (licencia anual + terminales en venta) para programar la instalación. El saldo de la licencia se cancela contra instalación.'
+    ? annualPaymentIntroText({
+        includesTerminals,
+        hardwareSaleTotal,
+      })
     : 'El siguiente paso es enviar el comprobante del 100% de la primera mensualidad (software + continuidad de hardware).'
 
   drawSectionTitle(doc, implementationTitle, MARGIN, y)

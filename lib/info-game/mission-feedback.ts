@@ -380,7 +380,7 @@ function getVentasMissionFeedback(
       annual: {
         title: 'Nota #2 · registrada',
         headline: 'Anual suele convenir.',
-        body: `${name}, en anual aplican terminales incluidas y la ventana del 20% si aún está vigente.`,
+        body: `${name}, en anual el tratamiento de terminales depende del rango cotizado (incluidas o venta aparte) y la ventana del 20% si aún está vigente.`,
       },
       monthly: {
         title: 'Nota #2 · registrada',

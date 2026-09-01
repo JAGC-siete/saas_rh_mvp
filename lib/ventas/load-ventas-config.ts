@@ -1,5 +1,5 @@
 import type { CurrencyCode, VentasPricingTier } from './types'
-import { normalizeCouponCode } from './pricing'
+import { normalizeCouponCode, sortVentasTiersByEmployees } from './pricing'
 import { matchVentasPromoCode, promoCodesFromLegacyConfig, type VentasPromoCode } from './promo-codes'
 import {
   DEFAULT_VENTAS_BUSINESS_RULES,
@@ -12,38 +12,52 @@ const FALLBACK_CURRENCY: CurrencyCode = 'HNL'
 const FALLBACK_COUPON_CODE = 'gastro2026'
 const FALLBACK_COUPON_DISCOUNT_PCT = 0.45
 
+/** Matriz comercial vigente (Superadmin → Rangos y precios). */
 export const FALLBACK_VENTAS_TIERS: VentasPricingTier[] = [
   {
-    min_employees: 1,
-    max_employees: 30,
-    price: 65000,
+    min_employees: 2,
+    max_employees: 10,
+    price: 17507.7,
     is_active: true,
     sort_order: 10,
-    annual_terminal_mode: 'auto',
+    annual_terminal_mode: 'sale',
+    included_terminals_max: 5,
   },
   {
-    min_employees: 31,
+    min_employees: 11,
     max_employees: 50,
-    price: 74000,
+    price: 35000.77,
     is_active: true,
     sort_order: 20,
-    annual_terminal_mode: 'auto',
+    annual_terminal_mode: 'included',
+    included_terminals_max: 2,
   },
   {
     min_employees: 51,
     max_employees: 100,
-    price: 85000,
+    price: 45000.69,
     is_active: true,
     sort_order: 30,
-    annual_terminal_mode: 'auto',
+    annual_terminal_mode: 'included',
+    included_terminals_max: 2,
   },
   {
     min_employees: 101,
     max_employees: 200,
-    price: 97450,
+    price: 77000.71,
     is_active: true,
     sort_order: 40,
-    annual_terminal_mode: 'auto',
+    annual_terminal_mode: 'included',
+    included_terminals_max: 3,
+  },
+  {
+    min_employees: 201,
+    max_employees: 300,
+    price: 85000.69,
+    is_active: true,
+    sort_order: 50,
+    annual_terminal_mode: 'included',
+    included_terminals_max: 3,
   },
 ]
 
@@ -115,7 +129,7 @@ export async function loadActiveVentasConfig(supabase: any): Promise<LoadedVenta
     if (promoErr) throw new Error(`config_ventas_promo_codes: ${promoErr.message}`)
 
     if (Array.isArray(tiersRows) && tiersRows.length > 0) {
-      tiers = tiersRows.map(mapTierRow)
+      tiers = sortVentasTiersByEmployees(tiersRows.map(mapTierRow))
     }
     if (Array.isArray(promoRows) && promoRows.length > 0) {
       promoCodes = promoRows.map((r: VentasPromoCode) => ({

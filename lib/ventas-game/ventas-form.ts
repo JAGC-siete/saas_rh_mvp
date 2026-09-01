@@ -3,9 +3,11 @@ import {
   isMonthlyModalityAvailable,
   mergeVentasBusinessRules,
   ventasMonthlyUnavailableMessage,
+  hardwareSaleVolumeDiscountPct,
   VENTAS_MAX_AUTO_QUOTE_TERMINALS,
   type VentasAnnualTerminalMode,
   type VentasBusinessRules,
+  type VentasHardwareMode,
 } from '../ventas/business-rules'
 import type { CountryCode } from '../country/supported'
 import { isCountryCode } from '../country/supported'
@@ -64,6 +66,29 @@ export function findPublicTierForEmployees(
 
 export function sortPublicTiers(tiers: VentasPublicTier[]): VentasPublicTier[] {
   return [...tiers].sort((a, b) => a.min_employees - b.min_employees)
+}
+
+export function formatTerminalSelectLabel(params: {
+  n: number
+  hardwareMode: VentasHardwareMode
+  includedCap: number
+}): string {
+  const n = Math.max(1, Math.floor(Number(params.n) || 1))
+  const base = n === 1 ? '1 terminal' : `${n} terminales`
+  if (params.hardwareMode === 'included') {
+    const cap = Math.max(1, Math.floor(Number(params.includedCap) || 1))
+    if (n <= cap) {
+      return n === 1 ? '1 terminal (incluida)' : `${n} terminales (incluidas)`
+    }
+    const extras = n - cap
+    return `${n} terminales (${cap} incluidas + ${extras} adicional${extras === 1 ? '' : 'es'})`
+  }
+  if (params.hardwareMode === 'sale') {
+    const pct = Math.round(hardwareSaleVolumeDiscountPct(n) * 100)
+    if (pct > 0) return `${base} (venta, −${pct}%)`
+    return `${base} (venta aparte)`
+  }
+  return `${base} (continuidad HW)`
 }
 
 function employeesCountError(

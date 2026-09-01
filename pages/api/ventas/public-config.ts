@@ -1,7 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { createAdminClient } from '../../../lib/supabase/server'
 import { DEFAULT_VENTAS_BUSINESS_RULES } from '../../../lib/ventas/business-rules'
-import { loadActiveVentasConfig } from '../../../lib/ventas/load-ventas-config'
+import { FALLBACK_VENTAS_TIERS, loadActiveVentasConfig } from '../../../lib/ventas/load-ventas-config'
+import { sortVentasTiersByEmployees } from '../../../lib/ventas/pricing'
 import { logger } from '../../../lib/logger'
 
 /**
@@ -23,7 +24,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       max_auto_quote_terminals: rules.max_auto_quote_terminals,
       annual_terminals_included_min_employees: rules.annual_terminals_included_min_employees,
       hardware_sale_unit_price: rules.hardware_sale_unit_price,
-      tiers: (cfg.tiers || []).map((t) => ({
+      tiers: sortVentasTiersByEmployees(cfg.tiers || []).map((t) => ({
         min_employees: t.min_employees,
         max_employees: t.max_employees,
         annual_terminal_mode: t.annual_terminal_mode || 'auto',
@@ -39,7 +40,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       max_auto_quote_terminals: rules.max_auto_quote_terminals,
       annual_terminals_included_min_employees: rules.annual_terminals_included_min_employees,
       hardware_sale_unit_price: rules.hardware_sale_unit_price,
-      tiers: [],
+      tiers: sortVentasTiersByEmployees(FALLBACK_VENTAS_TIERS).map((t) => ({
+        min_employees: t.min_employees,
+        max_employees: t.max_employees,
+        annual_terminal_mode: t.annual_terminal_mode || 'auto',
+        included_terminals_max: t.included_terminals_max ?? null,
+      })),
     })
   }
 }

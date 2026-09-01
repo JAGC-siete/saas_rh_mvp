@@ -165,11 +165,17 @@ export function getContractIncludesLabels(params: {
   extraCount?: number
   /** Precio unitario vigente (lista HNL o ya localizado). */
   hardwareSaleUnitPrice?: number
+  /** Cupo del rango (Hasta N); si no hay extras, se usa para el copy de inclusión. */
+  includedCap?: number
 }): string[] {
-  const { isAnnual, terminalsCount, includesTerminals, hardwareMode } = params
+  const { isAnnual, includesTerminals, hardwareMode } = params
   const currency = params.currency || 'HNL'
   const extras = Math.max(0, Math.floor(Number(params.extraCount) || 0))
   const included = Math.max(0, Math.floor(Number(params.includedCount) || 0))
+  const includedCap = Math.max(
+    0,
+    Math.floor(Number(params.includedCap) || included)
+  )
   const unitPrice =
     params.hardwareSaleUnitPrice != null && Number.isFinite(Number(params.hardwareSaleUnitPrice))
       ? Number(params.hardwareSaleUnitPrice)
@@ -180,7 +186,9 @@ export function getContractIncludesLabels(params: {
     const terminalsLine =
       extras > 0 && included > 0
         ? `${included} terminales incluidas + ${extras} adicional${extras === 1 ? '' : 'es'} (−20% unitario)`
-        : 'Terminales incluidas según cupo del plan (extras se venden por separado −20%)'
+        : includedCap > 0
+          ? `Hasta ${includedCap} terminales biométricas incluidas en este rango`
+          : 'Terminales incluidas según cupo del plan (extras se venden por separado −20%)'
     return [
       'Subscripción anual de software',
       terminalsLine,
@@ -211,6 +219,21 @@ export function getContractIncludesLabels(params: {
     'Actualizaciones',
     'Impuestos',
   ]
+}
+
+/** Copy de pago anual (PDF) alineado con depósito 50% de (licencia + venta de terminales). */
+export function annualPaymentIntroText(params: {
+  includesTerminals: boolean
+  hardwareSaleTotal?: number
+}): string {
+  const hasSale = (Number(params.hardwareSaleTotal) || 0) > 0
+  if (hasSale && params.includesTerminals) {
+    return 'Anticipo del 50% sobre (licencia anual + terminales adicionales) para programar la instalación. El saldo se cancela contra instalación y enlace efectivos con el sistema.'
+  }
+  if (hasSale) {
+    return 'Anticipo del 50% sobre (licencia anual + terminales en venta) para programar la instalación. El saldo de la licencia se cancela contra instalación.'
+  }
+  return '50% anticipo (licencia anual) para programar la instalación y enlace de las terminales y 50% únicamente contra la instalación y enlace efectivos con el sistema.'
 }
 
 function terminalsLabelFromCount(count: number): string {

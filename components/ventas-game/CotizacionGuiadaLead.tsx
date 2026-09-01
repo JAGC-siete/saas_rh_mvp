@@ -14,7 +14,7 @@ import {
   buildQuotationAcquisitionWhatsAppText,
   buildVentasSupportWhatsAppUrl,
 } from '../../lib/ventas/bank-details'
-import { getVentasModalityDefinition } from '../../lib/ventas/modality-includes'
+import { getVentasModalityDefinition, annualTerminalsSaleFieldHint } from '../../lib/ventas/modality-includes'
 import {
   annualIncludesExtrasMessage,
   isMonthlyModalityAvailable,
@@ -40,6 +40,7 @@ import {
   computeVentasErrors,
   findPublicTierForEmployees,
   formatEmployeeRangeLabel,
+  formatTerminalSelectLabel,
   sortPublicTiers,
   ventasCompanyErrors,
   ventasDeliveryErrors,
@@ -65,7 +66,7 @@ const defaultForm = (country: CountryCode): QuotationRequest => ({
   company_name: '',
   phone: '',
   country_code: country,
-  employees_count: 1,
+  employees_count: 2,
   billing_modality: 'annual',
   terminals_count: 1,
   sector_rubro: '',
@@ -373,6 +374,44 @@ export default function CotizacionGuiadaLead({
                       {errors.country_code && <p className="text-red-400 text-xs mt-2">{errors.country_code}</p>}
                     </div>
 
+                    <div>
+                      <label className="block text-white font-medium mb-2 text-sm">
+                        Rango de empleados *
+                      </label>
+                      <select
+                        value={selectEmployeesValue}
+                        onChange={(e) =>
+                          patchForm({ employees_count: parseInt(e.target.value, 10) || 1 })
+                        }
+                        disabled={publicTiers.length === 0}
+                        className={`${inputClass} ${errors.employees_count ? 'border-red-500/50' : ''}`}
+                      >
+                        {publicTiers.length === 0 ? (
+                          <option value={selectEmployeesValue} className="bg-slate-800">
+                            Cargando rangos…
+                          </option>
+                        ) : (
+                          publicTiers.map((t) => (
+                            <option
+                              key={`${t.min_employees}-${t.max_employees}`}
+                              value={t.min_employees}
+                              className="bg-slate-800"
+                            >
+                              {formatEmployeeRangeLabel(t.min_employees, t.max_employees)}
+                            </option>
+                          ))
+                        )}
+                      </select>
+                      {errors.employees_count && (
+                        <p className="text-red-400 text-xs mt-2">{errors.employees_count}</p>
+                      )}
+                      {countryLabel && selectedRangeLabel && (
+                        <p className="text-xs text-brand-400 mt-2">
+                          {copy.scope.tierHint(selectedRangeLabel, countryLabel)}
+                        </p>
+                      )}
+                    </div>
+
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-white font-medium mb-2 text-sm">Modalidad</label>
@@ -415,13 +454,27 @@ export default function CotizacionGuiadaLead({
                         >
                           {Array.from({ length: maxTerminals }, (_, i) => i + 1).map((n) => (
                             <option key={n} value={n} className="bg-slate-800">
-                              {n === 1 ? '1 terminal' : `${n} terminales`}
+                              {formatTerminalSelectLabel({
+                                n,
+                                hardwareMode: hardwareModeForSelection,
+                                includedCap,
+                              })}
                             </option>
                           ))}
                         </select>
                         {hardwareModeForSelection === 'included' && (
                           <p className="text-xs text-brand-400 mt-2">
                             {annualIncludesExtrasMessage(includedCap)}
+                          </p>
+                        )}
+                        {hardwareModeForSelection === 'sale' && (
+                          <p className="text-xs text-brand-400 mt-2">
+                            {annualTerminalsSaleFieldHint(
+                              currencyForCountryCode(
+                                isCountryCode(formData.country_code) ? formData.country_code : 'HND'
+                              ),
+                              formLimits
+                            )}
                           </p>
                         )}
                         {showAnnualExtrasHint && (
@@ -441,44 +494,6 @@ export default function CotizacionGuiadaLead({
                           <p className="text-red-400 text-xs mt-2">{errors.terminals_count}</p>
                         )}
                       </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-white font-medium mb-2 text-sm">
-                        Rango de empleados *
-                      </label>
-                      <select
-                        value={selectEmployeesValue}
-                        onChange={(e) =>
-                          patchForm({ employees_count: parseInt(e.target.value, 10) || 1 })
-                        }
-                        disabled={publicTiers.length === 0}
-                        className={`${inputClass} ${errors.employees_count ? 'border-red-500/50' : ''}`}
-                      >
-                        {publicTiers.length === 0 ? (
-                          <option value={selectEmployeesValue} className="bg-slate-800">
-                            Cargando rangos…
-                          </option>
-                        ) : (
-                          publicTiers.map((t) => (
-                            <option
-                              key={`${t.min_employees}-${t.max_employees}`}
-                              value={t.min_employees}
-                              className="bg-slate-800"
-                            >
-                              {formatEmployeeRangeLabel(t.min_employees, t.max_employees)}
-                            </option>
-                          ))
-                        )}
-                      </select>
-                      {errors.employees_count && (
-                        <p className="text-red-400 text-xs mt-2">{errors.employees_count}</p>
-                      )}
-                      {countryLabel && selectedRangeLabel && (
-                        <p className="text-xs text-brand-400 mt-2">
-                          {copy.scope.tierHint(selectedRangeLabel, countryLabel)}
-                        </p>
-                      )}
                     </div>
 
                     <p className="text-xs text-brand-300 bg-black/20 p-3 rounded-lg border border-white/10">

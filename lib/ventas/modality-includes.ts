@@ -164,6 +164,13 @@ export function hardwareFeeMonthly(
   return { fee: roundMoney(total), special: false }
 }
 
+export function annualTerminalsSaleFieldHint(
+  currency: CurrencyCode = 'HNL',
+  rules?: Partial<VentasBusinessRules> | null
+): string {
+  return `En este rango las terminales se venden por separado (${hardwareSaleUnitLabel(currency, rules)} c/u; descuento por volumen desde 2 unidades).`
+}
+
 export function buildTerminalsPricingNote(params: {
   modality: VentasBillingModality
   terminalsCount: number
