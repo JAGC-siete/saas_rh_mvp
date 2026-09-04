@@ -6,7 +6,6 @@ import AppMeshShell from '../../../components/landing/AppMeshShell'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../components/ui/card'
 import { Button } from '../../../components/ui/button'
 import EmployeeManager from '../../../components/EmployeeManager'
-import AttendanceManager from '../../../components/AttendanceManager'
 import PayrollManagerNew from '../../../components/PayrollManagerNew'
 import ReportsManager from '../../../components/ReportsManager'
 import { ChartBarIcon, UsersIcon, ClockIcon, CurrencyDollarIcon, DocumentTextIcon } from '@heroicons/react/24/outline'
@@ -263,7 +262,14 @@ export default function Demo() {
       case 'employees':
         return <EmployeeManager />
       case 'attendance':
-        return <AttendanceManager />
+        return (
+          <div className="rounded-lg border border-white/10 bg-white/5 p-6 text-white">
+            <h2 className="text-lg font-semibold">Kiosco deshabilitado</h2>
+            <p className="mt-2 text-sm text-white/70">
+              El registro público por DNI o últimos 5 dígitos no está disponible.
+            </p>
+          </div>
+        )
       case 'payroll':
         return <PayrollManagerNew />
       case 'reports':

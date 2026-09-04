@@ -1,7 +1,10 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { createClient } from '../../../../lib/supabase/server'
 import { logger } from '../../../../lib/logger'
-import { assertEmployeePortalEnabled } from '../../../../lib/employee-portal/company-settings'
+import {
+  assertEmployeePortalEnabled,
+  resolveEmployeeAndCompanyId,
+} from '../../../../lib/employee-portal/company-settings'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -18,30 +21,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(401).json({ error: 'No autorizado' })
     }
     
-    // Get company_id from user_metadata (primary) or user_profiles (fallback)
-    let companyId = user.user_metadata?.company_id
-    
-    // Fallback: buscar en user_profiles si no está en user_metadata
-    if (!companyId) {
-      const { data: userProfile, error: profileError } = await supabase
-        .from('user_profiles')
-        .select('company_id')
-        .eq('id', user.id)
-        .single()
-      
-      if (profileError || !userProfile?.company_id) {
-        logger.error('User profile not found or missing company_id', {
-          userId: user.id,
-          email: user.email,
-          profileError: profileError?.message
-        })
-        return res.status(404).json({ error: 'Perfil de empleado no encontrado' })
-      }
-      
-      companyId = userProfile.company_id
+    const ctx = await resolveEmployeeAndCompanyId(supabase, user)
+    if (!ctx) {
+      return res.status(404).json({ error: 'Perfil de empleado no encontrado' })
     }
+    const { companyId } = ctx
 
-    if (!(await assertEmployeePortalEnabled(supabase, companyId ?? undefined, res))) {
+    if (!(await assertEmployeePortalEnabled(supabase, companyId, res))) {
       return
     }
 

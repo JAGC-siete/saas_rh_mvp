@@ -1,5 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import formidable from 'formidable';
+import { Readable } from 'stream';
+import type { IncomingMessage } from 'http';
 import { createAdminClient } from '../../../lib/supabase/server';
 import { logError, logger } from '../../../lib/logger';
 import { nowInHonduras, toHN } from '../../../lib/timezone';
@@ -7,6 +9,12 @@ import {
   RAW_PUNCH_EVENT_TYPE,
   generateDailyCloseReport,
 } from '../../../lib/attendance/daily-close';
+import {
+  extractAttendanceWebhookSignature,
+  extractAttendanceWebhookToken,
+  resolveStoredAttendanceWebhookSecretHash,
+  verifyAttendanceWebhookAuth,
+} from '../../../lib/attendance/webhook-auth';
 import { createHash } from 'crypto';
 import fs from 'fs';
 
@@ -43,7 +51,7 @@ export const config = {
  */
 const WEBHOOK_MAX_BODY_BYTES = 10 * 1024 * 1024;
 
-function readRawBody(req: NextApiRequest, maxBytes = WEBHOOK_MAX_BODY_BYTES): Promise<string> {
+function readRawBody(req: NextApiRequest, maxBytes = WEBHOOK_MAX_BODY_BYTES): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const chunks: Buffer[] = [];
     let total = 0;
@@ -55,9 +63,17 @@ function readRawBody(req: NextApiRequest, maxBytes = WEBHOOK_MAX_BODY_BYTES): Pr
       }
       chunks.push(chunk);
     });
-    req.on('end', () => resolve(Buffer.concat(chunks).toString('utf-8')));
+    req.on('end', () => resolve(Buffer.concat(chunks)));
     req.on('error', reject);
   });
+}
+
+function incomingMessageFromBuffer(req: NextApiRequest, raw: Buffer): IncomingMessage {
+  const stream = Readable.from(raw) as unknown as IncomingMessage;
+  stream.headers = { ...req.headers, 'content-length': String(raw.length) };
+  stream.method = req.method;
+  stream.url = req.url;
+  return stream;
 }
 
 function normalizeIdentifier(raw: string | number | undefined): string | undefined {
@@ -671,12 +687,49 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
 
   if (!company_id || typeof company_id !== 'string') {
     logger.warn('[ATTENDANCE WEBHOOK] Missing company_id', { query: req.query });
-    // Responder 200 incluso si falta company_id (no bloquear dispositivo)
-    return res.status(200).json({ success: false, message: 'company_id is required' });
+    return res.status(401).json({ success: false, message: 'Unauthorized' });
   }
 
-  // VALIDATE: Verify that company_id exists and is active
+  let rawBody: Buffer;
+  try {
+    rawBody = await readRawBody(req);
+  } catch (rawErr) {
+    logger.error('[ATTENDANCE WEBHOOK] Raw body read error', rawErr as Error, {
+      companyId: company_id,
+    });
+    return res.status(401).json({ success: false, message: 'Unauthorized' });
+  }
+
+  const presentedToken = extractAttendanceWebhookToken(req);
+  const presentedSignature = extractAttendanceWebhookSignature(req);
+  if (!presentedToken) {
+    logger.warn('[ATTENDANCE WEBHOOK] Auth rejected', {
+      company_id,
+      reason: 'missing_token',
+    });
+    return res.status(401).json({ success: false, message: 'Unauthorized' });
+  }
+
   const supabase = createAdminClient();
+  const storedSecretHash = await resolveStoredAttendanceWebhookSecretHash(
+    supabase,
+    company_id,
+    presentedToken
+  );
+  const auth = verifyAttendanceWebhookAuth({
+    presentedToken,
+    presentedSignature,
+    storedSecretHash,
+    rawBody,
+  });
+  if (!auth.ok) {
+    logger.warn('[ATTENDANCE WEBHOOK] Auth rejected', {
+      company_id,
+      reason: auth.reason,
+    });
+    return res.status(401).json({ success: false, message: 'Unauthorized' });
+  }
+
   try {
     const { data: company, error: companyError } = await supabase
       .from('companies')
@@ -684,31 +737,12 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       .eq('id', company_id)
       .single();
 
-    if (companyError || !company) {
-      logger.warn('[ATTENDANCE WEBHOOK] Invalid company_id provided', {
+    if (companyError || !company || !company.is_active) {
+      logger.warn('[ATTENDANCE WEBHOOK] Invalid or inactive company', {
         company_id,
         error: companyError?.message
       });
-      // Still respond 200 to not block device, but log the issue
-      return res.status(200).json({
-        success: false,
-        message: 'Invalid company_id',
-        warning: 'Company not found or inactive'
-      });
-    }
-
-    if (!company.is_active) {
-      logger.warn('[ATTENDANCE WEBHOOK] Company not active', {
-        company_id,
-        company_name: company.name,
-        is_active: company.is_active
-      });
-      // Still respond 200 to not block device
-      return res.status(200).json({
-        success: false,
-        message: 'Company not active',
-        warning: 'Company account is not active'
-      });
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
     }
 
     logger.debug('[ATTENDANCE WEBHOOK] Valid company_id confirmed', {
@@ -718,7 +752,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
 
   } catch (validationError) {
     logger.error('[ATTENDANCE WEBHOOK] Error validating company_id', validationError);
-    // Continue processing even if validation fails (fail-open for device compatibility)
+    return res.status(401).json({ success: false, message: 'Unauthorized' });
   }
 
   let rawEvent: any = null;
@@ -733,28 +767,20 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     let files: Record<string, unknown> = {};
 
     if (isRawJsonBody) {
-      try {
-        const body = await readRawBody(req);
-        const trimmed = body.trim();
-        if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
-          jsonString = body;
-          logger.info('[ATTENDANCE WEBHOOK] Using raw JSON body (not multipart)', {
-            companyId: company_id,
-            contentType: req.headers['content-type'],
-            byteLength: Buffer.byteLength(body, 'utf8'),
-          });
-        } else if (trimmed.length > 0) {
-          logger.warn('[ATTENDANCE WEBHOOK] Raw JSON Content-Type but body does not look like JSON', {
-            companyId: company_id,
-            preview: trimmed.slice(0, 200),
-          });
-        }
-      } catch (rawErr) {
-        logger.error('[ATTENDANCE WEBHOOK] Raw body read error', rawErr as Error, {
+      const body = rawBody.toString('utf8');
+      const trimmed = body.trim();
+      if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+        jsonString = body;
+        logger.info('[ATTENDANCE WEBHOOK] Using raw JSON body (not multipart)', {
           companyId: company_id,
           contentType: req.headers['content-type'],
+          byteLength: rawBody.length,
         });
-        return res.status(200).json({ success: false, message: 'Failed to read request body' });
+      } else if (trimmed.length > 0) {
+        logger.warn('[ATTENDANCE WEBHOOK] Raw JSON Content-Type but body does not look like JSON', {
+          companyId: company_id,
+          preview: trimmed.slice(0, 200),
+        });
       }
     } else {
       const form = formidable({
@@ -764,13 +790,12 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       });
 
       try {
-        [fields, files] = await form.parse(req);
+        [fields, files] = await form.parse(incomingMessageFromBuffer(req, rawBody));
       } catch (parseError) {
         logger.error('[ATTENDANCE WEBHOOK] Formidable parse error', parseError as Error, {
           companyId: company_id,
         contentType: req.headers['content-type'],
       });
-      // Responder 200 incluso si hay error de parsing (no bloquear dispositivo)
       return res.status(200).json({ success: false, message: 'Failed to parse form data' });
     }
 

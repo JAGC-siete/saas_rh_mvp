@@ -19,30 +19,19 @@ export function parseEmployeePortalSettings(settings: unknown): { employeePortal
  * Si la empresa deshabilitó el portal, responde 403 y devuelve false.
  * Si no hay companyId o falla la lectura, no bloquea (compatibilidad).
  */
-/** Resuelve employee_id y company_id del usuario autenticado (portal empleado). */
+/** Resuelve employee_id y company_id solo desde user_profiles. Ignora user_metadata. */
 export async function resolveEmployeeAndCompanyId(
   supabase: SupabaseClient,
-  user: { id: string; user_metadata?: Record<string, unknown> }
-): Promise<{ employeeId: string; companyId: string | undefined } | null> {
-  let employeeId = user.user_metadata?.employee_id as string | undefined
-  let companyId = user.user_metadata?.company_id as string | undefined
-  if (!employeeId) {
-    const { data: userProfile } = await supabase
-      .from('user_profiles')
-      .select('employee_id, company_id')
-      .eq('id', user.id)
-      .single()
-    employeeId = userProfile?.employee_id as string | undefined
-    companyId = (userProfile?.company_id as string | undefined) ?? undefined
-  } else if (!companyId) {
-    const { data: up } = await supabase
-      .from('user_profiles')
-      .select('company_id')
-      .eq('id', user.id)
-      .maybeSingle()
-    companyId = (up?.company_id as string | undefined) ?? undefined
-  }
-  if (!employeeId) return null
+  user: { id: string }
+): Promise<{ employeeId: string; companyId: string } | null> {
+  const { data: userProfile } = await supabase
+    .from('user_profiles')
+    .select('employee_id, company_id')
+    .eq('id', user.id)
+    .maybeSingle()
+  const employeeId = userProfile?.employee_id as string | undefined
+  const companyId = userProfile?.company_id as string | undefined
+  if (!employeeId || !companyId) return null
   return { employeeId, companyId }
 }
 

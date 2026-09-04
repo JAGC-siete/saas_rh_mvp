@@ -6,7 +6,10 @@ import {
   completedFullYearsOfService,
   statutoryVacationDaysForEmployee,
 } from '../../../lib/leave/honduras-labor-reference'
-import { assertEmployeePortalEnabled } from '../../../lib/employee-portal/company-settings'
+import {
+  assertEmployeePortalEnabled,
+  resolveEmployeeAndCompanyId,
+} from '../../../lib/employee-portal/company-settings'
 import { getTodayInHonduras } from '../../../lib/timezone'
 import { loadEffectiveWorkSchedule, workScheduleToPortalPayload } from '../../../lib/attendance/load-effective-schedule'
 
@@ -81,42 +84,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(401).json({ error: 'No autorizado' })
     }
     
-    // Get employee_id from user_metadata (primary) or user_profiles (fallback)
-    let employeeId = user.user_metadata?.employee_id
-    let companyId = user.user_metadata?.company_id
-    
-    // Fallback: buscar en user_profiles si no está en user_metadata
-    if (!employeeId) {
-      const { data: userProfile, error: profileError } = await supabase
-        .from('user_profiles')
-        .select('employee_id, company_id, role')
-        .eq('id', user.id)
-        .single()
-      
-      if (profileError || !userProfile?.employee_id) {
-        logger.error('User profile not found or missing employee_id', {
-          userId: user.id,
-          email: user.email,
-          profileError: profileError?.message,
-          userMetadata: user.user_metadata
-        })
-        return res.status(404).json({ 
-          error: 'Perfil de empleado no encontrado',
-          debug: {
-            userId: user.id,
-            email: user.email,
-            hint: 'El usuario no tiene un employee_id en user_metadata ni en user_profiles'
-          }
-        })
-      }
-      
-      employeeId = userProfile.employee_id
-      companyId = userProfile.company_id
+    const ctx = await resolveEmployeeAndCompanyId(supabase, user)
+    if (!ctx) {
+      return res.status(401).json({ error: 'Datos de empleado no encontrados' })
     }
-
-    if (!(await assertEmployeePortalEnabled(supabase, companyId ?? undefined, res))) {
+    if (!(await assertEmployeePortalEnabled(supabase, ctx.companyId, res))) {
       return
     }
+    const { employeeId, companyId } = ctx
     
     logger.info('Employee dashboard access', {
       supabaseUserId: user.id,
@@ -142,6 +117,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .from('employees')
       .select('*')
       .eq('id', employeeId)
+      .eq('company_id', companyId)
       .single()
 
     if (employeeError || !employeeDetails) {

@@ -623,9 +623,6 @@ export default function EmployeePortal() {
   const [fabBusy, setFabBusy] = useState(false)
   const fabWrapRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
-  
-  // Check if user is employee
-  const isEmployee = user?.user_metadata?.role === 'employee'
 
   // Check for existing session on load
   useEffect(() => {
@@ -637,7 +634,7 @@ export default function EmployeePortal() {
     setLoading(false)
   }
   const fetchEmployeeData = useCallback(async () => {
-    if (!user || !isEmployee) return
+    if (!user) return
 
     try {
       // Fetch all dashboard data in one unified call
@@ -690,7 +687,7 @@ export default function EmployeePortal() {
     } catch (error) {
       console.error('Error fetching employee data:', error)
     }
-  }, [user, isEmployee])
+  }, [user])
 
   // Fetch data when session is available
   useEffect(() => {
@@ -755,7 +752,7 @@ export default function EmployeePortal() {
   }, [])
 
   const handleFabConstancia = useCallback(async () => {
-    const employeeId = user?.user_metadata?.employee_id as string | undefined
+    const employeeId = profile?.employee?.id
     if (!employeeId) {
       addNotification({
         type: 'error',
@@ -810,10 +807,10 @@ export default function EmployeePortal() {
       setFabBusy(false)
       setFabMenuOpen(false)
     }
-  }, [user, addNotification])
+  }, [profile, addNotification])
 
   const handleFabAttendanceReport = useCallback(async () => {
-    const employeeId = user?.user_metadata?.employee_id as string | undefined
+    const employeeId = profile?.employee?.id
     if (!employeeId) {
       addNotification({
         type: 'error',
@@ -877,7 +874,7 @@ export default function EmployeePortal() {
       setFabBusy(false)
       setFabMenuOpen(false)
     }
-  }, [user, addNotification, getHondurasMonthRange])
+  }, [profile, addNotification, getHondurasMonthRange])
 
   const handleFabVoucherNav = useCallback(() => {
     setActiveTab('payroll')
@@ -1023,8 +1020,8 @@ export default function EmployeePortal() {
             <div className="flex items-center space-x-4">
               <NotificationBell className="hidden sm:block" />
               <div className="text-right">
-                <p className="text-sm font-medium text-white">{user?.user_metadata?.full_name || 'Empleado'}</p>
-                <p className="text-xs text-white/70">{user?.user_metadata?.role || 'employee'}</p>
+                <p className="text-sm font-medium text-white">{profile?.employee?.name || 'Empleado'}</p>
+                <p className="text-xs text-white/70">{profile?.employee?.role || 'employee'}</p>
               </div>
               <Button
                 onClick={handleLogout}
@@ -1045,7 +1042,7 @@ export default function EmployeePortal() {
         {/* Welcome Section */}
         <div className="mb-8">
           <h2 className="text-2xl font-bold text-white mb-2">
-            Bienvenido, {user?.user_metadata?.full_name?.split(' ')[0] || 'Empleado'}
+            Bienvenido, {profile?.employee?.name?.split(' ')[0] || 'Empleado'}
           </h2>
           <p className="text-white/70">
             Acceda a su información personal, asistencia y más.
@@ -1405,7 +1402,7 @@ export default function EmployeePortal() {
                       <h4 className="text-white font-medium">Registros Recientes</h4>
                       <div className="space-y-2 max-h-64 overflow-y-auto">
                         {/* Show actual attendance records if available */}
-                        <AttendanceRecordsList employeeId={user?.user_metadata?.employee_id} />
+                        <AttendanceRecordsList employeeId={profile?.employee?.id} />
                       </div>
                     </div>
                   </div>
@@ -1479,7 +1476,7 @@ export default function EmployeePortal() {
                     {/* Permission History */}
                     <div className="space-y-2">
                       <h4 className="text-white font-medium">Historial de Permisos</h4>
-                      <EmployeePermissionHistory employeeId={user?.user_metadata?.employee_id} />
+                      <EmployeePermissionHistory employeeId={profile?.employee?.id} />
                     </div>
                   </div>
                 )}
@@ -1497,7 +1494,7 @@ export default function EmployeePortal() {
               </CardHeader>
               <CardContent>
                 <PayrollSection
-                  employeeId={user?.user_metadata?.employee_id}
+                  employeeId={profile?.employee?.id}
                   addNotification={addNotification}
                 />
               </CardContent>

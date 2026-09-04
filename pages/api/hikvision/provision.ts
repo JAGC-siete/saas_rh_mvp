@@ -3,6 +3,11 @@ import { HikvisionSDK } from '../../../lib/hikvision/sdk';
 import { requireAdminWithTenant } from '../../../lib/auth/api-guards';
 import { createSuccessResponse, createErrorResponse, createNotFoundErrorResponse } from '../../../lib/security/api-responses';
 import { logger } from '../../../lib/logger';
+import {
+  appendAttendanceWebhookToken,
+  issueAttendanceWebhookSecret,
+  redactAttendanceWebhookUrl,
+} from '../../../lib/attendance/webhook-auth';
 
 /**
  * Provision a Hikvision device by configuring its webhook URL.
@@ -113,11 +118,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     }
 
+    const issued = issueAttendanceWebhookSecret();
+    const deviceWebhookUrl = appendAttendanceWebhookToken(finalWebhookUrl, issued.token);
+
     logger.info('Hikvision device provisioning request', {
       userId: user.id,
       companyId: device.company_id,
       deviceId,
-      webhookUrl: finalWebhookUrl
+      webhookUrl: redactAttendanceWebhookUrl(deviceWebhookUrl)
     });
 
     // IMPORTANT: The password is currently stored in plain text in the database.
@@ -171,11 +179,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     logger.info('Configuring webhook URL on device', {
       userId: user.id,
       deviceId,
-      webhookUrl: finalWebhookUrl
+      webhookUrl: redactAttendanceWebhookUrl(deviceWebhookUrl)
     });
 
     const notificationResult = await hikvisionClient.setNotificationServer({
-      webhookUrl: finalWebhookUrl,
+      webhookUrl: deviceWebhookUrl,
       hostId: '1',
     });
 
@@ -193,6 +201,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           status: 'error', 
           last_sync_at: new Date().toISOString(),
           webhook_url: finalWebhookUrl,
+          webhook_secret_hash: issued.hash,
           webhook_configured: false,
           last_webhook_test_at: new Date().toISOString(),
           webhook_test_result: { error: notificationResult.error },
@@ -219,6 +228,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         status: 'online', 
         last_sync_at: new Date().toISOString(),
         webhook_url: finalWebhookUrl,
+        webhook_secret_hash: issued.hash,
         http_host_id: '1',
         webhook_configured: true,
         last_webhook_test_at: new Date().toISOString(),

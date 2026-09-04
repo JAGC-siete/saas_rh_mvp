@@ -40,18 +40,12 @@ class ApiService {
   }
   
   // Attendance methods
-  async registerAttendance(data: { last5: string; justification?: string }) {
-    return this.request('/attendance/register', {
-      method: 'POST',
-      body: JSON.stringify(data)
-    })
+  async registerAttendance(_data: { last5: string; justification?: string }) {
+    throw new ApiError(410, 'El kiosco público de asistencia está deshabilitado.')
   }
   
-  async lookupEmployee(data: { last5: string }) {
-    return this.request('/attendance/lookup', {
-      method: 'POST',
-      body: JSON.stringify(data)
-    })
+  async lookupEmployee(_data: { last5: string }) {
+    throw new ApiError(410, 'El kiosco público de asistencia está deshabilitado.')
   }
   
   async getWeeklyPattern() {

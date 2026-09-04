@@ -49,7 +49,9 @@ POST /api/webhooks/attendance?company_id=
  → calculate_attendance_hours_batch → AHC
 ```
 
-Registro público (`/api/attendance/register`) escribe **directo** a `attendance_records` (no `raw_punch`). No unificar ambos caminos.
+Kiosco público last5/DNI (`/api/attendance`, `/api/attendance/register`, `/api/attendance/first-time-check`, `/attendance/register`, `/attendance/public`) responde **410**. No reactivar last5 en este branch.
+
+Webhook Hikvision: `token` obligatorio (query/header) fail-closed 401. HMAC (`x-attendance-signature` / `sig`) opcional; si llega, debe coincidir. Provision guarda `devices.webhook_secret_hash`, no el secreto en claro.
 
 **Daily-close no calcula AHC.** `generateDailyCloseReport` no llama `calculate_attendance_hours_batch`.
 

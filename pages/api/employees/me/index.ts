@@ -68,9 +68,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return
     }
     const { employeeId, companyId } = ctx
-    if (!companyId) {
-      return res.status(401).json({ error: 'Empresa no encontrada' })
-    }
 
     // Get detailed employee information (RLS will filter automatically)
     const { data: employeeDetails, error: detailsError } = await supabase
@@ -110,6 +107,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         )
       `)
       .eq('id', employeeId)
+      .eq('company_id', companyId)
       .single()
 
     if (detailsError || !employeeDetails) {

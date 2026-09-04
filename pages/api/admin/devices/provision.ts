@@ -1,6 +1,11 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { createClient, createAdminClient } from '../../../../lib/supabase/server';
 import { HikvisionSDK } from '../../../../lib/hikvision/sdk';
+import {
+  appendAttendanceWebhookToken,
+  issueAttendanceWebhookSecret,
+  redactAttendanceWebhookUrl,
+} from '../../../../lib/attendance/webhook-auth';
 
 /**
  * Provision a Hikvision device.
@@ -53,10 +58,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
     
     const webhookUrl = `${baseUrl}/api/webhooks/attendance?company_id=${userProfile.company_id}`;
-    console.log(`[SaaS API] Constructed webhook URL: ${webhookUrl}`);
+    const issued = issueAttendanceWebhookSecret();
+    const deviceWebhookUrl = appendAttendanceWebhookToken(webhookUrl, issued.token);
+    console.log(`[SaaS API] Constructed webhook URL: ${redactAttendanceWebhookUrl(deviceWebhookUrl)}`);
 
-    // 3. Call internal Hikvision proxy functionality
-    console.log(`[SaaS API] Provisioning device ${deviceId} with webhook ${webhookUrl}`);
+    console.log(`[SaaS API] Provisioning device ${deviceId} with webhook ${redactAttendanceWebhookUrl(deviceWebhookUrl)}`);
 
     // Fetch device credentials from the database
     const { data: device, error: deviceError } = await supabaseAdmin
@@ -98,9 +104,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.log(`[SaaS API] Successfully connected to device ${deviceId}`);
 
     // Configure HTTP notification server (httpHosts) on the device
-    console.log(`[SaaS API] Configuring webhook URL on device: ${webhookUrl}`);
+    console.log(`[SaaS API] Configuring webhook URL on device: ${redactAttendanceWebhookUrl(deviceWebhookUrl)}`);
     const notificationResult = await hikvisionClient.setNotificationServer({
-      webhookUrl: webhookUrl,
+      webhookUrl: deviceWebhookUrl,
       hostId: '1',
     });
 
@@ -114,6 +120,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           status: 'error', 
           last_sync_at: new Date().toISOString(),
           webhook_url: webhookUrl,
+          webhook_secret_hash: issued.hash,
           webhook_configured: false,
           last_webhook_test_at: new Date().toISOString(),
           webhook_test_result: { error: notificationResult.error },
@@ -136,6 +143,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         status: 'online', 
         last_sync_at: new Date().toISOString(),
         webhook_url: webhookUrl,
+        webhook_secret_hash: issued.hash,
         http_host_id: '1',
         webhook_configured: true,
         last_webhook_test_at: new Date().toISOString(),

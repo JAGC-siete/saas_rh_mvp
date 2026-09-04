@@ -34,13 +34,12 @@ export default function AttendanceIndex() {
           // Admins go to attendance dashboard
           router.push('/app/attendance/dashboard')
         } else {
-          // Employees go to attendance registration
-          router.push('/attendance/register')
+          router.push('/employees/portal')
         }
       } catch (error) {
         console.error('Error checking user role:', error)
         // Default fallback to registration
-        router.push('/attendance/register')
+        router.push('/employees/portal')
       } finally {
         setLoading(false)
       }

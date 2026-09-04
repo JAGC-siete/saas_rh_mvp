@@ -14,7 +14,7 @@ Leer desde `SKILL.md`. Código > docs. Verificar `daily-close.ts` + `webhooks/at
 | `attendance_corrections` | `pending` \| `approved` \| `rejected` |
 | `company_metadata.attendance_metadata` | `biometric_mode`, timezone |
 | `attendance_stage` | Solo types; sin uso app |
-| `devices` | Tenant webhook (`company_id` en URL) |
+| `devices` | Tenant webhook (`company_id` + `token` en URL; `webhook_secret_hash`) |
 
 `employees` se lee: `dni`, `work_schedule_id`, `pay_type`, `attendance_required`, `company_id`.
 
@@ -33,7 +33,7 @@ Cross: `employee_has_approved_paid_leave_on_date`, `payroll_paid_leave_work_day_
 | Ruta | Función |
 |------|---------|
 | `webhooks/attendance.ts` | Hikvision → raw_punch + daily-close live |
-| `register.ts` | Marca pública/manual → records |
+| `register.ts` | **410** kiosco público last5/DNI deshabilitado |
 | `daily-close/index.ts` | GET reporte |
 | `daily-close/run.ts` | POST regenerar |
 | `daily-close/finalize.ts` | Finalizar + AHC |

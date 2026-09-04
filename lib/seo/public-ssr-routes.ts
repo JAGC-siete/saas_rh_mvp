@@ -43,6 +43,18 @@ const PUBLIC_SSR_EXACT = new Set([
   '/calculadora-catorceavo-honduras',
 ])
 
+const PUBLIC_KIOSK_DISABLED = new Set([
+  '/attendance/register',
+  '/attendance/public',
+  '/app/attendance/register',
+])
+
+export function isPublicKioskDisabledRoute(pathname: string): boolean {
+  const bare =
+    pathname === '/en' ? '/' : pathname.startsWith('/en/') ? pathname.slice(3) : pathname
+  return PUBLIC_KIOSK_DISABLED.has(bare)
+}
+
 export function isPublicMarketingRoute(pathname: string): boolean {
   // /en rewrites strip prefix for page matching; still accept prefixed paths if seen.
   const bare =

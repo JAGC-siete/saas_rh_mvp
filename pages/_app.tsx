@@ -5,7 +5,7 @@ import { useRouter } from 'next/router'
 import { Montserrat } from 'next/font/google'
 import { ToastContainer } from '../lib/toast'
 import { cn } from '../lib/utils'
-import { isPublicMarketingRoute } from '../lib/seo/public-ssr-routes'
+import { isPublicMarketingRoute, isPublicKioskDisabledRoute } from '../lib/seo/public-ssr-routes'
 import MarketingAnalytics from '../components/marketing/MarketingAnalytics'
 import { LandingPreferencesProvider } from '../components/landing/LandingPreferencesProvider'
 import '../styles/globals.css'
@@ -73,9 +73,10 @@ export default function App({ Component, pageProps }: AppProps) {
     router.pathname === '/app/login' || router.pathname === '/app/forgot-password'
 
   const isMarketingRoute = isPublicMarketingRoute(router.pathname)
+  const isKioskDisabledRoute = isPublicKioskDisabledRoute(router.pathname)
 
   // SSR completo solo en landings SEO; shell /app y rutas legacy esperan hidratación.
-  const shouldRenderImmediately = isMarketingRoute || isAuthEntryRoute
+  const shouldRenderImmediately = isMarketingRoute || isAuthEntryRoute || isKioskDisabledRoute
 
   const needsClientHydrationGate = !shouldRenderImmediately
 
@@ -92,6 +93,14 @@ export default function App({ Component, pageProps }: AppProps) {
       <Component {...pageProps} />
     </div>
   )
+
+  if (isKioskDisabledRoute) {
+    return (
+      <SupabaseContext.Provider value={null}>
+        {page}
+      </SupabaseContext.Provider>
+    )
+  }
 
   // Marketing: skip Auth/Notification; gtag loads immediately (Meta stays deferred).
   if (isMarketingRoute) {

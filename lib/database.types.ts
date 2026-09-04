@@ -920,6 +920,7 @@ export type Database = {
           status: string | null
           updated_at: string | null
           username: string
+          webhook_secret_hash: string | null
           webhook_url: string | null
         }
         Insert: {
@@ -939,6 +940,7 @@ export type Database = {
           status?: string | null
           updated_at?: string | null
           username: string
+          webhook_secret_hash?: string | null
           webhook_url?: string | null
         }
         Update: {
@@ -958,6 +960,7 @@ export type Database = {
           status?: string | null
           updated_at?: string | null
           username?: string
+          webhook_secret_hash?: string | null
           webhook_url?: string | null
         }
         Relationships: [
@@ -3530,6 +3533,16 @@ export type Database = {
           role: string
           status: string
           team: string
+        }[]
+      }
+      lookup_employee_invitation_by_token: {
+        Args: { p_token: string }
+        Returns: {
+          email: string
+          employee_id: string
+          expires_at: string
+          id: string
+          status: string
         }[]
       }
       authenticate_employee: {

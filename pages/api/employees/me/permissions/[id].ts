@@ -1,7 +1,10 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { createClient } from '../../../../../lib/supabase/server'
 import { logger } from '../../../../../lib/logger'
-import { assertEmployeePortalEnabled } from '../../../../../lib/employee-portal/company-settings'
+import {
+  assertEmployeePortalEnabled,
+  resolveEmployeeAndCompanyId,
+} from '../../../../../lib/employee-portal/company-settings'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'PATCH' && req.method !== 'DELETE') {
@@ -22,33 +25,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(401).json({ error: 'No autorizado' })
     }
 
-    let employeeId = user.user_metadata?.employee_id as string | undefined
-    let companyId = user.user_metadata?.company_id as string | undefined
-
-    if (!employeeId) {
-      const { data: userProfile, error: profileError } = await supabase
-        .from('user_profiles')
-        .select('employee_id, company_id')
-        .eq('id', user.id)
-        .single()
-
-      if (profileError || !userProfile?.employee_id) {
-        return res.status(404).json({ error: 'Perfil de empleado no encontrado' })
-      }
-      employeeId = userProfile.employee_id
-      companyId = userProfile.company_id ?? undefined
-    } else if (!companyId) {
-      const { data: up } = await supabase
-        .from('user_profiles')
-        .select('company_id')
-        .eq('id', user.id)
-        .maybeSingle()
-      companyId = up?.company_id ?? undefined
+    const ctx = await resolveEmployeeAndCompanyId(supabase, user)
+    if (!ctx) {
+      return res.status(401).json({ error: 'Datos de empleado no encontrados' })
     }
-
-    if (!(await assertEmployeePortalEnabled(supabase, companyId, res))) {
+    if (!(await assertEmployeePortalEnabled(supabase, ctx.companyId, res))) {
       return
     }
+    const { employeeId } = ctx
 
     const { data: row, error: fetchError } = await supabase
       .from('leave_requests')

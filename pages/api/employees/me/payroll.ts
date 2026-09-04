@@ -127,6 +127,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
       .from('employees')
       .select('base_salary, name')
       .eq('id', employeeId)
+      .eq('company_id', ctx.companyId)
       .single()
 
     logger.info('Employee data query result', { 
