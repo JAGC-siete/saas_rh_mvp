@@ -69,8 +69,14 @@ export default function AttendanceRegisterPage() {
 
             <AttendanceManager />
 
-            <div className="mt-8 pt-6 border-t border-white/10">
-              <p className="text-white/70 text-sm mb-4 text-center">¿Eres administrador?</p>
+            <div className="mt-8 pt-6 border-t border-white/10 space-y-3">
+              <Link
+                href="/attendance/field"
+                className="block text-center text-brand-200 hover:text-white transition-colors text-sm font-semibold"
+              >
+                Personal de campo → check-in móvil con biometría + GPS
+              </Link>
+              <p className="text-white/70 text-sm text-center">¿Eres administrador?</p>
               <Link
                 href="/app/login"
                 className="inline-flex items-center gap-2 text-white hover:text-brand-200 transition-colors text-sm font-semibold mx-auto block w-fit px-4 py-2 rounded-lg hover:bg-white/10"

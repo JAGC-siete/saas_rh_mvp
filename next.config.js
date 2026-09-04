@@ -276,10 +276,10 @@ const nextConfig = {
               "frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com; " +
               "frame-ancestors 'none';",
           },
-          // Permissions policy (restricts browser features)
+          // Permissions policy — geolocation=(self) required for field/kiosk attendance GPS
           {
             key: 'Permissions-Policy',
-            value: 'camera=(), microphone=(), geolocation=(), payment=(), usb=()',
+            value: 'camera=(), microphone=(), geolocation=(self), payment=(), usb=()',
           },
         ],
       },

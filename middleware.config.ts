@@ -38,7 +38,7 @@ export const MIDDLEWARE_CONFIG = {
       'X-Frame-Options': 'DENY',
       'X-Content-Type-Options': 'nosniff',
       'Referrer-Policy': 'strict-origin-when-cross-origin',
-      'Permissions-Policy': 'camera=(), microphone=(), geolocation=()'
+      'Permissions-Policy': 'camera=(), microphone=(), geolocation=(self)'
     }
   },
   
@@ -170,9 +170,14 @@ export function getAllPublicRoutes(): string[] {
     '/registrodeasistencia',
     '/attendance/public',
     '/attendance/register',
+    '/attendance/field',
     '/api/attendance/lookup',
     '/api/attendance/register',
     '/api/attendance/first-time-check',
+    '/api/attendance/field/options',
+    '/api/attendance/field/enroll',
+    '/api/attendance/field/punch',
+    // enroll-token is authenticated (HR) — not public
     '/api/activar',
     '/api/demo/verify-pin',
     '/api/health',

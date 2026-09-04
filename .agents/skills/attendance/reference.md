@@ -34,6 +34,7 @@ Cross: `employee_has_approved_paid_leave_on_date`, `payroll_paid_leave_work_day_
 |------|---------|
 | `webhooks/attendance.ts` | Hikvision → raw_punch + daily-close live |
 | `register.ts` | Marca pública/manual → records |
+| `field/options.ts`, `enroll.ts`, `punch.ts` | Campo móvil: WebAuthn + geo → records (`source: field_mobile`) |
 | `daily-close/index.ts` | GET reporte |
 | `daily-close/run.ts` | POST regenerar |
 | `daily-close/finalize.ts` | Finalizar + AHC |
@@ -87,4 +88,4 @@ Horario: `employees.work_schedule_id` → override assignments (más reciente en
 
 ## UI
 
-`pages/app/attendance/{dashboard,daily-close,scheduling,corrections,register}.tsx`. Públicas: `pages/attendance/{index,register,public}.tsx`. Componentes: `components/attendance/*`.
+`pages/app/attendance/{dashboard,daily-close,scheduling,corrections,register}.tsx`. Públicas: `pages/attendance/{index,register,public,field}.tsx`. Componentes: `components/attendance/*`, `FieldAttendanceManager`. Campo móvil: `docs/FIELD_MOBILE_ATTENDANCE.md`.

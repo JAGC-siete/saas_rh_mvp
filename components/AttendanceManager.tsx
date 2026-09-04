@@ -68,11 +68,25 @@ export default function AttendanceManager() {
     successTimerRef.current = setTimeout(resetToIdle, 3000)
   }
 
+  const captureKioskLocation = (): Promise<{ lat: number; lon: number }> =>
+    new Promise((resolve, reject) => {
+      if (typeof navigator === 'undefined' || !navigator.geolocation) {
+        reject(new Error('GPS no disponible'))
+        return
+      }
+      navigator.geolocation.getCurrentPosition(
+        (pos) => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
+        () => reject(new Error('No se pudo obtener ubicación. Activa el GPS.')),
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 30000 }
+      )
+    })
+
   const submitAttendance = async (withJustification = false) => {
     setStatus('loading')
     setErrorMessage('')
 
     try {
+      const location = await captureKioskLocation()
       const response = await fetch('/api/attendance/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -80,6 +94,9 @@ export default function AttendanceManager() {
           dni: dni.length === 13 ? dni : undefined,
           last5: dni.length === 5 ? dni : undefined,
           justification: withJustification ? justification : undefined,
+          lat: location.lat,
+          lon: location.lon,
+          source: 'public',
         }),
       })
 
@@ -98,9 +115,9 @@ export default function AttendanceManager() {
 
       setStatus('error')
       setErrorMessage(data.error || data.message || 'Error al registrar asistencia')
-    } catch {
+    } catch (err: any) {
       setStatus('error')
-      setErrorMessage('Error de conexión')
+      setErrorMessage(err?.message || 'Error de conexión')
     }
   }
 

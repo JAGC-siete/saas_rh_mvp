@@ -5,7 +5,8 @@ description: >-
   AHC, horarios efectivos, KPIs). Use when working on punches, attendance_events,
   attendance_records, attendance_hours_calculation, daily-close, biometric_mode,
   work_schedules resolution, schedule assignments, corrections, Hikvision webhook
-  ingest, or files under lib/attendance/, pages/api/attendance/, pages/api/webhooks/attendance.ts,
+  ingest, field mobile WebAuthn/geo (`/attendance/field`, `pages/api/attendance/field/`),
+  or files under lib/attendance/, pages/api/attendance/, pages/api/webhooks/attendance.ts,
   pages/app/attendance/. Do not use for payroll preview/authorize or employee CRUD.
 ---
 
@@ -17,11 +18,11 @@ Detalle de superficie: [reference.md](reference.md). Si el cambio toca master da
 
 ## Frontera
 
-**Entra:** webhook Hikvision → `raw_punch`; registro manual; daily-close; horarios (`work_schedules` + assignments); AHC; KPIs/listas/timeline; correcciones; reportes de asistencia.
+**Entra:** webhook Hikvision → `raw_punch`; registro manual; daily-close; horarios (`work_schedules` + assignments); AHC; KPIs/listas/timeline; correcciones; reportes de asistencia; campo móvil WebAuthn+geo (`/attendance/field`, `source: field_mobile`).
 
 **No entra:** Hikvision outbound/ISAPI (`lib/hikvision/*`); portal read-only (`/api/employees/me/attendance`); leave CRUD; escritura a `payroll_run_lines`; gamificación; demo/trial.
 
-Regla: ingest = eventos inmutables; jornada = daily-close + RPC horas; liquidación = payroll.
+Regla: ingest = eventos inmutables; jornada = daily-close + RPC horas; liquidación = payroll. Campo móvil y kiosk DNI escriben **directo** a `attendance_records` (no `raw_punch`). No unificar con webhook.
 
 ## Vocabulario
 
@@ -60,6 +61,7 @@ Registro público (`/api/attendance/register`) escribe **directo** a `attendance
 3. `lib/attendance/calculate-hours.ts`, `overtime-bands.ts`
 4. `lib/attendance/effective-work-schedule.ts`, `resolve-schedule-batch.ts`
 5. APIs `pages/api/attendance/daily-close/*`
+6. Campo móvil: `pages/api/attendance/field/*`, `lib/attendance/field-*.ts`, `docs/FIELD_MOBILE_ATTENDANCE.md`
 
 KPIs: preferir `attendance_kpis_filtered` / `attendance_lists_filtered` sobre RPCs legacy.
 

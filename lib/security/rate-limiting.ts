@@ -30,11 +30,18 @@ const RATE_LIMITS = {
     message: 'Demasiadas solicitudes. Intente más tarde.'
   },
 
-  // Registro público de asistencia (muy restrictivo; endpoint de alto abuso)
+  // Registro público de asistencia kiosk (1 POST)
   attendance_public: {
     windowMs: 2 * 60 * 1000, // 2 minutos
     max: 6, // 6 requests por ventana (por IP+UA)
     message: 'Demasiados registros de asistencia. Espere un momento e intente de nuevo.'
+  },
+
+  // Campo móvil: handshake WebAuthn = varias HTTP por punch
+  attendance_field: {
+    windowMs: 2 * 60 * 1000,
+    max: 24,
+    message: 'Demasiados intentos de asistencia de campo. Espere un momento e intente de nuevo.'
   },
 
   // Nómina: flujo intensivo (preview, draft, refresh tras autorizar)
@@ -243,8 +250,20 @@ export function enforceAuthRateLimits(
   return true
 }
 
+type RateLimitEndpoint =
+  | 'export'
+  | 'reports'
+  | 'general'
+  | 'payroll'
+  | 'setup'
+  | 'attendance_public'
+  | 'attendance_field'
+
 // Middleware de rate limiting
-export const withRateLimit = (endpointType: 'export' | 'reports' | 'general' | 'payroll' | 'setup' = 'general', allowedMethods: string[] = ['GET', 'POST', 'PUT', 'DELETE']) => {
+export const withRateLimit = (
+  endpointType: RateLimitEndpoint = 'general',
+  allowedMethods: string[] = ['GET', 'POST', 'PUT', 'DELETE']
+) => {
   return (handler: any) => {
     return async (req: NextApiRequest, res: NextApiResponse) => {
       // Validar método HTTP permitido ANTES de verificar rate limit
@@ -315,8 +334,13 @@ export const withReportsRateLimit = (methods?: string[]) => withRateLimit('repor
 // Rate limiting general
 export const withGeneralRateLimit = (methods?: string[]) => withRateLimit('general', methods)
 
-// Rate limiting para registro público de asistencia
-export const withAttendancePublicRateLimit = (methods?: string[]) => withRateLimit('attendance_public' as any, methods)
+// Rate limiting para registro público de asistencia (kiosk)
+export const withAttendancePublicRateLimit = (methods?: string[]) =>
+  withRateLimit('attendance_public', methods)
+
+// Rate limiting para handshake de campo (WebAuthn multi-step)
+export const withAttendanceFieldRateLimit = (methods?: string[]) =>
+  withRateLimit('attendance_field', methods)
 
 // Rate limiting para nómina (límite más alto por flujo intensivo)
 export const withPayrollRateLimit = (methods?: string[]) => withRateLimit('payroll', methods)
@@ -325,7 +349,10 @@ export const withPayrollRateLimit = (methods?: string[]) => withRateLimit('payro
 export const withSetupRateLimit = (methods?: string[]) => withRateLimit('setup', methods)
 
 // Función para verificar rate limit sin middleware
-export const checkRateLimitStatus = (req: NextApiRequest, endpointType: 'export' | 'reports' | 'general' | 'payroll' | 'setup' = 'general') => {
+export const checkRateLimitStatus = (
+  req: NextApiRequest,
+  endpointType: RateLimitEndpoint = 'general'
+) => {
   const clientIP = getClientIP(req)
   const userAgent = req.headers['user-agent'] || 'unknown'
   const rateLimitKey = `${clientIP}:${endpointType}:${userAgent.substring(0, 50)}`

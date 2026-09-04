@@ -44,6 +44,9 @@ export type DailyCloseFlags = Record<string, unknown> & {
   admin_override?: boolean
   daily_close_absent?: boolean
   corrected_fields?: string[]
+  /** Field mobile punch — daily-close must not overwrite marks or force absent */
+  field_protected?: boolean
+  channel?: string
 }
 
 export interface AttendanceEventRow {
@@ -77,7 +80,12 @@ export interface GenerateDailyCloseReportResult {
 
 function recordLocked(flags: unknown): boolean {
   const f = flags as DailyCloseFlags | null | undefined
-  return f?.close_state === 'finalized' || f?.admin_override === true
+  return (
+    f?.close_state === 'finalized' ||
+    f?.admin_override === true ||
+    f?.field_protected === true ||
+    f?.channel === 'field_mobile'
+  )
 }
 
 function mergeFlags(
@@ -136,6 +144,26 @@ export async function generateDailyCloseReport(params: {
   const employeeRows = (employees || []) as DailyCloseEmployeeRow[]
   const employeeIds = employeeRows.map((e) => e.id)
   const employeeById = new Map(employeeRows.map((e) => [e.id, e]))
+
+  /** Employees with an active field WebAuthn credential — do not force mid-day absent (they punch later). */
+  const fieldEligibleIds = new Set<string>()
+  if (employeeIds.length > 0) {
+    try {
+      const { data: fieldCreds, error: fieldCredErr } = await supabase
+        .from('employee_device_credentials')
+        .select('employee_id')
+        .in('employee_id', employeeIds)
+        .is('revoked_at', null)
+      if (!fieldCredErr) {
+        for (const row of fieldCreds || []) {
+          const eid = (row as { employee_id: string }).employee_id
+          if (eid) fieldEligibleIds.add(eid)
+        }
+      }
+    } catch {
+      // Table may not exist yet pre-migration; ignore.
+    }
+  }
 
   if (employeeIds.length === 0) {
     return {
@@ -269,6 +297,19 @@ export async function generateDailyCloseReport(params: {
           punchCount: 0,
           anomalyTypes: [],
           recordId: existing.id as string,
+          skippedLocked: false,
+        })
+        continue
+      }
+
+      // Field-capable staff punch via /attendance/field later in the day.
+      // Do not materialize absent mid-day from Hikvision-triggered daily-close.
+      if (fieldEligibleIds.has(employeeId)) {
+        results.push({
+          employeeId,
+          punchCount: 0,
+          anomalyTypes: [],
+          recordId: (existing?.id as string) || null,
           skippedLocked: false,
         })
         continue
