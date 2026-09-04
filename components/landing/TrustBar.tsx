@@ -12,11 +12,15 @@ export const TRUST_CLIENT_NAMES = [
   'Rooster Café',
 ] as const
 
-export default function TrustBar() {
+export default function TrustBar({
+  heading = 'Empresas que confían en nosotros',
+}: {
+  heading?: string
+}) {
   return (
     <section className="py-8 overflow-hidden border-t border-white/5" aria-label="Clientes que confían en Humano SISU">
-      <p className="text-center text-xs uppercase tracking-widest text-slate-500 mb-4 font-medium">
-        Empresas que confían en nosotros
+      <p className="text-center text-xs uppercase tracking-widest text-slate-500 mb-4 font-medium px-4">
+        {heading}
       </p>
       <div className="relative">
         <div className="trust-marquee">

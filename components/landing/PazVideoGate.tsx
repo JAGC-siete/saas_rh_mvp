@@ -145,14 +145,11 @@ export default function PazVideoGate() {
                   <LockClosedIcon />
                 </span>
               </button>
-              <p className="paz-serif paz-video-teaser-title">El método está acá.</p>
+              <p className="paz-serif paz-video-teaser-title">Webinar gratuito</p>
               <p className="paz-video-teaser-lead">
-                Dejá tu correo y lo revelamos — en esta página y en tu bandeja.
+                Estudio de caso: como delegar tareas repetitivas de recursos humanos en la tecnología
               </p>
               <form className="paz-gate paz-gate-inplayer" onSubmit={onSubmit} id="paz-video-form">
-                <label htmlFor="paz-email" className="paz-gate-label">
-                  Correo para revelar el video
-                </label>
                 <div className="paz-gate-row">
                   <input
                     id="paz-email"
@@ -163,6 +160,7 @@ export default function PazVideoGate() {
                     value={email}
                     onChange={(ev) => setEmail(ev.target.value)}
                     placeholder="nina.v@example.com"
+                    aria-label="Correo"
                     className="paz-gate-input"
                     disabled={status === 'submitting'}
                   />

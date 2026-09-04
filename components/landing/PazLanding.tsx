@@ -198,7 +198,7 @@ export default function PazLanding() {
           <PazVideoGate />
         </section>
 
-        <TrustBar />
+        <TrustBar heading="Empresas que recuperaron la paz con Recursos Humanos" />
 
         <hr className="paz-divider" />
 
