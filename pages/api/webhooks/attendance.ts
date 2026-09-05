@@ -702,32 +702,27 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
 
   const presentedToken = extractAttendanceWebhookToken(req);
   const presentedSignature = extractAttendanceWebhookSignature(req);
-  if (!presentedToken) {
-    logger.warn('[ATTENDANCE WEBHOOK] Auth rejected', {
-      company_id,
-      reason: 'missing_token',
-    });
-    return res.status(401).json({ success: false, message: 'Unauthorized' });
-  }
-
   const supabase = createAdminClient();
-  const storedSecretHash = await resolveStoredAttendanceWebhookSecretHash(
-    supabase,
-    company_id,
-    presentedToken
-  );
-  const auth = verifyAttendanceWebhookAuth({
-    presentedToken,
-    presentedSignature,
-    storedSecretHash,
-    rawBody,
-  });
-  if (!auth.ok) {
-    logger.warn('[ATTENDANCE WEBHOOK] Auth rejected', {
+
+  if (presentedToken) {
+    const storedSecretHash = await resolveStoredAttendanceWebhookSecretHash(
+      supabase,
       company_id,
-      reason: auth.reason,
+      presentedToken
+    );
+    const auth = verifyAttendanceWebhookAuth({
+      presentedToken,
+      presentedSignature,
+      storedSecretHash,
+      rawBody,
     });
-    return res.status(401).json({ success: false, message: 'Unauthorized' });
+    if (!auth.ok) {
+      logger.warn('[ATTENDANCE WEBHOOK] Auth rejected', {
+        company_id,
+        reason: auth.reason,
+      });
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
   }
 
   try {

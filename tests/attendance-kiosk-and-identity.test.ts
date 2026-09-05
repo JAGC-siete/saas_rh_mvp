@@ -50,17 +50,17 @@ describe('resolveEmployeeAndCompanyId', () => {
 })
 
 describe('attendance webhook HMAC', () => {
-  it('rejects missing token or missing stored hash; allows Hikvision token-only', () => {
+  it('allows legacy company_id-only; 401 only when a token does not match', () => {
     const { token, hash } = issueAttendanceWebhookSecret()
     const body = Buffer.from('{"eventType":"heartBeat"}')
     assert.equal(
       verifyAttendanceWebhookAuth({
         presentedToken: null,
-        presentedSignature: signAttendanceWebhookBody(token, body),
+        presentedSignature: null,
         storedSecretHash: hash,
         rawBody: body,
       }).ok,
-      false
+      true
     )
     assert.equal(
       verifyAttendanceWebhookAuth({
@@ -74,8 +74,18 @@ describe('attendance webhook HMAC', () => {
     assert.equal(
       verifyAttendanceWebhookAuth({
         presentedToken: token,
-        presentedSignature: signAttendanceWebhookBody(token, body),
+        presentedSignature: null,
         storedSecretHash: null,
+        rawBody: body,
+      }).ok,
+      false
+    )
+    const other = issueAttendanceWebhookSecret()
+    assert.equal(
+      verifyAttendanceWebhookAuth({
+        presentedToken: token,
+        presentedSignature: null,
+        storedSecretHash: other.hash,
         rawBody: body,
       }).ok,
       false

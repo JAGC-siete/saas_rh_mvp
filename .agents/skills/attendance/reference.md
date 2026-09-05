@@ -14,7 +14,7 @@ Leer desde `SKILL.md`. Código > docs. Verificar `daily-close.ts` + `webhooks/at
 | `attendance_corrections` | `pending` \| `approved` \| `rejected` |
 | `company_metadata.attendance_metadata` | `biometric_mode`, timezone |
 | `attendance_stage` | Solo types; sin uso app |
-| `devices` | Tenant webhook (`company_id` + `token` en URL; `webhook_secret_hash`) |
+| `devices` | Tenant webhook (`company_id` en URL; `token`/`webhook_secret_hash` opcionales) |
 
 `employees` se lee: `dni`, `work_schedule_id`, `pay_type`, `attendance_required`, `company_id`.
 

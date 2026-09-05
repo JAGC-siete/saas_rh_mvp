@@ -51,7 +51,7 @@ POST /api/webhooks/attendance?company_id=
 
 Kiosco público last5/DNI (`/api/attendance`, `/api/attendance/register`, `/api/attendance/first-time-check`, `/attendance/register`, `/attendance/public`) responde **410**. No reactivar last5 en este branch.
 
-Webhook Hikvision: `token` obligatorio (query/header) fail-closed 401. HMAC (`x-attendance-signature` / `sig`) opcional; si llega, debe coincidir. Provision guarda `devices.webhook_secret_hash`, no el secreto en claro.
+Webhook Hikvision: `company_id` válido basta (terminales legacy sin `token`). Si llega `token`, debe coincidir con `webhook_secret_hash`; si no, 401. HMAC opcional y solo se valida cuando hay token. Provision puede escribir hash + token en URL.
 
 **Daily-close no calcula AHC.** `generateDailyCloseReport` no llama `calculate_attendance_hours_batch`.
 

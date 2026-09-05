@@ -128,7 +128,10 @@ export function verifyAttendanceWebhookAuth(opts: {
   storedSecretHash: string | null
   rawBody: Buffer
 }): { ok: true } | { ok: false; reason: AttendanceWebhookAuthFailure } {
-  if (!opts.presentedToken) return { ok: false, reason: 'missing_token' }
+  // Legacy Hikvision httpHosts: URL is only ?company_id=. No token → allow.
+  // If a token is sent, it must match the stored hash (401 on mismatch).
+  if (!opts.presentedToken) return { ok: true }
+
   if (!opts.storedSecretHash || !HASH_HEX_RE.test(opts.storedSecretHash)) {
     return { ok: false, reason: 'invalid' }
   }
@@ -138,8 +141,6 @@ export function verifyAttendanceWebhookAuth(opts: {
     return { ok: false, reason: 'invalid' }
   }
 
-  // Native Hikvision httpHosts can put a token in the URL but cannot HMAC the body.
-  // Token + stored hash is required (fail-closed). HMAC is enforced only when sent.
   if (opts.presentedSignature) {
     const expected = signAttendanceWebhookBody(opts.presentedToken, opts.rawBody)
     const presented = opts.presentedSignature.trim().toLowerCase()
