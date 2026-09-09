@@ -6,7 +6,9 @@ import { formatDateForHonduras, formatDateTimeForHonduras } from '../timezone'
 import { formatPeriodRangeForDisplay } from './period-dates'
 import {
   buildPayrollPdfColumnMeta,
+  collectCustomFieldsWithPdfValues,
   reportBiweeklyBaseFromMonthly,
+  statutoryColumnsWithPdfValues,
   type PayrollPdfCustomFieldsConfig,
 } from './payroll-pdf-columns'
 import { formatVoucherCompanyName } from './voucher-pdf-options'
@@ -407,22 +409,13 @@ export async function generateConsolidatedPayrollPDF(
 
         const hasSeptimoDia = isHourly && planillaData.some((r) => (r.septimo_dia ?? 0) > 0)
         const hasOvertimePay = planillaData.some((r) => (r.overtime_pay ?? 0) > 0)
-        const customEarningsWithValues = new Set<string>()
-        if (customFieldsConfig) {
-          for (const [fieldName, fieldDef] of Object.entries(customFieldsConfig)) {
-            const cat =
-              typeof fieldDef === 'string'
-                ? 'earnings'
-                : fieldDef?.category || 'deductions'
-            if (cat !== 'earnings') continue
-            const hasVal = planillaData.some((r) => {
-              const raw = r.metadata?.[fieldName]
-              const n = typeof raw === 'number' ? raw : Number(raw)
-              return Number.isFinite(n) && n !== 0
-            })
-            if (hasVal) customEarningsWithValues.add(fieldName)
-          }
-        }
+        const customWithValues = collectCustomFieldsWithPdfValues(
+          customFieldsConfig as PayrollPdfCustomFieldsConfig | undefined,
+          planillaData
+        )
+        const customEarningsWithValues = customWithValues.earnings
+        const customDeductionsWithValues = customWithValues.deductions
+        const statutoryWithValues = statutoryColumnsWithPdfValues(planillaData)
 
         type PdfTableCol = {
           id: string
@@ -598,6 +591,8 @@ export async function generateConsolidatedPayrollPDF(
           legalDeductions: payrollConfig?.legal_deductions,
           countryCode: jurisdictionCountry,
           customEarningsWithValues,
+          customDeductionsWithValues,
+          statutoryWithValues,
         })
           .map((meta) => {
             const binding = resolveColBinding(meta.id)
@@ -657,11 +652,11 @@ export async function generateConsolidatedPayrollPDF(
         }
 
         const startX = 40
-        const dataRowHeight = 12
-        const headerRowHeight = 26
-        const dataFontSize = 5.5
-        const headerFontSize = 6
-        const totalsFontSize = 5.5
+        const dataRowHeight = 14
+        const headerRowHeight = 28
+        const dataFontSize = 7
+        const headerFontSize = 7.5
+        const totalsFontSize = 7
 
         const buildRowValues = (row: PlanillaItem): string[] => cols.map((c) => c.value(row))
 
@@ -684,7 +679,11 @@ export async function generateConsolidatedPayrollPDF(
           return y + headerRowHeight
         }
 
-        const paintTotalsRow = (rows: PlanillaItem[], y: number): number => {
+        const paintTotalsRow = (
+          rows: PlanillaItem[],
+          y: number,
+          label: string = 'TOTALES:'
+        ): number => {
           const y2 = y + 4
           const totalsWidth = colWidths.reduce((a, b) => a + b, 0)
           const sums = new Array(cols.length).fill(0) as number[]
@@ -711,7 +710,7 @@ export async function generateConsolidatedPayrollPDF(
                 .font('Helvetica-Bold')
                 .fontSize(totalsFontSize)
                 .fillColor(PDF.accentDark)
-                .text('TOTALES:', x + 1, y2 + 3, {
+                .text(label, x + 1, y2 + 3, {
                   width: cellW,
                   align: 'left',
                   lineBreak: false,
@@ -740,7 +739,7 @@ export async function generateConsolidatedPayrollPDF(
           let y = yStart
           let pageCount = 1
           let rowIndex = 0
-          const bottomLimit = doc.page.height - 60 - PDF_FOOTER_RESERVE
+          const bottomLimit = doc.page.height - 60 - PDF_FOOTER_RESERVE - dataRowHeight - 8
           for (const row of rows) {
             if (y > bottomLimit) {
               addPlanillaPage()
@@ -802,6 +801,16 @@ export async function generateConsolidatedPayrollPDF(
           y = paintDataRows(grows, y, continuationLabel)
           y = paintTotalsRow(grows, y)
           y += 12
+        }
+
+        if (segments.length > 1) {
+          const totalsNeed = dataRowHeight + 12
+          if (y + totalsNeed > doc.page.height - 60 - PDF_FOOTER_RESERVE) {
+            addPlanillaPage()
+            y = 40
+            y = paintHeaderRow(y)
+          }
+          y = paintTotalsRow(planillaData, y, 'TOTAL GENERAL:')
         }
       }
 

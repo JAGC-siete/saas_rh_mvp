@@ -6,6 +6,7 @@
 
 import { statutoryDeductionLabels } from '../country/payroll-labels'
 import { normalizeCountryCode, type CountryCode } from '../country/supported'
+import { resolveReservedCustomColumnAmount } from './statutory-reserved-custom-keys'
 import { resolveStatutoryDeductionColumns } from './statutory-deduction-columns'
 
 export interface PayrollPdfCustomFieldDef {
@@ -32,10 +33,22 @@ export interface BuildPayrollPdfColumnsInput {
   countryCode?: CountryCode | string | null
   /**
    * Custom earnings field names with at least one non-zero value in the table.
-   * OT-alias earnings (e.g. horas_extra_manual) are omitted when empty so they
-   * do not duplicate the "Pago HE" / overtime_pay column.
+   * When a Set (including empty), earnings not in the set are omitted.
+   * When null/undefined, all custom earnings print (legacy), except OT aliases.
    */
   customEarningsWithValues?: Set<string> | null
+  /**
+   * Custom deduction field names with at least one non-zero value in the table.
+   * When a Set, deductions not in the set are omitted for this run/quincena.
+   * When null/undefined, all custom deductions print (legacy).
+   */
+  customDeductionsWithValues?: Set<string> | null
+  /**
+   * When set, statutory columns with `false` are omitted even if legal_deductions
+   * would include them. Used to hide IHSS/RAP/ISR when the whole table is 0.
+   * When null/undefined, statutory visibility follows legal_deductions only.
+   */
+  statutoryWithValues?: { ihss?: boolean; rap?: boolean; isr?: boolean } | null
 }
 
 export interface PayrollPdfColumnMeta {
@@ -88,6 +101,57 @@ function normalizeCustomField(
   return fieldDef
 }
 
+export function pdfAmountHasValue(n: unknown): boolean {
+  const v = typeof n === 'number' ? n : Number(n)
+  return Number.isFinite(v) && v !== 0
+}
+
+export type PlanillaPdfValueRow = {
+  metadata?: Record<string, unknown> | null
+  IHSS?: number
+  RAP?: number
+  ISR?: number
+}
+
+/** Same amount the PDF cell uses (reserved statutory keys → row.IHSS/RAP/ISR). */
+export function customFieldHasPdfValue(fieldName: string, row: PlanillaPdfValueRow): boolean {
+  const reserved = resolveReservedCustomColumnAmount(fieldName, row)
+  if (reserved != null) return pdfAmountHasValue(reserved)
+  return pdfAmountHasValue(row.metadata?.[fieldName])
+}
+
+export function collectCustomFieldsWithPdfValues(
+  customFieldsConfig: PayrollPdfCustomFieldsConfig | undefined,
+  rows: PlanillaPdfValueRow[]
+): { earnings: Set<string>; deductions: Set<string> } {
+  const earnings = new Set<string>()
+  const deductions = new Set<string>()
+  if (!customFieldsConfig) return { earnings, deductions }
+
+  for (const [fieldName, fieldDef] of Object.entries(customFieldsConfig)) {
+    const cat =
+      typeof fieldDef === 'string' ? 'earnings' : fieldDef?.category || 'deductions'
+    if (cat === 'calculation_helper') continue
+    const hasVal = rows.some((r) => customFieldHasPdfValue(fieldName, r))
+    if (!hasVal) continue
+    if (cat === 'earnings') earnings.add(fieldName)
+    else deductions.add(fieldName)
+  }
+  return { earnings, deductions }
+}
+
+export function statutoryColumnsWithPdfValues(rows: PlanillaPdfValueRow[]): {
+  ihss: boolean
+  rap: boolean
+  isr: boolean
+} {
+  return {
+    ihss: rows.some((r) => pdfAmountHasValue(r.IHSS)),
+    rap: rows.some((r) => pdfAmountHasValue(r.RAP)),
+    isr: rows.some((r) => pdfAmountHasValue(r.ISR)),
+  }
+}
+
 /** Manual/legacy HE earnings that collide with standard `overtime_pay` ("Pago HE"). */
 export function isOvertimeEarningsAlias(fieldName: string): boolean {
   const n = fieldName.trim().toLowerCase()
@@ -112,6 +176,8 @@ export function buildPayrollPdfColumnMeta(input: BuildPayrollPdfColumnsInput): P
     legalDeductions,
     countryCode,
     customEarningsWithValues = null,
+    customDeductionsWithValues = null,
+    statutoryWithValues = null,
   } = input
   const filterCustomFields = Boolean(input.includeCustomPayrollFields && visibleColumnIds)
   const country = normalizeCountryCode(countryCode)
@@ -121,6 +187,8 @@ export function buildPayrollPdfColumnMeta(input: BuildPayrollPdfColumnsInput): P
     customFieldsConfig,
     country
   )
+  const statutoryUsed = (id: 'ihss' | 'rap' | 'isr') =>
+    statutoryWithValues == null || statutoryWithValues[id] !== false
 
   const cols: PayrollPdfColumnMeta[] = []
   const push = (id: string, fallback: string) => {
@@ -164,6 +232,7 @@ export function buildPayrollPdfColumnMeta(input: BuildPayrollPdfColumnsInput): P
       // Never print OT-alias custom earnings (e.g. horas_extra_manual "Horas Extra"):
       // official money column is overtime_pay ("Pago HE").
       if (isOvertimeEarningsAlias(fieldName)) continue
+      if (customEarningsWithValues != null && !customEarningsWithValues.has(fieldName)) continue
       cols.push({ id: customId, header: colLabel(columnLabels, customId, def.label || fieldName) })
     }
   }
@@ -171,13 +240,13 @@ export function buildPayrollPdfColumnMeta(input: BuildPayrollPdfColumnsInput): P
   push('gross_salary', 'Total ingresos')
 
   // —— Deducciones → suma → neto ——
-  if (statutoryCols.ihss) {
+  if (statutoryCols.ihss && statutoryUsed('ihss')) {
     push('ihss', dedLabels.primarySocial)
   }
-  if (statutoryCols.rap && dedLabels.secondarySocial !== '—') {
+  if (statutoryCols.rap && dedLabels.secondarySocial !== '—' && statutoryUsed('rap')) {
     push('rap', dedLabels.secondarySocial)
   }
-  if (statutoryCols.isr) {
+  if (statutoryCols.isr && statutoryUsed('isr')) {
     push('isr', dedLabels.incomeTax)
   }
 
@@ -193,6 +262,7 @@ export function buildPayrollPdfColumnMeta(input: BuildPayrollPdfColumnsInput): P
       const def = normalizeCustomField(fieldName, fieldDef, 'deductions')
       const customId = `custom_${fieldName}`
       if (filterCustomFields && !visibleColumnIds!.has(customId)) continue
+      if (customDeductionsWithValues != null && !customDeductionsWithValues.has(fieldName)) continue
       cols.push({ id: customId, header: colLabel(columnLabels, customId, def.label || fieldName) })
     }
   }

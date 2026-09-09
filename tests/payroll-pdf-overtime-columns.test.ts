@@ -7,7 +7,9 @@ import assert from 'node:assert/strict'
 import { generateConsolidatedPayrollPDF, type PlanillaItem } from '../lib/payroll/report'
 import {
   buildPayrollPdfColumnMeta,
+  collectCustomFieldsWithPdfValues,
   reportBiweeklyBaseFromMonthly,
+  statutoryColumnsWithPdfValues,
 } from '../lib/payroll/payroll-pdf-columns'
 import { getStandardColumns } from '../lib/reports/standard-columns'
 
@@ -278,3 +280,161 @@ describe('payroll PDF overtime columns', () => {
     assert.ok(pdf.length > 1500)
   })
 })
+
+const customFieldsMix = {
+  cooperativa_elga: {
+    label: 'Cooperativa Elga',
+    type: 'number' as const,
+    category: 'deductions' as const,
+    required: false,
+    default: 0,
+  },
+  prestamo_caja: {
+    label: 'Préstamo caja',
+    type: 'number' as const,
+    category: 'deductions' as const,
+    required: false,
+    default: 0,
+  },
+  bono_asistencia: {
+    label: 'Bono asistencia',
+    type: 'number' as const,
+    category: 'earnings' as const,
+    required: false,
+    default: 0,
+  },
+}
+
+describe('payroll PDF hide unused columns this run', () => {
+  it('omits custom earnings/deductions not in the value sets; keeps totals', () => {
+    const cols = buildPayrollPdfColumnMeta({
+      isHourly: false,
+      hasSeptimoDia: false,
+      hasOvertimePay: false,
+      customEarningsWithValues: new Set(['bono_asistencia']),
+      customDeductionsWithValues: new Set(['prestamo_caja']),
+      statutoryWithValues: { ihss: true, rap: true, isr: false },
+      legalDeductions: { ihss: true, rap: true, isr: true },
+      countryCode: 'HND',
+      customFieldsConfig: customFieldsMix,
+    })
+    const ids = cols.map((c) => c.id)
+    assert.ok(ids.includes('custom_bono_asistencia'))
+    assert.equal(ids.includes('custom_cooperativa_elga'), false)
+    assert.ok(ids.includes('custom_prestamo_caja'))
+    assert.ok(ids.includes('ihss'))
+    assert.ok(ids.includes('rap'))
+    assert.equal(ids.includes('isr'), false)
+    assert.ok(ids.includes('gross_salary'))
+    assert.ok(ids.includes('total_deductions'))
+    assert.ok(ids.includes('net_salary'))
+  })
+
+  it('without value sets, still prints all custom deductions (legacy catalog)', () => {
+    const cols = buildPayrollPdfColumnMeta({
+      isHourly: false,
+      hasSeptimoDia: false,
+      hasOvertimePay: false,
+      legalDeductions: { ihss: true, rap: true, isr: true },
+      countryCode: 'HND',
+      customFieldsConfig: customFieldsMix,
+    })
+    const ids = cols.map((c) => c.id)
+    assert.ok(ids.includes('custom_cooperativa_elga'))
+    assert.ok(ids.includes('custom_prestamo_caja'))
+    assert.ok(ids.includes('custom_bono_asistencia'))
+    assert.ok(ids.includes('isr'))
+  })
+
+  it('collects reserved custom_isr from row.ISR when metadata is 0', () => {
+    const collected = collectCustomFieldsWithPdfValues(
+      {
+        isr: {
+          label: 'Retención Asalariada',
+          type: 'number',
+          category: 'deductions',
+          required: false,
+          default: 0,
+        },
+        cooperativa_elga: customFieldsMix.cooperativa_elga,
+      },
+      [
+        {
+          ISR: 920.16,
+          IHSS: 297.58,
+          RAP: 30,
+          metadata: { isr: 0, cooperativa_elga: 0 },
+        },
+      ]
+    )
+    assert.equal(collected.deductions.has('isr'), true)
+    assert.equal(collected.deductions.has('cooperativa_elga'), false)
+    assert.deepEqual(statutoryColumnsWithPdfValues([{ IHSS: 297.58, RAP: 0, ISR: 920.16 }]), {
+      ihss: true,
+      rap: false,
+      isr: true,
+    })
+  })
+
+  it('PDF still Legal landscape after hiding unused deduction columns', async () => {
+    const rows = [
+      baseFixed({
+        ISR: 0,
+        metadata: { cooperativa_elga: 0, prestamo_caja: 150 },
+      }),
+    ]
+    const customFieldsConfig = {
+      cooperativa_elga: { ...customFieldsMix.cooperativa_elga, label: 'CoopElga' },
+      prestamo_caja: { ...customFieldsMix.prestamo_caja, label: 'Caja' },
+      bono_asistencia: { ...customFieldsMix.bono_asistencia, label: 'BonoAsist' },
+    }
+    const collected = collectCustomFieldsWithPdfValues(customFieldsConfig, rows)
+    assert.equal(collected.deductions.has('prestamo_caja'), true)
+    assert.equal(collected.deductions.has('cooperativa_elga'), false)
+    assert.equal(collected.earnings.has('bono_asistencia'), false)
+
+    const cols = buildPayrollPdfColumnMeta({
+      isHourly: false,
+      hasSeptimoDia: false,
+      hasOvertimePay: false,
+      customEarningsWithValues: collected.earnings,
+      customDeductionsWithValues: collected.deductions,
+      statutoryWithValues: statutoryColumnsWithPdfValues(rows),
+      legalDeductions: { ihss: true, rap: true, isr: true },
+      countryCode: 'HND',
+      customFieldsConfig,
+    })
+    const ids = cols.map((c) => c.id)
+    assert.ok(ids.includes('custom_prestamo_caja'))
+    assert.equal(ids.includes('custom_cooperativa_elga'), false)
+    assert.equal(ids.includes('custom_bono_asistencia'), false)
+    assert.equal(ids.includes('isr'), false)
+    assert.ok(ids.includes('total_deductions'))
+    assert.ok(ids.includes('net_salary'))
+
+    const pdf = await generateConsolidatedPayrollPDF(
+      rows,
+      [],
+      '2026-07',
+      1,
+      undefined,
+      'Enlace',
+      customFieldsConfig,
+      {
+        currency: 'HNL',
+        payment_frequency: 'quincenal',
+        legal_deductions: { ihss: true, rap: true, isr: true },
+        country_code: 'HND',
+      },
+      { period_start: '2026-07-01', period_end: '2026-07-15' }
+    )
+
+    assert.ok(Buffer.isBuffer(pdf))
+    assert.ok(pdf.length > 2000)
+    const media = firstMediaBox(pdf)
+    assert.ok(media, 'PDF must include MediaBox')
+    assert.equal(media![0], 1008)
+    assert.equal(media![1], 612)
+  })
+})
+
