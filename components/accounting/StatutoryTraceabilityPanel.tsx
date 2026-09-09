@@ -6,8 +6,8 @@ import type { StatutoryDataSource } from '../../lib/tax/statutory-trace'
 import { LinkIcon } from '@heroicons/react/24/outline'
 
 const DATA_SOURCE_LABELS: Record<StatutoryDataSource, string> = {
-  payroll_statutory_params: 'Parámetros legales (payroll_statutory_params)',
-  tax_brackets: 'Tablas fiscales (tax_brackets)',
+  payroll_statutory_params: 'Parámetros legales de nómina',
+  tax_brackets: 'Tablas fiscales',
   fallback_default: 'Valores por defecto embebidos',
   none: 'Sin parámetros activos'
 }

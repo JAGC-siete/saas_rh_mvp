@@ -23,12 +23,12 @@ export default memo(function AchievementTypesGrid() {
       const res = await fetch('/api/gamification?action=achievement-types&limit=100')
       const data = await res.json()
       if (!data.success) {
-        setError(data.error || 'Failed to fetch achievement types')
+        setError(data.error || 'No se pudieron cargar los tipos de logro')
         return
       }
       setTypes(data.data || [])
     } catch (e) {
-      setError('Failed to fetch achievement types')
+      setError('No se pudieron cargar los tipos de logro')
     } finally {
       setLoading(false)
     }
@@ -81,7 +81,7 @@ export default memo(function AchievementTypesGrid() {
               onClick={fetchTypes}
               className="px-4 py-2 bg-blue-600/20 border border-blue-500/30 hover:bg-blue-600/30 rounded-md text-white transition-all duration-200"
             >
-              Retry
+              Reintentar
             </button>
           </div>
         </CardContent>

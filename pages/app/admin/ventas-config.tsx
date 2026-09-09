@@ -559,7 +559,7 @@ export default function VentasConfigPage() {
                     </div>
                     <div className="rounded-lg border border-white/10 bg-white/5 p-3 text-sm text-white/80 space-y-1">
                       <p className="text-xs uppercase tracking-wide text-white/50">
-                        Preview runtime (reglas + rango)
+                        Vista previa en ejecución (reglas + rango)
                       </p>
                       {runtimePreviews.map((p) => (
                         <p key={p.emps}>
@@ -571,7 +571,7 @@ export default function VentasConfigPage() {
                         </p>
                       ))}
                       <p className="text-xs text-white/50">
-                        Mensual siempre usa continuidad. Override por rango gana sobre umbral
+                        Mensual siempre usa continuidad. La excepción por rango gana sobre el umbral
                         Auto. Form máx. terminales = «Máx. terminales cotización web».
                       </p>
                     </div>

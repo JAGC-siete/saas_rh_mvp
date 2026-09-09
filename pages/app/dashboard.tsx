@@ -310,7 +310,14 @@ export default function Dashboard() {
                       </div>
                       <div className="text-right">
                         <div className="font-medium text-white">{format(payroll.net_salary ?? 0)}</div>
-                        <div className="text-sm text-gray-300 capitalize">{payroll.status}</div>
+                        <div className="text-sm text-gray-300 capitalize">{
+                          payroll.status === 'draft' ? 'Borrador'
+                            : payroll.status === 'edited' ? 'Editado'
+                            : payroll.status === 'authorized' ? 'Autorizado'
+                            : payroll.status === 'distributed' ? 'Distribuido'
+                            : payroll.status === 'paid' ? 'Pagado'
+                            : payroll.status
+                        }</div>
                       </div>
                     </div>
                   ))}

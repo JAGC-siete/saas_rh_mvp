@@ -69,10 +69,10 @@ export default memo(function RealtimeEmployeeAchievements({
       if (data.success) {
         setAchievements(data.data)
       } else {
-        setError(data.error || 'Failed to fetch achievements')
+        setError(data.error || 'No se pudieron cargar los logros')
       }
     } catch (err) {
-      setError('Failed to fetch achievements data')
+      setError('No se pudieron cargar los logros')
       console.error('Achievements fetch error:', err)
     } finally {
       setLoading(false)
@@ -136,8 +136,8 @@ export default memo(function RealtimeEmployeeAchievements({
     return (
       <Card variant="liquid">
         <CardHeader>
-          <CardTitle className="text-white">Employee Achievements</CardTitle>
-          <CardDescription className="text-gray-300">Loading achievements...</CardDescription>
+          <CardTitle className="text-white">Logros de empleados</CardTitle>
+          <CardDescription className="text-gray-300">Cargando logros...</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex justify-center py-8">
@@ -152,7 +152,7 @@ export default memo(function RealtimeEmployeeAchievements({
     return (
       <Card variant="liquid">
         <CardHeader>
-          <CardTitle className="text-white">Employee Achievements</CardTitle>
+          <CardTitle className="text-white">Logros de empleados</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="text-center py-8">
@@ -161,7 +161,7 @@ export default memo(function RealtimeEmployeeAchievements({
               onClick={fetchAchievements}
               className="px-4 py-2 bg-blue-600/20 border border-blue-500/30 hover:bg-blue-600/30 rounded-md text-white transition-all duration-200"
             >
-              Retry
+              Reintentar
             </button>
           </div>
         </CardContent>
@@ -173,14 +173,14 @@ export default memo(function RealtimeEmployeeAchievements({
     <Card variant="liquid">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-white">
-          Employee Achievements
+          Logros de empleados
           {isConnected && (
             <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" 
                  title="Conectado en tiempo real" />
           )}
         </CardTitle>
         <CardDescription className="text-gray-300">
-          {employeeId ? 'Individual achievements' : 'Company achievements'}
+          {employeeId ? 'Logros individuales' : 'Logros de la empresa'}
           <span className={`ml-2 text-xs ${getConnectionColor()}`}>
             • {getConnectionStatus()}
           </span>
@@ -193,7 +193,9 @@ export default memo(function RealtimeEmployeeAchievements({
             <div className="flex items-center gap-2 text-green-400">
               <span className="text-lg">🎉</span>
               <span className="text-sm font-medium">
-                {newAchievements.length} nuevo(s) logro(s) desbloqueado(s)!
+                {newAchievements.length === 1
+                  ? '¡Nuevo logro desbloqueado!'
+                  : `¡${newAchievements.length} nuevos logros desbloqueados!`}
               </span>
             </div>
           </div>
@@ -201,7 +203,7 @@ export default memo(function RealtimeEmployeeAchievements({
 
         {achievements.length === 0 ? (
           <div className="text-center py-8 text-gray-400">
-            <p>Keep up the good work to earn achievements!</p>
+            <p>Siga acumulando asistencia para desbloquear logros.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -260,7 +262,7 @@ export default memo(function RealtimeEmployeeAchievements({
               onClick={fetchAchievements}
               className="px-4 py-2 bg-blue-600/20 border border-blue-500/30 hover:bg-blue-600/30 rounded-md text-white text-sm transition-all duration-200"
             >
-              Refresh Achievements
+              Actualizar logros
             </button>
           </div>
         )}

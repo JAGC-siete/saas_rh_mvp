@@ -407,7 +407,7 @@ export default function BillingPage() {
                               <th className="text-left py-3 px-2">Empresa</th>
                               <th className="text-left py-3 px-2">Mes</th>
                               <th className="text-right py-3 px-2">PDFs</th>
-                              <th className="text-right py-3 px-2">Vouchers</th>
+                              <th className="text-right py-3 px-2">Comprobantes</th>
                               <th className="text-right py-3 px-2">Asistencias</th>
                               <th className="text-right py-3 px-2">Empleados</th>
                               <th className="text-right py-3 px-2">Total</th>

@@ -623,7 +623,7 @@ export default function PayrollFixedTable({
                           onClick={async () => {
                             if (
                               !confirm(
-                                '¿Recalcular esta línea desde asistencia? Se perderán las ediciones manuales de este empleado (incl. override de retenciones de ley).'
+                                '¿Recalcular esta línea desde asistencia? Se perderán las ediciones manuales de este empleado (incl. el ajuste de retenciones de ley).'
                               )
                             ) {
                               return
@@ -681,7 +681,7 @@ export default function PayrollFixedTable({
             <h3 className="text-lg font-semibold">Ajustar días trabajados</h3>
             <p className="mt-1 text-sm text-gray-300">{daysModal.employeeName}</p>
             <p className="mt-2 text-xs text-amber-200/90">
-              Se recalculan salario proporcional, horas extras (override o AHC), deducciones de ley
+              Se recalculan salario proporcional, horas extras (ajuste manual o cálculo de asistencia), deducciones de ley
               (sobre salario base) y planes.
             </p>
             <div className="mt-4 space-y-3">

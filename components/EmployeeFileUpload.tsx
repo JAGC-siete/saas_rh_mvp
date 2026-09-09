@@ -370,7 +370,7 @@ export default function EmployeeFileUpload({
           <p className={`text-sm mb-2 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>Vista previa:</p>
           <img
             src={preview}
-            alt="Preview"
+            alt="Vista previa"
             className={`max-w-xs max-h-48 rounded-lg border ${isDark ? 'border-white/20' : 'border-gray-300'}`}
           />
         </div>

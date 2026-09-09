@@ -59,10 +59,10 @@ export default function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
     { name: 'Planes y módulos', href: '/app/admin/plan-features', icon: Layers, description: 'Segmentación por categoría de servicio' },
     { name: 'Permisos de campo', href: '/app/admin/role-field-permissions', icon: Key, description: 'Salario y campos sensibles por rol' },
     { name: 'Sistema', href: '/app/admin/system', icon: Server, description: 'Estado del sistema' },
-    { name: 'Logs', href: '/app/admin/logs', icon: FileText, description: 'Registros del sistema' },
+    { name: 'Registros', href: '/app/admin/logs', icon: FileText, description: 'Registros del sistema' },
     { name: 'Configuración', href: '/app/admin/settings', icon: Settings, description: 'Configuración global' },
     { name: 'Seguridad', href: '/app/admin/security', icon: Shield, description: 'Configuración de seguridad' },
-    { name: 'Backup', href: '/app/admin/backup', icon: Database, description: 'Respaldo de datos' },
+    { name: 'Respaldo', href: '/app/admin/backup', icon: Database, description: 'Respaldo de datos' },
     { name: 'Tablas de Impuestos', href: '/app/admin/tax-brackets', icon: FileText, description: 'Gestión de tablas ISR por año' },
   ]
 

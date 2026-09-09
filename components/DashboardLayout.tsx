@@ -348,7 +348,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     permission: keyof UserPermissions
     feature_key?: string
   }> = [
-    { name: 'Dashboard',        href: '/app/dashboard',            icon: ChartBarIcon,          permission: 'dashboard' },
+    { name: 'Inicio',           href: '/app/dashboard',            icon: ChartBarIcon,          permission: 'dashboard' },
     { name: 'Empleados',        href: '/app/employees',            icon: UsersIcon,             permission: 'employees',  feature_key: 'employees' },
     { name: 'Departamentos',    href: '/app/departments',          icon: UsersIcon,             permission: 'departments', feature_key: 'departments' },
     { name: 'Asistencia',       href: '/app/attendance/dashboard', icon: ClockIcon,             permission: 'attendance',  feature_key: 'attendance' },
@@ -356,14 +356,14 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     { name: 'Nómina',           href: '/app/payroll',              icon: CurrencyDollarIcon,    permission: 'payroll',     feature_key: 'payroll' },
     { name: 'Cesantías',        href: '/app/cesantias',            icon: ScaleIcon,             permission: 'payroll',     feature_key: 'cesantias' },
     { name: 'Deducciones',      href: '/app/deducciones',          icon: BanknotesIcon,         permission: 'deducciones', feature_key: 'deducciones' },
-    { name: '13 & 14 Salario',  href: '/app/13-14-salario',        icon: GiftIcon,              permission: 'payroll',     feature_key: 'decimo_13_14' },
+    { name: '13.º y 14.º salario', href: '/app/13-14-salario',        icon: GiftIcon,              permission: 'payroll',     feature_key: 'decimo_13_14' },
     { name: 'Reportes',         href: '/app/reports',              icon: DocumentChartBarIcon,  permission: 'reports',     feature_key: 'reports' },
     { name: 'MTP Puestos',      href: '/app/mtp',                  icon: ClipboardList,         permission: 'mtp',         feature_key: 'mtp_job_descriptions' },
     { name: 'Evaluaciones',     href: '/app/performance-evaluations', icon: ClipboardCheck,      permission: 'performance', feature_key: 'performance_evaluations' },
     { name: 'Contabilidad',     href: '/app/accounting',           icon: CalculatorIcon,        permission: 'payroll',     feature_key: 'contabilidad' },
     // { name: 'Gamificación',  href: '/app/gamification',         icon: TrophyIcon,            permission: 'gamification' },
     // { name: 'Programa de Afiliados', href: '/app/affiliates',   icon: CurrencyDollarIcon,    permission: 'affiliates' },
-    { name: 'Parametros',       href: '/app/settings',             icon: Cog6ToothIcon,         permission: 'settings' },
+    { name: 'Parámetros',       href: '/app/settings',             icon: Cog6ToothIcon,         permission: 'settings' },
     { name: 'Soporte',          href: '/app/support',              icon: LifebuoyIcon,          permission: 'dashboard' },
   ]
 

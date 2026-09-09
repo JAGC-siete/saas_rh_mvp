@@ -245,7 +245,7 @@ export default function MTPPage() {
                   Matriz de Transformación de Puestos
                 </h1>
                 <p className="mt-1 max-w-3xl text-gray-300">
-                  Convierte ideas crudas en funciones claras, accionables y evaluables para job descriptions.
+                  Convierte ideas crudas en funciones claras, accionables y evaluables para descripciones de puesto.
                 </p>
               </div>
             </div>

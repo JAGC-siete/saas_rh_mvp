@@ -432,7 +432,7 @@ export default function UsersAdminPage() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Error al guardar permisos')
 
-      addNotification({ type: 'success', title: 'Permisos actualizados', message: 'Overrides de permisos guardados.' })
+      addNotification({ type: 'success', title: 'Permisos actualizados', message: 'Excepciones de permisos guardadas.' })
       setUserDetails((prev: any) => (prev ? { ...prev, permissions: nextPermissions } : prev))
     } catch (err: any) {
       addNotification({ type: 'error', title: 'Error', message: err.message || 'No se pudieron guardar los permisos' })
@@ -497,10 +497,10 @@ export default function UsersAdminPage() {
                   onChange={(e) => { setPage(1); setRole(e.target.value) }}
                 >
                   <option value="" className="bg-slate-800">Todos los roles</option>
-                  <option value="super_admin" className="bg-slate-800">Super admin</option>
-                  <option value="company_admin" className="bg-slate-800">Admin empresa</option>
-                  <option value="hr_manager" className="bg-slate-800">HR manager</option>
-                  <option value="manager" className="bg-slate-800">Manager</option>
+                  <option value="super_admin" className="bg-slate-800">Superadministrador</option>
+                  <option value="company_admin" className="bg-slate-800">Administrador de empresa</option>
+                  <option value="hr_manager" className="bg-slate-800">Gerente de RRHH</option>
+                  <option value="manager" className="bg-slate-800">Supervisor</option>
                   <option value="employee" className="bg-slate-800">Empleado</option>
                 </select>
                 <select 
@@ -617,8 +617,8 @@ export default function UsersAdminPage() {
                           onChange={(e) => setForm({ ...form, role: e.target.value })}
                         >
                           <option value="company_admin" className="bg-slate-800">Administrador de Empresa</option>
-                          <option value="hr_manager" className="bg-slate-800">HR Manager</option>
-                          <option value="manager" className="bg-slate-800">Manager</option>
+                          <option value="hr_manager" className="bg-slate-800">Gerente de RRHH</option>
+                          <option value="manager" className="bg-slate-800">Supervisor</option>
                           <option value="employee" className="bg-slate-800">Empleado</option>
                         </select>
                       </div>
@@ -965,7 +965,7 @@ export default function UsersAdminPage() {
                   </div>
                   <div>
                     <label className="text-xs uppercase tracking-wider text-white/60 mb-2 block">
-                      Overrides de permisos
+                      Excepciones de permisos
                     </label>
                     <div className="bg-white/5 rounded-md p-4 border border-white/10 space-y-5">
                       <div className="space-y-4">
@@ -993,7 +993,7 @@ export default function UsersAdminPage() {
                               <option value="false" className="text-black">Denegar</option>
                             </select>
                             {fieldPermView !== null && fieldPermView !== roleSalaryDefaults.view && (
-                              <p className="text-xs text-amber-300 mt-1">Override activo</p>
+                              <p className="text-xs text-amber-300 mt-1">Excepción activa</p>
                             )}
                           </div>
                           <div>
@@ -1013,7 +1013,7 @@ export default function UsersAdminPage() {
                               <option value="false" className="text-black">Denegar</option>
                             </select>
                             {fieldPermEdit !== null && fieldPermEdit !== roleSalaryDefaults.edit && (
-                              <p className="text-xs text-amber-300 mt-1">Override activo</p>
+                              <p className="text-xs text-amber-300 mt-1">Excepción activa</p>
                             )}
                           </div>
                         </div>
@@ -1050,7 +1050,7 @@ export default function UsersAdminPage() {
                             <option value="false" className="text-black">Denegar</option>
                           </select>
                           {cancelDeductionPlans === false && (
-                            <p className="text-xs text-amber-300 mt-1">Override activo: sin cancelar</p>
+                            <p className="text-xs text-amber-300 mt-1">Excepción activa: sin cancelar</p>
                           )}
                         </div>
                       </div>

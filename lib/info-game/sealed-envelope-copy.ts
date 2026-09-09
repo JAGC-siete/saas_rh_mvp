@@ -7,7 +7,7 @@ export const SEALED_ENVELOPE_COPY = {
   intrigue: {
     headlineLead: '¿Conocés a alguien que perdió la paz con Recursos Humanos?',
     headlineAccent:
-      'Siempre amargados. Luchando por que todos lleguen a tiempo. A veces celebran cumpleaños. Se tardan meses para entregar una constancia de trabajo. El día de cierre, cuadrando horas extra en Excel, recalculando deducciones hasta la madrugada. Otra vez.',
+      'Siempre amargados. Luchando porque todos lleguen a tiempo. A veces celebran cumpleaños. Se tardan meses para entregar una constancia de trabajo. El día de cierre, cuadrando horas extra en Excel, recalculando deducciones hasta la madrugada. Otra vez.',
     subheadline: '¿Eres esa persona?',
     cta: 'Revelar los 4 fallos ocultos',
     ctaSecondary: 'Validar deducciones gratis',

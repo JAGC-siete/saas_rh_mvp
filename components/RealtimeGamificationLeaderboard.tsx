@@ -69,10 +69,10 @@ export default memo(function RealtimeGamificationLeaderboard({
       if (data.success) {
         setLeaderboard(data.data)
       } else {
-        setError(data.error || 'Failed to fetch leaderboard')
+        setError(data.error || 'No se pudo cargar la tabla de posiciones')
       }
     } catch (err) {
-      setError('Failed to fetch leaderboard data')
+      setError('No se pudo cargar la tabla de posiciones')
       console.error('Leaderboard fetch error:', err)
     } finally {
       setLoading(false)
@@ -158,9 +158,9 @@ export default memo(function RealtimeGamificationLeaderboard({
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-white">
             <TrophyIcon className="h-6 w-6 text-yellow-500" />
-            Employee Leaderboard
+            Tabla de posiciones
           </CardTitle>
-          <CardDescription className="text-gray-300">Loading employee rankings...</CardDescription>
+          <CardDescription className="text-gray-300">Cargando clasificación...</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex justify-center py-8">
@@ -177,7 +177,7 @@ export default memo(function RealtimeGamificationLeaderboard({
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-white">
             <TrophyIcon className="h-6 w-6 text-yellow-500" />
-            Employee Leaderboard
+            Tabla de posiciones
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -187,7 +187,7 @@ export default memo(function RealtimeGamificationLeaderboard({
               onClick={fetchLeaderboard}
               className="px-4 py-2 bg-blue-600/20 border border-blue-500/30 hover:bg-blue-600/30 rounded-md text-white transition-all duration-200"
             >
-              Retry
+              Reintentar
             </button>
           </div>
         </CardContent>
@@ -201,13 +201,13 @@ export default memo(function RealtimeGamificationLeaderboard({
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-white">
             <TrophyIcon className="h-6 w-6 text-yellow-500" />
-            Employee Leaderboard
+            Tabla de posiciones
           </CardTitle>
-          <CardDescription className="text-gray-300">No employees have earned points yet</CardDescription>
+          <CardDescription className="text-gray-300">Aún no hay empleados con puntos</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="text-center py-8 text-gray-400">
-            <p>Start tracking attendance to see the leaderboard!</p>
+            <p>Registre asistencia para ver la clasificación.</p>
           </div>
         </CardContent>
       </Card>
@@ -219,14 +219,14 @@ export default memo(function RealtimeGamificationLeaderboard({
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-white">
           <TrophyIcon className="h-6 w-6 text-yellow-500" />
-          Employee Leaderboard
+          Tabla de posiciones
           {isConnected && (
             <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" 
                  title="Conectado en tiempo real" />
           )}
         </CardTitle>
         <CardDescription className="text-gray-300">
-          Top performers this month
+          Mejores del mes
           <span className={`ml-2 text-xs ${getConnectionColor()}`}>
             • {getConnectionStatus()}
           </span>
@@ -250,10 +250,10 @@ export default memo(function RealtimeGamificationLeaderboard({
                   </div>
                   <div>
                     <h4 className="font-semibold text-white">
-                      {entry.employee.name || `Employee ${entry.employee.employee_code}`}
+                      {entry.employee.name || `Empleado ${entry.employee.employee_code}`}
                     </h4>
                     <p className="text-sm text-gray-300">
-                      {entry.employee.department?.name || 'No Department'} • {entry.employee.employee_code}
+                      {entry.employee.department?.name || 'Sin departamento'} • {entry.employee.employee_code}
                     </p>
                   </div>
                 </div>
@@ -263,11 +263,11 @@ export default memo(function RealtimeGamificationLeaderboard({
                     {entry.total_points.toLocaleString()} pts
                   </div>
                   <div className="text-sm text-gray-300">
-                    {entry.weekly_points} this week
+                    {entry.weekly_points} esta semana
                   </div>
                   {entry.punctuality_streak > 0 && (
                     <div className="text-xs text-green-400">
-                      {entry.punctuality_streak} day streak
+                        {entry.punctuality_streak} días de racha
                     </div>
                   )}
                   {isUpdated && (
@@ -287,7 +287,7 @@ export default memo(function RealtimeGamificationLeaderboard({
               onClick={fetchLeaderboard}
               className="px-4 py-2 bg-blue-600/20 border border-blue-500/30 hover:bg-blue-600/30 rounded-md text-white text-sm transition-all duration-200"
             >
-              Refresh Leaderboard
+              Actualizar clasificación
             </button>
           </div>
         )}

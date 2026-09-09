@@ -553,7 +553,7 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
   const getChangesDescription = (snapshot?: PayrollConfig): { action: string; description: string } => {
     const cfg = snapshot ?? config
     if (!initialConfig) {
-      return { action: 'guardar configuración', description: 'Está guardando la configuración inicial de payroll' }
+      return { action: 'guardar configuración', description: 'Está guardando la configuración inicial de nómina' }
     }
 
     const changes: string[] = []
@@ -2487,7 +2487,7 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
         isOpen={showConfirmDialog}
         onClose={() => setShowConfirmDialog(false)}
         onConfirm={handleConfirmSave}
-        title="Confirmar Cambios en Configuración de Payroll"
+        title="Confirmar cambios en configuración de nómina"
         description={getChangesDescription().description}
         confirmText={confirmAction}
         confirmLabel="Confirmar Cambios"

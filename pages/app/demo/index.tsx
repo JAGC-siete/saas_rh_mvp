@@ -295,7 +295,7 @@ export default function Demo() {
           <div className="w-64 glass-modern border-r border-white/10 shrink-0">
             <nav className="mt-8 space-y-1 px-2">
               {[
-                { id: 'dashboard', name: 'Dashboard', icon: ChartBarIcon },
+                { id: 'dashboard', name: 'Inicio', icon: ChartBarIcon },
                 { id: 'employees', name: 'Empleados', icon: UsersIcon },
                 { id: 'attendance', name: 'Asistencia', icon: ClockIcon },
                 { id: 'payroll', name: 'Nómina', icon: CurrencyDollarIcon },

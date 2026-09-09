@@ -97,7 +97,7 @@ export default function MailListStats() {
       <StatsCard
         title="Activos"
         value={byStatus.active}
-        description={`${stats.awaitingWatchman ?? 0} esperando watchman`}
+        description={`${stats.awaitingWatchman ?? 0} esperando seguimiento`}
         icon={TrendingUp}
         iconColor="text-blue-500"
         valueColor="text-blue-400"

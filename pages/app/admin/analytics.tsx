@@ -371,9 +371,22 @@ export default function AnalyticsPage() {
       absent: 'bg-red-500/20 text-red-300',
       late: 'bg-yellow-500/20 text-yellow-300'
     }
+    const labels: Record<string, string> = {
+      draft: 'Borrador',
+      edited: 'Editado',
+      authorized: 'Autorizado',
+      distributed: 'Distribuido',
+      paid: 'Pagado',
+      pending: 'Pendiente',
+      rejected: 'Rechazado',
+      present: 'Presente',
+      absent: 'Ausente',
+      late: 'Tarde',
+      approved: 'Aprobado',
+    }
     return (
       <span className={`px-2 py-1 rounded-full text-xs font-medium ${colors[status] || 'bg-gray-500/20 text-gray-300'}`}>
-        {status}
+        {labels[status] || status}
       </span>
     )
   }
@@ -526,10 +539,10 @@ export default function AnalyticsPage() {
                           className="input-glass w-full text-white"
                         >
                           <option value="">Todos</option>
-                          <option value="draft">Draft</option>
-                          <option value="edited">Edited</option>
-                          <option value="authorized">Authorized</option>
-                          <option value="distributed">Distributed</option>
+                          <option value="draft">Borrador</option>
+                          <option value="edited">Editado</option>
+                          <option value="authorized">Autorizado</option>
+                          <option value="distributed">Distribuido</option>
                         </select>
                       </div>
                     </div>

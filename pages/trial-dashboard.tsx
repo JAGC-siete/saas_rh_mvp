@@ -156,7 +156,7 @@ export default function TrialDashboard() {
                     variant="outline" 
                     onClick={() => setActiveView('dashboard')}
                   >
-                    ← Volver al Dashboard
+                    ← Volver al inicio
                   </Button>
                 </div>
               </div>
@@ -200,7 +200,7 @@ export default function TrialDashboard() {
                     variant="outline" 
                     onClick={() => setActiveView('dashboard')}
                   >
-                    ← Volver al Dashboard
+                    ← Volver al inicio
                   </Button>
                 </div>
               </div>

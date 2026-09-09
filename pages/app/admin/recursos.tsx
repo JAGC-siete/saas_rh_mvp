@@ -124,7 +124,7 @@ export default function RecursosAdminPage() {
     try {
       return markdownToHtml(formData.content)
     } catch {
-      return '<p>Error al renderizar preview</p>'
+      return '<p>Error al renderizar la vista previa</p>'
     }
   }, [formData?.content])
 
@@ -401,7 +401,7 @@ export default function RecursosAdminPage() {
                     }`}
                   >
                     <Eye className="h-4 w-4" />
-                    Preview
+                    Vista previa
                   </button>
                 </div>
 

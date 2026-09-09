@@ -64,12 +64,12 @@ export default memo(function PointHistoryPanel({
       const res = await fetch(`/api/gamification?${qs.toString()}`)
       const data = await res.json()
       if (!data.success) {
-        setError(data.error || 'Failed to fetch point history')
+        setError(data.error || 'No se pudo cargar el historial de puntos')
         return
       }
       setRows(data.data || [])
     } catch {
-      setError('Failed to fetch point history')
+      setError('No se pudo cargar el historial de puntos')
     } finally {
       setLoading(false)
     }
@@ -123,7 +123,7 @@ export default memo(function PointHistoryPanel({
               onClick={fetchHistory}
               className="px-4 py-2 bg-blue-600/20 border border-blue-500/30 hover:bg-blue-600/30 rounded-md text-white text-sm transition-all duration-200"
             >
-              Refresh
+              Actualizar
             </button>
           </div>
         </div>

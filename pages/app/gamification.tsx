@@ -80,7 +80,7 @@ export default function GamificationDashboard() {
           {/* Header */}
           <div className="flex justify-between items-center">
             <div>
-              <h1 className="text-3xl font-bold text-white">Dashboard de Gamificación</h1>
+              <h1 className="text-3xl font-bold text-white">Panel de gamificación</h1>
               <p className="text-gray-300">Sistema de motivación y reconocimiento de empleados</p>
             </div>
             <div className="flex gap-2">
@@ -89,7 +89,7 @@ export default function GamificationDashboard() {
                 variant="outline"
                 className="border-brand-600 bg-white/10 text-white hover:bg-brand-800 hover:text-white font-medium"
               >
-                ← Volver al Dashboard
+                ← Volver al inicio
               </Button>
             </div>
           </div>

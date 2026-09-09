@@ -345,7 +345,7 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
       setDepartments(departmentsList)
     } catch (error) {
       console.error('💥 Error fetching departments:', error)
-      setDepartmentsError('Error loading departments')
+      setDepartmentsError('Error al cargar departamentos')
     } finally {
       setDepartmentsLoading(false)
     }
@@ -397,7 +397,7 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
       setWorkSchedules(schedulesList)
     } catch (error) {
       console.error('💥 Error fetching work schedules:', error)
-      setSchedulesError('Error loading work schedules')
+      setSchedulesError('Error al cargar horarios')
     } finally {
       setSchedulesLoading(false)
     }

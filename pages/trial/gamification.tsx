@@ -75,7 +75,7 @@ export default function TrialGamificationPage() {
         <div className="text-center max-w-md mx-auto p-6">
           <div className="text-red-400 text-6xl mb-4">⚠️</div>
           <h1 className="text-2xl font-bold text-white mb-4">Error cargando gamificación</h1>
-          <p className="text-gray-300 mb-6">{error || 'No se pudo cargar el leaderboard'}</p>
+          <p className="text-gray-300 mb-6">{error || 'No se pudo cargar la tabla de posiciones'}</p>
           <Button onClick={goBackToTrial}>Volver al Trial</Button>
         </div>
       </PublicPageShell>
@@ -110,7 +110,7 @@ export default function TrialGamificationPage() {
           {/* Leaderboard */}
           <Card variant="liquid">
             <CardHeader>
-              <CardTitle className="text-white">Leaderboard</CardTitle>
+              <CardTitle className="text-white">Tabla de posiciones</CardTitle>
               <CardDescription className="text-gray-300">Top empleados por puntos</CardDescription>
             </CardHeader>
             <CardContent>

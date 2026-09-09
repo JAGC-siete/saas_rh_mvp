@@ -308,7 +308,7 @@ export default function CompanySettings() {
 
   const allTabs = [
     { id: 'schedules', name: 'Horarios', icon: ClockIcon },
-    { id: 'payroll', name: 'Configuración Payroll', icon: CalculatorIcon },
+    { id: 'payroll', name: 'Configuración de nómina', icon: CalculatorIcon },
     { id: 'reports', name: 'Parámetros de Reportes', icon: DocumentChartBarIcon },
     { id: 'leaveTypes', name: 'Parámetros de permisos', icon: ClipboardDocumentListIcon },
     { id: 'performance', name: 'Desempeño', icon: ChartBarIcon },

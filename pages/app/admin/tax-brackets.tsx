@@ -556,7 +556,7 @@ export default function TaxBracketsPage() {
                     <div className="border-t border-white/10 pt-4">
                       <div className="flex items-center gap-3 mb-3">
                         <Calculator className="h-5 w-5 text-white/70" />
-                        <h3 className="text-lg font-semibold text-white">Preview de Cálculo</h3>
+                        <h3 className="text-lg font-semibold text-white">Vista previa de cálculo</h3>
                       </div>
                       <div className="flex gap-3 items-end">
                         <div className="flex-1">

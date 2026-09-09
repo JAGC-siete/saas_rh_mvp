@@ -29,7 +29,7 @@ interface AddEmployeeFormProps {
   employeeId?: string // Required for file upload
   onProfileImageUploaded?: (fileId: string, storagePath: string) => void
   onProfileImageError?: (error: string) => void
-  /** Company calculation_mode for dynamic "Default de la empresa" label */
+  /** Company calculation_mode for dynamic "Predeterminado de la empresa" label */
   companyCalculationMode?: 'daily' | 'hourly' | 'admin_floor'
   canEditSalary?: boolean
   canViewSalary?: boolean
@@ -67,10 +67,10 @@ function AddEmployeeForm({
 
   const defaultPayTypeLabel =
     companyCalculationMode === 'hourly'
-      ? 'Default de la empresa (Por hora)'
-        : companyCalculationMode === 'admin_floor'
-        ? 'Default de la empresa (Legacy — Admin con piso horario)'
-        : 'Default de la empresa (Administrativo)'
+      ? 'Predeterminado de la empresa (Por hora)'
+      : companyCalculationMode === 'admin_floor'
+        ? 'Predeterminado de la empresa (Legacy — Admin con piso horario)'
+        : 'Predeterminado de la empresa (Administrativo)'
 
   const handleSubmit = (e: React.FormEvent) => {
     const payType = resolvedPayType
@@ -315,7 +315,7 @@ function AddEmployeeForm({
                   </option>
                 </select>
                 <p className="text-xs text-gray-400 mt-1">
-                  <strong>Default de la empresa:</strong> hereda el método por defecto de Nómina.
+                  <strong>Predeterminado de la empresa:</strong> hereda el método por defecto de Nómina.
                   <br />
                   <strong>Administrativo:</strong> Salario mensual por día de asistencia. HE AHC
                   (con recargos) entra al bruto si empresa y empleado pagan HE.
@@ -411,7 +411,7 @@ function AddEmployeeForm({
                   onChange={(e) => onFormChange('payment_frequency', e.target.value)}
                   className="w-full p-2 border border-white/20 rounded-md focus:ring-2 focus:ring-brand-500 focus:border-brand-500 bg-white/10 text-white"
                 >
-                  <option value="" className="bg-brand-900 text-white">Default empresa</option>
+                  <option value="" className="bg-brand-900 text-white">Predeterminado empresa</option>
                   <option value="quincenal" className="bg-brand-900 text-white">Quincenal</option>
                   <option value="mensual" className="bg-brand-900 text-white">Mensual</option>
                   <option value="semanal" className="bg-brand-900 text-white">Semanal</option>

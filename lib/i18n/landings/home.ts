@@ -85,7 +85,7 @@ const testimonialsEs: HomeCopy['testimonials'] = [
     image: '/images/testimonials/roberto.jpg',
     imagePosition: 'object-top',
     quote:
-      'El biométrico y la nómina en un solo servicio fué lo que nos terminó de convencer, redujo los errores y conflictos de fin de cada quincena. Remedio inmediato, verdaderamente.',
+      'El biométrico y la nómina en un solo servicio fue lo que nos terminó de convencer, redujo los errores y conflictos de fin de cada quincena. Remedio inmediato, verdaderamente.',
     rating: 5,
   },
   {
@@ -169,7 +169,7 @@ const byLocale: Record<LandingLocale, HomeCopy> = {
       'software recursos humanos, RRHH, control de asistencia, reloj biométrico, huella digital, planillas, nómina, Honduras El Salvador Guatemala, Humano SISU',
     bannerAria: 'Anuncio',
     bannerText: '¿Problemas de Recursos Humanos 😰?',
-    bannerCta: 'Dale click aquí',
+    bannerCta: 'Dale clic aquí',
     bannerClose: 'Cerrar',
     hero: {
       badgeLaws: 'Adaptado a leyes de CA (HN, SV, GT)',
@@ -181,7 +181,7 @@ const byLocale: Record<LandingLocale, HomeCopy> = {
       ctaQuote: 'Solicitar cotización',
       ctaTrial: 'Probar gratis',
       imageAlt: 'Profesional de RRHH con café y libretas de trabajo',
-      imageCaption: 'Contrata hoy tu nueva asistente de RRHH. Digital y Automatizado.',
+      imageCaption: 'Contrata hoy tu nueva asistente de RRHH. Digital y automatizada.',
       overlayTitle: 'Planilla quincenal',
       overlayStatus: 'Autorizada',
       overlayNetLabel: 'Neto a pagar',
@@ -190,7 +190,7 @@ const byLocale: Record<LandingLocale, HomeCopy> = {
     },
     socialProof: {
       titleLead: 'Clientes SISU certifican: ',
-      titleAccent: 'el reloj de asistencia integrado a la nómina son la diferencia',
+      titleAccent: 'el reloj de asistencia integrado a la nómina es la diferencia',
       aria: 'Testimonios de clientes',
     },
     testimonials: testimonialsEs,

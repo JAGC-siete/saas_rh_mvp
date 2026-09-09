@@ -61,7 +61,7 @@ export default function ThirteenthFourteenthManager() {
           <Gift className="h-7 w-7 text-indigo-300" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-white">13 & 14 Salario</h1>
+          <h1 className="text-2xl font-bold text-white">13.º y 14.º salario</h1>
           <p className="text-gray-300 mt-1">
             Cálculo de Aguinaldo (13avo) y Decimocuarto Mes (14avo) según ley hondureña
           </p>
@@ -154,7 +154,7 @@ export default function ThirteenthFourteenthManager() {
                     Cargando...
                   </>
                 ) : (
-                  'Generar Preview'
+                  'Generar vista previa'
                 )}
               </Button>
             </div>
@@ -189,7 +189,7 @@ export default function ThirteenthFourteenthManager() {
                 Sin datos para mostrar
               </p>
               <p className="text-gray-500 text-sm mt-1">
-                Selecciona año y tipo, luego haz clic en &quot;Generar Preview&quot; para cargar los cálculos.
+                Selecciona año y tipo, luego haz clic en &quot;Generar vista previa&quot; para cargar los cálculos.
               </p>
             </div>
           ) : (

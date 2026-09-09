@@ -222,7 +222,7 @@ export default function CompaniesAdminPage() {
                     onChange={(e) => { setPage(1); setShowOnlyActive(e.target.checked) }}
                     className="w-4 h-4 rounded border-white/20 bg-white/10 text-amber-300 focus:ring-amber-300/50"
                   />
-                  Sólo activas
+                  Solo activas
                 </label>
                 <Button onClick={() => setShowCreate(true)}>Nueva empresa</Button>
               </div>

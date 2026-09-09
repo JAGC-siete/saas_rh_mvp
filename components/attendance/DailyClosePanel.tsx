@@ -885,7 +885,7 @@ export default function DailyClosePanel({
           >
             <h3 className="text-lg font-semibold text-white mb-4">Ajustar registro — {editItem.employee.name}</h3>
             <p className="text-xs text-amber-200/90 mb-4">
-              Corrige horarios antes de finalizar si necesitas horas calculadas. Se marca como override de administrador.
+              Corrige horarios antes de finalizar si necesitas horas calculadas. Se marca como excepción de administrador.
             </p>
             <div className="space-y-3">
               <Field label="Entrada" value={editCheckIn} onChange={setEditCheckIn} />

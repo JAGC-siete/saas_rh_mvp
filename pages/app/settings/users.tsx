@@ -549,8 +549,8 @@ export default function CompanyUsersPage() {
               <CardContent className="pt-6 space-y-3">
                 <h1 className="text-xl font-semibold text-white">Usuarios</h1>
                 <p className="text-white/70 text-sm">
-                  Solo <strong className="text-white/90">Admin empresa</strong> y{' '}
-                  <strong className="text-white/90">HR Manager</strong> pueden gestionar usuarios.
+                  Solo <strong className="text-white/90">Administrador de empresa</strong> y{' '}
+                  <strong className="text-white/90">Gerente de RRHH</strong> pueden gestionar usuarios.
                   Tu rol actual: {ROLE_LABELS[actorRole || ''] || actorRole || 'sin rol'}.
                 </p>
                 <Link href="/app/settings" className="inline-block text-sm text-white/80 hover:text-white underline">

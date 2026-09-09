@@ -25,10 +25,10 @@ type PermissionRow = {
 const ROLE_ORDER = ['super_admin', 'admin', 'company_admin', 'hr_manager', 'manager', 'employee'] as const
 
 const ROLE_LABEL: Record<string, string> = {
-  super_admin: 'Super Admin',
-  admin: 'Admin',
-  company_admin: 'Admin Empresa',
-  hr_manager: 'RRHH',
+  super_admin: 'Superadministrador',
+  admin: 'Administrador',
+  company_admin: 'Administrador de empresa',
+  hr_manager: 'Gerente de RRHH',
   manager: 'Supervisor',
   employee: 'Empleado',
 }

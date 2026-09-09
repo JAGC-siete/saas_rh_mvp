@@ -182,12 +182,12 @@ export default function AdminDashboard() {
     },
     {
       title: 'Estado del Sistema',
-      description: 'Salud global y uptime',
+      description: 'Salud global y tiempo de actividad',
       href: '/app/admin/system',
       icon: Server
     },
     {
-      title: 'Logs y Auditoría',
+      title: 'Registros y auditoría',
       description: 'Eventos recientes e incidentes',
       href: '/app/admin/logs',
       icon: FileText
@@ -243,7 +243,7 @@ export default function AdminDashboard() {
         <title>Panel de Administración - Humano SISU</title>
         <meta
           name="description"
-          content="Panel principal para operaciones multi-tenant y super administración"
+          content="Panel principal para operaciones multiempresa y superadministración"
         />
       </Head>
 
@@ -517,7 +517,7 @@ export default function AdminDashboard() {
                         Estado del Sistema
                       </CardTitle>
                       <CardDescription className="text-white/70">
-                        Monitoreo de la plataforma multi-tenant
+                        Monitoreo de la plataforma multiempresa
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
@@ -525,7 +525,7 @@ export default function AdminDashboard() {
                         <div>
                           <p className="text-sm font-medium text-white">Salud general</p>
                           <p className="text-xs text-white/70">
-                            Último backup: {systemStats.lastBackup || 'Sin registros en data_backups'}
+                            Último respaldo: {systemStats.lastBackup || 'Sin registros'}
                           </p>
                         </div>
                         <span className={`rounded-full px-3 py-1 text-xs font-semibold ${healthBadge}`}>

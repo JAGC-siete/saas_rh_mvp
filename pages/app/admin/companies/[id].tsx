@@ -171,10 +171,10 @@ export default function CompanyDetailPage() {
         body: JSON.stringify({ action: 'set', feature_key, is_enabled }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data?.message || data?.error || 'Error aplicando override')
+      if (!res.ok) throw new Error(data?.message || data?.error || 'Error aplicando la excepción')
       await loadFeatures()
     } catch (err: any) {
-      addNotification({ type: 'error', title: 'Override', message: err.message || 'Error aplicando override' })
+      addNotification({ type: 'error', title: 'Excepción', message: err.message || 'Error aplicando la excepción' })
     } finally {
       setSavingFeature(null)
     }
@@ -191,10 +191,10 @@ export default function CompanyDetailPage() {
         body: JSON.stringify({ action: 'clear', feature_key }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data?.message || data?.error || 'Error quitando override')
+      if (!res.ok) throw new Error(data?.message || data?.error || 'Error quitando la excepción')
       await loadFeatures()
     } catch (err: any) {
-      addNotification({ type: 'error', title: 'Override', message: err.message || 'Error quitando override' })
+      addNotification({ type: 'error', title: 'Excepción', message: err.message || 'Error quitando la excepción' })
     } finally {
       setSavingFeature(null)
     }
@@ -327,7 +327,7 @@ export default function CompanyDetailPage() {
                 <CardHeader>
                   <CardTitle className="text-white">Módulos efectivos</CardTitle>
                   <p className="text-xs text-white/60 mt-1">
-                    Acceso resuelto por <span className="font-mono">has_feature()</span>: override por empresa gana sobre el plan asignado.
+                    Acceso resuelto por <span className="font-mono">has_feature()</span>: la excepción por empresa gana sobre el plan asignado.
                     Plan actual: <span className="font-mono text-amber-200/90">{features.plan.commercial}</span> → interno{' '}
                     <span className="font-mono text-amber-200/90">{features.plan.internal_key}</span>.
                   </p>
@@ -356,7 +356,7 @@ export default function CompanyDetailPage() {
                                 {f.has_override ? (
                                   <span className="inline-flex items-center gap-1 text-amber-200">
                                     <ShieldCheck className="h-3.5 w-3.5" />
-                                    Override empresa
+                                    Excepción de empresa
                                   </span>
                                 ) : (
                                   <span className="inline-flex items-center gap-1 text-white/60">
@@ -392,9 +392,9 @@ export default function CompanyDetailPage() {
                                     {busy ? (
                                       <Loader2 className="h-4 w-4 animate-spin" />
                                     ) : f.is_enabled ? (
-                                      'Forzar off'
+                                      'Forzar desactivado'
                                     ) : (
-                                      'Forzar on'
+                                      'Forzar activado'
                                     )}
                                   </Button>
                                   {f.has_override && (

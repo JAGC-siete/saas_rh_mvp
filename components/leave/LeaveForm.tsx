@@ -339,7 +339,7 @@ export default function LeaveForm({
               </select>
               {leaveTypes.length === 0 && (
                 <p className="mt-2 text-xs text-amber-200/90">
-                  No hay tipos de permiso para su empresa. Configúrelos en Parametros → Parámetros de permisos.
+                  No hay tipos de permiso para su empresa. Configúrelos en Parámetros → Parámetros de permisos.
                 </p>
               )}
               {formData.leave_type_id && selectedType && (

@@ -359,7 +359,7 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
         variants[status as keyof typeof variants] || variants.idle
       }`}>
         {status === 'idle' ? 'Inactivo' :
-         status === 'previewing' ? 'Generando Preview' :
+         status === 'previewing' ? 'Generando vista previa' :
          status === 'draft' ? 'Borrador' :
          status === 'edited' ? 'Editado' :
          status === 'authorizing' ? 'Autorizando' :
@@ -709,7 +709,7 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
               className="mt-4"
               disabled={!payroll.canPreview}
             >
-              Generar Preview
+              Generar vista previa
             </Button>
           </CardContent>
         </Card>

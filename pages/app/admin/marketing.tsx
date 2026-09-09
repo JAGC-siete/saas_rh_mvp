@@ -148,7 +148,7 @@ export default function MarketingKpisPage() {
                 <StatsCard
                   title="Activos en secuencia"
                   value={data.leads.byStatus.active}
-                  description={`${data.sequence.awaitingWatchman} esperando watchman (global)`}
+                  description={`${data.sequence.awaitingWatchman} esperando seguimiento (global)`}
                   icon={TrendingUp}
                   iconColor="text-blue-500"
                   valueColor="text-blue-400"
@@ -156,7 +156,7 @@ export default function MarketingKpisPage() {
                 <StatsCard
                   title="Completados"
                   value={data.leads.byStatus.completed}
-                  description={`${data.leads.byStatus.unsubscribed} bajas en el periodo`}
+                  description={`${data.leads.byStatus.unsubscribed} bajas en el período`}
                   icon={CheckCircle}
                   iconColor="text-green-500"
                   valueColor="text-green-400"
@@ -164,7 +164,7 @@ export default function MarketingKpisPage() {
                 <StatsCard
                   title="Emails enviados"
                   value={data.email.sentInRange}
-                  description={`Ledger · últimos ${data.range.days} días`}
+                  description={`Registro de envíos · últimos ${data.range.days} días`}
                   icon={Send}
                   iconColor="text-cyan-500"
                   valueColor="text-cyan-400"
@@ -300,7 +300,7 @@ export default function MarketingKpisPage() {
                   <CardHeader>
                     <CardTitle className="text-white">Emails por paso de secuencia</CardTitle>
                     <CardDescription className="text-white/60">
-                      Envios del ledger en el periodo seleccionado
+                      Envíos del ledger en el período seleccionado
                     </CardDescription>
                   </CardHeader>
                   <CardContent>

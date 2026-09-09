@@ -32,10 +32,10 @@ export const VIERNES_COPY = {
 
   insight: {
     title: 'Digitalizar no es automatizar',
-    lead: 'El verdadero costo de los procesos manuales no es el tiempo invertido; si no la incertidumbre en cada ciclo de pago.',
+    lead: 'El verdadero costo de los procesos manuales no es el tiempo invertido, sino la incertidumbre en cada ciclo de pago.',
     paragraphs: [
-      'Muchas empresas instalan un reloj biométrico y se digitalizaron. Pero siguen dependiendo reportes a memorias USB, uniendo con tablas en Excel y recalculando deducciones de ley cada vez. La intención es acertada pero la solución incompleta.',
-      'Las paces con RR.HH. se hacen cuando los datos viajan por si solos. Cuando el registro biométrico entra, el motor legal almacena, ordena y calcula automáticamente (IHSS, RAP, ISR) y también la planilla lista para aprobación. RR.HH. deja de apagar incendios para dedicarse a tareas que agreguen valor al personal.',
+      'Muchas empresas instalan un reloj biométrico y se digitalizaron. Pero siguen dependiendo de reportes a memorias USB, uniendo con tablas en Excel y recalculando deducciones de ley cada vez. La intención es acertada pero la solución incompleta.',
+      'Las paces con RR.HH. se hacen cuando los datos viajan por sí solos. Cuando el registro biométrico entra, el motor legal almacena, ordena y calcula automáticamente (IHSS, RAP, ISR) y también la planilla lista para aprobación. RR.HH. deja de apagar incendios para dedicarse a tareas que agreguen valor al personal.',
     ],
     comparison: [
       { before: 'Estrés y dudas todo el domingo', after: 'Paz contable y certeza total el viernes' },
@@ -47,9 +47,9 @@ export const VIERNES_COPY = {
   proof: {
     title: 'Esto es lo que sucede cuando haces las paces con RR.HH.',
     items: [
-      'Pasamos del revisar hasta altas horas de la noche o estar cuadrando un domingo por la noche a generar en un par de clicks y aprobar en minutos. La interfaz es moderna y maneja tiene incorporada la ley tal cuál la vivimos los empresarios locales. — PyME manufactura, SPS',
-      'Siempre me regresaban la planilla por que algo no cuadraba, si no era el cálculo del seguro social era el impuesto,  todo dejó de ser un dolor de cabeza. Todo cuadra exacto a la primera. — ONG, 45 empleados, TGU',
-      'Mismos parámetros  legales  utilizados en las herramientas gratuitas.',
+      'Pasamos de revisar hasta altas horas de la noche o estar cuadrando un domingo por la noche a generar en un par de clics y aprobar en minutos. La interfaz es moderna y tiene incorporada la ley tal cual la vivimos los empresarios locales. — PyME manufactura, SPS',
+      'Siempre me regresaban la planilla porque algo no cuadraba, si no era el cálculo del seguro social era el impuesto, todo dejó de ser un dolor de cabeza. Todo cuadra exacto a la primera. — ONG, 45 empleados, TGU',
+      'Mismos parámetros legales utilizados en las herramientas gratuitas.',
     ],
   },
 
@@ -84,7 +84,7 @@ export const VIERNES_COPY = {
   finalCta: {
     headlineLead: 'Cierra esta quincena sin estrés.',
     headlineAccent: 'Haz las paces con RR.HH. hoy mismo.',
-    sub: 'Descargá las claves gratis. Opcional: trial de 30 días  con cotización a la medida lista en minutos.',
+    sub: 'Descargá las claves gratis. Opcional: trial de 30 días con cotización a la medida lista en minutos.',
     primary: 'Recibir las claves para mi empresa',
     secondary: '¿Más de 30 empleados o varias sucursales? Solicitar propuesta personalizada',
   },

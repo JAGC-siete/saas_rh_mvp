@@ -301,7 +301,7 @@ export function WorkScheduleCardSummary({ schedule }: { schedule: LegacySchedule
         )
       })}
       <div className="flex justify-between items-center py-1 pt-2 border-t border-white/5">
-        <span className="text-xs text-gray-400">Almuerzo (continuo, default)</span>
+        <span className="text-xs text-gray-400">Almuerzo (continuo, predeterminado)</span>
         <span className="text-xs text-gray-300 font-medium">{schedule.break_duration ?? 60} min</span>
       </div>
     </div>

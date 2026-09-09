@@ -24,11 +24,11 @@ export const COMPANY_USER_ACTORS = ['company_admin', 'hr_manager'] as const
 export type CompanyUserActorRole = (typeof COMPANY_USER_ACTORS)[number]
 
 export const COMPANY_ROLE_LABELS: Record<string, string> = {
-  super_admin: 'Super admin',
-  admin: 'Admin',
-  company_admin: 'Admin empresa',
-  hr_manager: 'HR Manager',
-  manager: 'Manager',
+  super_admin: 'Superadministrador',
+  admin: 'Administrador',
+  company_admin: 'Administrador de empresa',
+  hr_manager: 'Gerente de RRHH',
+  manager: 'Supervisor',
   employee: 'Empleado',
 }
 

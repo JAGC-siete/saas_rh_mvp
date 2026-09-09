@@ -68,7 +68,7 @@ export default function B2CDashboardBasic() {
 
       setResult(data)
     } catch (err: any) {
-      setError(err.message || 'Calculation failed')
+      setError(err.message || 'Error al calcular')
     }
   }
 
@@ -77,21 +77,21 @@ export default function B2CDashboardBasic() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>B2C Payroll Calculator</CardTitle>
+        <CardTitle>Calculadora de nómina B2C</CardTitle>
       </CardHeader>
       <CardContent>
         <Input
           type="number"
-          placeholder="Salary"
+          placeholder="Salario"
           value={salary}
           onChange={(e) => setSalary(e.target.value)}
         />
         <Input
-          placeholder="Deductions JSON"
+          placeholder="Deducciones JSON"
           value={deductions}
           onChange={(e) => setDeductions(e.target.value)}
         />
-        <Button onClick={handleCalculate}>Calculate</Button>
+        <Button onClick={handleCalculate}>Calcular</Button>
         {result && <pre>{JSON.stringify(result, null, 2)}</pre>}
       </CardContent>
     </Card>

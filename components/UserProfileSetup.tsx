@@ -39,7 +39,7 @@ export default function UserProfileSetup({ onComplete }: UserProfileSetupProps) 
 
       if (!response.ok) {
         const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to create profile')
+        throw new Error(errorData.error || 'No se pudo crear el perfil')
       }
 
       const data = await response.json()
@@ -51,7 +51,7 @@ export default function UserProfileSetup({ onComplete }: UserProfileSetupProps) 
       // Complete onboarding
       onComplete()
     } catch (err: any) {
-      setError(err.message || 'Failed to create profile')
+      setError(err.message || 'No se pudo crear el perfil')
     } finally {
       setLoading(false)
     }
@@ -148,7 +148,7 @@ export default function UserProfileSetup({ onComplete }: UserProfileSetupProps) 
                 <span className="text-sm font-medium text-white">Rol Asignado</span>
               </div>
               <p className="text-xs text-gray-300">
-                Serás configurado como <strong className="text-white">HR Manager</strong> con acceso completo para gestionar empleados, departamentos y nóminas. Si no proporcionás un ID, se asignará automáticamente <strong className="text-white">EMP001</strong>.
+                Serás configurado como <strong className="text-white">Gerente de RRHH</strong> con acceso completo para gestionar empleados, departamentos y nóminas. Si no proporcionás un ID, se asignará automáticamente <strong className="text-white">EMP001</strong>.
               </p>
             </div>
 

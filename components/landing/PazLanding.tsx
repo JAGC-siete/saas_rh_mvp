@@ -74,7 +74,7 @@ const FAQS = [
   {
     question: '¿Cuánto tardo en sentir la diferencia?',
     answer:
-      'La mayoría siente alivio en la primera quincena automatizada. Algunos en 4 minutos (por que antes le tomaba 6 horas).',
+      'La mayoría siente alivio en la primera quincena automatizada. Algunos en 4 minutos (porque antes le tomaba 6 horas).',
   },
   {
     question: '¿Puedo traer a mi contador?',
@@ -318,7 +318,7 @@ export default function PazLanding() {
                   Perder la paz <span>/</span> Hacer las paces
                 </h2>
                 <p className="paz-lead max-w-lg mx-auto mb-10">
-                  La ayuda está a un click. Activá tu demo o pedí de una vez tu cotización. El tiempo
+                  La ayuda está a un clic. Activá tu demo o pedí de una vez tu cotización. El tiempo
                   perdido es real, pero también lo es la solución. (La paz recuperada también.)
                 </p>
                 <div className="flex flex-col sm:flex-row flex-wrap items-center justify-center gap-3">

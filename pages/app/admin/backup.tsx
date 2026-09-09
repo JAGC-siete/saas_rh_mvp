@@ -7,14 +7,14 @@ export default function BackupPage() {
   return (
     <>
       <Head>
-        <title>Backup - Admin</title>
+        <title>Respaldo - Admin</title>
       </Head>
       <SuperAdminGuard>
         <SuperAdminLayout>
           <div className="space-y-6 text-white">
             <div>
               <p className="text-xs uppercase tracking-[0.3em] text-white/60">Respaldo de datos</p>
-              <h1 className="text-3xl font-semibold text-white">Backup</h1>
+              <h1 className="text-3xl font-semibold text-white">Respaldo</h1>
               <p className="text-white/70">
                 Respaldo y restauración de datos
               </p>
@@ -24,7 +24,7 @@ export default function BackupPage() {
                 <CardTitle className="text-white">Próximamente</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-sm text-white/70">Placeholder para respaldo y restauración de datos.</div>
+                <div className="text-sm text-white/70">Espacio reservado para respaldo y restauración de datos.</div>
               </CardContent>
             </Card>
           </div>

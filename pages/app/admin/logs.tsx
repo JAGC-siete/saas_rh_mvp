@@ -63,14 +63,14 @@ export default function AdminLogs() {
       
       if (!response.ok) {
         const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to fetch logs')
+        throw new Error(errorData.error || 'No se pudieron cargar los registros')
       }
       
       const data = await response.json()
       setLogs(data.data)
     } catch (error: any) {
       console.error('Error fetching logs:', error)
-      setError(error.message || 'Failed to load logs')
+      setError(error.message || 'No se pudieron cargar los registros')
     } finally {
       setLoadingLogs(false)
     }
@@ -109,7 +109,7 @@ export default function AdminLogs() {
   return (
     <>
       <Head>
-        <title>Logs del Sistema - Panel de Administración</title>
+        <title>Registros del sistema - Panel de administración</title>
         <meta name="description" content="Visualiza y analiza los logs del sistema" />
       </Head>
 
@@ -120,7 +120,7 @@ export default function AdminLogs() {
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <p className="text-xs uppercase tracking-[0.3em] text-white/60">Registros del sistema</p>
-              <h1 className="text-3xl font-semibold text-white">Logs del Sistema</h1>
+              <h1 className="text-3xl font-semibold text-white">Registros del sistema</h1>
               <p className="text-white/70">Monitorea la actividad y errores del sistema</p>
             </div>
             <div className="flex items-center gap-2">
@@ -262,7 +262,7 @@ export default function AdminLogs() {
                 Entradas de Log
               </CardTitle>
               <CardDescription className="text-white/70">
-                {loadingLogs ? 'Cargando logs...' : `Mostrando ${logs?.logs?.length || 0} entradas`}
+                {loadingLogs ? 'Cargando registros...' : `Mostrando ${logs?.logs?.length || 0} entradas`}
               </CardDescription>
             </CardHeader>
             <CardContent>

@@ -48,10 +48,10 @@ export default memo(function EmployeeAchievements({ companyId: propCompanyId, em
       if (data.success) {
         setAchievements(data.data)
       } else {
-        setError(data.error || 'Failed to fetch achievements')
+        setError(data.error || 'No se pudieron cargar los logros')
       }
     } catch (err) {
-      setError('Failed to fetch achievements data')
+      setError('No se pudieron cargar los logros')
       console.error('Achievements fetch error:', err)
     } finally {
       setLoading(false)
@@ -80,8 +80,8 @@ export default memo(function EmployeeAchievements({ companyId: propCompanyId, em
     return (
       <Card variant="liquid">
         <CardHeader>
-          <CardTitle className="text-white">Employee Achievements</CardTitle>
-          <CardDescription className="text-gray-300">Loading achievements...</CardDescription>
+          <CardTitle className="text-white">Logros de empleados</CardTitle>
+          <CardDescription className="text-gray-300">Cargando logros...</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex justify-center py-8">
@@ -96,7 +96,7 @@ export default memo(function EmployeeAchievements({ companyId: propCompanyId, em
     return (
       <Card variant="liquid">
         <CardHeader>
-          <CardTitle className="text-white">Employee Achievements</CardTitle>
+          <CardTitle className="text-white">Logros de empleados</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="text-center py-8">
@@ -105,7 +105,7 @@ export default memo(function EmployeeAchievements({ companyId: propCompanyId, em
               onClick={fetchAchievements}
               className="px-4 py-2 bg-blue-600/20 border border-blue-500/30 hover:bg-blue-600/30 rounded-md text-white transition-all duration-200"
             >
-              Retry
+              Reintentar
             </button>
           </div>
         </CardContent>
@@ -117,12 +117,12 @@ export default memo(function EmployeeAchievements({ companyId: propCompanyId, em
     return (
       <Card variant="liquid">
         <CardHeader>
-          <CardTitle className="text-white">Employee Achievements</CardTitle>
-          <CardDescription className="text-gray-300">No achievements earned yet</CardDescription>
+          <CardTitle className="text-white">Logros de empleados</CardTitle>
+          <CardDescription className="text-gray-300">Aún no hay logros</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="text-center py-8 text-gray-400">
-            <p>Keep up the good work to earn achievements!</p>
+            <p>Siga acumulando asistencia para desbloquear logros.</p>
           </div>
         </CardContent>
       </Card>
@@ -132,9 +132,9 @@ export default memo(function EmployeeAchievements({ companyId: propCompanyId, em
   return (
     <Card variant="liquid">
       <CardHeader>
-        <CardTitle className="text-white">Employee Achievements</CardTitle>
+        <CardTitle className="text-white">Logros de empleados</CardTitle>
         <CardDescription className="text-gray-300">
-          {employeeId ? 'Individual achievements' : 'Company achievements'}
+          {employeeId ? 'Logros individuales' : 'Logros de la empresa'}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -177,7 +177,7 @@ export default memo(function EmployeeAchievements({ companyId: propCompanyId, em
               onClick={fetchAchievements}
               className="px-4 py-2 bg-blue-600/20 border border-blue-500/30 hover:bg-blue-600/30 rounded-md text-white text-sm transition-all duration-200"
             >
-              Refresh Achievements
+              Actualizar logros
             </button>
           </div>
         )}

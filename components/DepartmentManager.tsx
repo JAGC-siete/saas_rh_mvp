@@ -311,7 +311,7 @@ export default function DepartmentManager({ companyId: propCompanyId }: { compan
             
             <div className="space-y-2">
               <div>
-                <span className="text-sm font-medium text-gray-700">Manager: </span>
+                <span className="text-sm font-medium text-gray-700">Supervisor: </span>
                 <span className="text-sm text-gray-600">
                   {getManagerName(department.manager_id || '')}
                 </span>

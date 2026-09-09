@@ -147,7 +147,7 @@ export default function DepartmentsPage() {
                 ➕ Nuevo Departamento
               </Button>
               <Button onClick={() => router.push('/dashboard')}>
-                📊 Dashboard
+                Inicio
               </Button>
               <Button variant="outline" onClick={() => router.push('/employees')}>
                 👥 Empleados

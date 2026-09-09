@@ -203,7 +203,7 @@ export default function ConfigNomina({
             className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white"
           >
             <Icon name="eye" className="h-4 w-4" />
-            {loading ? 'Generando...' : 'Generar Preview'}
+            {loading ? 'Generando...' : 'Generar vista previa'}
           </Button>
 
           <Button
