@@ -25,13 +25,15 @@ import {
   CalendarDaysIcon,
   ChartBarIcon,
   DocumentTextIcon,
-  SparklesIcon
+  SparklesIcon,
+  FolderIcon,
 } from '@heroicons/react/24/outline'
 import HabitTracker from '../../components/employee-portal/HabitTracker'
 import { clientLogger } from '../../lib/logger-client'
 import EmployeePermissionForm from '../../components/employee-portal/EmployeePermissionForm'
 import EmployeePermissionHistory from '../../components/employee-portal/EmployeePermissionHistory'
-import { formatTimeDisplay, parseDateOnlyAsHonduras, formatDateOnlyForHonduras, HONDURAS_TIMEZONE } from '../../lib/timezone'
+import { formatTimeDisplay, parseDateOnlyAsHonduras, HONDURAS_TIMEZONE } from '../../lib/timezone'
+import { markSpanWorkedHours } from '../../lib/attendance/mark-span-hours'
 import { formatMoneyForCountry, statutoryUiLabels } from '../../lib/country/display-money'
 import NotificationBell from '../../components/ui/NotificationBell'
 import EmployeePortalShell from '../../components/employee-portal/EmployeePortalShell'
@@ -73,16 +75,14 @@ function AttendanceRecordsList({ employeeId }: { employeeId?: string }) {
     return formatTimeDisplay(timeString)
   }
 
-  const calculateHours = (checkIn: string, checkOut: string) => {
-    if (!checkIn || !checkOut) return null
-    try {
-      const start = new Date(checkIn)
-      const end = new Date(checkOut)
-      const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60)
-      return hours.toFixed(1)
-    } catch {
-      return null
-    }
+  const calculateHours = (record: {
+    check_in?: string | null
+    check_out?: string | null
+    lunch_start?: string | null
+    lunch_end?: string | null
+  }) => {
+    const hours = markSpanWorkedHours(record)
+    return hours == null ? null : hours.toFixed(1)
   }
 
   if (loading) {
@@ -112,7 +112,7 @@ function AttendanceRecordsList({ employeeId }: { employeeId?: string }) {
       {/* Records List */}
       <div className="space-y-2">
         {records.map((record, index) => {
-          const calculatedHours = calculateHours(record.check_in, record.check_out)
+          const calculatedHours = calculateHours(record as any)
           
           return (
             <div key={record.id || index} className="bg-white/5 rounded-lg p-4">
@@ -257,14 +257,22 @@ function PayrollSection({
     fetchPayroll()
   }, [employeeId])
 
-  const generatePDF = async (periodo: string, quincena: number) => {
+  const generatePDF = async (item: {
+    runLineId: string
+    periodo: string
+    quincena: number
+  }) => {
     setGeneratingPDF(true)
     try {
       const response = await fetch('/api/employees/me/payroll-pdf', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ periodo, quincena })
+        body: JSON.stringify({
+          runLineId: item.runLineId,
+          periodo: item.periodo,
+          quincena: item.quincena,
+        }),
       })
 
       if (!response.ok) {
@@ -276,7 +284,7 @@ function PayrollSection({
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `recibo-nomina-${periodo}-q${quincena}.pdf`
+      a.download = `recibo-nomina-${item.periodo}-q${item.quincena}.pdf`
       document.body.appendChild(a)
       a.click()
       a.remove()
@@ -286,7 +294,7 @@ function PayrollSection({
         type: 'success',
         title: 'Recibo de nómina',
         message: 'PDF descargado correctamente',
-        module: 'payroll'
+        module: 'payroll',
       })
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Inténtalo nuevamente'
@@ -294,7 +302,7 @@ function PayrollSection({
         type: 'error',
         title: 'Error al descargar PDF',
         message,
-        module: 'payroll'
+        module: 'payroll',
       })
     } finally {
       setGeneratingPDF(false)
@@ -309,229 +317,213 @@ function PayrollSection({
     )
   }
 
-  if (!payrollData || payrollData.summary.totalRecords === 0) {
+  const items = payrollData?.items || []
+  if (!payrollData || items.length === 0) {
     return (
       <div className="text-center py-8">
         <CurrencyDollarIcon className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-        <h3 className="text-lg font-medium text-white mb-2">
-          Sin Información de Nómina
-        </h3>
+        <h3 className="text-lg font-medium text-white mb-2">Sin Información de Nómina</h3>
         <p className="text-gray-300">
-          No hay registros de nómina disponibles para este período
+          No hay recibos liberados disponibles. Los pagos aparecen cuando RRHH autoriza la planilla.
         </p>
       </div>
     )
   }
 
+  const statusLabel = (status: string) => {
+    if (status === 'paid') return 'Pagado'
+    if (status === 'distributed') return 'Distribuido'
+    return 'Autorizado'
+  }
+
   return (
     <div className="space-y-6">
-      {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-white/5 rounded-lg p-4">
           <div className="text-sm text-gray-400 mb-1">Período Actual</div>
           <div className="text-white font-medium">
-            {payrollData.currentPeriod.month.toString().padStart(2, '0')}/{payrollData.currentPeriod.year}
+            {payrollData.currentPeriod.month.toString().padStart(2, '0')}/
+            {payrollData.currentPeriod.year}
           </div>
         </div>
         <div className="bg-white/5 rounded-lg p-4">
           <div className="text-sm text-gray-400 mb-1">Último Pago</div>
           <div className="text-white font-medium">
-            {payrollData.summary.lastPayment 
+            {payrollData.summary.lastPayment
               ? new Date(payrollData.summary.lastPayment).toLocaleDateString('es-HN')
-              : 'No disponible'
-            }
+              : 'No disponible'}
           </div>
         </div>
         <div className="bg-white/5 rounded-lg p-4">
           <div className="text-sm text-gray-400 mb-1">Último Monto</div>
           <div className="text-white font-medium">
-            {payrollData.summary.lastAmount 
+            {payrollData.summary.lastAmount != null
               ? money(Number(payrollData.summary.lastAmount))
-              : 'No disponible'
-            }
+              : 'No disponible'}
           </div>
         </div>
       </div>
 
-      {/* Payroll Records */}
-      {payrollData.records && payrollData.records.length > 0 && (
-        <div className="space-y-4">
-          <h4 className="text-white font-medium">Registros de Nómina</h4>
-          <div className="space-y-2">
-            {payrollData.records.map((record: any, index: number) => {
-              // Calcular período y quincena para el PDF (usar parseDateOnlyAsHonduras para evitar bug UTC)
-              const periodStart = parseDateOnlyAsHonduras(record.period_start)
-              const periodo = `${periodStart.getFullYear()}-${String(periodStart.getMonth() + 1).padStart(2, '0')}`
-              const quincena = periodStart.getDate() <= 15 ? 1 : 2
-              
-              return (
-                <div key={record.id || index} className="bg-white/5 rounded-lg p-4">
-                  <div className="flex justify-between items-start mb-2">
-                    <div>
-                      <div className="text-white font-medium">
-                        {formatDateOnlyForHonduras(record.period_start)} - {formatDateOnlyForHonduras(record.period_end)}
-                      </div>
-                      <div className="text-sm text-gray-400">
-                        {record.days_worked} días trabajados
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className={`px-2 py-1 rounded-full text-xs ${
-                        record.status === 'paid' ? 'bg-green-500/20 text-green-400' :
-                        record.status === 'approved' ? 'bg-blue-500/20 text-blue-400' :
-                        'bg-yellow-500/20 text-yellow-400'
-                      }`}>
-                        {record.status === 'paid' ? 'Pagado' :
-                         record.status === 'approved' ? 'Aprobado' : 'Pendiente'}
-                      </span>
-                      <button
-                        onClick={() => generatePDF(periodo, quincena)}
-                        disabled={generatingPDF}
-                        className="px-3 py-1 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:opacity-50 text-white text-xs rounded-md flex items-center gap-1 transition-colors"
-                      >
-                        {generatingPDF ? (
-                          <>
-                            <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
-                            Generando...
-                          </>
-                        ) : (
-                          <>
-                            <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                            </svg>
-                            PDF
-                          </>
-                        )}
-                      </button>
-                    </div>
+      <div className="space-y-4">
+        <h4 className="text-white font-medium">Recibos de pago</h4>
+        <div className="space-y-2">
+          {items.map((item: any) => (
+            <div key={item.runLineId} className="bg-white/5 rounded-lg p-4">
+              <div className="flex justify-between items-start mb-2">
+                <div>
+                  <div className="text-white font-medium">
+                    {item.month}/{item.year} — Q{item.quincena}
                   </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                  <div>
-                    <div className="text-gray-400">Salario Bruto</div>
-                    <div className="text-white">{money(Number(record.gross_salary || 0))}</div>
-                  </div>
-                  <div>
-                    <div className="text-gray-400">Deducciones</div>
-                    <div className="text-red-300">-{money(Number(record.total_deductions || 0))}</div>
-                  </div>
-                  <div>
-                    <div className="text-gray-400">Salario Neto</div>
-                    <div className="text-green-300 font-medium">{money(Number(record.net_salary || 0))}</div>
-                  </div>
-                  <div>
-                    <div className="text-gray-400">Fecha Pago</div>
-                    <div className="text-white">
-                      {record.paid_at ? new Date(record.paid_at).toLocaleDateString('es-HN') : 'Pendiente'}
-                    </div>
+                  <div className="text-sm text-gray-400">
+                    {Number(item.eff_hours || 0).toFixed(1)} horas
                   </div>
                 </div>
-                <div className="mt-4 flex justify-end">
+                <div className="flex items-center gap-2">
+                  <span className="px-2 py-1 rounded-full text-xs bg-green-500/20 text-green-400">
+                    {statusLabel(item.status)}
+                  </span>
                   <button
-                    onClick={() => generatePDF(
-                      `${periodStart.getFullYear()}-${String(periodStart.getMonth() + 1).padStart(2, '0')}`,
-                      periodStart.getDate() <= 15 ? 1 : 2
-                    )}
-                    className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded"
+                    type="button"
+                    onClick={() =>
+                      generatePDF({
+                        runLineId: item.runLineId,
+                        periodo: item.periodo,
+                        quincena: item.quincena,
+                      })
+                    }
+                    disabled={generatingPDF}
+                    className="px-3 py-1 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:opacity-50 text-white text-xs rounded-md"
                   >
-                    📄 PDF
+                    {generatingPDF ? 'Generando…' : 'PDF'}
                   </button>
                 </div>
               </div>
-              )
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Run Lines (if no records available) */}
-      {payrollData.runLines && payrollData.runLines.length > 0 && (!payrollData.records || payrollData.records.length === 0) && (
-        <div className="space-y-4">
-          <h4 className="text-white font-medium">Cálculos de Nómina</h4>
-          <div className="space-y-2">
-            {payrollData.runLines.map((line: any, index: number) => {
-              // Calcular período y quincena para el PDF
-              const periodo = `${line.payroll_runs.year}-${String(line.payroll_runs.month).padStart(2, '0')}`
-              const quincena = line.payroll_runs.quincena
-              
-              return (
-                <div key={line.id || index} className="bg-white/5 rounded-lg p-4">
-                  <div className="flex justify-between items-start mb-2">
-                    <div>
-                      <div className="text-white font-medium">
-                        {line.payroll_runs.month}/{line.payroll_runs.year} - Q{line.payroll_runs.quincena}
-                      </div>
-                      <div className="text-sm text-gray-400">
-                        {Number(line.eff_hours || 0).toFixed(1)} horas
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className={`px-2 py-1 rounded-full text-xs ${
-                        line.payroll_runs.status === 'authorized' ? 'bg-green-500/20 text-green-400' :
-                        line.payroll_runs.status === 'edited' ? 'bg-blue-500/20 text-blue-400' :
-                        'bg-yellow-500/20 text-yellow-400'
-                      }`}>
-                        {line.payroll_runs.status === 'authorized' ? 'Autorizado' :
-                         line.payroll_runs.status === 'edited' ? 'Editado' : 'Borrador'}
-                      </span>
-                      <button
-                        onClick={() => generatePDF(periodo, quincena)}
-                        disabled={generatingPDF}
-                        className="px-3 py-1 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:opacity-50 text-white text-xs rounded-md flex items-center gap-1 transition-colors"
-                      >
-                        {generatingPDF ? (
-                          <>
-                            <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
-                            Generando...
-                          </>
-                        ) : (
-                          <>
-                            <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                            </svg>
-                            PDF
-                          </>
-                        )}
-                      </button>
-                    </div>
-                  </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                  <div>
-                    <div className="text-gray-400">Bruto</div>
-                    <div className="text-white">{money(Number(line.eff_bruto || 0))}</div>
-                  </div>
-                  <div>
-                    <div className="text-gray-400">{labels.primarySocial}</div>
-                    <div className="text-red-300">-{money(Number(line.eff_ihss || 0))}</div>
-                  </div>
-                  {labels.secondarySocial !== '—' && (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                <div>
+                  <div className="text-gray-400">Bruto</div>
+                  <div className="text-white">{money(Number(item.eff_bruto || 0))}</div>
+                </div>
+                <div>
+                  <div className="text-gray-400">{labels.primarySocial}</div>
+                  <div className="text-red-300">-{money(Number(item.eff_ihss || 0))}</div>
+                </div>
+                {labels.secondarySocial !== '—' && (
                   <div>
                     <div className="text-gray-400">{labels.secondarySocial}</div>
-                    <div className="text-red-300">-{money(Number(line.eff_rap || 0))}</div>
+                    <div className="text-red-300">-{money(Number(item.eff_rap || 0))}</div>
                   </div>
-                  )}
-                  <div>
-                    <div className="text-gray-400">Neto</div>
-                    <div className="text-green-300 font-medium">{money(Number(line.eff_neto || 0))}</div>
+                )}
+                <div>
+                  <div className="text-gray-400">Neto</div>
+                  <div className="text-green-300 font-medium">
+                    {money(Number(item.eff_neto || 0))}
                   </div>
-                </div>
-                <div className="mt-4 flex justify-end">
-                  <button
-                    onClick={() => generatePDF(
-                      `${line.payroll_runs.year}-${String(line.payroll_runs.month).padStart(2, '0')}`,
-                      line.payroll_runs.quincena
-                    )}
-                    className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded"
-                  >
-                    📄 PDF
-                  </button>
                 </div>
               </div>
-              )
-            })}
-          </div>
+            </div>
+          ))}
         </div>
-      )}
+      </div>
     </div>
+  )
+}
+
+function DocumentsSection({ employeeId }: { employeeId?: string }) {
+  const [files, setFiles] = useState<
+    Array<{
+      id: string
+      file_name: string
+      file_type: string
+      document_category?: string
+      signed_url?: string
+      created_at: string
+      mime_type?: string
+    }>
+  >([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!employeeId) return
+    let cancelled = false
+    ;(async () => {
+      setLoading(true)
+      setError(null)
+      try {
+        const res = await fetch(`/api/employees/files/${employeeId}?file_type=document`, {
+          credentials: 'include',
+        })
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}))
+          throw new Error((body as { error?: string }).error || 'No se pudieron cargar los documentos')
+        }
+        const data = await res.json()
+        if (!cancelled) setFiles(data.files || [])
+      } catch (err) {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : 'Error cargando documentos')
+          setFiles([])
+        }
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [employeeId])
+
+  if (loading) {
+    return (
+      <div className="flex justify-center py-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-400" />
+      </div>
+    )
+  }
+
+  if (error) {
+    return <p className="text-sm text-red-300 py-4">{error}</p>
+  }
+
+  if (files.length === 0) {
+    return (
+      <p className="text-sm text-gray-300 py-4">
+        No hay documentos disponibles. RRHH los publica desde su expediente.
+      </p>
+    )
+  }
+
+  return (
+    <ul className="space-y-2">
+      {files.map((file) => (
+        <li
+          key={file.id}
+          className="flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-white/5 px-4 py-3"
+        >
+          <div className="min-w-0">
+            <p className="truncate text-white font-medium">{file.file_name}</p>
+            <p className="text-xs text-gray-400">
+              {file.document_category || file.file_type}
+              {file.created_at
+                ? ` · ${new Date(file.created_at).toLocaleDateString('es-HN')}`
+                : ''}
+            </p>
+          </div>
+          {file.signed_url ? (
+            <a
+              href={file.signed_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="shrink-0 px-3 py-1 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-xs"
+            >
+              Descargar
+            </a>
+          ) : (
+            <span className="text-xs text-gray-500">Sin enlace</span>
+          )}
+        </li>
+      ))}
+    </ul>
   )
 }
 
@@ -595,6 +587,8 @@ interface RecentAttendanceRow {
   date: string
   check_in: string | null
   check_out: string | null
+  lunch_start?: string | null
+  lunch_end?: string | null
   status: string | null
 }
 
@@ -614,9 +608,12 @@ export default function EmployeePortal() {
   const [permissionsSummary, setPermissionsSummary] = useState<PermissionsSummary | null>(null)
   const [recentAttendance, setRecentAttendance] = useState<RecentAttendanceRow[]>([])
   const [vacationSummary, setVacationSummary] = useState<VacationSummary | null>(null)
+  const [nextPay, setNextPay] = useState<{ label: string; periodRange?: string } | null>(null)
   const [performanceEvaluations, setPerformanceEvaluations] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<'profile' | 'attendance' | 'permissions' | 'payroll' | 'performance' | 'habits'>('profile')
+  const [activeTab, setActiveTab] = useState<
+    'profile' | 'attendance' | 'permissions' | 'payroll' | 'documents' | 'performance' | 'habits'
+  >('profile')
   const [showPermissionForm, setShowPermissionForm] = useState(false)
   const [isSubmittingPermission, setIsSubmittingPermission] = useState(false)
   const [fabMenuOpen, setFabMenuOpen] = useState(false)
@@ -662,6 +659,7 @@ export default function EmployeePortal() {
 
         setRecentAttendance(dashboardData.recent_attendance || [])
         setVacationSummary(dashboardData.vacation_summary || null)
+        setNextPay(dashboardData.next_pay || null)
         
       } else {
         const errorData = await dashboardResponse.text()
@@ -913,9 +911,13 @@ export default function EmployeePortal() {
       .map((r) => {
         let hours = 0
         if (r.check_in && r.check_out) {
-          const diff =
-            (new Date(r.check_out).getTime() - new Date(r.check_in).getTime()) / (1000 * 60 * 60)
-          hours = Math.round(Math.max(0, diff) * 10) / 10
+          const diff = markSpanWorkedHours({
+            check_in: r.check_in,
+            check_out: r.check_out,
+            lunch_start: (r as any).lunch_start,
+            lunch_end: (r as any).lunch_end,
+          })
+          hours = diff == null ? 0 : Math.round(diff * 10) / 10
         }
         const d = parseDateOnlyAsHonduras(r.date)
         const dayLabel = isNaN(d.getTime())
@@ -1234,7 +1236,12 @@ export default function EmployeePortal() {
               <div className="flex justify-between items-start">
                 <div>
                   <p className="text-sm text-purple-300">Próximo pago</p>
-                  <p className="text-3xl font-bold text-purple-400 mt-2">15 Mayo</p>
+                  <p className="text-3xl font-bold text-purple-400 mt-2">
+                    {nextPay?.label || '—'}
+                  </p>
+                  {nextPay?.periodRange && (
+                    <p className="text-xs text-purple-200/70 mt-2">{nextPay.periodRange}</p>
+                  )}
                 </div>
                 <CurrencyDollarIcon className="h-10 w-10 text-purple-400/30" />
               </div>
@@ -1249,6 +1256,7 @@ export default function EmployeePortal() {
             { id: 'attendance', label: 'Asistencia', icon: ClockIcon },
             { id: 'permissions', label: 'Permisos', icon: DocumentTextIcon },
             { id: 'payroll', label: 'Recibos de pago', icon: CurrencyDollarIcon },
+            { id: 'documents', label: 'Documentos', icon: FolderIcon },
             { id: 'performance', label: 'Desempeño', icon: ChartBarIcon },
             { id: 'habits', label: 'Hábitos', icon: SparklesIcon }
           ].map((tab) => (
@@ -1497,6 +1505,20 @@ export default function EmployeePortal() {
                   employeeId={profile?.employee?.id}
                   addNotification={addNotification}
                 />
+              </CardContent>
+            </Card>
+          )}
+
+          {activeTab === 'documents' && (
+            <Card variant="liquid">
+              <CardHeader>
+                <CardTitle className="text-white">Documentos</CardTitle>
+                <CardDescription className="text-gray-300">
+                  Archivos publicados por RRHH en su expediente
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <DocumentsSection employeeId={profile?.employee?.id} />
               </CardContent>
             </Card>
           )}

@@ -12,6 +12,12 @@ import {
 } from '../../../lib/employee-portal/company-settings'
 import { getTodayInHonduras } from '../../../lib/timezone'
 import { loadEffectiveWorkSchedule, workScheduleToPortalPayload } from '../../../lib/attendance/load-effective-schedule'
+import { markSpanWorkedHours } from '../../../lib/attendance/mark-span-hours'
+import { buildCompanyPeriodConfig } from '../../../lib/payroll/period-config'
+import {
+  formatPeriodRangeForDisplay,
+  getUpcomingPeriods,
+} from '../../../lib/payroll/period-dates'
 
 interface EmployeeDashboardResponse {
   employee: {
@@ -57,6 +63,8 @@ interface EmployeeDashboardResponse {
     date: string
     check_in: string | null
     check_out: string | null
+    lunch_start?: string | null
+    lunch_end?: string | null
     status: string | null
   }>
   vacation_summary: {
@@ -67,6 +75,11 @@ interface EmployeeDashboardResponse {
     tenureCompletedYears?: number
     statutoryMinimumDays?: number
   }
+  next_pay?: {
+    label: string
+    periodEnd: string
+    periodRange: string
+  } | null
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -185,6 +198,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         date,
         check_in,
         check_out,
+        lunch_start,
+        lunch_end,
         status
       `)
       .eq('employee_id', employeeId)
@@ -238,15 +253,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const daysWithRecords = new Set(records.map(r => r.date))
     const actualAbsentDays = totalWorkingDays - daysWithRecords.size
     
-    // Calculate total hours from check-in/check-out times
+    // Calculate total hours from marks (subtract lunch when both marks exist)
     const totalHours = records.reduce((sum, r) => {
-      if (r.check_in && r.check_out) {
-        const checkIn = new Date(r.check_in)
-        const checkOut = new Date(r.check_out)
-        const hours = (checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60)
-        return sum + Math.max(0, hours)
-      }
-      return sum
+      const hours = markSpanWorkedHours(r)
+      return hours == null ? sum : sum + hours
     }, 0)
     
     // Calculate average hours per working day (not per attendance record)
@@ -385,6 +395,48 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     }
 
+    // Next pay window from company payroll cut dates (not hardcoded)
+    let nextPay: EmployeeDashboardResponse['next_pay'] = null
+    try {
+      const { data: payrollCfg } = await supabase
+        .from('company_payroll_configs')
+        .select('payment_frequency, quincena_config, metadata')
+        .eq('company_id', companyId)
+        .eq('is_active', true)
+        .maybeSingle()
+      const periodConfig = buildCompanyPeriodConfig(payrollCfg)
+      const upcoming = getUpcomingPeriods(periodConfig, 1)
+      const next = upcoming[0]
+      if (next?.fechaFin) {
+        const [, mm, dd] = next.fechaFin.split('-')
+        const monthsShort = [
+          'Ene',
+          'Feb',
+          'Mar',
+          'Abr',
+          'May',
+          'Jun',
+          'Jul',
+          'Ago',
+          'Sep',
+          'Oct',
+          'Nov',
+          'Dic',
+        ]
+        const monthLabel = monthsShort[Number(mm) - 1] || mm
+        nextPay = {
+          label: `${Number(dd)} ${monthLabel}`,
+          periodEnd: next.fechaFin,
+          periodRange: formatPeriodRangeForDisplay(next.fechaInicio, next.fechaFin),
+        }
+      }
+    } catch (payErr) {
+      logger.warn('Could not resolve next pay for portal dashboard', {
+        companyId,
+        error: payErr instanceof Error ? payErr.message : String(payErr),
+      })
+    }
+
     // Mask sensitive information
     const dniMasked = employeeDetails.dni?.length > 9 
       ? `${employeeDetails.dni.substring(0, 4)}****${employeeDetails.dni.slice(-5)}`
@@ -437,9 +489,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         date: record.date,
         check_in: record.check_in,
         check_out: record.check_out,
+        lunch_start: (record as any).lunch_start ?? null,
+        lunch_end: (record as any).lunch_end ?? null,
         status: record.status,
       })),
-      vacation_summary: vacationSummary
+      vacation_summary: vacationSummary,
+      next_pay: nextPay,
     }
 
     return res.status(200).json(response)

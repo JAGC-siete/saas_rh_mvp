@@ -8,7 +8,7 @@ type RunRef = {
   status: string
 }
 
-const CLOSED_STATUSES = ['authorized', 'distributed'] as const
+const CLOSED_STATUSES = ['authorized', 'distributed', 'paid'] as const
 const OPEN_STATUSES = ['edited', 'draft'] as const
 
 /**

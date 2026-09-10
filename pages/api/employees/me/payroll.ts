@@ -5,13 +5,17 @@ import {
   assertEmployeePortalEnabled,
   resolveEmployeeAndCompanyId,
 } from '../../../../lib/employee-portal/company-settings'
-import { createEmployeeSalaryClient } from '../../../../lib/security/employee-data-access'
+import {
+  loadCompanyPortalPayrollTipo,
+  mapReleasedRunLineToPortalItem,
+  PORTAL_RELEASED_STATUSES,
+  type PortalPayrollListItem,
+} from '../../../../lib/employee-portal/released-payroll'
+import { resolveRunLineDisplayNet } from '../../../../lib/payroll/resolve-run-line-display-net'
 import { normalizeCountryCode } from '../../../../lib/country/supported'
 
 interface PayrollResponse {
-  records: any[]
-  runLines: any[]
-  baseSalary?: number
+  items: PortalPayrollListItem[]
   employeeName?: string
   currentPeriod: {
     year: number
@@ -27,21 +31,26 @@ interface PayrollResponse {
 
 interface ErrorResponse {
   error: string
-  debug?: any
-  details?: any
+  debug?: unknown
+  details?: unknown
 }
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse<PayrollResponse | ErrorResponse>) {
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse<PayrollResponse | ErrorResponse>
+) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
   try {
     const supabase = createClient(req, res)
-    
-    // Use standard Supabase Auth like admin portal
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    
+
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser()
+
     if (authError || !user) {
       return res.status(401).json({ error: 'No autorizado' })
     }
@@ -53,48 +62,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
     if (!(await assertEmployeePortalEnabled(supabase, ctx.companyId, res))) {
       return
     }
-    const { employeeId } = ctx
-    const salaryClient = createEmployeeSalaryClient()
 
-    // Get current month for payroll data
+    const { employeeId, companyId } = ctx
     const now = new Date()
     const currentYear = now.getFullYear()
-    const currentMonth = now.getMonth() + 1 // getMonth() is 0-indexed
+    const currentMonth = now.getMonth() + 1
+    const fromMonth = currentMonth - 5
+    const fromYear = fromMonth <= 0 ? currentYear - 1 : currentYear
+    const normalizedFromMonth = fromMonth <= 0 ? fromMonth + 12 : fromMonth
 
-    // Try to get payroll records first (more comprehensive)
-    const { data: payrollRecords, error: recordsError } = await supabase
-      .from('payroll_records')
-      .select(`
-        id,
-        period_start,
-        period_end,
-        base_salary,
-        gross_salary,
-        net_salary,
-        total_deductions,
-        income_tax,
-        social_security,
-        days_worked,
-        status,
-        paid_at,
-        created_at
-      `)
-      .eq('employee_id', employeeId)
-      .gte('period_start', `${currentYear}-${currentMonth.toString().padStart(2, '0')}-01`)
-      .lt('period_start', `${currentYear}-${(currentMonth + 1).toString().padStart(2, '0')}-01`)
-      .order('period_end', { ascending: false })
-      .limit(5)
+    const companyTipo = await loadCompanyPortalPayrollTipo(supabase, companyId)
 
-    logger.info('Payroll records query result', { 
-      recordsError, 
-      recordsCount: payrollRecords?.length || 0,
-      employeeId 
-    })
-
-    // Also try payroll_run_lines for more recent data
     const { data: runLines, error: runLinesError } = await supabase
       .from('payroll_run_lines')
-      .select(`
+      .select(
+        `
         id,
         eff_bruto,
         eff_neto,
@@ -102,77 +84,101 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
         eff_rap,
         eff_isr,
         eff_hours,
+        metadata,
         created_at,
         payroll_runs!inner(
           year,
           month,
           quincena,
-          status
+          status,
+          tipo
         )
-      `)
+      `
+      )
       .eq('employee_id', employeeId)
-      .eq('payroll_runs.year', currentYear)
-      .gte('payroll_runs.month', currentMonth - 2) // Last 3 months
+      .eq('company_id', companyId)
+      .eq('payroll_runs.tipo', companyTipo)
+      .in('payroll_runs.status', [...PORTAL_RELEASED_STATUSES])
       .order('created_at', { ascending: false })
-      .limit(5)
+      .limit(24)
 
-    logger.info('Payroll run lines query result', { 
-      runLinesError, 
-      runLinesCount: runLines?.length || 0,
-      employeeId 
-    })
+    if (runLinesError) {
+      logger.error('Portal payroll list query failed', {
+        error: runLinesError.message,
+        employeeId,
+      })
+      return res.status(500).json({ error: 'Error cargando recibos' })
+    }
 
-    // Get employee base salary for reference
-    const { data: employee, error: empError } = await salaryClient
-      .from('employees')
-      .select('base_salary, name')
-      .eq('id', employeeId)
-      .eq('company_id', ctx.companyId)
-      .single()
+    const mapped = (runLines || [])
+      .map((row) => mapReleasedRunLineToPortalItem(row as any, { companyTipo }))
+      .filter((item): item is PortalPayrollListItem => item != null)
+      .filter((item) => {
+        if (item.year > fromYear) return true
+        if (item.year < fromYear) return false
+        return item.month >= normalizedFromMonth
+      })
+      .slice(0, 12)
 
-    logger.info('Employee data query result', { 
-      empError, 
-      hasEmployee: !!employee,
-      employeeId 
-    })
+    const items: PortalPayrollListItem[] = []
+    for (const item of mapped) {
+      const raw = (runLines || []).find((r: { id: string }) => r.id === item.runLineId) as
+        | {
+            eff_bruto?: number
+            eff_ihss?: number
+            eff_rap?: number
+            eff_isr?: number
+            eff_neto?: number
+            metadata?: Record<string, unknown> | null
+          }
+        | undefined
+      if (!raw) {
+        items.push(item)
+        continue
+      }
+      const displayNet = await resolveRunLineDisplayNet(companyId, raw, supabase)
+      items.push({ ...item, eff_neto: displayNet })
+    }
 
-    // If no data found, return empty response
-    if ((!payrollRecords || payrollRecords.length === 0) && 
-        (!runLines || runLines.length === 0)) {
-      logger.info('No payroll data found for employee', { employeeId, currentYear, currentMonth })
-      return res.status(404).json({ 
+    if (items.length === 0) {
+      return res.status(404).json({
         error: 'No payroll data found for this period',
-        debug: { employeeId, currentYear, currentMonth }
+        debug: { employeeId, currentYear, currentMonth },
       })
     }
+
+    const { data: employee } = await supabase
+      .from('employees')
+      .select('name')
+      .eq('id', employeeId)
+      .eq('company_id', companyId)
+      .maybeSingle()
 
     const { data: companyRow } = await supabase
       .from('companies')
       .select('country_code')
-      .eq('id', ctx.companyId)
+      .eq('id', companyId)
       .maybeSingle()
-    const countryCode = normalizeCountryCode(companyRow?.country_code)
 
-    // Build response with available data
-    const response: PayrollResponse = {
-      records: payrollRecords || [],
-      runLines: runLines || [],
-      baseSalary: employee?.base_salary,
+    const newest = items[0]
+    const newestRaw = (runLines || []).find((r: { id: string }) => r.id === newest.runLineId) as
+      | { created_at?: string }
+      | undefined
+
+    return res.status(200).json({
+      items,
       employeeName: employee?.name,
       currentPeriod: {
         year: currentYear,
-        month: currentMonth
+        month: currentMonth,
       },
       summary: {
-        totalRecords: (payrollRecords?.length || 0) + (runLines?.length || 0),
-        lastPayment: payrollRecords?.[0]?.paid_at || runLines?.[0]?.created_at,
-        lastAmount: payrollRecords?.[0]?.net_salary || runLines?.[0]?.eff_neto,
-        countryCode,
-      }
-    }
-
-    return res.status(200).json(response)
-
+        totalRecords: items.length,
+        lastPayment: newestRaw?.created_at,
+        lastAmount: newest.eff_neto,
+        countryCode: normalizeCountryCode(companyRow?.country_code),
+      },
+    })
   } catch (error) {
     logger.error('API error fetching employee payroll', error)
     return res.status(500).json({ error: 'Error interno del servidor' })

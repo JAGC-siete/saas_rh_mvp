@@ -3,6 +3,8 @@ import type { EmployeeReceiptInput } from './receipt'
 import { buildCustomDeductionsList } from './custom-deductions-list'
 import { resolveDisplayNet } from './resolve-display-net'
 import { loadOvertimeDailyBreakdownSheet } from './overtime-daily-breakdown'
+import { resolvePlanillaDaysWorked } from './planilla-from-run'
+import { resolvePlanillaRowPayType } from './resolve-effective-pay-type'
 
 export interface VoucherFromRunLineResult {
   record: EmployeeReceiptInput
@@ -40,7 +42,8 @@ export async function buildVoucherFromRunLine(
         bank_name,
         bank_account,
         department_id,
-        role
+        role,
+        pay_type
       ),
       payroll_runs:run_id (
         year,
@@ -152,6 +155,15 @@ export async function buildVoucherFromRunLine(
 
   const employeeCode = employee.employee_code || 'empleado'
   const periodLabel = `Quincena ${run.quincena}`
+  const payType = resolvePlanillaRowPayType({
+    employeePayType: employee.pay_type,
+    metadataPayType: lineMetadata.pay_type,
+  })
+  const daysWorked = resolvePlanillaDaysWorked(
+    payType,
+    Number(lineData.eff_hours) || 0,
+    lineMetadata.days_worked
+  )
 
   return {
     record: {
@@ -161,7 +173,7 @@ export async function buildVoucherFromRunLine(
       position: employee.role || 'N/A',
       period_start: fechaInicio,
       period_end: fechaFin,
-      days_worked: Math.floor(lineData.eff_hours || 0),
+      days_worked: daysWorked,
       base_salary: baseSalaryForReceipt,
       septimo_dia: septimoDia > 0 ? septimoDia : undefined,
       overtime_pay: overtimePay > 0 ? overtimePay : undefined,

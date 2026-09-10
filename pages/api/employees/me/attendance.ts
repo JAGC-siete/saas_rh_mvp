@@ -58,7 +58,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
 
     let query = supabase
       .from('attendance_records')
-      .select('id, date, check_in, check_out, status, late_minutes, justification')
+      .select('id, date, check_in, check_out, lunch_start, lunch_end, status, late_minutes, justification')
       .eq('employee_id', employeeId)
 
     if (startDate) {
