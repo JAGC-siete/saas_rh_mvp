@@ -2,7 +2,6 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { serialize } from 'cookie'
 import { NextApiRequest, NextApiResponse } from 'next'
-import { cookies } from 'next/headers'
 import { env } from '../env'
 
 // Legacy API route client (for pages/api routes)
@@ -87,39 +86,6 @@ export function createClient(req: NextApiRequest, res: NextApiResponse) {
       },
     },
   })
-}
-
-// App Router client (for server components and middleware)
-export async function createServerComponentClient() {
-  const cookieStore = await cookies()
-
-  return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value
-        },
-        set(name: string, value: string, options: CookieOptions) {
-          try {
-            cookieStore.set(name, value, options)
-          } catch {
-            // Handle errors when setting cookies in server components
-            console.warn('Failed to set cookie in server component:', name)
-          }
-        },
-        remove(name: string, options: CookieOptions) {
-          try {
-            cookieStore.set(name, '', { ...options, maxAge: 0 })
-          } catch {
-            // Handle errors when removing cookies in server components
-            console.warn('Failed to remove cookie in server component:', name)
-          }
-        }
-      }
-    }
-  )
 }
 
 // Admin client for server-side operations with service role

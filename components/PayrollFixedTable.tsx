@@ -20,7 +20,7 @@ import {
   type OvertimePercentGroupKey,
 } from '../lib/payroll/overtime-pay'
 import { HONDURAS_LABOR_FACTOR } from '../lib/payroll/constants'
-import { normalizePayrollDaysWorked } from '../lib/payroll/fixed-line-recalc'
+import { normalizePayrollDaysWorked } from '../lib/payroll/normalize-days-worked'
 
 const HORAS_EXTRA_AHC_INFO =
   'Administrativo por día: HE por recargo (25% 5–7pm y 5–7am, 50% 7–10pm, 75% 10pm–5am, 100% feriados). Si empresa y empleado pagan HE, el monto entra al bruto (IHSS/RAP/ISR sobre salario base). Sin salida no hay HE. Editable en la corrida.'

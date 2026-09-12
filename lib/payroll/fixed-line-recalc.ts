@@ -7,11 +7,14 @@ import type { TaxConstants } from '../tax/honduras-tax'
 import { getIsrForPeriod } from './isr-ytd'
 import type { CountryCode } from '../country/supported'
 import { computePayrollEmployeeStatutoryDeductions } from './statutory-deductions-compute'
+import { normalizePayrollDaysWorked } from './normalize-days-worked'
 import {
   getBiweeklyPeriodDates,
   getMonthlyPeriodDates,
   getWeeklyPeriodDates
 } from './period-dates'
+
+export { normalizePayrollDaysWorked }
 
 export type PreviewPaymentFrequency = 'monthly' | 'biweekly' | 'weekly'
 
@@ -121,18 +124,6 @@ export function resolvePayrollPeriodContext(
     ultimoDiaCalendario,
     isMonthlyCalendarStandard: false
   }
-}
-
-/** Días de planilla fija: admite medios días (14.5). Redondeo a 2 decimales. */
-export function normalizePayrollDaysWorked(raw: unknown): number | null {
-  if (raw === undefined || raw === null) return null
-  if (typeof raw === 'string' && raw.trim() === '') return null
-  const parsed =
-    typeof raw === 'number'
-      ? raw
-      : Number(typeof raw === 'string' ? raw.trim().replace(',', '.') : raw)
-  if (!Number.isFinite(parsed) || parsed < 0) return null
-  return Math.round(parsed * 100) / 100
 }
 
 export function computeFixedGrossFromDays(input: {
