@@ -8,7 +8,7 @@ import assert from 'node:assert/strict'
 import { calculatePeriodBaseSalary } from '../lib/payroll/calculate-period-base-salary'
 import { HONDURAS_LABOR_FACTOR } from '../lib/payroll/constants'
 import { calculateOvertimePayFromAhc } from '../lib/payroll/overtime-pay'
-import { computeFixedGrossFromDays } from '../lib/payroll/fixed-line-recalc'
+import { computeFixedGrossFromDays, normalizePayrollDaysWorked } from '../lib/payroll/fixed-line-recalc'
 import {
   isFrozenPayrollRunStatus,
   isMutablePayrollRunStatus,
@@ -50,6 +50,57 @@ describe('period ordinary from monthly base_salary', () => {
       semanalProration: 'proportional',
     })
     assert.equal(gross, 8250)
+  })
+
+  it('biweekly 14.5 days prorates against 15 (not truncated to 14)', () => {
+    const full = computeFixedGrossFromDays({
+      baseSalary: 16500,
+      daysWorked: 15,
+      paymentFrequency: 'biweekly',
+      diasPeriodo: 15,
+      ultimoDiaCalendario: 31,
+      isMonthlyCalendarStandard: false,
+      semanalProration: 'proportional',
+    })
+    const halfDay = computeFixedGrossFromDays({
+      baseSalary: 16500,
+      daysWorked: 14.5,
+      paymentFrequency: 'biweekly',
+      diasPeriodo: 15,
+      ultimoDiaCalendario: 31,
+      isMonthlyCalendarStandard: false,
+      semanalProration: 'proportional',
+    })
+    const truncated = computeFixedGrossFromDays({
+      baseSalary: 16500,
+      daysWorked: 14,
+      paymentFrequency: 'biweekly',
+      diasPeriodo: 15,
+      ultimoDiaCalendario: 31,
+      isMonthlyCalendarStandard: false,
+      semanalProration: 'proportional',
+    })
+    assert.equal(full, 8250)
+    assert.equal(halfDay, 8250 * (14.5 / 15))
+    assert.equal(truncated, 8250 * (14 / 15))
+    assert.ok(halfDay > truncated)
+    assert.ok(halfDay < full)
+  })
+})
+
+describe('normalizePayrollDaysWorked', () => {
+  it('keeps 14.5 instead of truncating like parseInt', () => {
+    assert.equal(normalizePayrollDaysWorked(14.5), 14.5)
+    assert.equal(normalizePayrollDaysWorked('14.5'), 14.5)
+    assert.equal(normalizePayrollDaysWorked('14,5'), 14.5)
+    assert.equal(parseInt('14.5', 10), 14)
+  })
+
+  it('rejects negatives and non-numeric', () => {
+    assert.equal(normalizePayrollDaysWorked(-1), null)
+    assert.equal(normalizePayrollDaysWorked('abc'), null)
+    assert.equal(normalizePayrollDaysWorked(''), null)
+    assert.equal(normalizePayrollDaysWorked(null), null)
   })
 })
 

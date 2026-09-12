@@ -7,6 +7,7 @@ import {
   resolvePayrollPeriodContext,
   computeFixedGrossFromDays,
   computeFixedLineDeductionsAndNet,
+  normalizePayrollDaysWorked,
   buildFixedLinePlanMetadata,
   mergeRecalcMetadata,
   type PreviewPaymentFrequency,
@@ -141,12 +142,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'run_line_id y days_worked son requeridos' })
     }
 
-    const daysWorked = Number(dwRaw)
-    if (!Number.isFinite(daysWorked) || daysWorked < 0) {
+    const daysWorked = normalizePayrollDaysWorked(dwRaw)
+    if (daysWorked == null) {
       return res.status(400).json({ error: 'days_worked debe ser un número >= 0' })
-    }
-    if (!Number.isInteger(daysWorked)) {
-      return res.status(400).json({ error: 'days_worked debe ser entero (días del período)' })
     }
 
     const { data: line, error: lineError } = await supabase

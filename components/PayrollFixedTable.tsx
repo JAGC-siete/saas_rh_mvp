@@ -20,6 +20,7 @@ import {
   type OvertimePercentGroupKey,
 } from '../lib/payroll/overtime-pay'
 import { HONDURAS_LABOR_FACTOR } from '../lib/payroll/constants'
+import { normalizePayrollDaysWorked } from '../lib/payroll/fixed-line-recalc'
 
 const HORAS_EXTRA_AHC_INFO =
   'Administrativo por día: HE por recargo (25% 5–7pm y 5–7am, 50% 7–10pm, 75% 10pm–5am, 100% feriados). Si empresa y empleado pagan HE, el monto entra al bruto (IHSS/RAP/ISR sobre salario base). Sin salida no hay HE. Editable en la corrida.'
@@ -215,9 +216,9 @@ export default function PayrollFixedTable({
 
   const submitDaysAdjust = async () => {
     if (!daysModal || !onAdjustFixedDays) return
-    const n = parseInt(daysInput, 10)
-    if (!Number.isFinite(n) || n < 0 || !Number.isInteger(n)) {
-      alert('Ingrese un número entero de días ≥ 0')
+    const n = normalizePayrollDaysWorked(daysInput)
+    if (n == null) {
+      alert('Ingrese días ≥ 0 (admite decimales, p. ej. 14.5)')
       return
     }
     setDaysSaving(true)
@@ -485,7 +486,11 @@ export default function PayrollFixedTable({
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-200">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="tabular-nums font-medium text-white">{row.days_worked || 0}</span>
+                      <span className="tabular-nums font-medium text-white">
+                        {Number.isInteger(Number(row.days_worked) || 0)
+                          ? String(row.days_worked || 0)
+                          : (Number(row.days_worked) || 0).toFixed(1)}
+                      </span>
                       {onAdjustFixedDays && row.line_id && row.pay_type !== 'admin_floor' ? (
                         <Button
                           type="button"
@@ -689,11 +694,12 @@ export default function PayrollFixedTable({
                 <label htmlFor="adj-days" className="block text-sm font-medium text-gray-200">
                   Días trabajados (período)
                 </label>
+                <p className="mt-0.5 text-xs text-gray-400">Admite medios días, p. ej. 14.5</p>
                 <Input
                   id="adj-days"
                   type="number"
                   min={0}
-                  step={1}
+                  step={0.5}
                   value={daysInput}
                   onChange={(e) => setDaysInput(e.target.value)}
                   className="mt-1 border-white/20 bg-white/10 text-white"
