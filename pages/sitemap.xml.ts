@@ -42,7 +42,7 @@ const publicPages: SitemapUrl[] = [
     lastmod: new Date().toISOString().split('T')[0],
   },
   {
-    loc: '/plan-basico',
+    loc: '/membresia-anual',
     changefreq: 'weekly',
     priority: 0.85,
     lastmod: new Date().toISOString().split('T')[0],

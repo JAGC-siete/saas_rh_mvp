@@ -65,6 +65,7 @@ export function computeVentasQuotationQuote(params: {
   const couponDiscountAmount = roundMoney(afterMembership * couponPct)
   const softwareDiscountAmount = roundMoney(membershipDiscountAmount + couponDiscountAmount)
   const softwareTotal = roundMoney(annualSubtotal - softwareDiscountAmount)
+  const membershipFee = product.chargeMembershipFee ? roundMoney(rules.basic_annual_price) : 0
 
   const enterpriseList = product.includeEnterprise
     ? roundMoney(
@@ -73,7 +74,7 @@ export function computeVentasQuotationQuote(params: {
           : rules.enterprise_annual_price
       )
     : 0
-  const annualTotal = roundMoney(softwareTotal + enterpriseList)
+  const annualTotal = roundMoney(softwareTotal + membershipFee + enterpriseList)
   const monthlySoftwareTotal = roundMoney(annualTotal / 12)
 
   const terminalsForPricing = product.chargeHardware
@@ -151,6 +152,7 @@ export function computeVentasQuotationQuote(params: {
     membership_applied: product.applyMembershipDiscount && membershipDiscountAmount > 0,
     membership_discount_pct: product.applyMembershipDiscount ? membershipPct : 0,
     membership_discount_amount: membershipDiscountAmount,
+    membership_annual_price: membershipFee,
     complement_biometric: product.includeTerminals,
     include_terminals: product.includeTerminals,
     include_enterprise: product.includeEnterprise,

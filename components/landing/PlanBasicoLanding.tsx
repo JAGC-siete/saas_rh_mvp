@@ -19,7 +19,9 @@ import { generateFAQPageSchema, generateWebPageSchema, generateBreadcrumbListSch
 import { PLAN_BASICO_COPY, PLAN_BASICO_PUBLIC_PATH } from '../../lib/marketing/plan-basico-copy'
 import { PRIVACY_PUBLIC_PATH, TERMS_PUBLIC_PATH } from '../../lib/marketing/legal-paths'
 import { VENTAS_BASIC_ANNUAL_PRICE } from '../../lib/ventas/business-rules'
-import { VENTAS_BASIC_MODULE_LABELS } from '../../lib/ventas/product-catalog'
+import { VENTAS_BASIC_MODULE_LABELS, VENTAS_BASIC_QUOTE_FLAGS } from '../../lib/ventas/product-catalog'
+import { convertVentasMoney, VENTAS_PRICE_LIST_CURRENCY } from '../../lib/ventas/currency'
+import { formatMoney, roundMoney } from '../../lib/ventas/pricing'
 import {
   findPublicTierForEmployees,
   formatEmployeeRangeLabel,
@@ -27,7 +29,7 @@ import {
   VENTAS_COUNTRY_LABEL,
   type VentasPublicTier,
 } from '../../lib/ventas-game/ventas-form'
-import { isCountryCode, type CountryCode } from '../../lib/country/supported'
+import { currencyForCountryCode, isCountryCode, type CountryCode } from '../../lib/country/supported'
 import type { QuotationRequest, QuotationResponse } from '../../lib/ventas/types'
 import {
   buildMetaApiTrackingFields,
@@ -61,8 +63,55 @@ function scrollToSolicitud() {
 export default function PlanBasicoLanding() {
   const salesPhone = getVentasSupportWhatsAppNumber()
   const salesWaDisplay = formatSalesWhatsApp(salesPhone)
+  const [countryCode, setCountryCode] = useState<CountryCode>('HND')
+  const [basicAnnualPrice, setBasicAnnualPrice] = useState(VENTAS_BASIC_ANNUAL_PRICE)
+  const [publicTiers, setPublicTiers] = useState<VentasPublicTier[]>([])
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const res = await fetch('/api/ventas/public-config')
+        const data = await res.json()
+        if (!res.ok || cancelled) return
+        const price = Number(data.basic_annual_price)
+        if (Number.isFinite(price) && price > 0) setBasicAnnualPrice(price)
+        if (Array.isArray(data.tiers)) {
+          const mapped = sortPublicTiers(
+            data.tiers.map((t: { min_employees: number; max_employees: number }) => ({
+              min_employees: Number(t.min_employees),
+              max_employees: Number(t.max_employees),
+            }))
+          )
+          setPublicTiers(mapped)
+        }
+      } catch {
+        /* keep defaults */
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const displayCurrency = currencyForCountryCode(countryCode)
+  const displayAmount = convertVentasMoney(
+    basicAnnualPrice,
+    VENTAS_PRICE_LIST_CURRENCY,
+    displayCurrency
+  )
+  const priceLabel = formatMoney(displayCurrency, displayAmount)
+  const monthlyLabel = formatMoney(displayCurrency, roundMoney(displayAmount / 12))
+  const faq = copy.faq.map((item) => ({
+    question: item.question,
+    answer: typeof item.answer === 'function' ? item.answer(priceLabel) : item.answer,
+  }))
+  const honestyItems = copy.honesty.items.map((item) => ({
+    title: item.title,
+    body: typeof item.body === 'function' ? item.body(priceLabel) : item.body,
+  }))
   const whatsappHref = buildVentasSupportWhatsAppUrl(
-    'Quiero la membresía anual Basic de Humano SISU (L. 6,500/año, sin reloj).'
+    `Quiero la membresía anual de Humano SISU (${priceLabel}/año, sin reloj).`
   )
 
   const webPageSchema = generateWebPageSchema({
@@ -70,24 +119,24 @@ export default function PlanBasicoLanding() {
     title: copy.seo.title,
     description: copy.seo.description,
   })
-  const faqSchema = generateFAQPageSchema(copy.faq.map((item) => ({ question: item.question, answer: item.answer })))
+  const faqSchema = generateFAQPageSchema(faq.map((item) => ({ question: item.question, answer: item.answer })))
   const breadcrumbSchema = generateBreadcrumbListSchema([
     { name: 'Inicio', url: '/' },
-    { name: 'Plan básico', url: PLAN_BASICO_PUBLIC_PATH },
+    { name: 'Membresía anual', url: PLAN_BASICO_PUBLIC_PATH },
   ])
   const offerSchema = {
     '@context': 'https://schema.org',
     '@type': 'Offer',
-    name: 'Plan básico Humano SISU',
+    name: 'Membresía anual Humano SISU',
     description: copy.seo.description,
     url: `${SEO_BASE_URL}${PLAN_BASICO_PUBLIC_PATH}`,
-    price: String(VENTAS_BASIC_ANNUAL_PRICE),
+    price: String(basicAnnualPrice),
     priceCurrency: 'HNL',
     availability: 'https://schema.org/InStock',
     seller: { '@type': 'Organization', name: 'Humano SISU' },
     itemOffered: {
       '@type': 'SoftwareApplication',
-      name: 'Humano SISU Plan básico',
+      name: 'Humano SISU membresía anual',
       applicationCategory: 'BusinessApplication',
       operatingSystem: 'Web',
     },
@@ -119,7 +168,9 @@ export default function PlanBasicoLanding() {
             <h1 className="landing-hero-gradient text-3xl font-bold leading-tight sm:text-4xl lg:text-5xl">
               {copy.hero.headline}
             </h1>
-            <p className="landing-muted mt-5 max-w-2xl text-base font-medium sm:text-lg">{copy.hero.subheadline}</p>
+            <p className="landing-muted mt-5 max-w-2xl text-base font-medium sm:text-lg">
+              {copy.hero.subheadline(priceLabel)}
+            </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <button
                 type="button"
@@ -129,7 +180,7 @@ export default function PlanBasicoLanding() {
                 {copy.hero.ctaPrimary}
               </button>
               <TrackedInternalCta
-                href={`/activar?utm_source=plan-basico&utm_medium=hero&utm_campaign=micro-6500`}
+                href={`/activar?utm_source=membresia-anual&utm_medium=hero&utm_campaign=micro-6500`}
                 ctaType="activar_trial"
                 location="plan_basico_hero"
                 className="inline-flex min-h-[48px] items-center justify-center rounded-xl border border-white/25 px-6 py-3 text-center text-base font-medium text-white transition-colors hover:bg-white/10"
@@ -142,8 +193,8 @@ export default function PlanBasicoLanding() {
           <BorderBeam>
             <div className="glass-modern relative overflow-hidden rounded-2xl p-6 sm:p-8">
               <p className="text-xs uppercase tracking-[0.2em] text-slate-400">{copy.hero.priceLabel}</p>
-              <p className="mt-2 text-4xl font-bold tabular-nums text-white sm:text-5xl">{copy.hero.price}</p>
-              <p className="mt-1 text-sm text-cyan-300">{copy.hero.priceHint}</p>
+              <p className="mt-2 text-4xl font-bold tabular-nums text-white sm:text-5xl">{priceLabel}</p>
+              <p className="mt-1 text-sm text-cyan-300">≈ {monthlyLabel} / mes · un solo cargo</p>
               <ul className="mt-6 space-y-3">
                 {VENTAS_BASIC_MODULE_LABELS.map((label, index) => {
                   const Icon = MODULE_ICONS[index] ?? UserGroupIcon
@@ -172,7 +223,7 @@ export default function PlanBasicoLanding() {
             <h2 className="mb-6 text-center text-2xl font-bold text-white sm:text-3xl">{copy.honesty.title}</h2>
           </ScrollReveal>
           <div className="grid gap-4 md:grid-cols-3">
-            {copy.honesty.items.map((item, i) => (
+            {honestyItems.map((item, i) => (
               <ScrollReveal key={item.title} delay={i * 0.06}>
                 <div className="glass-modern h-full rounded-2xl p-5 sm:p-6">
                   <h3 className="text-lg font-semibold text-white">{item.title}</h3>
@@ -257,7 +308,7 @@ export default function PlanBasicoLanding() {
             <p className="mt-2 text-xs text-slate-500">{copy.form.whatsappHint}</p>
             <p className="mt-6 text-sm text-slate-400">
               <TrackedInternalCta
-                href="/ventas?utm_source=plan-basico&utm_medium=body&utm_campaign=micro-6500"
+                href="/ventas?utm_source=membresia-anual&utm_medium=body&utm_campaign=micro-6500"
                 ctaType="solicitar_cotizacion"
                 location="plan_basico_form_aside"
                 className="text-brand-300 underline-offset-2 hover:underline"
@@ -266,7 +317,11 @@ export default function PlanBasicoLanding() {
               </TrackedInternalCta>
             </p>
           </div>
-          <PlanBasicoQuoteForm />
+          <PlanBasicoQuoteForm
+            countryCode={countryCode}
+            onCountryCodeChange={setCountryCode}
+            publicTiers={publicTiers}
+          />
         </div>
       </section>
 
@@ -274,7 +329,7 @@ export default function PlanBasicoLanding() {
         <div className="mx-auto max-w-3xl">
           <h2 className="mb-6 text-center text-2xl font-bold text-white sm:text-3xl">Preguntas frecuentes</h2>
           <div className="space-y-3">
-            {copy.faq.map((item) => (
+            {faq.map((item) => (
               <details key={item.question} className="glass-modern group rounded-2xl px-5 py-4">
                 <summary className="cursor-pointer list-none text-sm font-semibold text-white marker:content-none">
                   {item.question}
@@ -306,7 +361,7 @@ export default function PlanBasicoLanding() {
               {copy.close.primary}
             </button>
             <TrackedInternalCta
-              href="/ventas?utm_source=plan-basico&utm_medium=cta-final&utm_campaign=micro-6500"
+              href="/ventas?utm_source=membresia-anual&utm_medium=cta-final&utm_campaign=micro-6500"
               ctaType="solicitar_cotizacion"
               location="plan_basico_final"
               className="inline-flex min-h-[48px] items-center justify-center rounded-xl border border-white/25 px-6 py-3 text-base font-medium text-white hover:bg-white/10"
@@ -329,49 +384,34 @@ type FormErrors = {
   submit?: string
 }
 
-function PlanBasicoQuoteForm() {
+function PlanBasicoQuoteForm({
+  countryCode,
+  onCountryCodeChange,
+  publicTiers,
+}: {
+  countryCode: CountryCode
+  onCountryCodeChange: (code: CountryCode) => void
+  publicTiers: VentasPublicTier[]
+}) {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [consent, setConsent] = useState(false)
   const [errors, setErrors] = useState<FormErrors>({})
-  const [publicTiers, setPublicTiers] = useState<VentasPublicTier[]>([])
   const [form, setForm] = useState({
     contact_name: '',
     company_name: '',
     contact_email: '',
     phone: '',
-    country_code: 'HND' as CountryCode,
     employees_count: 2,
   })
 
   useEffect(() => {
-    let cancelled = false
-    ;(async () => {
-      try {
-        const res = await fetch('/api/ventas/public-config')
-        const data = await res.json()
-        if (!res.ok || cancelled || !Array.isArray(data.tiers)) return
-        const mapped = sortPublicTiers(
-          data.tiers.map((t: { min_employees: number; max_employees: number }) => ({
-            min_employees: Number(t.min_employees),
-            max_employees: Number(t.max_employees),
-          }))
-        )
-        setPublicTiers(mapped)
-        if (mapped.length > 0) {
-          setForm((prev) => {
-            if (findPublicTierForEmployees(prev.employees_count, mapped)) return prev
-            return { ...prev, employees_count: mapped[0].min_employees }
-          })
-        }
-      } catch {
-        /* keep defaults */
-      }
-    })()
-    return () => {
-      cancelled = true
-    }
-  }, [])
+    if (publicTiers.length === 0) return
+    setForm((prev) => {
+      if (findPublicTierForEmployees(prev.employees_count, publicTiers)) return prev
+      return { ...prev, employees_count: publicTiers[0].min_employees }
+    })
+  }, [publicTiers])
 
   const fieldClass =
     'input-glass w-full text-white placeholder:text-white/50 disabled:cursor-not-allowed disabled:opacity-50'
@@ -399,14 +439,9 @@ function PlanBasicoQuoteForm() {
       contact_name: form.contact_name.trim(),
       company_name: form.company_name.trim(),
       phone: form.phone.trim(),
-      country_code: form.country_code,
+      country_code: countryCode,
       employees_count: form.employees_count,
-      billing_modality: 'annual',
-      terminals_count: 0,
-      include_terminals: false,
-      complement_biometric: false,
-      affiliate_membership: false,
-      include_enterprise: false,
+      ...VENTAS_BASIC_QUOTE_FLAGS,
       consent_newsletter: true,
     }
 
@@ -416,6 +451,7 @@ function PlanBasicoQuoteForm() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...payload,
+          source: 'membresia-anual',
           ...buildMetaApiTrackingFields(metaEventId),
         }),
       })
@@ -526,10 +562,10 @@ function PlanBasicoQuoteForm() {
             <select
               id="pb-country"
               className={fieldClass}
-              value={form.country_code}
+              value={countryCode}
               onChange={(e) => {
                 const value = e.target.value
-                if (isCountryCode(value)) setForm((f) => ({ ...f, country_code: value }))
+                if (isCountryCode(value)) onCountryCodeChange(value)
               }}
             >
               {Object.entries(VENTAS_COUNTRY_LABEL).map(([code, label]) => (
@@ -558,6 +594,7 @@ function PlanBasicoQuoteForm() {
                 </option>
               ))}
             </select>
+            <p className="mt-1.5 text-xs text-slate-500">{copy.form.employeesHint}</p>
           </div>
         </div>
         <label className="flex items-start gap-3 text-sm text-slate-300">

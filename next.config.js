@@ -157,6 +157,11 @@ const nextConfig = {
         destination: '/app/login',
         permanent: false,
       },
+      {
+        source: '/plan-basico',
+        destination: '/membresia-anual',
+        permanent: true,
+      },
       // Funnel TOFU: canonical /cerrar-planilla-en-paz (legacy /secreto, /info → 301)
       {
         source: '/secreto',

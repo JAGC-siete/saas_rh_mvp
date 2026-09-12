@@ -102,15 +102,15 @@ export function getVentasModalityDefinition(
   if (productKind === 'basic') {
     return {
       modality: 'annual',
-      label: 'Plan básico · Membresía anual',
+      label: 'Membresía anual',
       formHint:
-        'Incluye exactamente tres módulos: expedientes digitales, asistencia por input manual y recibos de nómina. Sin reloj biométrico. Disponible para cualquier tamaño de equipo.',
+        'Tres módulos: expedientes digitales, asistencia por marcas a mano y recibos de nómina. Sin reloj biométrico. El precio no cambia con el tamaño del equipo. Solo modalidad anual.',
       includes: [...VENTAS_BASIC_MODULE_LABELS],
       excludesOrNotes: [
-        'Sin reloj biométrico. Para Premium, incluya terminales en la cotización del rango vigente.',
+        'Sin reloj biométrico. Los relojes se cotizan aparte, sobre el rango de empleados.',
       ],
       successSummaryLine:
-        'Membresía anual: expedientes, asistencia manual y recibos de nómina.',
+        'Membresía anual: expedientes, marcas a mano y recibos de nómina.',
     }
   }
 
@@ -288,8 +288,11 @@ export function buildMonthlyPricingBreakdownLines(quote: QuotationQuote, fmt: (n
   if (quote.membership_applied && (quote.membership_discount_amount || 0) > 0) {
     const pct = Math.round((quote.membership_discount_pct || 0) * 100)
     lines.push(
-      `- Membresía (−${pct}% sobre rango con terminales): −${fmt((quote.membership_discount_amount || 0) / 12)} / mes`
+      `- Descuento ${pct}% sobre el plan: −${fmt((quote.membership_discount_amount || 0) / 12)} / mes`
     )
+  }
+  if ((quote.membership_annual_price || 0) > 0) {
+    lines.push(`- Afiliación anual: ${fmt((quote.membership_annual_price || 0) / 12)} / mes`)
   }
   if (quote.include_enterprise) {
     lines.push(`- Add-on Enterprise: ${fmt((quote.enterprise_annual_price || 0) / 12)} / mes`)
@@ -341,7 +344,10 @@ export function buildAnnualPricingBreakdownLines(quote: QuotationQuote, fmt: (n:
   }
   if (quote.membership_applied && (quote.membership_discount_amount || 0) > 0) {
     const pct = Math.round((quote.membership_discount_pct || 0) * 100)
-    lines.push(`- Membresía (−${pct}% sobre rango con terminales): −${fmt(quote.membership_discount_amount || 0)} / año`)
+    lines.push(`- Descuento ${pct}% sobre el plan: −${fmt(quote.membership_discount_amount || 0)} / año`)
+  }
+  if ((quote.membership_annual_price || 0) > 0) {
+    lines.push(`- Afiliación anual: ${fmt(quote.membership_annual_price || 0)} / año`)
   }
   if (quote.include_enterprise) {
     lines.push(`- Add-on Enterprise: ${fmt(quote.enterprise_annual_price || 0)} / año`)

@@ -14,7 +14,7 @@ export const VENTAS_MONTHLY_MIN_EMPLOYEES = 21
 /** Tope histórico del segmento micro (referencia UI; ya no excluye membresía). Inclusive. */
 export const VENTAS_MICRO_MAX_EMPLOYEES = 10
 
-/** Precio anual de la membresía Basic (sin relojes, cualquier N). */
+/** Precio anual de la afiliación. Sin relojes es el total; con relojes se suma al rango. */
 export const VENTAS_BASIC_ANNUAL_PRICE = 6500
 
 /** Descuento de membresía sobre un rango con terminales. */
@@ -56,9 +56,9 @@ export type VentasBusinessRules = {
   hardware_continuity: VentasHardwareContinuityRules
   /** Inclusive. Referencia de segmento micro; no bloquea membresía en N mayores. */
   micro_max_employees: number
-  /** Precio anual de la membresía Basic (sin relojes). */
+  /** Precio anual de la afiliación (sin relojes = total; con relojes se suma). */
   basic_annual_price: number
-  /** Descuento sobre el rango con terminales si hay membresía. */
+  /** Descuento sobre el rango con relojes si hay afiliación anual. */
   membership_discount_pct: number
   /** Add-on Enterprise anual (fallback si plan_catalog no tiene precio). */
   enterprise_annual_price: number

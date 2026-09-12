@@ -71,6 +71,7 @@ export const MIDDLEWARE_CONFIG = {
       '/demo',
       '/activar',
       '/plan-basico',
+      '/membresia-anual',
       '/gracias',
       '/pricing',
       '/features',
@@ -177,6 +178,7 @@ export function getAllPublicRoutes(): string[] {
     '/api/public/send-deduction-report',
     // SEO pages
     '/plan-basico',
+    '/membresia-anual',
     '/alternativa-odoo-honduras',
     '/sistema-biometrico-nomina',
     '/implementacion-48-horas',

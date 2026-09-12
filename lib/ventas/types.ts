@@ -55,7 +55,7 @@ export interface QuotationRequest {
   complement_biometric?: boolean
   /** Contrata el rango con terminales (plan Premium). */
   include_terminals?: boolean
-  /** Membresía anual: 10% sobre el rango con terminales. */
+  /** Afiliación anual: L. 6,500 y, si hay relojes, 10% sobre el rango. */
   affiliate_membership?: boolean
   /** Add-on Enterprise, cualquier rango. */
   include_enterprise?: boolean
@@ -90,11 +90,13 @@ export interface QuotationQuote {
   discount_pct_applied: number
   /** Código normalizado del cupón aplicado (si coupon_applied). */
   coupon_code_applied?: string | null
-  /** basic = 3 módulos (micro); regular = rango vigente. */
+  /** basic = membresía anual sin relojes (cualquier N); regular = rango + terminales. */
   product_kind?: 'basic' | 'regular'
   membership_applied?: boolean
   membership_discount_pct?: number
   membership_discount_amount?: number
+  /** Afiliación anual sumada al rango con relojes (0 si el total ya es solo esa afiliación). */
+  membership_annual_price?: number
   complement_biometric?: boolean
   include_terminals?: boolean
   include_enterprise?: boolean

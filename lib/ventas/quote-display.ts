@@ -9,6 +9,7 @@ import {
   VENTAS_HARDWARE_SALE_UNIT_PRICE,
   type VentasTierHardwareHints,
 } from './business-rules'
+import { VENTAS_BASIC_MODULE_LABELS } from './product-catalog'
 
 export function hardwareOptsFromQuote(quote: QuotationQuote): {
   rules: QuotationQuote['business_rules']
@@ -170,12 +171,7 @@ export function getContractIncludesLabels(params: {
   productKind?: 'basic' | 'regular'
 }): string[] {
   if (params.productKind === 'basic') {
-    return [
-      'Expedientes digitales',
-      'Asistencia por input manual',
-      'Recibos de nómina',
-      'Membresía anual (módulos Basic)',
-    ]
+    return [...VENTAS_BASIC_MODULE_LABELS, 'Membresía anual, sin reloj']
   }
   const { isAnnual, includesTerminals, hardwareMode } = params
   const currency = params.currency || 'HNL'
@@ -237,7 +233,7 @@ export function annualPaymentIntroText(params: {
   productKind?: 'basic' | 'regular'
 }): string {
   if (params.productKind === 'basic') {
-    return '50% anticipo de la membresía anual para activar el plan básico y 50% contra la puesta en marcha de expedientes, asistencia y recibos.'
+    return '50% anticipo de la membresía anual y 50% contra la puesta en marcha de expedientes, marcas a mano y recibos.'
   }
   const hasSale = (Number(params.hardwareSaleTotal) || 0) > 0
   if (hasSale && params.includesTerminals) {
@@ -347,9 +343,16 @@ export function buildQuotationPlanSummary(params: {
     })
     if (membershipAmt > 0) {
       lines.push({
-        label: `Membresía (−${membershipPctLabel}% sobre rango con terminales)`,
+        label: `Descuento ${membershipPctLabel}% sobre el plan`,
         value: `−${fmt(isMonthly ? membershipAmt / 12 : membershipAmt)} / ${periodLabel}`,
         variant: 'discount',
+      })
+    }
+    const membershipFee = Number(quote.membership_annual_price) || 0
+    if (membershipFee > 0) {
+      lines.push({
+        label: 'Afiliación anual',
+        value: `${fmt(isMonthly ? membershipFee / 12 : membershipFee)} / ${periodLabel}`,
       })
     }
     if (couponAmt > 0) {
@@ -361,7 +364,7 @@ export function buildQuotationPlanSummary(params: {
     }
   } else {
     lines.push({
-      label: quote.product_kind === 'basic' ? 'Membresía plan básico' : 'Precio Software',
+      label: quote.product_kind === 'basic' ? 'Membresía anual' : 'Precio Software',
       value: `${fmt(isMonthly ? softwareAnnualQuoted / 12 : softwareAnnualQuoted)} / ${periodLabel}`,
     })
   }

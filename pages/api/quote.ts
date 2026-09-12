@@ -64,6 +64,10 @@ function parseFlag(v: unknown): boolean {
   return v === true || v === 1 || v === '1' || (typeof v === 'string' && v.trim().toLowerCase() === 'true')
 }
 
+function parseQuoteSource(v: unknown): 'ventas' | 'membresia-anual' {
+  return v === 'membresia-anual' ? 'membresia-anual' : 'ventas'
+}
+
 async function sendEmailWithResend(params: {
   to: string | string[]
   subject: string
@@ -243,6 +247,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
   const includeTerminals = parseFlag((body as any).include_terminals) || complementBiometric
   const affiliateMembership = parseFlag((body as any).affiliate_membership)
   const includeEnterprise = parseFlag((body as any).include_enterprise)
+  const quoteSource = parseQuoteSource((body as any).source)
 
   const phoneNorm = normalizeSoftPhone(body.phone)
   const couponSubmitted = typeof body.coupon_code === 'string' ? body.coupon_code : ''
@@ -356,7 +361,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
 
     // Persist lead
     const meta = {
-      source: 'ventas',
+      source: quoteSource,
       user_agent: String(req.headers['user-agent'] || '').slice(0, 120),
       referer: String(req.headers['referer'] || '').slice(0, 200),
       country_code: countryCode,
@@ -374,6 +379,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
       commercial_plan_type: quoteList.commercial_plan_type,
       membership_applied: quoteList.membership_applied,
       membership_discount_pct: quoteList.membership_discount_pct,
+      membership_annual_price: quoteList.membership_annual_price,
       list_currency: listCurrency,
       monthly_hardware_fee: quote.monthly_hardware_fee || undefined,
       hardware_sale_total: quote.hardware_sale_total || undefined,

@@ -9,12 +9,22 @@ import {
 
 export type VentasProductKind = 'basic' | 'regular'
 
-/** Módulos del plan básico (membresía anual, sin reloj). */
+/** Módulos de la membresía anual (product_kind = basic, sin reloj). */
 export const VENTAS_BASIC_MODULE_LABELS = [
   'Expedientes digitales',
-  'Asistencia por input manual',
+  'Asistencia por marcas a mano',
   'Recibos de nómina',
 ] as const
+
+/** Payload canónico de /membresia-anual = clocks OFF en el motor. */
+export const VENTAS_BASIC_QUOTE_FLAGS = {
+  billing_modality: 'annual' as const,
+  terminals_count: 0,
+  include_terminals: false,
+  complement_biometric: false,
+  affiliate_membership: true,
+  include_enterprise: false,
+}
 
 export type VentasProductSelection = {
   kind: VentasProductKind
@@ -27,6 +37,8 @@ export type VentasProductSelection = {
   chargeHardware: boolean
   forceAnnual: boolean
   applyMembershipDiscount: boolean
+  /** Suma basic_annual_price al rango con relojes. Sin relojes esa cifra ya es el total. */
+  chargeMembershipFee: boolean
   commercialPlanType: CommercialPlanType
 }
 
@@ -42,7 +54,8 @@ export function resolveVentasProductSelection(params: {
     params.includeTerminals === true || params.complementBiometric === true
   const includeEnterprise = params.includeEnterprise === true
   const kind: VentasProductKind = includeTerminals ? 'regular' : 'basic'
-  const affiliateMembership = includeTerminals && params.affiliateMembership === true
+  const affiliateMembership = params.affiliateMembership === true
+  const stackOnRange = includeTerminals && affiliateMembership
   const isMicro = isMicroEmployeeSegment(params.employeesCount, params.rules)
 
   return {
@@ -54,7 +67,8 @@ export function resolveVentasProductSelection(params: {
     includeEnterprise,
     chargeHardware: includeTerminals,
     forceAnnual: !includeTerminals,
-    applyMembershipDiscount: affiliateMembership,
+    applyMembershipDiscount: stackOnRange,
+    chargeMembershipFee: stackOnRange,
     commercialPlanType: includeEnterprise ? 'enterprise' : includeTerminals ? 'premium' : 'basic',
   }
 }

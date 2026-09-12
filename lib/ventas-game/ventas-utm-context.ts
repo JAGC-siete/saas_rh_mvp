@@ -26,10 +26,10 @@ const PATTERNS: Array<{ match: RegExp; context: VentasUtmContext }> = [
     },
   },
   {
-    match: /plan-basico|plan_basico|micro-6500/i,
+    match: /plan-basico|plan_basico|membresia-anual|micro-6500/i,
     context: {
-      headline: 'Plan básico para hasta 10 colaboradores. Aquí la propuesta formal.',
-      subheadline: 'L. 6,500 al año: expedientes, asistencia manual y recibos. Sin reloj biométrico.',
+      headline: 'Membresía anual sin reloj. Aquí la propuesta.',
+      subheadline: 'L. 6,500 al año: expedientes, marcas a mano y recibos.',
     },
   },
 ]

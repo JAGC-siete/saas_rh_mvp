@@ -19,6 +19,7 @@ const PUBLIC_SSR_EXACT = new Set([
   '/ventas',
   '/ventas/gracias',
   '/plan-basico',
+  '/membresia-anual',
   '/gracias',
   INFO_FUNNEL_PUBLIC_PATH,
   '/info',

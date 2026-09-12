@@ -527,7 +527,7 @@ export default function VentasConfigPage() {
                       </div>
                       <div>
                         <label className="block text-xs text-white/70 mb-1">
-                          Descuento membresía (rango + terminales)
+                          Descuento afiliación (rango + relojes)
                         </label>
                         <input
                           type="number"
@@ -616,10 +616,11 @@ export default function VentasConfigPage() {
                         </p>
                       ))}
                       <p className="text-xs text-white/50">
-                        Mensual siempre usa continuidad. Sin terminales = membresía Basic (3 módulos, anual). Con
-                        terminales = rango vigente + hardware (plan Premium). Membresía sobre rango con terminales =
-                        el descuento configurado (no se suma L. 6,500). Enterprise es add-on opcional (costo en Planes
-                        y módulos). La excepción de terminales por rango gana sobre el umbral Auto.
+                        Mensual siempre usa continuidad. Sin terminales = afiliación anual (3 módulos, anual). Con
+                        terminales = rango vigente + hardware (plan Premium). Afiliación + terminales = se suma el
+                        precio de afiliación y se descuenta el % configurado sobre el rango. Enterprise es add-on
+                        opcional (costo en Planes y módulos). La excepción de terminales por rango gana sobre el
+                        umbral Auto.
                       </p>
                     </div>
                   </>

@@ -104,16 +104,17 @@ export const MARKETING_LANDINGS: MarketingLandingEntry[] = [
     primaryCta: 'Formulario ventas',
   },
   {
-    path: '/plan-basico',
-    pageFile: 'pages/plan-basico.tsx',
-    name: 'Plan básico micro (0–10)',
+    path: '/membresia-anual',
+    pageFile: 'pages/membresia-anual.tsx',
+    aliases: ['/plan-basico'],
+    name: 'Membresía anual (sin reloj)',
     kind: 'commercial',
     status: 'active',
-    purpose: 'Oferta anual L. 6,500: expedientes, asistencia manual, recibos. Sin marco estatal.',
+    purpose: 'Oferta anual L. 6,500: expedientes, marcas a mano, recibos.',
     primaryCta: 'Formulario → /api/quote',
     launched: '2026-09-12',
     notes:
-      'Reemplazo web del PDF de membresía. Copy honesto: no notificación, no gratis vs cobro, asistencia manual explícita.',
+      'Canónico /membresia-anual. /plan-basico → 301. Copy de SKU; deslinde en badge, una frase, FAQ y consentimiento.',
   },
   {
     path: '/calculadora',

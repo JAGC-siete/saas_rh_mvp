@@ -1,65 +1,65 @@
-/** Copy for /plan-basico — membresía anual Basic (sin relojes), cualquier tamaño de equipo. */
+/** Copy for /membresia-anual — tres módulos, sin relojes, cualquier tamaño de equipo. */
 
-export const PLAN_BASICO_PUBLIC_PATH = '/plan-basico'
+export const PLAN_BASICO_PUBLIC_PATH = '/membresia-anual'
+export const PLAN_BASICO_LEGACY_PATH = '/plan-basico'
 
 export const PLAN_BASICO_COPY = {
   seo: {
-    title: 'Membresía anual Basic | L. 6,500/año | Humano SISU',
+    title: 'Membresía anual | L. 6,500/año | Humano SISU',
     description:
-      'Software comercial de expedientes, asistencia por captura manual y recibos de nómina. Membresía anual L. 6,500, sin reloj biométrico. No es un trámite de gobierno.',
+      'Expedientes, marcas a mano y recibos de nómina. L. 6,500 al año, sin reloj biométrico. Software privado de Humano SISU.',
     keywords:
-      'plan básico RRHH Honduras, software empleados microempresa, asistencia manual, recibos de nómina, Humano SISU',
+      'membresía anual RRHH Honduras, software empleados, asistencia manual, recibos de nómina, Humano SISU',
   },
 
   hero: {
     badge: 'Oferta comercial · software privado',
     kicker: 'Humano SISU',
-    headline: 'Expedientes, asistencia y recibos. Un pago al año.',
-    subheadline:
-      'Para cualquier tamaño de equipo. El precio incluye el software de tres módulos. No es una notificación, no es un organismo estatal y no formaliza la empresa ante el IHSS, RAP, SAR ni la Secretaría de Trabajo.',
-    ctaPrimary: 'Solicitar la membresía',
+    headline: 'Expedientes, marcas a mano y recibos. Un pago al año.',
+    subheadline: (price: string) =>
+      `${price} cubre los tres módulos, cualquier tamaño de equipo, sin reloj biométrico. Software privado de Humano SISU — no es un trámite de gobierno.`,
+    ctaPrimary: 'Recibir propuesta y acceso',
     ctaSecondary: 'Probar el sistema',
     priceLabel: 'Membresía anual',
-    price: 'L. 6,500',
-    priceHint: '≈ L. 542 / mes · un solo cargo',
   },
 
   honesty: {
     title: 'Qué estás comprando',
     items: [
       {
-        title: 'Empresa privada de software',
-        body: 'Humano SISU vende una plataforma de recursos humanos. El emisor no es la STSS, el IHSS ni ningún ente público.',
+        title: 'Tres módulos, un precio',
+        body: (price: string) =>
+          `${price} al año cubre expedientes, marcas y recibos. No hay un cobro aparte de un producto “gratis”.`,
       },
       {
-        title: 'El software no es gratis',
-        body: 'L. 6,500 es el precio anual del plan básico. Ese monto cubre el acceso a los tres módulos. No hay una “aportación” aparte de un producto gratuito.',
+        title: 'Dejá el cuaderno',
+        body: 'El colaborador o el encargado registra la entrada y la salida en el sistema. Este plan no trae reloj.',
       },
       {
-        title: 'Asistencia de este plan: captura manual',
-        body: 'El colaborador o el encargado registra la entrada y la salida en el sistema. Este SKU no incluye reloj biométrico ni marcación automática.',
+        title: 'Software privado',
+        body: 'Humano SISU vende una plataforma de recursos humanos. No es un trámite de gobierno.',
       },
     ],
   },
 
   modules: {
     title: 'Tres módulos incluidos',
-    subtitle: 'El mismo alcance del plan básico de cotización: sin reloj, cualquier tamaño de equipo.',
+    subtitle: 'Sin reloj, cualquier tamaño de equipo.',
     items: [
       {
         title: 'Empleados',
         body: 'Expedientes digitales del equipo: datos de contratación y archivo en un solo lugar.',
-        limit: 'No lista retención legal ni backups en esta página; el contrato y los términos sí.',
+        limit: 'Sin límite de empleados en este plan.',
       },
       {
         title: 'Asistencia',
-        body: 'Registro estructurado por input manual. Deja el cuaderno; no automatiza la marcación.',
-        limit: 'Sin terminal, sin huella, sin reconocimiento facial en este plan.',
+        body: 'Registro de entrada y salida a mano. Dejá el cuaderno; no automatiza la marcación.',
+        limit: 'Sin reloj, sin huella, sin reconocimiento facial.',
       },
       {
         title: 'Nómina',
         body: 'Cálculos estandarizados y recibos de pago para el colaborador.',
-        limit: 'El módulo no sustituye la afiliación IHSS/RAP ni la declaración SAR.',
+        limit: 'Recibos en el sistema. La afiliación IHSS o RAP se hace en las instituciones.',
       },
     ],
   },
@@ -67,37 +67,37 @@ export const PLAN_BASICO_COPY = {
   included: {
     title: 'Incluye',
     items: [
-      'Acceso anual a los tres módulos, sin tope de headcount en este SKU',
-      'Activación por cotización en PDF + credenciales al correo',
-      'Modalidad anual únicamente (el plan básico no se vende mes a mes)',
+      'Acceso anual a los tres módulos, sin límite de empleados en este plan',
+      'Propuesta en PDF y credenciales al correo',
+      'Modalidad anual únicamente (este plan no se vende mes a mes)',
     ],
   },
 
   excluded: {
     title: 'No incluye',
     items: [
-      'Reloj biométrico ni continuidad de hardware',
-      'Inscripción o “formalización” mercantil ante el Estado',
-      'Prevención de demandas, representación legal ni “protección ante cualquier auditoría”',
-      'Cálculo de IHSS, RAP, ISR, 13º o 14º como trámite gubernamental',
+      'Reloj biométrico ni servicio de hardware',
+      'Marcación automática por huella o reconocimiento facial',
     ],
   },
 
   form: {
-    title: 'Solicitud de membresía',
+    title: 'Recibir propuesta y acceso',
     subtitle:
-      'Completá el formulario. Recibís la propuesta en PDF y las credenciales en el correo. No hace falta fotografiar un papel ni firmar una hoja en blanco.',
+      'Completá el formulario. Recibís la propuesta en PDF y las credenciales en el correo.',
     owner: 'Nombre del propietario o gerente',
     company: 'Nombre comercial',
     email: 'Correo',
     phone: 'Teléfono o WhatsApp',
     employees: 'Número de colaboradores',
+    employeesHint:
+      'El rango queda en la cotización. El precio de esta membresía no cambia con el tamaño del equipo.',
     country: 'País de operación',
     consent:
       'Acepto los términos de servicio y la política de privacidad. Entiendo que esta es una solicitud comercial de software, no un trámite estatal.',
-    submit: 'Enviar solicitud y recibir PDF',
+    submit: 'Recibir propuesta y acceso',
     submitting: 'Generando propuesta…',
-    moreThanTen: '¿También querés terminales biométricas? Cotizá Premium en /ventas.',
+    moreThanTen: '¿También querés relojes de asistencia? Cotizá con terminales.',
     termsPrefix: 'Acepto los',
     terms: 'términos de servicio',
     privacyJoin: 'y la',
@@ -105,44 +105,44 @@ export const PLAN_BASICO_COPY = {
     consentSuffix:
       '. Entiendo que esta es una solicitud comercial de software, no un trámite estatal.',
     errorConsent: 'Marcá el consentimiento para continuar.',
-    errorName: 'Indique el nombre del responsable.',
-    errorPhone: 'Indique un teléfono de contacto.',
+    errorName: 'Indicá el nombre del responsable.',
+    errorPhone: 'Indicá un teléfono de contacto.',
     whatsapp: 'Escribir por WhatsApp',
     whatsappHint: 'Canal de ventas. No sustituye el PDF ni el contrato.',
   },
 
   faq: [
     {
-      question: '¿Esto es una notificación formal o un llamado del gobierno?',
-      answer:
-        'No. Es una oferta comercial de Humano SISU, software privado de recursos humanos. No emite actos administrativos ni representa a la Secretaría de Trabajo.',
-    },
-    {
-      question: '¿El software es gratuito?',
-      answer:
-        'No. La membresía anual cuesta L. 6,500 y ese precio incluye el acceso a expedientes, asistencia manual y recibos. No hay un producto “gratis” y una “aportación” aparte.',
+      question: '¿Cuánto cuesta y qué cubre?',
+      answer: (price: string) =>
+        `${price} al año. Ese precio incluye expedientes, marcas a mano y recibos. No hay un producto “gratis” y un cobro aparte.`,
     },
     {
       question: '¿La asistencia es biométrica?',
       answer:
-        'En este plan, no. La asistencia se carga a mano en el sistema. El reloj biométrico es otro producto; se cotiza aparte.',
+        'En este plan, no. La asistencia se carga a mano en el sistema. El reloj se cotiza aparte.',
+    },
+    {
+      question: '¿Qué pasa después de enviar el formulario?',
+      answer:
+        'Recibís la propuesta en PDF y las credenciales en el correo. WhatsApp es un canal de seguimiento, no un contrato.',
     },
     {
       question: '¿Esto formaliza mi empresa?',
       answer:
-        'Digitaliza controles internos de personal. No constituye la sociedad, no afilia al IHSS/RAP y no inscribe ante el SAR. Esa formalización se hace en las instituciones públicas correspondientes.',
+        'Digitaliza controles internos de personal. No constituye la sociedad, no afilia al IHSS o RAP y no inscribe ante el SAR.',
     },
     {
-      question: '¿Cómo se cierra la compra?',
+      question: '¿Esto es una notificación o un llamado del gobierno?',
       answer:
-        'El formulario genera la cotización en PDF y envía credenciales al correo. WhatsApp es un canal de seguimiento, no un contrato por foto de una firma vacía.',
+        'No. Es una oferta comercial de Humano SISU, software privado de recursos humanos.',
     },
   ],
 
   close: {
-    headline: 'Un plan claro: tres módulos, un pago al año.',
-    sub: 'Precio visible. Alcance visible. Cierre por cotización, no por papel fotografiado.',
+    headline: 'Tres módulos, un pago al año.',
+    sub: 'Precio visible. Alcance visible. PDF y credenciales al correo.',
     primary: 'Ir al formulario',
-    secondary: 'Cotización completa',
+    secondary: 'Cotizá con relojes',
   },
 } as const
