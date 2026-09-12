@@ -33,7 +33,6 @@ import {
 } from '../../lib/ventas/business-rules'
 import {
   resolveVentasProductSelection,
-  VENTAS_BASIC_MODULE_LABELS,
 } from '../../lib/ventas/product-catalog'
 import { isCountryCode, currencyForCountryCode, type CountryCode } from '../../lib/country/supported'
 import {
@@ -87,6 +86,39 @@ const defaultForm = (country: CountryCode): QuotationRequest => ({
 })
 
 const VENTAS_WIZARD_STEPS: [string, string, string] = ['Alcance', 'Empresa', 'Entrega']
+
+function BooleanSwitch({
+  checked,
+  onChange,
+  label,
+}: {
+  checked: boolean
+  onChange: (next: boolean) => void
+  label: string
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      onClick={() => onChange(!checked)}
+      className="flex w-full items-center justify-between gap-4 rounded-xl border border-white/15 bg-white/5 px-4 py-3.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/70"
+    >
+      <span className="text-white text-sm font-medium">{label}</span>
+      <span
+        className={`relative h-7 w-12 shrink-0 rounded-full transition-colors ${
+          checked ? 'bg-blue-500' : 'bg-white/20'
+        }`}
+      >
+        <span
+          className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-transform duration-200 ${
+            checked ? 'translate-x-5' : 'translate-x-0.5'
+          }`}
+        />
+      </span>
+    </button>
+  )
+}
 
 function wizardStepIndex(step: WizardStep): number {
   if (step === 'intro') return 0
@@ -191,9 +223,6 @@ export default function CotizacionGuiadaLead({
   })
   const monthlyMin = formLimits.monthly_min_employees ?? VENTAS_MONTHLY_MIN_EMPLOYEES
   const maxTerminals = formLimits.max_auto_quote_terminals ?? VENTAS_MAX_AUTO_QUOTE_TERMINALS
-  const membershipPctLabel = Math.round(
-    (formLimits.membership_discount_pct ?? VENTAS_MEMBERSHIP_DISCOUNT_PCT) * 100
-  )
   const monthlyAvailable =
     !product.forceAnnual && isMonthlyModalityAvailable(employeesCount, formLimits)
   const matchedTier = findPublicTierForEmployees(employeesCount, publicTiers)
@@ -465,69 +494,28 @@ export default function CotizacionGuiadaLead({
                       )}
                     </div>
 
-                    {!product.includeTerminals && (
-                      <div className="rounded-xl border border-white/15 bg-white/5 p-4 space-y-3">
-                        <p className="text-white font-medium text-sm">{copy.scope.basicTitle}</p>
-                        <p className="text-brand-300 text-xs">{copy.scope.basicBody}</p>
-                        <ul className="text-xs text-brand-200 space-y-1">
-                          {VENTAS_BASIC_MODULE_LABELS.map((mod) => (
-                            <li key={mod}>{mod}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-
-                    <label className="flex items-start gap-3 rounded-xl border border-white/15 bg-white/5 p-4 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        className="mt-1"
+                    <div className="space-y-3">
+                      <BooleanSwitch
+                        label={copy.scope.membershipLabel}
+                        checked={!!formData.affiliate_membership}
+                        onChange={(next) => patchForm({ affiliate_membership: next })}
+                      />
+                      <BooleanSwitch
+                        label={copy.scope.terminalsLabel}
                         checked={!!formData.include_terminals}
-                        onChange={(e) =>
+                        onChange={(next) =>
                           patchForm({
-                            include_terminals: e.target.checked,
-                            complement_biometric: e.target.checked,
+                            include_terminals: next,
+                            complement_biometric: next,
                           })
                         }
                       />
-                      <span>
-                        <span className="text-white text-sm">{copy.scope.terminalsLabel}</span>
-                        <span className="block text-brand-400 text-xs mt-1">
-                          {copy.scope.terminalsHint}
-                        </span>
-                      </span>
-                    </label>
-
-                    {product.includeTerminals && (
-                      <label className="flex items-start gap-3 rounded-xl border border-white/15 bg-white/5 p-4 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          className="mt-1"
-                          checked={!!formData.affiliate_membership}
-                          onChange={(e) => patchForm({ affiliate_membership: e.target.checked })}
-                        />
-                        <span>
-                          <span className="text-white text-sm">{copy.scope.membershipLabel}</span>
-                          <span className="block text-brand-400 text-xs mt-1">
-                            {copy.scope.membershipHint(membershipPctLabel)}
-                          </span>
-                        </span>
-                      </label>
-                    )}
-
-                    <label className="flex items-start gap-3 rounded-xl border border-white/15 bg-white/5 p-4 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        className="mt-1"
+                      <BooleanSwitch
+                        label={copy.scope.enterpriseLabel}
                         checked={!!formData.include_enterprise}
-                        onChange={(e) => patchForm({ include_enterprise: e.target.checked })}
+                        onChange={(next) => patchForm({ include_enterprise: next })}
                       />
-                      <span>
-                        <span className="text-white text-sm">{copy.scope.enterpriseLabel}</span>
-                        <span className="block text-brand-400 text-xs mt-1">
-                          {copy.scope.enterpriseHint}
-                        </span>
-                      </span>
-                    </label>
+                    </div>
 
                     <div className={`grid grid-cols-1 ${product.chargeHardware ? 'sm:grid-cols-2' : ''} gap-4`}>
                       <div>

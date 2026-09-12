@@ -15,18 +15,9 @@ export const COTIZACION_GUIADA_COPY = {
     subtitle: 'País, tamaño del equipo y modalidad: así ajustamos la propuesta.',
     tierHint: (rangeLabel: string, country: string) =>
       `Con ${rangeLabel} en ${country}, armamos el alcance con leyes locales aplicadas.`,
-    basicTitle: 'Membresía anual (sin terminales)',
-    basicBody:
-      'Expedientes digitales, asistencia por input manual y recibos de nómina. Disponible para cualquier tamaño de equipo. Sin reloj biométrico.',
-    terminalsLabel: 'Incluir terminales biométricas (plan Premium)',
-    terminalsHint:
-      'Cotiza el rango de empleados más las terminales del cupo. Las extras se venden aparte. Activa companies.plan_type = premium.',
-    membershipLabel: 'Aplicar membresía sobre el rango con terminales',
-    membershipHint: (pct: number) =>
-      `Descuenta ${pct}% el rango con terminales. La membresía no se suma como SKU aparte de L. 6,500.`,
-    enterpriseLabel: 'Add-on Enterprise',
-    enterpriseHint:
-      'Capa opcional sobre cualquier rango. Activa companies.plan_type = enterprise.',
+    membershipLabel: 'Contratar afiliación anual',
+    terminalsLabel: 'Enlazar relojes de asistencia',
+    enterpriseLabel: 'Agregar módulos empresariales',
   },
 
   company: {
