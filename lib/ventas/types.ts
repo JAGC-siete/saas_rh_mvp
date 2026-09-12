@@ -55,7 +55,7 @@ export interface QuotationRequest {
   complement_biometric?: boolean
   /** Contrata el rango con terminales (plan Premium). */
   include_terminals?: boolean
-  /** Afiliación anual: L. 6,500 y, si hay relojes, 10% sobre el rango. */
+  /** Afiliación anual: L. 6,500 y, si hay relojes, % sobre el total anual de software. */
   affiliate_membership?: boolean
   /** Add-on Enterprise, cualquier rango. */
   include_enterprise?: boolean

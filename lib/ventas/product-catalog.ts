@@ -36,6 +36,7 @@ export type VentasProductSelection = {
   includeEnterprise: boolean
   chargeHardware: boolean
   forceAnnual: boolean
+  /** 15% (configurable) sobre rango + afiliación + Enterprise. Hardware fuera. */
   applyMembershipDiscount: boolean
   /** Suma basic_annual_price al rango con relojes. Sin relojes esa cifra ya es el total. */
   chargeMembershipFee: boolean

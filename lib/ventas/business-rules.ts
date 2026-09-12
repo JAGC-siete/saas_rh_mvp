@@ -17,8 +17,8 @@ export const VENTAS_MICRO_MAX_EMPLOYEES = 10
 /** Precio anual de la afiliación. Sin relojes es el total; con relojes se suma al rango. */
 export const VENTAS_BASIC_ANNUAL_PRICE = 6500
 
-/** Descuento de membresía sobre un rango con terminales. */
-export const VENTAS_MEMBERSHIP_DISCOUNT_PCT = 0.1
+/** Descuento por afiliación + relojes sobre el total anual de software (no hardware). */
+export const VENTAS_MEMBERSHIP_DISCOUNT_PCT = 0.15
 
 /** Fallback del add-on Enterprise si plan_catalog.annual_price es null. */
 export const VENTAS_ENTERPRISE_ANNUAL_PRICE = 0
@@ -58,7 +58,7 @@ export type VentasBusinessRules = {
   micro_max_employees: number
   /** Precio anual de la afiliación (sin relojes = total; con relojes se suma). */
   basic_annual_price: number
-  /** Descuento sobre el rango con relojes si hay afiliación anual. */
+  /** Descuento sobre el total anual de software si hay afiliación + relojes. */
   membership_discount_pct: number
   /** Add-on Enterprise anual (fallback si plan_catalog no tiene precio). */
   enterprise_annual_price: number
@@ -88,6 +88,21 @@ export const DEFAULT_VENTAS_BUSINESS_RULES: VentasBusinessRules = {
 function finiteOr(n: unknown, fallback: number): number {
   const v = typeof n === 'number' ? n : typeof n === 'string' ? Number(n) : NaN
   return Number.isFinite(v) ? v : fallback
+}
+
+/** Acepta fracción (0.15) o porcentaje (15). Tope 95%. */
+export function normalizeMembershipDiscountPct(raw: unknown, fallback: number): number {
+  const v = finiteOr(raw, fallback)
+  const asFraction = v > 1 ? v / 100 : v
+  return Math.min(0.95, Math.max(0, asFraction))
+}
+
+export function membershipDiscountPctToPercent(pct: number): number {
+  return Math.round(normalizeMembershipDiscountPct(pct, 0) * 100)
+}
+
+export function formatVentasMembershipDiscountLabel(pct: number): string {
+  return `Descuento ${membershipDiscountPctToPercent(pct)}% sobre total anual`
 }
 
 export function mergeVentasBusinessRules(raw?: Partial<VentasBusinessRules> | null): VentasBusinessRules {
@@ -131,9 +146,9 @@ export function mergeVentasBusinessRules(raw?: Partial<VentasBusinessRules> | nu
       Math.trunc(finiteOr(raw?.micro_max_employees, d.micro_max_employees))
     ),
     basic_annual_price: Math.max(0, finiteOr(raw?.basic_annual_price, d.basic_annual_price)),
-    membership_discount_pct: Math.min(
-      0.95,
-      Math.max(0, finiteOr(raw?.membership_discount_pct, d.membership_discount_pct))
+    membership_discount_pct: normalizeMembershipDiscountPct(
+      raw?.membership_discount_pct,
+      d.membership_discount_pct
     ),
     enterprise_annual_price: Math.max(
       0,

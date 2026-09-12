@@ -5,6 +5,7 @@ import {
   VENTAS_ANNUAL_TERMINALS_INCLUDED_MIN_EMPLOYEES,
   VENTAS_EXTRA_TERMINALS_DISCOUNT_PCT,
   VENTAS_HARDWARE_SALE_UNIT_PRICE,
+  VENTAS_MEMBERSHIP_DISCOUNT_PCT,
   VENTAS_MONTHLY_MIN_EMPLOYEES,
   annualIncludesBiometricTerminals,
   computeAnnualHardwareCharges,
@@ -12,6 +13,8 @@ import {
   hardwareSaleTotal,
   hardwareSaleVolumeDiscountPct,
   isMonthlyModalityAvailable,
+  membershipDiscountPctToPercent,
+  mergeVentasBusinessRules,
   quoteIncludesBiometricTerminals,
   resolveFormMaxTerminals,
   resolveHardwareMode,
@@ -256,5 +259,13 @@ describe('ventas business rules', () => {
     assert.equal(top.includedCount, 3)
     assert.equal(top.extraCount, 0)
     assert.equal(top.sale, null)
+  })
+
+  it('membership discount default is 15% and Super Admin percent 15 stores as 0.15', () => {
+    assert.equal(VENTAS_MEMBERSHIP_DISCOUNT_PCT, 0.15)
+    assert.equal(mergeVentasBusinessRules(null).membership_discount_pct, 0.15)
+    assert.equal(mergeVentasBusinessRules({ membership_discount_pct: 15 }).membership_discount_pct, 0.15)
+    assert.equal(mergeVentasBusinessRules({ membership_discount_pct: 0.15 }).membership_discount_pct, 0.15)
+    assert.equal(membershipDiscountPctToPercent(0.15), 15)
   })
 })

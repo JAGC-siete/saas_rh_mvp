@@ -11,7 +11,7 @@ import { resolveVentasProductSelection, VENTAS_BASIC_QUOTE_FLAGS } from '../lib/
 import { computeVentasQuotationQuote } from '../lib/ventas/compute-quote'
 import { getVentasModalityDefinition } from '../lib/ventas/modality-includes'
 import { getContractIncludesLabels } from '../lib/ventas/quote-display'
-import { resolveTierByEmployees } from '../lib/ventas/pricing'
+import { resolveTierByEmployees, roundMoney } from '../lib/ventas/pricing'
 import { ventasScopeErrors } from '../lib/ventas-game/ventas-form'
 import { hasValidationErrors } from '../lib/forms/validation-errors'
 import { planTypeFromQuoteFlags } from '../lib/billing/tier-to-plan'
@@ -80,7 +80,7 @@ describe('ventas product catalog', () => {
     assert.equal(p.commercialPlanType, 'premium')
   })
 
-  it('membership without terminals does not apply 10% and does not double the fee', () => {
+  it('membership without terminals does not apply affiliation % and does not double the fee', () => {
     const p = resolveVentasProductSelection({
       employeesCount: 30,
       affiliateMembership: true,
@@ -175,7 +175,7 @@ describe('ventas product catalog', () => {
     assert.ok((quote.hardware_sale_total || 0) > 0 || (quote.terminals_included_count || 0) >= 1)
   })
 
-  it('afiliación + relojes suma L. 6500 y descuenta 10% del rango', () => {
+  it('afiliación + relojes suma L. 6500 y descuenta 15% del total anual de software', () => {
     assert.ok(regularTier)
     const { quote, product } = computeVentasQuotationQuote({
       employeesCount: 30,
@@ -191,14 +191,14 @@ describe('ventas product catalog', () => {
     assert.equal(product.chargeMembershipFee, true)
     assert.equal(quote.membership_applied, true)
     assert.equal(quote.membership_discount_pct, VENTAS_MEMBERSHIP_DISCOUNT_PCT)
-    const expected = Math.round(Number(regularTier.price) * VENTAS_MEMBERSHIP_DISCOUNT_PCT * 100) / 100
+    const contracted = roundMoney(Number(regularTier.price) + VENTAS_BASIC_ANNUAL_PRICE)
+    const expected = roundMoney(contracted * VENTAS_MEMBERSHIP_DISCOUNT_PCT)
     assert.equal(quote.membership_discount_amount, expected)
     assert.equal(quote.membership_annual_price, VENTAS_BASIC_ANNUAL_PRICE)
-    const softwareAfter = Math.round((Number(regularTier.price) - expected) * 100) / 100
-    assert.equal(quote.annual_total, Math.round((softwareAfter + VENTAS_BASIC_ANNUAL_PRICE) * 100) / 100)
+    assert.equal(quote.annual_total, roundMoney(contracted - expected))
   })
 
-  it('Enterprise add-on is after software discount and not 10%-ed', () => {
+  it('afiliación + relojes + Enterprise aplica 15% al total anual de software', () => {
     assert.ok(regularTier)
     const enterprisePrice = 12000
     const { quote } = computeVentasQuotationQuote({
@@ -214,15 +214,40 @@ describe('ventas product catalog', () => {
       businessRules: rules,
       coupon: { applied: false, discountPct: 0, code: null },
     })
-    const softwareAfter = Math.round(Number(regularTier.price) * (1 - VENTAS_MEMBERSHIP_DISCOUNT_PCT) * 100) / 100
+    const contracted = roundMoney(
+      Number(regularTier.price) + VENTAS_BASIC_ANNUAL_PRICE + enterprisePrice
+    )
+    const expected = roundMoney(contracted * VENTAS_MEMBERSHIP_DISCOUNT_PCT)
     assert.equal(quote.include_enterprise, true)
     assert.equal(quote.enterprise_annual_price, enterprisePrice)
     assert.equal(quote.membership_annual_price, VENTAS_BASIC_ANNUAL_PRICE)
+    assert.equal(quote.membership_discount_amount, expected)
+    assert.equal(quote.annual_total, roundMoney(contracted - expected))
+    assert.equal(quote.commercial_plan_type, 'enterprise')
+  })
+
+  it('relojes + Enterprise sin afiliación no aplica el %', () => {
+    assert.ok(regularTier)
+    const enterprisePrice = 12000
+    const { quote } = computeVentasQuotationQuote({
+      employeesCount: 30,
+      billingModality: 'annual',
+      terminalsCount: 1,
+      includeTerminals: true,
+      affiliateMembership: false,
+      includeEnterprise: true,
+      enterpriseAnnualPrice: enterprisePrice,
+      listCurrency: 'HNL',
+      tier: regularTier,
+      businessRules: rules,
+      coupon: { applied: false, discountPct: 0, code: null },
+    })
+    assert.equal(quote.membership_applied, false)
+    assert.equal(quote.membership_discount_amount, 0)
     assert.equal(
       quote.annual_total,
-      Math.round((softwareAfter + VENTAS_BASIC_ANNUAL_PRICE + enterprisePrice) * 100) / 100
+      roundMoney(Number(regularTier.price) + enterprisePrice)
     )
-    assert.equal(quote.commercial_plan_type, 'enterprise')
   })
 })
 

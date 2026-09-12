@@ -57,16 +57,7 @@ export function computeVentasQuotationQuote(params: {
       ? roundMoney(rules.basic_annual_price)
       : roundMoney(Number(params.tier.price))
 
-  const membershipPct = product.applyMembershipDiscount ? rules.membership_discount_pct : 0
-  const membershipDiscountAmount = roundMoney(annualSubtotal * membershipPct)
-  const afterMembership = roundMoney(annualSubtotal - membershipDiscountAmount)
-
-  const couponPct = product.kind === 'basic' ? 0 : params.coupon.applied ? params.coupon.discountPct : 0
-  const couponDiscountAmount = roundMoney(afterMembership * couponPct)
-  const softwareDiscountAmount = roundMoney(membershipDiscountAmount + couponDiscountAmount)
-  const softwareTotal = roundMoney(annualSubtotal - softwareDiscountAmount)
   const membershipFee = product.chargeMembershipFee ? roundMoney(rules.basic_annual_price) : 0
-
   const enterpriseList = product.includeEnterprise
     ? roundMoney(
         Number.isFinite(params.enterpriseAnnualPrice)
@@ -74,7 +65,22 @@ export function computeVentasQuotationQuote(params: {
           : rules.enterprise_annual_price
       )
     : 0
-  const annualTotal = roundMoney(softwareTotal + membershipFee + enterpriseList)
+
+  const contractedAnnual = roundMoney(annualSubtotal + membershipFee + enterpriseList)
+  const membershipPct = product.applyMembershipDiscount ? rules.membership_discount_pct : 0
+  const membershipDiscountAmount = product.applyMembershipDiscount
+    ? roundMoney(contractedAnnual * membershipPct)
+    : 0
+
+  const couponPct = product.kind === 'basic' ? 0 : params.coupon.applied ? params.coupon.discountPct : 0
+  const couponBase = product.applyMembershipDiscount
+    ? roundMoney(contractedAnnual - membershipDiscountAmount)
+    : annualSubtotal
+  const couponDiscountAmount = roundMoney(couponBase * couponPct)
+  const softwareDiscountAmount = roundMoney(membershipDiscountAmount + couponDiscountAmount)
+  const annualTotal = product.applyMembershipDiscount
+    ? roundMoney(contractedAnnual - softwareDiscountAmount)
+    : roundMoney(annualSubtotal - couponDiscountAmount + membershipFee + enterpriseList)
   const monthlySoftwareTotal = roundMoney(annualTotal / 12)
 
   const terminalsForPricing = product.chargeHardware

@@ -7,6 +7,7 @@ import { Button } from '../../../components/ui/button'
 import { useNotificationContext } from '../../../components/NotificationProvider'
 import {
   DEFAULT_VENTAS_BUSINESS_RULES,
+  membershipDiscountPctToPercent,
   mergeVentasBusinessRules,
   resolveHardwareMode,
   type VentasAnnualTerminalMode,
@@ -306,7 +307,7 @@ export default function VentasConfigPage() {
                 <p className="text-xs uppercase tracking-[0.3em] text-white/60">Landing /ventas</p>
                 <h1 className="text-3xl font-semibold text-white">Configuración de Ventas</h1>
                 <p className="text-white/70">
-                  Rangos, cupones, modalidades y terminales — sin deploy.
+                  Rangos, afiliación, cupones y terminales — sin deploy.
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -444,6 +445,60 @@ export default function VentasConfigPage() {
 
             <Card variant="liquid" className="border-white/10">
               <CardHeader>
+                <CardTitle className="text-white">Afiliación anual</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {loading ? (
+                  <div className="text-white/70 text-sm">Cargando…</div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs text-white/70 mb-1">
+                        Costo de afiliación anual (lista HNL)
+                      </label>
+                      <input
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        className="input-glass w-full text-white"
+                        value={businessRules.basic_annual_price}
+                        onChange={(e) =>
+                          updateRules({ basic_annual_price: Number(e.target.value) })
+                        }
+                      />
+                      <p className="text-xs text-white/50 mt-1">
+                        Sin relojes este monto es el total. Con relojes se suma al rango.
+                      </p>
+                    </div>
+                    <div>
+                      <label className="block text-xs text-white/70 mb-1">
+                        Descuento por afiliación (%)
+                      </label>
+                      <input
+                        type="number"
+                        min={0}
+                        max={95}
+                        step={1}
+                        className="input-glass w-full text-white"
+                        value={membershipDiscountPctToPercent(businessRules.membership_discount_pct)}
+                        onChange={(e) =>
+                          updateRules({
+                            membership_discount_pct: Number(e.target.value) / 100,
+                          })
+                        }
+                      />
+                      <p className="text-xs text-white/50 mt-1">
+                        Solo con relojes + afiliación. Se aplica al total anual de software (rango +
+                        afiliación + Enterprise). Hardware no entra.
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card variant="liquid" className="border-white/10">
+              <CardHeader>
                 <CardTitle className="text-white">Modalidades y hardware</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -498,21 +553,6 @@ export default function VentasConfigPage() {
                       </div>
                       <div>
                         <label className="block text-xs text-white/70 mb-1">
-                          Precio anual membresía Basic (sin terminales)
-                        </label>
-                        <input
-                          type="number"
-                          min={0}
-                          step="0.01"
-                          className="input-glass w-full text-white"
-                          value={businessRules.basic_annual_price}
-                          onChange={(e) =>
-                            updateRules({ basic_annual_price: Number(e.target.value) })
-                          }
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs text-white/70 mb-1">
                           Tope microempresa (empleados)
                         </label>
                         <input
@@ -522,22 +562,6 @@ export default function VentasConfigPage() {
                           value={businessRules.micro_max_employees}
                           onChange={(e) =>
                             updateRules({ micro_max_employees: Number(e.target.value) })
-                          }
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs text-white/70 mb-1">
-                          Descuento afiliación (rango + relojes)
-                        </label>
-                        <input
-                          type="number"
-                          min={0}
-                          max={0.95}
-                          step="0.01"
-                          className="input-glass w-full text-white"
-                          value={businessRules.membership_discount_pct}
-                          onChange={(e) =>
-                            updateRules({ membership_discount_pct: Number(e.target.value) })
                           }
                         />
                       </div>
@@ -618,9 +642,9 @@ export default function VentasConfigPage() {
                       <p className="text-xs text-white/50">
                         Mensual siempre usa continuidad. Sin terminales = afiliación anual (3 módulos, anual). Con
                         terminales = rango vigente + hardware (plan Premium). Afiliación + terminales = se suma el
-                        precio de afiliación y se descuenta el % configurado sobre el rango. Enterprise es add-on
-                        opcional (costo en Planes y módulos). La excepción de terminales por rango gana sobre el
-                        umbral Auto.
+                        costo de afiliación y se descuenta el % sobre el total anual de software (rango + afiliación
+                        + Enterprise). Hardware no entra en ese %. Enterprise es add-on opcional (costo en Planes y
+                        módulos). La excepción de terminales por rango gana sobre el umbral Auto.
                       </p>
                     </div>
                   </>

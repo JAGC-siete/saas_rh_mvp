@@ -1,6 +1,7 @@
 import type { QuotationQuote, CurrencyCode } from './types'
 import { formatMoney, roundMoney } from './pricing'
 import {
+  formatVentasMembershipDiscountLabel,
   mergeVentasBusinessRules,
   quoteIncludesBiometricTerminals,
   resolveFormMaxTerminals,
@@ -274,6 +275,17 @@ export function buildMonthlyPricingBreakdownLines(quote: QuotationQuote, fmt: (n
     `- Software (mensual): ${fmt(quote.monthly_software_total)} / mes`,
     `- Continuidad de hardware: ${fmt(quote.monthly_hardware_fee)} / mes`,
   ]
+  if ((quote.membership_annual_price || 0) > 0) {
+    lines.push(`- Afiliación anual: ${fmt((quote.membership_annual_price || 0) / 12)} / mes`)
+  }
+  if (quote.include_enterprise) {
+    lines.push(`- Add-on Enterprise: ${fmt((quote.enterprise_annual_price || 0) / 12)} / mes`)
+  }
+  if (quote.membership_applied && (quote.membership_discount_amount || 0) > 0) {
+    lines.push(
+      `- ${formatVentasMembershipDiscountLabel(quote.membership_discount_pct || 0)}: −${fmt((quote.membership_discount_amount || 0) / 12)} / mes`
+    )
+  }
   if (quote.coupon_applied) {
     const couponName = quote.coupon_code_applied?.trim()
     const label = couponName
@@ -284,18 +296,6 @@ export function buildMonthlyPricingBreakdownLines(quote: QuotationQuote, fmt: (n
       (quote.annual_discount_amount || 0) - (quote.membership_applied ? quote.membership_discount_amount || 0 : 0)
     )
     lines.push(`- ${label}: −${fmt(couponAmt / 12)} / mes`)
-  }
-  if (quote.membership_applied && (quote.membership_discount_amount || 0) > 0) {
-    const pct = Math.round((quote.membership_discount_pct || 0) * 100)
-    lines.push(
-      `- Descuento ${pct}% sobre el plan: −${fmt((quote.membership_discount_amount || 0) / 12)} / mes`
-    )
-  }
-  if ((quote.membership_annual_price || 0) > 0) {
-    lines.push(`- Afiliación anual: ${fmt((quote.membership_annual_price || 0) / 12)} / mes`)
-  }
-  if (quote.include_enterprise) {
-    lines.push(`- Add-on Enterprise: ${fmt((quote.enterprise_annual_price || 0) / 12)} / mes`)
   }
   lines.push(`- Total mensual cotizado: ${fmt(quote.monthly_total)} / mes`)
   lines.push(
@@ -333,6 +333,17 @@ export function buildModalityPerksSummaryLines(
 export function buildAnnualPricingBreakdownLines(quote: QuotationQuote, fmt: (n: number) => string): string[] {
   const employeesCount = quote.employees_count || quote.tier.min_employees
   const lines: string[] = [`- Subtotal anual (licencia): ${fmt(quote.annual_subtotal)} / año`]
+  if ((quote.membership_annual_price || 0) > 0) {
+    lines.push(`- Afiliación anual: ${fmt(quote.membership_annual_price || 0)} / año`)
+  }
+  if (quote.include_enterprise) {
+    lines.push(`- Add-on Enterprise: ${fmt(quote.enterprise_annual_price || 0)} / año`)
+  }
+  if (quote.membership_applied && (quote.membership_discount_amount || 0) > 0) {
+    lines.push(
+      `- ${formatVentasMembershipDiscountLabel(quote.membership_discount_pct || 0)}: −${fmt(quote.membership_discount_amount || 0)} / año`
+    )
+  }
   if (quote.coupon_applied) {
     const couponName = quote.coupon_code_applied?.trim()
     const label = couponName ? `Descuento por cupón «${couponName}»` : 'Descuento por cupón'
@@ -341,16 +352,6 @@ export function buildAnnualPricingBreakdownLines(quote: QuotationQuote, fmt: (n:
       (quote.annual_discount_amount || 0) - (quote.membership_applied ? quote.membership_discount_amount || 0 : 0)
     )
     lines.push(`- ${label}: −${fmt(couponAmt)} / año`)
-  }
-  if (quote.membership_applied && (quote.membership_discount_amount || 0) > 0) {
-    const pct = Math.round((quote.membership_discount_pct || 0) * 100)
-    lines.push(`- Descuento ${pct}% sobre el plan: −${fmt(quote.membership_discount_amount || 0)} / año`)
-  }
-  if ((quote.membership_annual_price || 0) > 0) {
-    lines.push(`- Afiliación anual: ${fmt(quote.membership_annual_price || 0)} / año`)
-  }
-  if (quote.include_enterprise) {
-    lines.push(`- Add-on Enterprise: ${fmt(quote.enterprise_annual_price || 0)} / año`)
   }
   lines.push(`- Total anual cotizado: ${fmt(quote.annual_total)} / año`)
   if ((quote.hardware_sale_total || 0) > 0) {

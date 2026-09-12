@@ -3,6 +3,7 @@ import { formatMoney, roundMoney } from './pricing'
 import { hardwareFeeMonthly } from './modality-includes'
 import {
   computeAnnualHardwareCharges,
+  formatVentasMembershipDiscountLabel,
   quoteIncludesBiometricTerminals,
   resolveHardwareMode,
   shouldChargeHardwareContinuity,
@@ -331,28 +332,33 @@ export function buildQuotationPlanSummary(params: {
 
   if (hasSoftwareDiscount) {
     const pctLabel = Math.round((quote.discount_pct_applied || 0) * 100)
-    const membershipPctLabel = Math.round((quote.membership_discount_pct || 0) * 100)
     const couponName = quote.coupon_code_applied?.trim()
     const couponLabel = couponName
       ? `Cupón promocional «${couponName}» (−${pctLabel}%)`
       : `Descuento promocional (−${pctLabel}%)`
+    const membershipFee = Number(quote.membership_annual_price) || 0
 
     lines.push({
       label: 'Precio Software (lista)',
       value: `${fmt(isMonthly ? quote.annual_subtotal / 12 : quote.annual_subtotal)} / ${periodLabel}`,
     })
-    if (membershipAmt > 0) {
-      lines.push({
-        label: `Descuento ${membershipPctLabel}% sobre el plan`,
-        value: `−${fmt(isMonthly ? membershipAmt / 12 : membershipAmt)} / ${periodLabel}`,
-        variant: 'discount',
-      })
-    }
-    const membershipFee = Number(quote.membership_annual_price) || 0
     if (membershipFee > 0) {
       lines.push({
         label: 'Afiliación anual',
         value: `${fmt(isMonthly ? membershipFee / 12 : membershipFee)} / ${periodLabel}`,
+      })
+    }
+    if (membershipAmt > 0 && quote.include_enterprise) {
+      lines.push({
+        label: 'Add-on Enterprise',
+        value: `${fmt(isMonthly ? enterpriseAmt / 12 : enterpriseAmt)} / ${periodLabel}`,
+      })
+    }
+    if (membershipAmt > 0) {
+      lines.push({
+        label: formatVentasMembershipDiscountLabel(quote.membership_discount_pct || 0),
+        value: `−${fmt(isMonthly ? membershipAmt / 12 : membershipAmt)} / ${periodLabel}`,
+        variant: 'discount',
       })
     }
     if (couponAmt > 0) {
@@ -369,7 +375,7 @@ export function buildQuotationPlanSummary(params: {
     })
   }
 
-  if (quote.include_enterprise) {
+  if (quote.include_enterprise && membershipAmt <= 0) {
     lines.push({
       label: 'Add-on Enterprise',
       value: `${fmt(isMonthly ? enterpriseAmt / 12 : enterpriseAmt)} / ${periodLabel}`,
