@@ -153,9 +153,10 @@ describe('ventas business rules', () => {
     assert.equal(charges.sale, null)
   })
 
-  it('fallback matrix: 2–10 sale; 11–100 included cap 2; 101–300 included cap 3', () => {
+  it('fallback matrix: 2–10 included cap 5; 11–100 included cap 2; 101–300 included cap 3', () => {
     const t2 = resolveTierByEmployees(FALLBACK_VENTAS_TIERS, 8)
-    assert.equal(t2?.annual_terminal_mode, 'sale')
+    assert.equal(t2?.annual_terminal_mode, 'included')
+    assert.equal(t2?.included_terminals_max, 5)
     assert.equal(t2?.price, 17507.7)
 
     const t11 = resolveTierByEmployees(FALLBACK_VENTAS_TIERS, 40)

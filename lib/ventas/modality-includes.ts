@@ -16,6 +16,10 @@ import {
   type VentasTierHardwareHints,
 } from './business-rules'
 import {
+  VENTAS_BASIC_MODULE_LABELS,
+  type VentasProductKind,
+} from './product-catalog'
+import {
   convertVentasMoney,
   VENTAS_PRICE_LIST_CURRENCY,
 } from './currency'
@@ -73,6 +77,7 @@ export type VentasModalityContext = {
   currency?: CurrencyCode
   rules?: Partial<VentasBusinessRules> | null
   tier?: VentasTierHardwareHints | null
+  productKind?: VentasProductKind
 }
 
 function employeesFromContext(ctx?: VentasModalityContext): number {
@@ -92,6 +97,22 @@ export function getVentasModalityDefinition(
   const currency = currencyFromContext(ctx)
   const ruleOpts = { rules: ctx?.rules, tier: ctx?.tier }
   const includedCap = resolveIncludedTerminalsCap(ctx?.rules, ctx?.tier)
+  const productKind = ctx?.productKind || 'regular'
+
+  if (productKind === 'basic') {
+    return {
+      modality: 'annual',
+      label: 'Plan básico · Membresía anual',
+      formHint:
+        'Incluye exactamente tres módulos: expedientes digitales, asistencia por input manual y recibos de nómina. Sin reloj biométrico. Disponible para cualquier tamaño de equipo.',
+      includes: [...VENTAS_BASIC_MODULE_LABELS],
+      excludesOrNotes: [
+        'Sin reloj biométrico. Para Premium, incluya terminales en la cotización del rango vigente.',
+      ],
+      successSummaryLine:
+        'Membresía anual: expedientes, asistencia manual y recibos de nómina.',
+    }
+  }
 
   if (modality === 'monthly') {
     return {
@@ -258,7 +279,20 @@ export function buildMonthlyPricingBreakdownLines(quote: QuotationQuote, fmt: (n
     const label = couponName
       ? `Descuento por cupón «${couponName}» (aplicado al software anual, prorrateado al mes)`
       : 'Descuento por cupón (aplicado al software anual, prorrateado al mes)'
-    lines.push(`- ${label}: −${fmt(quote.annual_discount_amount / 12)} / mes`)
+    const couponAmt = Math.max(
+      0,
+      (quote.annual_discount_amount || 0) - (quote.membership_applied ? quote.membership_discount_amount || 0 : 0)
+    )
+    lines.push(`- ${label}: −${fmt(couponAmt / 12)} / mes`)
+  }
+  if (quote.membership_applied && (quote.membership_discount_amount || 0) > 0) {
+    const pct = Math.round((quote.membership_discount_pct || 0) * 100)
+    lines.push(
+      `- Membresía (−${pct}% sobre rango con terminales): −${fmt((quote.membership_discount_amount || 0) / 12)} / mes`
+    )
+  }
+  if (quote.include_enterprise) {
+    lines.push(`- Add-on Enterprise: ${fmt((quote.enterprise_annual_price || 0) / 12)} / mes`)
   }
   lines.push(`- Total mensual cotizado: ${fmt(quote.monthly_total)} / mes`)
   lines.push(
@@ -299,7 +333,18 @@ export function buildAnnualPricingBreakdownLines(quote: QuotationQuote, fmt: (n:
   if (quote.coupon_applied) {
     const couponName = quote.coupon_code_applied?.trim()
     const label = couponName ? `Descuento por cupón «${couponName}»` : 'Descuento por cupón'
-    lines.push(`- ${label}: −${fmt(quote.annual_discount_amount)} / año`)
+    const couponAmt = Math.max(
+      0,
+      (quote.annual_discount_amount || 0) - (quote.membership_applied ? quote.membership_discount_amount || 0 : 0)
+    )
+    lines.push(`- ${label}: −${fmt(couponAmt)} / año`)
+  }
+  if (quote.membership_applied && (quote.membership_discount_amount || 0) > 0) {
+    const pct = Math.round((quote.membership_discount_pct || 0) * 100)
+    lines.push(`- Membresía (−${pct}% sobre rango con terminales): −${fmt(quote.membership_discount_amount || 0)} / año`)
+  }
+  if (quote.include_enterprise) {
+    lines.push(`- Add-on Enterprise: ${fmt(quote.enterprise_annual_price || 0)} / año`)
   }
   lines.push(`- Total anual cotizado: ${fmt(quote.annual_total)} / año`)
   if ((quote.hardware_sale_total || 0) > 0) {

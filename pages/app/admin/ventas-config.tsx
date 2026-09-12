@@ -498,6 +498,51 @@ export default function VentasConfigPage() {
                       </div>
                       <div>
                         <label className="block text-xs text-white/70 mb-1">
+                          Precio anual membresía Basic (sin terminales)
+                        </label>
+                        <input
+                          type="number"
+                          min={0}
+                          step="0.01"
+                          className="input-glass w-full text-white"
+                          value={businessRules.basic_annual_price}
+                          onChange={(e) =>
+                            updateRules({ basic_annual_price: Number(e.target.value) })
+                          }
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-white/70 mb-1">
+                          Tope microempresa (empleados)
+                        </label>
+                        <input
+                          type="number"
+                          min={1}
+                          className="input-glass w-full text-white"
+                          value={businessRules.micro_max_employees}
+                          onChange={(e) =>
+                            updateRules({ micro_max_employees: Number(e.target.value) })
+                          }
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-white/70 mb-1">
+                          Descuento membresía (rango + terminales)
+                        </label>
+                        <input
+                          type="number"
+                          min={0}
+                          max={0.95}
+                          step="0.01"
+                          className="input-glass w-full text-white"
+                          value={businessRules.membership_discount_pct}
+                          onChange={(e) =>
+                            updateRules({ membership_discount_pct: Number(e.target.value) })
+                          }
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-white/70 mb-1">
                           Precio venta unitario terminal
                         </label>
                         <input
@@ -571,8 +616,10 @@ export default function VentasConfigPage() {
                         </p>
                       ))}
                       <p className="text-xs text-white/50">
-                        Mensual siempre usa continuidad. La excepción por rango gana sobre el umbral
-                        Auto. Form máx. terminales = «Máx. terminales cotización web».
+                        Mensual siempre usa continuidad. Sin terminales = membresía Basic (3 módulos, anual). Con
+                        terminales = rango vigente + hardware (plan Premium). Membresía sobre rango con terminales =
+                        el descuento configurado (no se suma L. 6,500). Enterprise es add-on opcional (costo en Planes
+                        y módulos). La excepción de terminales por rango gana sobre el umbral Auto.
                       </p>
                     </div>
                   </>

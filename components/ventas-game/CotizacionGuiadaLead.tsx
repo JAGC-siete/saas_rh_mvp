@@ -21,12 +21,20 @@ import {
   resolveHardwareMode,
   resolveIncludedTerminalsCap,
   VENTAS_ANNUAL_TERMINALS_INCLUDED_MIN_EMPLOYEES,
+  VENTAS_BASIC_ANNUAL_PRICE,
+  VENTAS_ENTERPRISE_ANNUAL_PRICE,
   VENTAS_EXTRA_TERMINALS_DISCOUNT_PCT,
   VENTAS_HARDWARE_SALE_UNIT_PRICE,
   VENTAS_MAX_AUTO_QUOTE_TERMINALS,
+  VENTAS_MEMBERSHIP_DISCOUNT_PCT,
+  VENTAS_MICRO_MAX_EMPLOYEES,
   VENTAS_MONTHLY_MIN_EMPLOYEES,
   type VentasAnnualTerminalMode,
 } from '../../lib/ventas/business-rules'
+import {
+  resolveVentasProductSelection,
+  VENTAS_BASIC_MODULE_LABELS,
+} from '../../lib/ventas/product-catalog'
 import { isCountryCode, currencyForCountryCode, type CountryCode } from '../../lib/country/supported'
 import {
   buildMetaApiTrackingFields,
@@ -72,6 +80,10 @@ const defaultForm = (country: CountryCode): QuotationRequest => ({
   sector_rubro: '',
   coupon_code: '',
   consent_newsletter: true,
+  include_terminals: true,
+  complement_biometric: true,
+  affiliate_membership: false,
+  include_enterprise: false,
 })
 
 const VENTAS_WIZARD_STEPS: [string, string, string] = ['Alcance', 'Empresa', 'Entrega']
@@ -100,6 +112,10 @@ export default function CotizacionGuiadaLead({
     max_auto_quote_terminals: VENTAS_MAX_AUTO_QUOTE_TERMINALS,
     annual_terminals_included_min_employees: VENTAS_ANNUAL_TERMINALS_INCLUDED_MIN_EMPLOYEES,
     hardware_sale_unit_price: VENTAS_HARDWARE_SALE_UNIT_PRICE,
+    micro_max_employees: VENTAS_MICRO_MAX_EMPLOYEES,
+    basic_annual_price: VENTAS_BASIC_ANNUAL_PRICE,
+    membership_discount_pct: VENTAS_MEMBERSHIP_DISCOUNT_PCT,
+    enterprise_annual_price: VENTAS_ENTERPRISE_ANNUAL_PRICE,
   })
   const [publicTiers, setPublicTiers] = useState<VentasPublicTier[]>([])
 
@@ -119,6 +135,12 @@ export default function CotizacionGuiadaLead({
             VENTAS_ANNUAL_TERMINALS_INCLUDED_MIN_EMPLOYEES,
           hardware_sale_unit_price:
             Number(data.hardware_sale_unit_price) || VENTAS_HARDWARE_SALE_UNIT_PRICE,
+          micro_max_employees: Number(data.micro_max_employees) || VENTAS_MICRO_MAX_EMPLOYEES,
+          basic_annual_price: Number(data.basic_annual_price) || VENTAS_BASIC_ANNUAL_PRICE,
+          membership_discount_pct:
+            Number(data.membership_discount_pct) || VENTAS_MEMBERSHIP_DISCOUNT_PCT,
+          enterprise_annual_price:
+            Number(data.enterprise_annual_price) || VENTAS_ENTERPRISE_ANNUAL_PRICE,
         })
         if (Array.isArray(data.tiers)) {
           const mapped = sortPublicTiers(
@@ -159,9 +181,21 @@ export default function CotizacionGuiadaLead({
       : ''
 
   const employeesCount = Number(formData.employees_count) || 1
+  const product = resolveVentasProductSelection({
+    employeesCount,
+    includeTerminals: formData.include_terminals ?? formData.complement_biometric,
+    complementBiometric: formData.complement_biometric,
+    affiliateMembership: formData.affiliate_membership,
+    includeEnterprise: formData.include_enterprise,
+    rules: formLimits,
+  })
   const monthlyMin = formLimits.monthly_min_employees ?? VENTAS_MONTHLY_MIN_EMPLOYEES
   const maxTerminals = formLimits.max_auto_quote_terminals ?? VENTAS_MAX_AUTO_QUOTE_TERMINALS
-  const monthlyAvailable = isMonthlyModalityAvailable(employeesCount, formLimits)
+  const membershipPctLabel = Math.round(
+    (formLimits.membership_discount_pct ?? VENTAS_MEMBERSHIP_DISCOUNT_PCT) * 100
+  )
+  const monthlyAvailable =
+    !product.forceAnnual && isMonthlyModalityAvailable(employeesCount, formLimits)
   const matchedTier = findPublicTierForEmployees(employeesCount, publicTiers)
   const tierHints = {
     annual_terminal_mode: matchedTier?.annual_terminal_mode ?? ('auto' as VentasAnnualTerminalMode),
@@ -189,6 +223,17 @@ export default function CotizacionGuiadaLead({
     setFormData((prev) => {
       const next = { ...prev, ...patch }
       const emp = Number(next.employees_count)
+      const nextProduct = resolveVentasProductSelection({
+        employeesCount: emp,
+        includeTerminals: next.include_terminals ?? next.complement_biometric,
+        complementBiometric: next.complement_biometric,
+        affiliateMembership: next.affiliate_membership,
+        includeEnterprise: next.include_enterprise,
+        rules: formLimits,
+      })
+      next.include_terminals = nextProduct.includeTerminals
+      next.complement_biometric = nextProduct.includeTerminals
+      if (nextProduct.forceAnnual) next.billing_modality = 'annual'
       if (
         next.billing_modality === 'monthly' &&
         Number.isFinite(emp) &&
@@ -196,6 +241,10 @@ export default function CotizacionGuiadaLead({
       ) {
         next.billing_modality = 'annual'
       }
+      if (nextProduct.chargeHardware && !(Number(next.terminals_count) >= 1)) {
+        next.terminals_count = 1
+      }
+      if (!nextProduct.chargeHardware) next.terminals_count = 0
       return next
     })
     setErrors((prev) => (prev.submit ? omitValidationField(prev, 'submit') : prev))
@@ -246,10 +295,14 @@ export default function CotizacionGuiadaLead({
         country_code: isCountryCode(formData.country_code) ? formData.country_code : 'HND',
         employees_count: Number(formData.employees_count),
         billing_modality: formData.billing_modality || 'annual',
-        terminals_count: Number(formData.terminals_count) || 1,
+        terminals_count: Number(formData.terminals_count) || (product.chargeHardware ? 1 : 0),
         sector_rubro: formData.sector_rubro?.trim() || '',
         coupon_code: formData.coupon_code?.trim() || '',
         consent_newsletter: formData.consent_newsletter === true,
+        complement_biometric: product.includeTerminals,
+        include_terminals: product.includeTerminals,
+        affiliate_membership: product.affiliateMembership,
+        include_enterprise: product.includeEnterprise,
       }
 
       const resp = await fetch('/api/quote', {
@@ -412,7 +465,71 @@ export default function CotizacionGuiadaLead({
                       )}
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {!product.includeTerminals && (
+                      <div className="rounded-xl border border-white/15 bg-white/5 p-4 space-y-3">
+                        <p className="text-white font-medium text-sm">{copy.scope.basicTitle}</p>
+                        <p className="text-brand-300 text-xs">{copy.scope.basicBody}</p>
+                        <ul className="text-xs text-brand-200 space-y-1">
+                          {VENTAS_BASIC_MODULE_LABELS.map((mod) => (
+                            <li key={mod}>{mod}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    <label className="flex items-start gap-3 rounded-xl border border-white/15 bg-white/5 p-4 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        className="mt-1"
+                        checked={!!formData.include_terminals}
+                        onChange={(e) =>
+                          patchForm({
+                            include_terminals: e.target.checked,
+                            complement_biometric: e.target.checked,
+                          })
+                        }
+                      />
+                      <span>
+                        <span className="text-white text-sm">{copy.scope.terminalsLabel}</span>
+                        <span className="block text-brand-400 text-xs mt-1">
+                          {copy.scope.terminalsHint}
+                        </span>
+                      </span>
+                    </label>
+
+                    {product.includeTerminals && (
+                      <label className="flex items-start gap-3 rounded-xl border border-white/15 bg-white/5 p-4 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          className="mt-1"
+                          checked={!!formData.affiliate_membership}
+                          onChange={(e) => patchForm({ affiliate_membership: e.target.checked })}
+                        />
+                        <span>
+                          <span className="text-white text-sm">{copy.scope.membershipLabel}</span>
+                          <span className="block text-brand-400 text-xs mt-1">
+                            {copy.scope.membershipHint(membershipPctLabel)}
+                          </span>
+                        </span>
+                      </label>
+                    )}
+
+                    <label className="flex items-start gap-3 rounded-xl border border-white/15 bg-white/5 p-4 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        className="mt-1"
+                        checked={!!formData.include_enterprise}
+                        onChange={(e) => patchForm({ include_enterprise: e.target.checked })}
+                      />
+                      <span>
+                        <span className="text-white text-sm">{copy.scope.enterpriseLabel}</span>
+                        <span className="block text-brand-400 text-xs mt-1">
+                          {copy.scope.enterpriseHint}
+                        </span>
+                      </span>
+                    </label>
+
+                    <div className={`grid grid-cols-1 ${product.chargeHardware ? 'sm:grid-cols-2' : ''} gap-4`}>
                       <div>
                         <label className="block text-white font-medium mb-2 text-sm">Modalidad</label>
                         <select
@@ -432,19 +549,23 @@ export default function CotizacionGuiadaLead({
                           >
                             {monthlyAvailable
                               ? 'Mensual'
-                              : `Mensual (desde ${monthlyMin} empleados)`}
+                              : product.forceAnnual
+                                ? 'Mensual (plan básico es anual)'
+                                : `Mensual (desde ${monthlyMin} empleados)`}
                           </option>
                         </select>
                         {!monthlyAvailable && (
                           <p className="text-xs text-brand-400 mt-2">
-                            Modalidad mensual disponible a partir de {monthlyMin}{' '}
-                            empleados.
+                            {product.forceAnnual
+                              ? 'El plan básico se contrata solo en modalidad anual.'
+                              : `Modalidad mensual disponible a partir de ${monthlyMin} empleados.`}
                           </p>
                         )}
                         {errors.billing_modality && (
                           <p className="text-red-400 text-xs mt-2">{errors.billing_modality}</p>
                         )}
                       </div>
+                      {product.chargeHardware && (
                       <div>
                         <label className="block text-white font-medium mb-2 text-sm">Terminales</label>
                         <select
@@ -494,6 +615,7 @@ export default function CotizacionGuiadaLead({
                           <p className="text-red-400 text-xs mt-2">{errors.terminals_count}</p>
                         )}
                       </div>
+                      )}
                     </div>
 
                     <p className="text-xs text-brand-300 bg-black/20 p-3 rounded-lg border border-white/10">
@@ -507,6 +629,7 @@ export default function CotizacionGuiadaLead({
                             ),
                             rules: formLimits,
                             tier: tierHints,
+                            productKind: product.kind,
                           }
                         ).formHint
                       }

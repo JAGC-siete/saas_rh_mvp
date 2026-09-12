@@ -15,12 +15,12 @@ import { generateVentasQuotationPDF } from '../lib/ventas/pdf'
 import { getVentasBankDetailsFromEnv } from '../lib/ventas/bank-details'
 import { loadActiveVentasConfig, resolveSubmittedPromo } from '../lib/ventas/load-ventas-config'
 
-const OUT_PATH = 'tmp/dry-run-cotizacion-tacostado.pdf'
-const EMPLOYEES_COUNT = 9
-const COUPON_SUBMITTED = 'aghas'
-const COMPANY_NAME = 'Restaurante Tacostado'
+const OUT_PATH = 'tmp/dry-run-cotizacion-fys-solutions.pdf'
+const EMPLOYEES_COUNT = 15
+const COUPON_SUBMITTED = ''
+const COMPANY_NAME = 'FYS Solutions'
 const BILLING_MODALITY: 'annual' | 'monthly' = 'annual'
-const TERMINALS_COUNT = 1
+const TERMINALS_COUNT = 2
 
 async function main() {
   const supabase = createAdminClient()
@@ -92,7 +92,7 @@ async function main() {
   const pdf = await generateVentasQuotationPDF({
     quote,
     contactEmail: 'jorge7gomez@gmail.com',
-    contactName: '[DRY RUN] Jorge Test',
+    contactName: '[DRY RUN] FYS Solutions',
     companyName: COMPANY_NAME,
     phone: '+50432226773',
     employeesCount: EMPLOYEES_COUNT,

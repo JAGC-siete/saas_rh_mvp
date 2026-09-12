@@ -51,6 +51,14 @@ export interface QuotationRequest {
   sector_rubro?: string
   coupon_code?: string
   consent_newsletter?: boolean
+  /** 0–10 legado: complementa membresía con reloj. Equivale a include_terminals. */
+  complement_biometric?: boolean
+  /** Contrata el rango con terminales (plan Premium). */
+  include_terminals?: boolean
+  /** Membresía anual: 10% sobre el rango con terminales. */
+  affiliate_membership?: boolean
+  /** Add-on Enterprise, cualquier rango. */
+  include_enterprise?: boolean
 }
 
 export interface QuotationQuote {
@@ -82,6 +90,17 @@ export interface QuotationQuote {
   discount_pct_applied: number
   /** Código normalizado del cupón aplicado (si coupon_applied). */
   coupon_code_applied?: string | null
+  /** basic = 3 módulos (micro); regular = rango vigente. */
+  product_kind?: 'basic' | 'regular'
+  membership_applied?: boolean
+  membership_discount_pct?: number
+  membership_discount_amount?: number
+  complement_biometric?: boolean
+  include_terminals?: boolean
+  include_enterprise?: boolean
+  enterprise_applied?: boolean
+  enterprise_annual_price?: number
+  commercial_plan_type?: 'trial' | 'basic' | 'premium' | 'enterprise'
   tier: {
     min_employees: number
     max_employees: number

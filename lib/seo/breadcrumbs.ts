@@ -56,6 +56,7 @@ function formatSegmentName(segment: string): string {
     recursos: 'Recursos',
     afiliados: 'Afiliados',
     activar: 'Activar',
+    'plan-basico': 'Plan básico',
     suscripcion: 'Alertas de sueldo',
     paz: 'Paz al cerrar planilla',
   }

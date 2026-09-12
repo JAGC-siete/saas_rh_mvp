@@ -1,5 +1,5 @@
 import type { CurrencyCode, QuotationQuote } from './types'
-import { formatMoney } from './pricing'
+import { formatMoney, roundMoney } from './pricing'
 import { hardwareFeeMonthly } from './modality-includes'
 import {
   computeAnnualHardwareCharges,
@@ -167,7 +167,16 @@ export function getContractIncludesLabels(params: {
   hardwareSaleUnitPrice?: number
   /** Cupo del rango (Hasta N); si no hay extras, se usa para el copy de inclusión. */
   includedCap?: number
+  productKind?: 'basic' | 'regular'
 }): string[] {
+  if (params.productKind === 'basic') {
+    return [
+      'Expedientes digitales',
+      'Asistencia por input manual',
+      'Recibos de nómina',
+      'Membresía anual (módulos Basic)',
+    ]
+  }
   const { isAnnual, includesTerminals, hardwareMode } = params
   const currency = params.currency || 'HNL'
   const extras = Math.max(0, Math.floor(Number(params.extraCount) || 0))
@@ -225,7 +234,11 @@ export function getContractIncludesLabels(params: {
 export function annualPaymentIntroText(params: {
   includesTerminals: boolean
   hardwareSaleTotal?: number
+  productKind?: 'basic' | 'regular'
 }): string {
+  if (params.productKind === 'basic') {
+    return '50% anticipo de la membresía anual para activar el plan básico y 50% contra la puesta en marcha de expedientes, asistencia y recibos.'
+  }
   const hasSale = (Number(params.hardwareSaleTotal) || 0) > 0
   if (hasSale && params.includesTerminals) {
     return 'Anticipo del 50% sobre (licencia anual + terminales adicionales) para programar la instalación. El saldo se cancela contra instalación y enlace efectivos con el sistema.'
@@ -309,42 +322,54 @@ export function buildQuotationPlanSummary(params: {
     }
   }
 
+  const enterpriseAmt = quote.include_enterprise ? Number(quote.enterprise_annual_price) || 0 : 0
+  const softwareAnnualQuoted = roundMoney((quote.annual_total || 0) - enterpriseAmt)
   const softwareTotal = isMonthly ? resolveMonthlyTotal(quote) : quote.annual_total
   const quotedTotal = isMonthly ? softwareTotal : softwareTotal + saleTotal
   const lines: PlanSummaryLine[] = []
+  const membershipAmt = quote.membership_applied ? quote.membership_discount_amount || 0 : 0
+  const couponAmt = quote.coupon_applied
+    ? Math.max(0, (quote.annual_discount_amount || 0) - membershipAmt)
+    : 0
+  const hasSoftwareDiscount = membershipAmt > 0 || couponAmt > 0
 
-  if (quote.coupon_applied && quote.annual_discount_amount > 0) {
+  if (hasSoftwareDiscount) {
     const pctLabel = Math.round((quote.discount_pct_applied || 0) * 100)
+    const membershipPctLabel = Math.round((quote.membership_discount_pct || 0) * 100)
     const couponName = quote.coupon_code_applied?.trim()
     const couponLabel = couponName
       ? `Cupón promocional «${couponName}» (−${pctLabel}%)`
       : `Descuento promocional (−${pctLabel}%)`
 
-    if (isMonthly) {
+    lines.push({
+      label: 'Precio Software (lista)',
+      value: `${fmt(isMonthly ? quote.annual_subtotal / 12 : quote.annual_subtotal)} / ${periodLabel}`,
+    })
+    if (membershipAmt > 0) {
       lines.push({
-        label: 'Precio Software (lista)',
-        value: `${fmt(quote.monthly_software_total + quote.annual_discount_amount / 12)} / ${periodLabel}`,
-      })
-      lines.push({
-        label: couponLabel,
-        value: `−${fmt(quote.annual_discount_amount / 12)} / ${periodLabel}`,
+        label: `Membresía (−${membershipPctLabel}% sobre rango con terminales)`,
+        value: `−${fmt(isMonthly ? membershipAmt / 12 : membershipAmt)} / ${periodLabel}`,
         variant: 'discount',
       })
-    } else {
-      lines.push({
-        label: 'Precio Software (lista)',
-        value: `${fmt(quote.annual_subtotal)} / ${periodLabel}`,
-      })
+    }
+    if (couponAmt > 0) {
       lines.push({
         label: couponLabel,
-        value: `−${fmt(quote.annual_discount_amount)} / ${periodLabel}`,
+        value: `−${fmt(isMonthly ? couponAmt / 12 : couponAmt)} / ${periodLabel}`,
         variant: 'discount',
       })
     }
   } else {
     lines.push({
-      label: 'Precio Software',
-      value: `${fmt(isMonthly ? quote.monthly_software_total : quote.annual_total)} / ${periodLabel}`,
+      label: quote.product_kind === 'basic' ? 'Membresía plan básico' : 'Precio Software',
+      value: `${fmt(isMonthly ? softwareAnnualQuoted / 12 : softwareAnnualQuoted)} / ${periodLabel}`,
+    })
+  }
+
+  if (quote.include_enterprise) {
+    lines.push({
+      label: 'Add-on Enterprise',
+      value: `${fmt(isMonthly ? enterpriseAmt / 12 : enterpriseAmt)} / ${periodLabel}`,
     })
   }
 

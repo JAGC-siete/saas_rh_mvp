@@ -1,6 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { audit } from '../audit'
-import { planTypeFromEmployeesCount } from './tier-to-plan'
 
 export type PaymentKind = 'deposit' | 'subscription' | 'adjustment'
 
@@ -28,9 +27,7 @@ export async function activateFromQuote(
   supabase: SupabaseClient,
   params: ActivateFromQuoteParams
 ): Promise<ActivateFromQuoteResult> {
-  const planType =
-    params.planType ??
-    (params.employeesCount != null ? planTypeFromEmployeesCount(params.employeesCount) : null)
+  const planType = params.planType ?? null
 
   const { data, error } = await supabase.rpc('activate_from_quote', {
     p_company_id: params.companyId,

@@ -18,6 +18,7 @@ const PUBLIC_SSR_EXACT = new Set([
   '/activar/gracias',
   '/ventas',
   '/ventas/gracias',
+  '/plan-basico',
   '/gracias',
   INFO_FUNNEL_PUBLIC_PATH,
   '/info',

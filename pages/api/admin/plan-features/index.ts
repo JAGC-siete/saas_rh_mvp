@@ -18,7 +18,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (req.method === 'GET') {
       const [{ data: plans, error: e1 }, { data: features, error: e2 }, { data: links, error: e3 }] =
         await Promise.all([
-          admin.from('plan_catalog').select('plan_key, name, description, is_active').order('plan_key'),
+          admin.from('plan_catalog').select('plan_key, name, description, is_active, annual_price').order('plan_key'),
           admin.from('feature_catalog').select('feature_key, name, description').order('feature_key'),
           admin.from('plan_features').select('plan_key, feature_key'),
         ])
@@ -43,9 +43,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     if (req.method === 'PUT') {
-      const body = req.body as { plan_key?: string; feature_keys?: string[] }
+      const body = req.body as { plan_key?: string; feature_keys?: string[]; annual_price?: number | null }
       const plan_key = typeof body.plan_key === 'string' ? body.plan_key.trim() : ''
       const feature_keys = Array.isArray(body.feature_keys) ? body.feature_keys : []
+      const hasAnnualPrice = Object.prototype.hasOwnProperty.call(body, 'annual_price')
 
       if (!isInternalPlanKey(plan_key)) {
         return res.status(400).json({
@@ -91,10 +92,35 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
       }
 
+      let annual_price: number | null | undefined
+      if (hasAnnualPrice) {
+        if (body.annual_price === null || body.annual_price === ('' as unknown)) {
+          annual_price = null
+        } else {
+          const n = Number(body.annual_price)
+          if (!Number.isFinite(n) || n < 0) {
+            return res.status(400).json({
+              error: 'annual_price inválido',
+              message: 'El costo anual debe ser un número ≥ 0.',
+            })
+          }
+          annual_price = Math.round(n * 100) / 100
+        }
+        const { error: priceErr } = await admin
+          .from('plan_catalog')
+          .update({ annual_price })
+          .eq('plan_key', plan_key)
+        if (priceErr) {
+          console.error('plan-features PUT annual_price', priceErr)
+          return res.status(500).json({ error: 'Error al guardar el costo anual' })
+        }
+      }
+
       return res.status(200).json({
         success: true,
         plan_key,
         feature_keys: normalized,
+        annual_price,
       })
     }
 

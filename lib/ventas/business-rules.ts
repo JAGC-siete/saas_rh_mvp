@@ -11,6 +11,18 @@ export type VentasAnnualTerminalMode = 'auto' | 'included' | 'sale'
 /** Modalidad mensual disponible desde este número de empleados (inclusive). */
 export const VENTAS_MONTHLY_MIN_EMPLOYEES = 21
 
+/** Tope histórico del segmento micro (referencia UI; ya no excluye membresía). Inclusive. */
+export const VENTAS_MICRO_MAX_EMPLOYEES = 10
+
+/** Precio anual de la membresía Basic (sin relojes, cualquier N). */
+export const VENTAS_BASIC_ANNUAL_PRICE = 6500
+
+/** Descuento de membresía sobre un rango con terminales. */
+export const VENTAS_MEMBERSHIP_DISCOUNT_PCT = 0.1
+
+/** Fallback del add-on Enterprise si plan_catalog.annual_price es null. */
+export const VENTAS_ENTERPRISE_ANNUAL_PRICE = 0
+
 /**
  * En plan anual, las terminales biométricas se incluyen desde este número
  * de empleados (inclusive). Por debajo se venden one-shot.
@@ -42,6 +54,14 @@ export type VentasBusinessRules = {
   max_auto_quote_terminals: number
   hardware_sale_unit_price: number
   hardware_continuity: VentasHardwareContinuityRules
+  /** Inclusive. Referencia de segmento micro; no bloquea membresía en N mayores. */
+  micro_max_employees: number
+  /** Precio anual de la membresía Basic (sin relojes). */
+  basic_annual_price: number
+  /** Descuento sobre el rango con terminales si hay membresía. */
+  membership_discount_pct: number
+  /** Add-on Enterprise anual (fallback si plan_catalog no tiene precio). */
+  enterprise_annual_price: number
 }
 
 export type VentasTierHardwareHints = {
@@ -59,6 +79,10 @@ export const DEFAULT_VENTAS_BUSINESS_RULES: VentasBusinessRules = {
     incremental_discount: VENTAS_HARDWARE_INCREMENTAL_DISCOUNT,
     floor_monthly: VENTAS_HARDWARE_FLOOR_MONTHLY,
   },
+  micro_max_employees: VENTAS_MICRO_MAX_EMPLOYEES,
+  basic_annual_price: VENTAS_BASIC_ANNUAL_PRICE,
+  membership_discount_pct: VENTAS_MEMBERSHIP_DISCOUNT_PCT,
+  enterprise_annual_price: VENTAS_ENTERPRISE_ANNUAL_PRICE,
 }
 
 function finiteOr(n: unknown, fallback: number): number {
@@ -102,6 +126,19 @@ export function mergeVentasBusinessRules(raw?: Partial<VentasBusinessRules> | nu
         finiteOr(continuity?.floor_monthly, d.hardware_continuity.floor_monthly)
       ),
     },
+    micro_max_employees: Math.max(
+      1,
+      Math.trunc(finiteOr(raw?.micro_max_employees, d.micro_max_employees))
+    ),
+    basic_annual_price: Math.max(0, finiteOr(raw?.basic_annual_price, d.basic_annual_price)),
+    membership_discount_pct: Math.min(
+      0.95,
+      Math.max(0, finiteOr(raw?.membership_discount_pct, d.membership_discount_pct))
+    ),
+    enterprise_annual_price: Math.max(
+      0,
+      finiteOr(raw?.enterprise_annual_price, d.enterprise_annual_price)
+    ),
   }
 }
 
@@ -116,6 +153,14 @@ export function isMonthlyModalityAvailable(
 ): boolean {
   const r = mergeVentasBusinessRules(rules)
   return Number.isFinite(employeesCount) && employeesCount >= r.monthly_min_employees
+}
+
+export function isMicroEmployeeSegment(
+  employeesCount: number,
+  rules?: Partial<VentasBusinessRules> | null
+): boolean {
+  const r = mergeVentasBusinessRules(rules)
+  return Number.isFinite(employeesCount) && employeesCount <= r.micro_max_employees
 }
 
 export function annualIncludesBiometricTerminals(
@@ -320,6 +365,10 @@ export function annualIncludesExtrasMessage(includedCap: number): string {
 export function ventasMonthlyUnavailableMessage(rules?: Partial<VentasBusinessRules> | null): string {
   const min = mergeVentasBusinessRules(rules).monthly_min_employees
   return `La modalidad mensual está disponible a partir de ${min} empleados.`
+}
+
+export function ventasBasicAnnualOnlyMessage(_rules?: Partial<VentasBusinessRules> | null): string {
+  return `La membresía Basic (sin terminales) se contrata solo en modalidad anual.`
 }
 
 export function ventasTooManyTerminalsErrorMessage(rules?: Partial<VentasBusinessRules> | null): string {

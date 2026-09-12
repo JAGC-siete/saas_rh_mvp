@@ -92,6 +92,7 @@ export function buildPriceCardHtml(params: {
       annual_terminal_mode: params.quote.tier?.annual_terminal_mode,
       included_terminals_max: params.quote.tier?.included_terminals_max,
     },
+    productKind: params.quote.product_kind,
   }).label
 
   let inner = ''

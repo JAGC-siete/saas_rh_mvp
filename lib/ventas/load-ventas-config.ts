@@ -20,7 +20,7 @@ export const FALLBACK_VENTAS_TIERS: VentasPricingTier[] = [
     price: 17507.7,
     is_active: true,
     sort_order: 10,
-    annual_terminal_mode: 'sale',
+    annual_terminal_mode: 'included',
     included_terminals_max: 5,
   },
   {

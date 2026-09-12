@@ -42,6 +42,12 @@ const publicPages: SitemapUrl[] = [
     lastmod: new Date().toISOString().split('T')[0],
   },
   {
+    loc: '/plan-basico',
+    changefreq: 'weekly',
+    priority: 0.85,
+    lastmod: new Date().toISOString().split('T')[0],
+  },
+  {
     loc: '/alternativa-odoo-honduras',
     changefreq: 'monthly',
     priority: 0.9,

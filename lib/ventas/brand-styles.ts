@@ -40,6 +40,7 @@ export function buildTerminalsDisplayLabel(params: {
   extraCount?: number
 }): string {
   const { terminalsCount, includesTerminals, hardwareMode, includedCount, extraCount } = params
+  if (terminalsCount <= 0) return 'Sin reloj biométrico'
   const extras = Math.max(0, Math.floor(Number(extraCount) || 0))
   const included = Math.max(0, Math.floor(Number(includedCount) || 0))
 

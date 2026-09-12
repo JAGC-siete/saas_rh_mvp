@@ -7,7 +7,13 @@ import { Button } from '../../../components/ui/button'
 import { useNotificationContext } from '../../../components/NotificationProvider'
 import { Info, Loader2, Save } from 'lucide-react'
 
-type PlanRow = { plan_key: string; name: string; description: string | null; is_active: boolean }
+type PlanRow = {
+  plan_key: string
+  name: string
+  description: string | null
+  is_active: boolean
+  annual_price?: number | null
+}
 type FeatureRow = { feature_key: string; name: string; description: string | null }
 type PlanFeatureLink = { plan_key: string; feature_key: string }
 
@@ -30,6 +36,7 @@ export default function PlanFeaturesAdminPage() {
   const [links, setLinks] = useState<PlanFeatureLink[]>([])
   /** draft[plan_key][feature_key] = enabled */
   const [draft, setDraft] = useState<Record<string, Record<string, boolean>>>({})
+  const [priceDraft, setPriceDraft] = useState<Record<string, string>>({})
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -64,6 +71,14 @@ export default function PlanFeaturesAdminPage() {
     setDraft(next)
   }, [links])
 
+  useEffect(() => {
+    const next: Record<string, string> = {}
+    for (const p of plans) {
+      next[p.plan_key] = p.annual_price == null || p.annual_price === ('' as unknown) ? '' : String(p.annual_price)
+    }
+    setPriceDraft(next)
+  }, [plans])
+
   const orderedPlans = useMemo(() => {
     const byKey = new Map(plans.map((p) => [p.plan_key, p]))
     return PLAN_ORDER.map((k) => byKey.get(k)).filter(Boolean) as PlanRow[]
@@ -83,20 +98,41 @@ export default function PlanFeaturesAdminPage() {
     const d = draft[planKey] || {}
     const prev = new Set(links.filter((l) => l.plan_key === planKey).map((l) => l.feature_key))
     const keys = Object.keys(d).filter((k) => d[k])
-    if (keys.length !== prev.size) return true
-    return keys.some((k) => !prev.has(k))
+    const featuresDirty = keys.length !== prev.size || keys.some((k) => !prev.has(k))
+    if (planKey === 'enterprise') {
+      const saved = plans.find((p) => p.plan_key === 'enterprise')
+      const savedStr = saved?.annual_price == null ? '' : String(saved.annual_price)
+      if ((priceDraft.enterprise ?? '') !== savedStr) return true
+    }
+    return featuresDirty
   }
 
   const savePlan = async (planKey: string) => {
     const d = draft[planKey] || {}
     const feature_keys = Object.keys(d).filter((k) => d[k])
+    const payload: { plan_key: string; feature_keys: string[]; annual_price?: number | null } = {
+      plan_key: planKey,
+      feature_keys,
+    }
+    if (planKey === 'enterprise') {
+      const raw = (priceDraft.enterprise ?? '').trim()
+      payload.annual_price = raw === '' ? null : Number(raw)
+      if (payload.annual_price != null && (!Number.isFinite(payload.annual_price) || payload.annual_price < 0)) {
+        addNotification({
+          type: 'error',
+          title: 'Costo inválido',
+          message: 'El costo anual de Enterprise debe ser un número ≥ 0.',
+        })
+        return
+      }
+    }
     setSavingPlan(planKey)
     try {
       const res = await fetch('/api/admin/plan-features', {
         method: 'PUT',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan_key: planKey, feature_keys }),
+        body: JSON.stringify(payload),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.message || data.error || 'Error al guardar')
@@ -158,7 +194,8 @@ export default function PlanFeaturesAdminPage() {
                 <CardHeader>
                   <CardTitle className="text-white">Matriz plan × módulo</CardTitle>
                   <CardDescription className="text-white/60">
-                    Marca los módulos incluidos en cada plan. Guarda por columna cuando termines de editar ese plan.
+                    Marca los módulos incluidos en cada plan. En Enterprise, el costo anual (HNL lista) es el add-on
+                    cotizable sobre cualquier rango. Guarda por columna cuando termines de editar ese plan.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="overflow-x-auto p-0 sm:p-6">
@@ -174,6 +211,24 @@ export default function PlanFeaturesAdminPage() {
                               <span className="text-[10px] text-white/45 max-w-[180px] text-center">
                                 {COMMERCIAL_LABEL[p.plan_key]}
                               </span>
+                              {p.plan_key === 'enterprise' && (
+                                <label className="mt-2 flex w-full max-w-[180px] flex-col items-center gap-1">
+                                  <span className="text-[10px] uppercase tracking-wide text-amber-200/80">
+                                    Costo anual (HNL)
+                                  </span>
+                                  <input
+                                    type="number"
+                                    min={0}
+                                    step="0.01"
+                                    className="input-glass w-full text-center text-white text-xs py-1"
+                                    value={priceDraft.enterprise ?? ''}
+                                    onChange={(e) =>
+                                      setPriceDraft((prev) => ({ ...prev, enterprise: e.target.value }))
+                                    }
+                                    aria-label="Costo anual Enterprise"
+                                  />
+                                </label>
+                              )}
                               <Button
                                 size="sm"
                                 variant="outline"

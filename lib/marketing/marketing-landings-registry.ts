@@ -104,6 +104,18 @@ export const MARKETING_LANDINGS: MarketingLandingEntry[] = [
     primaryCta: 'Formulario ventas',
   },
   {
+    path: '/plan-basico',
+    pageFile: 'pages/plan-basico.tsx',
+    name: 'Plan básico micro (0–10)',
+    kind: 'commercial',
+    status: 'active',
+    purpose: 'Oferta anual L. 6,500: expedientes, asistencia manual, recibos. Sin marco estatal.',
+    primaryCta: 'Formulario → /api/quote',
+    launched: '2026-09-12',
+    notes:
+      'Reemplazo web del PDF de membresía. Copy honesto: no notificación, no gratis vs cobro, asistencia manual explícita.',
+  },
+  {
     path: '/calculadora',
     aliases: [
       '/calculadora-deducciones',

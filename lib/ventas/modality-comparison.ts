@@ -45,6 +45,8 @@ export function buildModalityComparison(params: {
     },
   }
 
+  if (quote.product_kind === 'basic') return null
+
   if (alternateModality === 'monthly' && !isMonthlyModalityAvailable(employees, quote.business_rules)) {
     return null
   }
@@ -62,6 +64,7 @@ export function buildModalityComparison(params: {
     currency: quote.currency,
     rules: quote.business_rules,
     tier: ruleOpts.tier,
+    productKind: quote.product_kind,
   })
 
   const listPriceNote =

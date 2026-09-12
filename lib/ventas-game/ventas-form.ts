@@ -2,6 +2,7 @@ import type { QuotationRequest } from '../ventas/types'
 import {
   isMonthlyModalityAvailable,
   mergeVentasBusinessRules,
+  ventasBasicAnnualOnlyMessage,
   ventasMonthlyUnavailableMessage,
   hardwareSaleVolumeDiscountPct,
   VENTAS_MAX_AUTO_QUOTE_TERMINALS,
@@ -11,12 +12,17 @@ import {
 } from '../ventas/business-rules'
 import type { CountryCode } from '../country/supported'
 import { isCountryCode } from '../country/supported'
+import { resolveVentasProductSelection } from '../ventas/product-catalog'
 
 export type VentasFormLimits = {
   monthly_min_employees?: number
   max_auto_quote_terminals?: number
   annual_terminals_included_min_employees?: number
   hardware_sale_unit_price?: number
+  micro_max_employees?: number
+  basic_annual_price?: number
+  membership_discount_pct?: number
+  enterprise_annual_price?: number
 }
 
 /** Rango de precios expuesto al formulario (sincronizado con Superadmin). */
@@ -43,6 +49,10 @@ function limitsToRules(limits?: VentasFormLimits | null): Partial<VentasBusiness
     max_auto_quote_terminals: limits?.max_auto_quote_terminals,
     annual_terminals_included_min_employees: limits?.annual_terminals_included_min_employees,
     hardware_sale_unit_price: limits?.hardware_sale_unit_price,
+    micro_max_employees: limits?.micro_max_employees,
+    basic_annual_price: limits?.basic_annual_price,
+    membership_discount_pct: limits?.membership_discount_pct,
+    enterprise_annual_price: limits?.enterprise_annual_price,
   }
 }
 
@@ -126,8 +136,18 @@ export function computeVentasErrors(
   if (empErr) e.employees_count = empErr
 
   const rules = limitsToRules(limits)
+  const product = resolveVentasProductSelection({
+    employeesCount: emp,
+    complementBiometric: fd.complement_biometric,
+    includeTerminals: fd.include_terminals,
+    affiliateMembership: fd.affiliate_membership,
+    includeEnterprise: fd.include_enterprise,
+    rules,
+  })
   const modality = fd.billing_modality === 'monthly' ? 'monthly' : 'annual'
-  if (modality === 'monthly' && Number.isFinite(emp) && !isMonthlyModalityAvailable(emp, rules)) {
+  if (modality === 'monthly' && product.forceAnnual) {
+    e.billing_modality = ventasBasicAnnualOnlyMessage(rules)
+  } else if (modality === 'monthly' && Number.isFinite(emp) && !isMonthlyModalityAvailable(emp, rules)) {
     e.billing_modality = ventasMonthlyUnavailableMessage(rules)
   }
 
@@ -136,11 +156,13 @@ export function computeVentasErrors(
     e.country_code = 'Seleccione el país donde opera la empresa.'
   }
 
-  const t = Number(fd.terminals_count)
-  const maxT = maxTerminals(limits)
-  if (!Number.isFinite(t) || t < 1) e.terminals_count = 'Indique cuántos terminales necesita.'
-  else if (t > maxT) {
-    e.terminals_count = `Indique entre 1 y ${maxT} terminales.`
+  if (product.chargeHardware) {
+    const t = Number(fd.terminals_count)
+    const maxT = maxTerminals(limits)
+    if (!Number.isFinite(t) || t < 1) e.terminals_count = 'Indique cuántos terminales necesita.'
+    else if (t > maxT) {
+      e.terminals_count = `Indique entre 1 y ${maxT} terminales.`
+    }
   }
 
   return e
@@ -160,15 +182,27 @@ export function ventasScopeErrors(
   if (empErr) e.employees_count = empErr
 
   const rules = limitsToRules(limits)
+  const product = resolveVentasProductSelection({
+    employeesCount: emp,
+    complementBiometric: fd.complement_biometric,
+    includeTerminals: fd.include_terminals,
+    affiliateMembership: fd.affiliate_membership,
+    includeEnterprise: fd.include_enterprise,
+    rules,
+  })
   const modality = fd.billing_modality === 'monthly' ? 'monthly' : 'annual'
-  if (modality === 'monthly' && Number.isFinite(emp) && !isMonthlyModalityAvailable(emp, rules)) {
+  if (modality === 'monthly' && product.forceAnnual) {
+    e.billing_modality = ventasBasicAnnualOnlyMessage(rules)
+  } else if (modality === 'monthly' && Number.isFinite(emp) && !isMonthlyModalityAvailable(emp, rules)) {
     e.billing_modality = ventasMonthlyUnavailableMessage(rules)
   }
 
-  const t = Number(fd.terminals_count)
-  const maxT = maxTerminals(limits)
-  if (!Number.isFinite(t) || t < 1 || t > maxT) {
-    e.terminals_count = 'Indique terminales válidas.'
+  if (product.chargeHardware) {
+    const t = Number(fd.terminals_count)
+    const maxT = maxTerminals(limits)
+    if (!Number.isFinite(t) || t < 1 || t > maxT) {
+      e.terminals_count = 'Indique terminales válidas.'
+    }
   }
 
   return e

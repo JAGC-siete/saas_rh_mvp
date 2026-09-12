@@ -34,6 +34,11 @@ export const GUIDE_LINKS: Record<string, GuideLink> = {
     label: 'Complemento a Odoo',
     description: 'Nómina local y biométrico integrados con Odoo'
   },
+  planBasico: {
+    href: '/plan-basico',
+    label: 'Plan básico (hasta 10 personas)',
+    description: 'Membresía anual L. 6,500: expedientes, asistencia manual y recibos'
+  },
   domingosSinPlanilla: {
     href: '/domingos-sin-planilla',
     label: 'Domingos sin planilla',
@@ -48,7 +53,8 @@ export const FOOTER_GUIDE_KEYS: Array<keyof typeof GUIDE_LINKS> = [
   'biometricoNomina',
   'implementacion48h',
   'alternativaOdoo',
-  'domingosSinPlanilla'
+  'domingosSinPlanilla',
+  'planBasico'
 ]
 
 /** Cross-links "También te puede interesar" por landing (clave = ruta actual). */
@@ -56,5 +62,6 @@ export const RELATED_GUIDES: Record<string, Array<keyof typeof GUIDE_LINKS>> = {
   '/alternativa-odoo-honduras': ['implementacion48h', 'biometricoNomina', 'deduccionesHonduras'],
   '/sistema-biometrico-nomina': ['deduccionesHonduras', 'implementacion48h', 'alternativaOdoo'],
   '/implementacion-48-horas': ['alternativaOdoo', 'biometricoNomina', 'recursos'],
-  '/deducciones-honduras-ihss-rap-isr': ['biometricoNomina', 'recursos', 'alternativaOdoo']
+  '/deducciones-honduras-ihss-rap-isr': ['biometricoNomina', 'recursos', 'alternativaOdoo'],
+  '/plan-basico': ['biometricoNomina', 'deduccionesHonduras', 'implementacion48h']
 }

@@ -129,6 +129,7 @@ export function generateVentasQuotationEmailText(params: {
     currency: quote.currency,
     rules: quote.business_rules,
     tier: ruleOpts.tier,
+    productKind: quote.product_kind,
   }).label
   const isAnnual = quote.billing_modality === 'annual'
   const quoteLabel = isAnnual ? 'COTIZACIÓN ANUAL' : 'COTIZACIÓN MENSUAL'

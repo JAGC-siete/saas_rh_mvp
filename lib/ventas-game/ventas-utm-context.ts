@@ -25,6 +25,13 @@ const PATTERNS: Array<{ match: RegExp; context: VentasUtmContext }> = [
       subheadline: 'Cotización exacta con IHSS, RAP e ISR locales — PDF listo para gerencia.',
     },
   },
+  {
+    match: /plan-basico|plan_basico|micro-6500/i,
+    context: {
+      headline: 'Plan básico para hasta 10 colaboradores. Aquí la propuesta formal.',
+      subheadline: 'L. 6,500 al año: expedientes, asistencia manual y recibos. Sin reloj biométrico.',
+    },
+  },
 ]
 
 export function getVentasUtmContext(utmSource?: string | null): VentasUtmContext {

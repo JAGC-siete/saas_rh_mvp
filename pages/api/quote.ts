@@ -8,17 +8,19 @@ import { maskEmail, normalizeSoftPhone } from '../../lib/privacy'
 import { notificationManager } from '../../lib/notification-providers'
 import { getResendFromContact } from '../../lib/resend-from'
 import type { QuotationRequest, QuotationResponse, CurrencyCode } from '../../lib/ventas/types'
-import { clampInt, resolveTierByEmployees, roundMoney } from '../../lib/ventas/pricing'
-import { hardwareFeeMonthly } from '../../lib/ventas/modality-includes'
+import { clampInt, resolveTierByEmployees } from '../../lib/ventas/pricing'
 import {
-  computeAnnualHardwareCharges,
   DEFAULT_VENTAS_BUSINESS_RULES,
   isMonthlyModalityAvailable,
+  mergeVentasBusinessRules,
   resolveFormMaxTerminals,
-  shouldChargeHardwareContinuity,
+  ventasBasicAnnualOnlyMessage,
   ventasMonthlyUnavailableMessage,
   ventasTooManyTerminalsErrorMessage,
 } from '../../lib/ventas/business-rules'
+import { loadEnterpriseAnnualPriceFromCatalog } from '../../lib/ventas/enterprise-price'
+import { computeVentasQuotationQuote } from '../../lib/ventas/compute-quote'
+import { resolveVentasProductSelection } from '../../lib/ventas/product-catalog'
 import {
   FALLBACK_VENTAS_TIERS,
   loadActiveVentasConfig,
@@ -46,11 +48,7 @@ import {
 import { enrollMarketingLead } from '../../lib/marketing/enroll-lead'
 import { sendLeadRegistroNotification } from '../../lib/leads/registro-notification'
 import { buildModalityComparisonSnapshot } from '../../lib/ventas/modality-comparison'
-import {
-  convertVentasMoney,
-  localizeQuotationQuote,
-  VENTAS_PRICE_LIST_CURRENCY,
-} from '../../lib/ventas/currency'
+import { localizeQuotationQuote } from '../../lib/ventas/currency'
 import { computeFrozenQuoteAmounts } from '../../lib/billing/quote-amounts'
 import { getHondurasTimestamp } from '../../lib/timezone'
 import { addDays } from 'date-fns'
@@ -60,6 +58,10 @@ const FALLBACK_CURRENCY: CurrencyCode = 'HNL'
 function normalizeBillingModality(v: unknown): 'annual' | 'monthly' {
   const raw = typeof v === 'string' ? v.trim().toLowerCase() : ''
   return raw === 'monthly' || raw === 'mensual' ? 'monthly' : 'annual'
+}
+
+function parseFlag(v: unknown): boolean {
+  return v === true || v === 1 || v === '1' || (typeof v === 'string' && v.trim().toLowerCase() === 'true')
 }
 
 async function sendEmailWithResend(params: {
@@ -237,6 +239,10 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
   const billingModality = normalizeBillingModality((body as any).billing_modality)
   const terminalsCountRaw = (body as any).terminals_count
   const terminalsCount = clampInt(Number(terminalsCountRaw ?? 0), 0, 10000)
+  const complementBiometric = parseFlag((body as any).complement_biometric)
+  const includeTerminals = parseFlag((body as any).include_terminals) || complementBiometric
+  const affiliateMembership = parseFlag((body as any).affiliate_membership)
+  const includeEnterprise = parseFlag((body as any).include_enterprise)
 
   const phoneNorm = normalizeSoftPhone(body.phone)
   const couponSubmitted = typeof body.coupon_code === 'string' ? body.coupon_code : ''
@@ -294,88 +300,56 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
     }
     pricingTierId = (tier as any).id || null
 
-    const tierHardware = {
-      annual_terminal_mode: tier.annual_terminal_mode ?? 'auto',
-      included_terminals_max: tier.included_terminals_max ?? null,
+    const enterpriseAnnualPrice = await loadEnterpriseAnnualPriceFromCatalog(
+      supabase as any,
+      mergeVentasBusinessRules(businessRules).enterprise_annual_price
+    )
+
+    const product = resolveVentasProductSelection({
+      employeesCount,
+      complementBiometric,
+      includeTerminals,
+      affiliateMembership,
+      includeEnterprise,
+      rules: businessRules,
+    })
+
+    if (product.forceAnnual && billingModality === 'monthly') {
+      return res.status(400).json({ error: ventasBasicAnnualOnlyMessage(businessRules) })
     }
-    const ruleOpts = { rules: businessRules, tier: tierHardware }
 
     if (billingModality === 'monthly' && !isMonthlyModalityAvailable(employeesCount, businessRules)) {
       return res.status(400).json({ error: ventasMonthlyUnavailableMessage(businessRules) })
     }
 
-    // Software tiers viven en la moneda de config; hardware lista en HNL.
-    const annualSubtotal = roundMoney(Number(tier.price))
-    const annualDiscountAmount = roundMoney(annualSubtotal * discountPctApplied)
-    const annualTotal = roundMoney(annualSubtotal - annualDiscountAmount)
-
-    const monthlySoftwareTotal = roundMoney(annualTotal / 12)
-    const terminalsForPricing = terminalsCount >= 1 ? terminalsCount : 1
     const formMaxTerminals = resolveFormMaxTerminals(businessRules)
-    if (terminalsForPricing > formMaxTerminals) {
-      return res.status(400).json({ error: ventasTooManyTerminalsErrorMessage(businessRules) })
+    if (product.chargeHardware) {
+      const terminalsForCheck = terminalsCount >= 1 ? terminalsCount : 1
+      if (terminalsForCheck > formMaxTerminals) {
+        return res.status(400).json({ error: ventasTooManyTerminalsErrorMessage(businessRules) })
+      }
     }
-    const hwQuote = hardwareFeeMonthly(terminalsForPricing, businessRules, tierHardware)
-    if (hwQuote.special) {
-      return res.status(400).json({ error: ventasTooManyTerminalsErrorMessage(businessRules) })
-    }
-    const monthlyHardwareFeeList = shouldChargeHardwareContinuity(
-      billingModality,
-      employeesCount,
-      ruleOpts
-    )
-      ? hwQuote.fee
-      : 0
-    const monthlyHardwareFee = convertVentasMoney(
-      monthlyHardwareFeeList,
-      VENTAS_PRICE_LIST_CURRENCY,
-      listCurrency
-    )
-    const hwCharges = computeAnnualHardwareCharges({
-      modality: billingModality,
-      employeesCount,
-      terminalsCount: terminalsForPricing,
-      rules: businessRules,
-      tier: tierHardware,
-    })
-    const saleQuote = hwCharges.sale
-    const hardwareSaleTotalAmount = saleQuote
-      ? convertVentasMoney(saleQuote.total, VENTAS_PRICE_LIST_CURRENCY, listCurrency)
-      : 0
-    const hardwareSaleUnitPrice = saleQuote
-      ? convertVentasMoney(saleQuote.unitPrice, VENTAS_PRICE_LIST_CURRENCY, listCurrency)
-      : undefined
-    const monthlyTotal = roundMoney(monthlySoftwareTotal + monthlyHardwareFee)
-    const hardwareMode = hwCharges.mode
 
-    const quoteList = {
-      currency: listCurrency,
-      annual_subtotal: annualSubtotal,
-      annual_discount_amount: annualDiscountAmount,
-      annual_total: annualTotal,
-      monthly_software_total: monthlySoftwareTotal,
-      monthly_hardware_fee: monthlyHardwareFee,
-      monthly_total: monthlyTotal,
-      hardware_sale_total: hardwareSaleTotalAmount,
-      hardware_sale_unit_price: hardwareSaleUnitPrice,
-      hardware_sale_discount_pct: saleQuote?.discountPct,
-      coupon_applied: isCouponValid,
-      discount_pct_applied: discountPctApplied,
-      coupon_code_applied: couponCodeApplied,
-      tier: {
-        min_employees: tier.min_employees,
-        max_employees: tier.max_employees,
-        annual_terminal_mode: tierHardware.annual_terminal_mode,
-        included_terminals_max: tierHardware.included_terminals_max,
+    const { quote: quoteList } = computeVentasQuotationQuote({
+      employeesCount,
+      billingModality,
+      terminalsCount,
+      complementBiometric,
+      includeTerminals,
+      affiliateMembership,
+      includeEnterprise,
+      enterpriseAnnualPrice,
+      listCurrency,
+      tier,
+      businessRules,
+      coupon: {
+        applied: isCouponValid,
+        discountPct: discountPctApplied,
+        code: couponCodeApplied,
       },
-      hardware_mode: hardwareMode,
-      business_rules: businessRules,
-      billing_modality: billingModality,
-      terminals_count: terminalsForPricing,
-      terminals_included_count: hwCharges.includedCount,
-      terminals_extra_count: hwCharges.extraCount,
-      employees_count: employeesCount,
-    }
+    })
+    const terminalsForPricing = quoteList.terminals_count
+    const resolvedModality = quoteList.billing_modality
 
     // Montos al cliente: dólares (SV), quetzales (GT), lempiras (HN).
     const quote = localizeQuotationQuote(quoteList, listCurrency, displayCurrency)
@@ -387,15 +361,24 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
       referer: String(req.headers['referer'] || '').slice(0, 200),
       country_code: countryCode,
       sector_rubro: sectorRubro || undefined,
-      billing_modality: billingModality,
+      billing_modality: resolvedModality,
       terminals_count: terminalsForPricing,
-      terminals_included_count: hwCharges.includedCount,
-      terminals_extra_count: hwCharges.extraCount,
+      terminals_included_count: quoteList.terminals_included_count,
+      terminals_extra_count: quoteList.terminals_extra_count,
+      product_kind: quoteList.product_kind,
+      complement_biometric: quoteList.complement_biometric,
+      include_terminals: quoteList.include_terminals,
+      include_enterprise: quoteList.include_enterprise,
+      enterprise_applied: quoteList.enterprise_applied,
+      enterprise_annual_price: quoteList.enterprise_annual_price,
+      commercial_plan_type: quoteList.commercial_plan_type,
+      membership_applied: quoteList.membership_applied,
+      membership_discount_pct: quoteList.membership_discount_pct,
       list_currency: listCurrency,
       monthly_hardware_fee: quote.monthly_hardware_fee || undefined,
       hardware_sale_total: quote.hardware_sale_total || undefined,
       hardware_sale_unit_price: quote.hardware_sale_unit_price,
-      hardware_sale_discount_pct: saleQuote?.discountPct,
+      hardware_sale_discount_pct: quoteList.hardware_sale_discount_pct,
       monthly_total: quote.monthly_total || undefined,
       comparison_snapshot: buildModalityComparisonSnapshot(quote),
     }
@@ -421,9 +404,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
           min_employees: tier.min_employees,
           max_employees: tier.max_employees,
           price: Number(tier.price),
+          quoted_software_price: quoteList.annual_subtotal,
+          product_kind: quoteList.product_kind,
           list_currency: listCurrency,
-          annual_terminal_mode: tierHardware.annual_terminal_mode,
-          included_terminals_max: tierHardware.included_terminals_max,
+          annual_terminal_mode: quoteList.tier.annual_terminal_mode,
+          included_terminals_max: quoteList.tier.included_terminals_max,
         },
         status: 'created',
         meta,
@@ -546,7 +531,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
       country_code: countryCode,
       empleados: employeesCount,
       quote_id: quoteId,
-      billing_modality: billingModality,
+      billing_modality: resolvedModality,
       monthly_total: quote.monthly_total,
       currency: quote.currency,
     })
@@ -555,13 +540,14 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
     try {
       const quoteMetaForCompany = {
         quote_id: quoteId,
-        billing_modality: billingModality,
+        billing_modality: resolvedModality,
         terminals_count: terminalsForPricing,
         employees_count: employeesCount,
         country_code: countryCode,
         sector_rubro: sectorRubro || undefined,
         coupon_code_submitted: couponSubmittedNorm || undefined,
         coupon_applied: isCouponValid,
+        product_kind: quoteList.product_kind,
       }
 
       const env = await createTrialEnvironmentFromQuote(supabase as any, {
@@ -574,7 +560,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
       })
 
       const frozenAmounts = computeFrozenQuoteAmounts({
-        billingModality,
+        billingModality: resolvedModality,
         monthlySoftwareTotal: quoteList.monthly_software_total,
         monthlyHardwareFee: quoteList.monthly_hardware_fee,
         annualTotal: quoteList.annual_total,
@@ -654,7 +640,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
         content_category: countryCode,
         value: leadValue,
         currency: quote.currency,
-        status: billingModality,
+        status: resolvedModality,
       },
     })
 

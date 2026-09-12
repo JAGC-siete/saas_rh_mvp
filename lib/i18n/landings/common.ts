@@ -19,6 +19,7 @@ export type CommonCopy = {
     implementacion48h: string
     alternativaOdoo: string
     domingosSinPlanilla: string
+    planBasico: string
   }
 }
 
@@ -42,6 +43,7 @@ const byLocale: Record<LandingLocale, CommonCopy> = {
       implementacion48h: 'Implementación biométrica en 72 h',
       alternativaOdoo: 'Complemento a Odoo',
       domingosSinPlanilla: 'Domingos sin planilla',
+      planBasico: 'Membresía anual Basic',
     },
   },
   en: {
@@ -63,6 +65,7 @@ const byLocale: Record<LandingLocale, CommonCopy> = {
       implementacion48h: 'Biometric go-live in 72 h',
       alternativaOdoo: 'Odoo complement',
       domingosSinPlanilla: 'Sundays without payroll',
+      planBasico: 'Annual Basic membership',
     },
   },
 }

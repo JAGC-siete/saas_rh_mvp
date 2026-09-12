@@ -61,6 +61,7 @@ export async function generateVentasQuotationPDF(params: {
     currency: quote.currency,
     rules: quote.business_rules,
     tier: ruleOpts.tier,
+    productKind: quote.product_kind,
   })
   const isAnnual = quote.billing_modality === 'annual'
   const refLabel = buildVentasRefLabel(companyName, contactName)
@@ -130,6 +131,7 @@ export async function generateVentasQuotationPDF(params: {
                 quote.currency
               )
             : undefined),
+        productKind: quote.product_kind,
       })
 
       const priceY = featuresY + featuresH + 10
@@ -160,6 +162,7 @@ export async function generateVentasQuotationPDF(params: {
         includesTerminals,
         hardwareSaleTotal: quote.hardware_sale_total || 0,
         currency: quote.currency,
+        productKind: quote.product_kind,
       })
 
       doc.end()
@@ -287,6 +290,7 @@ function drawFeaturesRow(
     extraCount?: number
     includedCap?: number
     hardwareSaleUnitPrice?: number
+    productKind?: QuotationQuote['product_kind']
   }
 ): number {
   const {
@@ -301,6 +305,7 @@ function drawFeaturesRow(
     extraCount,
     includedCap,
     hardwareSaleUnitPrice,
+    productKind,
   } = params
   const labels = getContractIncludesLabels({
     isAnnual,
@@ -312,6 +317,7 @@ function drawFeaturesRow(
     extraCount,
     includedCap,
     hardwareSaleUnitPrice,
+    productKind,
   })
   const colGap = 16
   const colW = (contentW - colGap) / 2
@@ -411,6 +417,7 @@ function drawFooter(
     includesTerminals: boolean
     hardwareSaleTotal?: number
     currency: QuotationQuote['currency']
+    productKind?: QuotationQuote['product_kind']
   }
 ) {
   const { y, contentW, bankDetails, isAnnual, includesTerminals, hardwareSaleTotal, currency } = params
@@ -426,6 +433,7 @@ function drawFooter(
     ? annualPaymentIntroText({
         includesTerminals,
         hardwareSaleTotal,
+        productKind: params.productKind,
       })
     : 'El siguiente paso es enviar el comprobante del 100% de la primera mensualidad (software + continuidad de hardware).'
 

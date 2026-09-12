@@ -76,5 +76,13 @@ export function localizeQuotationQuote(
       typeof quote.hardware_sale_unit_price === 'number'
         ? convertVentasMoney(quote.hardware_sale_unit_price, from, to)
         : quote.hardware_sale_unit_price,
+    membership_discount_amount:
+      typeof quote.membership_discount_amount === 'number'
+        ? convertVentasMoney(quote.membership_discount_amount, from, to)
+        : quote.membership_discount_amount,
+    enterprise_annual_price:
+      typeof quote.enterprise_annual_price === 'number'
+        ? convertVentasMoney(quote.enterprise_annual_price, from, to)
+        : quote.enterprise_annual_price,
   }
 }
