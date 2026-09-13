@@ -4,6 +4,7 @@
 
 @layer base {
   :root {
+    --hs-cookie-offset: 0px;
     /* Icon tokens */
     --icon-size: 24px;
     --icon-stroke: 1.75;
@@ -80,6 +81,7 @@
   }
   body {
     @apply bg-background text-foreground;
+    padding-bottom: var(--hs-cookie-offset, 0px);
   }
   svg { width: var(--icon-size); height: var(--icon-size); stroke-width: var(--icon-stroke); }
 }

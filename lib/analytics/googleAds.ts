@@ -32,7 +32,7 @@ const SEND_TO_LEAD = process.env.NEXT_PUBLIC_GADS_SEND_TO_LEAD?.trim()
 const SEND_TO_WHATSAPP = process.env.NEXT_PUBLIC_GADS_SEND_TO_WHATSAPP?.trim()
 const SEND_TO_COMPARISON = process.env.NEXT_PUBLIC_GADS_SEND_TO_COMPARISON?.trim()
 
-/** Paths where gtag must load immediately (page-load conversion). */
+/** Thank-you URLs used for Ads primary conversions. Tags still wait for cookie opt-in. */
 export const THANK_YOU_PATHS = ['/activar/gracias', '/ventas/gracias', '/gracias'] as const
 
 interface ConversionPayload {
@@ -43,7 +43,7 @@ interface ConversionPayload {
   event_callback?: () => void
 }
 
-/** gtag carga diferido en marketing; encolar hasta que MarketingAnalytics lo monte. */
+/** gtag carga tras consentimiento; encolar conversiones hasta que MarketingAnalytics lo monte. */
 const pendingConversions: ConversionPayload[] = []
 
 function fireGoogleAdsConversion(

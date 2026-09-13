@@ -7,6 +7,7 @@ import SchemaMarkup from '../components/SEO/SchemaMarkup'
 import DockNavbar from '../components/landing/DockNavbar'
 import HomeAnnouncementBanner from '../components/landing/HomeAnnouncementBanner'
 import MagneticHero from '../components/landing/MagneticHero'
+import HomeStickyWhatsApp from '../components/landing/HomeStickyWhatsApp'
 import TrustBar from '../components/landing/TrustBar'
 import MeshBackground from '../components/landing/MeshBackground'
 import MarketingStyles from '../components/marketing/MarketingStyles'
@@ -84,7 +85,7 @@ export default function LandingPage() {
 
   return (
     <div
-      className={`landing-shell landing-tone-surface min-h-screen relative ${
+      className={`landing-shell landing-tone-surface min-h-screen relative pb-24 md:pb-0 ${
         isLight ? 'bg-white text-slate-900' : 'bg-mesh text-white'
       } ${bannerVisible ? 'pt-28 sm:pt-32' : 'pt-20 sm:pt-24'}`}
     >
@@ -92,7 +93,6 @@ export default function LandingPage() {
       <LandingHreflang />
       <Head>
         <title>{pageTitle}</title>
-        <link rel="icon" href="/brand/favicon-humano-sisu.png" />
         <meta name="description" content={pageDescription} />
         <meta name="keywords" content={home.metaKeywords} />
         <meta name="author" content="Humano SISU" />
@@ -117,6 +117,7 @@ export default function LandingPage() {
       <DockNavbar topOffsetPx={bannerVisible ? HOME_BANNER_OFFSET_PX : 0} tone={tone} />
 
       <MagneticHero />
+      <HomeStickyWhatsApp />
 
       <section
         id="prueba-social"

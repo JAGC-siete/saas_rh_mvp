@@ -12,6 +12,14 @@ export type CommonCopy = {
   privacy: string
   terms: string
   rightsReserved: string
+  cookies: {
+    aria: string
+    message: string
+    accept: string
+    reject: string
+    privacyLink: string
+    manage: string
+  }
   guideLabels: {
     recursos: string
     deduccionesHonduras: string
@@ -36,6 +44,15 @@ const byLocale: Record<LandingLocale, CommonCopy> = {
     privacy: 'Política de Privacidad',
     terms: 'Términos de servicio',
     rightsReserved: '© 2026 Humano SISU. Todos los derechos reservados.',
+    cookies: {
+      aria: 'Consentimiento de cookies',
+      message:
+        'Usamos cookies técnicas para que el sitio funcione. Con tu permiso, también cookies de analítica y marketing (Google Analytics, Google Ads y Meta Pixel).',
+      accept: 'Aceptar',
+      reject: 'Solo técnicas',
+      privacyLink: 'Política de privacidad',
+      manage: 'Gestionar cookies',
+    },
     guideLabels: {
       recursos: 'Artículos y guías',
       deduccionesHonduras: 'IHSS, RAP e ISR en Honduras',
@@ -58,6 +75,15 @@ const byLocale: Record<LandingLocale, CommonCopy> = {
     privacy: 'Privacy Policy',
     terms: 'Terms of service',
     rightsReserved: '© 2026 Humano SISU. All rights reserved.',
+    cookies: {
+      aria: 'Cookie consent',
+      message:
+        'We use technical cookies so the site works. With your permission, we also use analytics and marketing cookies (Google Analytics, Google Ads, and Meta Pixel).',
+      accept: 'Accept',
+      reject: 'Essential only',
+      privacyLink: 'Privacy policy',
+      manage: 'Manage cookies',
+    },
     guideLabels: {
       recursos: 'Articles & guides',
       deduccionesHonduras: 'IHSS, RAP & income tax in Honduras',

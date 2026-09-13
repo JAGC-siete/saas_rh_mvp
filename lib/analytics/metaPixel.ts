@@ -8,7 +8,7 @@
  * - calculadoras (PDF lead) → CompleteRegistration
  * - /info, /viernes → Lead
  *
- * Píxel base en pages/_document.tsx.
+ * Píxel base en MarketingAnalytics (solo tras consentimiento).
  */
 
 import { trackGA4Event } from './ga4'

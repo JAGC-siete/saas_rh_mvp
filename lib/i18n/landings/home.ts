@@ -55,6 +55,11 @@ export type HomeCopy = {
     dataSecure: string
     guarantee: string
   }
+  stickyWhatsApp: {
+    label: string
+    aria: string
+    prefill: string
+  }
 }
 
 const testimonialsEs: HomeCopy['testimonials'] = [
@@ -226,6 +231,11 @@ const byLocale: Record<LandingLocale, HomeCopy> = {
       dataSecure: 'Infraestructura AWS regional encriptada',
       guarantee: 'Garantía de calidad y seguridad certificada por AWS',
     },
+    stickyWhatsApp: {
+      label: 'Escribinos por WhatsApp',
+      aria: 'Abrir WhatsApp para escribir a Humano SISU',
+      prefill: 'Hola, quiero información de Humano SISU',
+    },
   },
   en: {
     metaKeywords:
@@ -287,6 +297,11 @@ const byLocale: Record<LandingLocale, HomeCopy> = {
       dataSecureLabel: 'Secure data:',
       dataSecure: 'Encrypted regional AWS infrastructure',
       guarantee: 'Quality and security assurance certified by AWS',
+    },
+    stickyWhatsApp: {
+      label: 'Message us on WhatsApp',
+      aria: 'Open WhatsApp to message Humano SISU',
+      prefill: 'Hi, I want information about Humano SISU',
     },
   },
 }

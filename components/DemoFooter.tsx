@@ -6,6 +6,7 @@ import { SOCIAL_LINKS } from '../lib/marketing/social-links'
 import { PRIVACY_PUBLIC_PATH, TERMS_PUBLIC_PATH } from '../lib/marketing/legal-paths'
 import { getCommonCopy } from '../lib/i18n/landings/common'
 import { useLandingPreferences } from './landing/LandingPreferencesProvider'
+import { openCookieBanner } from '../lib/analytics/cookie-consent'
 
 interface DemoFooterProps {
   variant?: 'default' | 'minimal'
@@ -183,6 +184,14 @@ const DemoFooter: React.FC<DemoFooterProps> = ({ variant = 'default' }) => {
               >
                 {copy.terms}
               </Link>
+              <span className="hidden sm:inline">•</span>
+              <button
+                type="button"
+                onClick={() => openCookieBanner()}
+                className="text-gray-600 hover:text-gray-900 transition-colors underline decoration-gray-400/30 hover:decoration-gray-600"
+              >
+                {copy.cookies.manage}
+              </button>
               <span className="hidden sm:inline">•</span>
               <span>{copy.rightsReserved}</span>
             </div>

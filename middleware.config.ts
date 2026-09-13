@@ -147,6 +147,9 @@ export const MIDDLEWARE_CONFIG = {
     '/logo-humano-sisu.png',
     '/brand/logo-humano-sisu-sm.png',
     '/brand/favicon-humano-sisu.png',
+    '/brand/favicon-32.png',
+    '/brand/favicon-48.png',
+    '/brand/apple-touch-icon.png',
     '/favicon.ico',
     '/robots.txt',
     '/sitemap.xml'

@@ -132,6 +132,10 @@ export default function PoliticaPrivacidad() {
                     • <strong>Mensajería</strong> (p. ej., <strong>WhatsApp/WhatsApp Business API</strong> o
                     integraciones equivalentes).
                   </li>
+                  <li>
+                    • <strong>Analítica y publicidad</strong> (solo con consentimiento):{' '}
+                    <strong>Google Analytics 4</strong>, <strong>Google Ads</strong> y <strong>Meta Pixel</strong>.
+                  </li>
                 </ul>
                 <p className="text-slate-300 mt-4">
                   Estos proveedores pueden estar ubicados fuera de tu país. En ese caso, adoptamos garantías
@@ -141,11 +145,11 @@ export default function PoliticaPrivacidad() {
 
               <section className="mb-8">
                 <h2 className="text-2xl font-semibold text-white mb-4">{copy.headings[6]}</h2>
-                <p className="text-slate-300">
-                  Usamos <strong>solo cookies técnicas</strong> necesarias para que el sitio funcione. No realizamos
-                  publicidad conductual ni perfilado. Si más adelante incorporamos analítica, lo informaremos y
-                  pediremos consentimiento.
-                </p>
+                <div className="text-slate-300 space-y-3">
+                  {copy.cookiesParagraphs.map((paragraph) => (
+                    <p key={paragraph.slice(0, 48)}>{paragraph}</p>
+                  ))}
+                </div>
               </section>
 
               <section className="mb-8">

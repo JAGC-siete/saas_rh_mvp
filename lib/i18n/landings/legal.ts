@@ -12,6 +12,7 @@ export type LegalPageCopy = {
   authorityBanner: string | null
   headings: string[]
   intro: string
+  cookiesParagraphs: string[]
 }
 
 export type LegalCopy = {
@@ -29,7 +30,7 @@ const byLocale: Record<LandingLocale, LegalCopy> = {
       breadcrumbLabel: 'Política de privacidad',
       backHome: '← Volver al inicio',
       title: 'Política de Privacidad',
-      lastUpdated: 'Última actualización: 17 de agosto de 2025',
+      lastUpdated: 'Última actualización: 13 de septiembre de 2026',
       authorityBanner: null,
       headings: [
         '1) Responsable',
@@ -45,6 +46,11 @@ const byLocale: Record<LandingLocale, LegalCopy> = {
       ],
       intro:
         'Humano SISU (“nosotros”), con operación en El Salvador, Guatemala y Honduras. Contacto: humanosisu@humanosisu.net | 504 32226773',
+      cookiesParagraphs: [
+        'Usamos cookies técnicas necesarias para que el sitio funcione (sesión, preferencia de tema, consentimiento).',
+        'Con tu consentimiento explícito (banner Aceptar) cargamos cookies y tecnologías similares de analítica y marketing: Google Analytics 4, Google Ads y Meta Pixel. Si elegís “Solo técnicas”, esos scripts no se cargan.',
+        'Podés cambiar tu elección en cualquier momento con “Gestionar cookies” en el pie de página.',
+      ],
     },
     terms: {
       metaTitle: 'Términos de servicio | Humano SISU',
@@ -68,6 +74,7 @@ const byLocale: Record<LandingLocale, LegalCopy> = {
       ],
       intro:
         'Humano SISU es un software de gestión de recursos humanos y nómina orientado a empresas en El Salvador, Guatemala y Honduras. Contacto: humanosisu@humanosisu.net | 504 32226773 (WhatsApp).',
+      cookiesParagraphs: [],
     },
   },
   en: {
@@ -79,7 +86,7 @@ const byLocale: Record<LandingLocale, LegalCopy> = {
       breadcrumbLabel: 'Privacy policy',
       backHome: '← Back to home',
       title: 'Privacy Policy',
-      lastUpdated: 'Last updated: August 17, 2025',
+      lastUpdated: 'Last updated: September 13, 2026',
       authorityBanner: 'Spanish legal text is authoritative; English summary available for chrome and headings.',
       headings: [
         '1) Controller',
@@ -95,6 +102,11 @@ const byLocale: Record<LandingLocale, LegalCopy> = {
       ],
       intro:
         'Humano SISU (“we”), operating in El Salvador, Guatemala, and Honduras. Contact: humanosisu@humanosisu.net | 504 32226773',
+      cookiesParagraphs: [
+        'We use technical cookies needed for the site to work (session, theme preference, consent).',
+        'With your explicit consent (Accept on the banner) we load analytics and marketing cookies: Google Analytics 4, Google Ads, and Meta Pixel. If you choose “Essential only”, those scripts do not load.',
+        'You can change your choice at any time with “Manage cookies” in the footer.',
+      ],
     },
     terms: {
       metaTitle: 'Terms of service | Humano SISU',
@@ -118,6 +130,7 @@ const byLocale: Record<LandingLocale, LegalCopy> = {
       ],
       intro:
         'Humano SISU is HR and payroll management software for companies in El Salvador, Guatemala, and Honduras. Contact: humanosisu@humanosisu.net | 504 32226773 (WhatsApp).',
+      cookiesParagraphs: [],
     },
   },
 }

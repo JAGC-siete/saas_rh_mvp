@@ -1,6 +1,11 @@
 import { useEffect } from 'react'
 import { flushPendingGoogleAdsConversions } from '../../lib/analytics/googleAds'
 import { resolveMetaPixelId } from '../../lib/analytics/meta-pixel-id'
+import {
+  analyticsAllowed,
+  readCookieConsent,
+  subscribeCookieConsent,
+} from '../../lib/analytics/cookie-consent'
 
 const GADS_CONVERSION_ID = 'AW-17840996991'
 const GA4_MEASUREMENT_ID =
@@ -19,10 +24,9 @@ type AnalyticsWindow = Window & {
 }
 
 /**
- * Marketing analytics:
- * - Google tag (GA4 + AW-17840996991) loads immediately so Ads Tag Assistant /
- *   conversion verification sees the tag without waiting for a click.
- * - Meta Pixel stays deferred (interaction or idle) to protect LCP lab scores.
+ * Marketing analytics (opt-in):
+ * - Google tag (GA4 + AW-17840996991) and Meta Pixel load only after cookie accept.
+ * - Meta stays deferred after consent (interaction or idle) to protect LCP.
  *
  * Scroll is intentionally omitted for Meta: Lighthouse often synthesizes scroll.
  */
@@ -33,6 +37,7 @@ export default function MarketingAnalytics() {
 
     let cancelled = false
     let idleTimer: ReturnType<typeof setTimeout> | null = null
+    let started = false
 
     const loadGtag = () => {
       if (cancelled || w.__hsGtagLoaded) return
@@ -94,36 +99,33 @@ export default function MarketingAnalytics() {
     const cleanupMeta = () => {
       window.removeEventListener('pointerdown', onInteract)
       window.removeEventListener('keydown', onInteract)
-      if (idleTimer) clearTimeout(idleTimer)
-    }
-
-    loadGtag()
-
-    if (w.__hsMetaLoaded) {
-      return () => {
-        cancelled = true
+      if (idleTimer) {
+        clearTimeout(idleTimer)
+        idleTimer = null
       }
     }
 
-    window.addEventListener('pointerdown', onInteract, { once: true, passive: true })
-    window.addEventListener('keydown', onInteract, { once: true })
-    idleTimer = setTimeout(loadMeta, META_IDLE_FALLBACK_MS)
+    const startAfterConsent = () => {
+      if (cancelled || started || !analyticsAllowed(readCookieConsent())) return
+      started = true
+      loadGtag()
+
+      if (w.__hsMetaLoaded) return
+
+      window.addEventListener('pointerdown', onInteract, { once: true, passive: true })
+      window.addEventListener('keydown', onInteract, { once: true })
+      idleTimer = setTimeout(loadMeta, META_IDLE_FALLBACK_MS)
+    }
+
+    startAfterConsent()
+    const unsubscribe = subscribeCookieConsent(() => startAfterConsent())
 
     return () => {
       cancelled = true
       cleanupMeta()
+      unsubscribe()
     }
   }, [])
 
-  return (
-    <noscript>
-      <img
-        height="1"
-        width="1"
-        style={{ display: 'none' }}
-        alt=""
-        src={`https://www.facebook.com/tr?id=${encodeURIComponent(META_PIXEL_ID)}&ev=PageView&noscript=1`}
-      />
-    </noscript>
-  )
+  return null
 }

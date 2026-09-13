@@ -7,6 +7,7 @@ import { ToastContainer } from '../lib/toast'
 import { cn } from '../lib/utils'
 import { isPublicMarketingRoute, isPublicKioskDisabledRoute } from '../lib/seo/public-ssr-routes'
 import MarketingAnalytics from '../components/marketing/MarketingAnalytics'
+import CookieBanner from '../components/marketing/CookieBanner'
 import { LandingPreferencesProvider } from '../components/landing/LandingPreferencesProvider'
 import '../styles/globals.css'
 import '../styles/templates.css'
@@ -102,13 +103,14 @@ export default function App({ Component, pageProps }: AppProps) {
     )
   }
 
-  // Marketing: skip Auth/Notification; gtag loads immediately (Meta stays deferred).
+  // Marketing: skip Auth/Notification; gtag/Meta wait for cookie opt-in.
   if (isMarketingRoute) {
     return (
       <SupabaseContext.Provider value={null}>
         <LandingPreferencesProvider>
           {page}
           <ToastContainer />
+          <CookieBanner />
           <MarketingAnalytics />
         </LandingPreferencesProvider>
       </SupabaseContext.Provider>
