@@ -89,8 +89,14 @@ export default function App({ Component, pageProps }: AppProps) {
     )
   }
 
+  const fontShellClass = cn(
+    montserrat.variable,
+    'min-h-screen font-sans',
+    !isMeshAppRoute && !isMarketingRoute && 'bg-app'
+  )
+
   const page = (
-    <div className={cn(montserrat.variable, 'min-h-screen font-sans', !isMeshAppRoute && !isMarketingRoute && 'bg-app')}>
+    <div className={fontShellClass}>
       <Component {...pageProps} />
     </div>
   )
@@ -108,10 +114,12 @@ export default function App({ Component, pageProps }: AppProps) {
     return (
       <SupabaseContext.Provider value={null}>
         <LandingPreferencesProvider>
-          {page}
-          <ToastContainer />
-          <CookieBanner />
-          <MarketingAnalytics />
+          <div className={cn(montserrat.variable, 'font-sans')}>
+            {page}
+            <ToastContainer />
+            <CookieBanner />
+            <MarketingAnalytics />
+          </div>
         </LandingPreferencesProvider>
       </SupabaseContext.Provider>
     )

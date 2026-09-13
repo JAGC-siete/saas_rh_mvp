@@ -61,8 +61,8 @@ export default function CookieBanner() {
       aria-label={copy.cookies.aria}
       className={
         isLight
-          ? 'fixed inset-x-0 bottom-0 z-[110] border-t border-slate-200 bg-white'
-          : 'fixed inset-x-0 bottom-0 z-[110] border-t border-white/15 bg-slate-950'
+          ? 'fixed inset-x-0 bottom-0 z-[110] border-t border-slate-200 bg-white font-sans'
+          : 'fixed inset-x-0 bottom-0 z-[110] border-t border-white/15 bg-slate-950 font-sans'
       }
     >
       <div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-6 sm:py-4">
