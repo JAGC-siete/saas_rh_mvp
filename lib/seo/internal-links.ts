@@ -37,7 +37,7 @@ export const GUIDE_LINKS: Record<string, GuideLink> = {
   planBasico: {
     href: '/membresia-anual',
     label: 'Membresía anual (sin reloj)',
-    description: 'L. 6,500/año: expedientes, marcas a mano y recibos'
+    description: 'L. 6,500/año: gestión profesional de empleados, sin reloj'
   },
   domingosSinPlanilla: {
     href: '/domingos-sin-planilla',

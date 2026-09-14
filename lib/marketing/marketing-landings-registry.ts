@@ -114,7 +114,7 @@ export const MARKETING_LANDINGS: MarketingLandingEntry[] = [
     primaryCta: 'Formulario → /api/quote',
     launched: '2026-09-12',
     notes:
-      'Canónico /membresia-anual. /plan-basico → 301. Copy de SKU; deslinde en badge, una frase, FAQ y consentimiento.',
+      'Canónico /membresia-anual. /plan-basico → 301. Copy de invitación + SKU L. 6,500. Deslinde en badge, subhead, FAQ y consentimiento.',
   },
   {
     path: '/calculadora',

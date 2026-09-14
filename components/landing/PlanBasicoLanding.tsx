@@ -161,7 +161,7 @@ export default function PlanBasicoLanding() {
               <span className="inline-flex items-center rounded-full border border-white/15 bg-white/8 px-3 py-1.5 text-xs font-medium text-slate-200">
                 {copy.hero.badge}
               </span>
-              <span className="inline-flex items-center rounded-full border border-cyan-400/25 bg-cyan-400/10 px-3 py-1.5 text-xs font-medium text-cyan-200">
+              <span className="inline-flex max-w-full items-center rounded-xl border border-cyan-400/25 bg-cyan-400/10 px-3 py-1.5 text-xs font-medium leading-snug text-cyan-200">
                 {copy.hero.kicker}
               </span>
             </div>
@@ -171,6 +171,10 @@ export default function PlanBasicoLanding() {
             <p className="landing-muted mt-5 max-w-2xl text-base font-medium sm:text-lg">
               {copy.hero.subheadline(priceLabel)}
             </p>
+            <blockquote className="mt-4 max-w-2xl">
+              <p className="text-sm italic leading-relaxed text-slate-400">«{copy.hero.quote}»</p>
+              <footer className="mt-1 text-xs text-slate-500">— {copy.hero.quoteAttr}</footer>
+            </blockquote>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <button
                 type="button"
@@ -211,7 +215,7 @@ export default function PlanBasicoLanding() {
                   )
                 })}
               </ul>
-              <p className="mt-4 text-xs text-slate-400">Cualquier tamaño de equipo · sin reloj biométrico</p>
+              <p className="mt-4 text-xs text-slate-400">{copy.hero.priceFoot}</p>
             </div>
           </BorderBeam>
         </div>

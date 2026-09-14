@@ -7,58 +7,61 @@ export const PLAN_BASICO_COPY = {
   seo: {
     title: 'Membresía anual | L. 6,500/año | Humano SISU',
     description:
-      'Expedientes, marcas a mano y recibos de nómina. L. 6,500 al año, sin reloj biométrico. Software privado de Humano SISU.',
+      'Gestión profesional de empleados. L. 6,500 al año: expedientes, marcas a mano y recibos. Sin reloj biométrico. Software privado de Humano SISU.',
     keywords:
       'membresía anual RRHH Honduras, software empleados, asistencia manual, recibos de nómina, Humano SISU',
   },
 
   hero: {
     badge: 'Oferta comercial · software privado',
-    kicker: 'Humano SISU',
-    headline: 'Expedientes, marcas a mano y recibos. Un pago al año.',
+    kicker: 'Formalización y digitalización de la micro y pequeña empresa',
+    headline: 'Gestión profesional de empleados. Un pago al año.',
     subheadline: (price: string) =>
-      `${price} cubre los tres módulos, cualquier tamaño de equipo, sin reloj biométrico. Software privado de Humano SISU — no es un trámite de gobierno.`,
+      `${price} cubre expedientes, marcas a mano y recibos. Cualquier tamaño de equipo, sin reloj. Software privado — no es un trámite de gobierno.`,
+    quote:
+      'El que es fiel en lo muy poco, también en lo más es fiel; y el que en lo muy poco es injusto, también en lo más es injusto.',
+    quoteAttr: 'Lucas 16:10',
     ctaPrimary: 'Recibir propuesta y acceso',
     ctaSecondary: 'Probar el sistema',
     priceLabel: 'Membresía anual',
+    priceFoot: 'Cualquier tamaño de equipo · sin reloj biométrico',
   },
 
   honesty: {
-    title: 'Qué estás comprando',
+    title: 'Beneficios desde el inicio',
     items: [
       {
-        title: 'Tres módulos, un precio',
-        body: (price: string) =>
-          `${price} al año cubre expedientes, marcas y recibos. No hay un cobro aparte de un producto “gratis”.`,
+        title: 'Formalizar desde el inicio',
+        body: 'Procesos claros generan confianza y lealtad en el equipo.',
       },
       {
-        title: 'Dejá el cuaderno',
-        body: 'El colaborador o el encargado registra la entrada y la salida en el sistema. Este plan no trae reloj.',
+        title: 'Digitalizar libera tiempo',
+        body: 'Las tareas formales siguen siendo necesarias. Invertir horas en papel, ya no.',
       },
       {
-        title: 'Software privado',
-        body: 'Humano SISU vende una plataforma de recursos humanos. No es un trámite de gobierno.',
+        title: 'Cuentas claras',
+        body: 'Con controles listos, el negocio está mejor preparado ante los malentendidos laborales.',
       },
     ],
   },
 
   modules: {
-    title: 'Tres módulos incluidos',
+    title: 'Gestión profesional de empleados',
     subtitle: 'Sin reloj, cualquier tamaño de equipo.',
     items: [
       {
         title: 'Empleados',
-        body: 'Expedientes digitales del equipo: datos de contratación y archivo en un solo lugar.',
+        body: 'Expedientes digitales, constancias de trabajo y control de permisos y ausencias en un solo lugar.',
         limit: 'Sin límite de empleados en este plan.',
       },
       {
         title: 'Asistencia',
-        body: 'Registro de entrada y salida a mano. Dejá el cuaderno; no automatiza la marcación.',
+        body: 'Marcas de entrada y salida a mano. El cuaderno y el cálculo al ojo se vuelven un problema cuando hay un malentendido.',
         limit: 'Sin reloj, sin huella, sin reconocimiento facial.',
       },
       {
         title: 'Nómina',
-        body: 'Cálculos estandarizados y recibos de pago para el colaborador.',
+        body: 'Deducciones de ley y boletas de pago para el colaborador.',
         limit: 'Recibos en el sistema. La afiliación IHSS o RAP se hace en las instituciones.',
       },
     ],
@@ -68,6 +71,8 @@ export const PLAN_BASICO_COPY = {
     title: 'Incluye',
     items: [
       'Acceso anual a los tres módulos, sin límite de empleados en este plan',
+      'Permisos y ausencias en el sistema',
+      'Sin contratar personal extra',
       'Propuesta en PDF y credenciales al correo',
       'Modalidad anual únicamente (este plan no se vende mes a mes)',
     ],
@@ -130,7 +135,7 @@ export const PLAN_BASICO_COPY = {
     {
       question: '¿Esto formaliza mi empresa?',
       answer:
-        'Digitaliza controles internos de personal. No constituye la sociedad, no afilia al IHSS o RAP y no inscribe ante el SAR.',
+        'Formaliza procesos internos de personal. No constituye la sociedad, no afilia al IHSS o RAP y no inscribe ante el SAR.',
     },
     {
       question: '¿Esto es una notificación o un llamado del gobierno?',
@@ -140,8 +145,8 @@ export const PLAN_BASICO_COPY = {
   ],
 
   close: {
-    headline: 'Tres módulos, un pago al año.',
-    sub: 'Precio visible. Alcance visible. PDF y credenciales al correo.',
+    headline: 'Controles mínimos de un empleador serio. Un pago al año.',
+    sub: 'Digital, sin personal extra. Precio visible. PDF y credenciales al correo.',
     primary: 'Ir al formulario',
     secondary: 'Cotizá con relojes',
   },
