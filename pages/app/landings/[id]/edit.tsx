@@ -16,7 +16,7 @@ import { useRouter } from 'next/router'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { ArrowLeft, ExternalLink, Eye, Globe, Inbox, Loader2, Save } from 'lucide-react'
-import ProtectedRoute from '../../../../components/ProtectedRoute'
+import SuperAdminGuard from '../../../../components/SuperAdminGuard'
 import AppMeshShell from '../../../../components/landing/AppMeshShell'
 import LandingRenderer from '../../../../components/landings/LandingRenderer'
 import {
@@ -363,7 +363,7 @@ export default function LandingEditorPage() {
   const landingId = Array.isArray(rawId) ? rawId[0] : rawId
 
   return (
-    <ProtectedRoute>
+    <SuperAdminGuard redirectPath="/app/landings">
       <Head>
         <title>Editor de página | Humano SISU</title>
         <meta name="robots" content="noindex, nofollow" />
@@ -375,6 +375,6 @@ export default function LandingEditorPage() {
           <div className="px-6 py-10 text-sm text-gray-300">Cargando…</div>
         )}
       </AppMeshShell>
-    </ProtectedRoute>
+    </SuperAdminGuard>
   )
 }

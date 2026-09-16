@@ -26,6 +26,7 @@ import {
   LifeBuoy,
   Send,
   MapPin,
+  Globe,
 } from 'lucide-react'
 
 interface SuperAdminLayoutProps {
@@ -48,6 +49,7 @@ export default function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
     { name: 'Afiliados', href: '/app/admin/affiliates', icon: Users, description: 'Gestión de afiliados' },
     { name: 'Leads marketing', href: '/app/admin/mail-list', icon: Mail, description: 'Secuencia de email y suscriptores' },
     { name: 'Prospección leads', href: '/app/admin/prospection', icon: MapPin, description: 'Búsqueda local B2B y outreach Resend' },
+    { name: 'Landings de ejemplo', href: '/app/landings', icon: Globe, description: 'Páginas de muestra para visitas a clientes' },
     { name: 'Marketing KPIs', href: '/app/admin/marketing', icon: Activity, description: 'Conversiones: leads, email y cotizaciones' },
     { name: 'Comunicaciones', href: '/app/admin/communications', icon: Send, description: 'Campañas y secuencias de adopción' },
     { name: 'Recursos SEO', href: '/app/admin/recursos', icon: BookOpen, description: 'Artículos públicos en /recursos' },
@@ -95,7 +97,10 @@ export default function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
 
           <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
             {superAdminNavigation.map((item) => {
-              const isActive = router.pathname === item.href
+              const isActive =
+                item.href === '/app/landings'
+                  ? router.pathname === item.href || router.pathname.startsWith(`${item.href}/`)
+                  : router.pathname === item.href
               return (
                 <Link key={item.href} href={item.href} prefetch={false}>
                   <div

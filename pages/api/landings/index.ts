@@ -1,46 +1,36 @@
 /**
- * Listado y creación de landings de la empresa en sesión.
+ * Listado y creación de landings de ejemplo (herramienta de superadmin).
  *
- * Tenant: requireCompanyAccess entrega el companyId y se usa el cliente con sesión,
- * así aplican las políticas RLS; además cada consulta filtra .eq('company_id', companyId)
- * de forma explícita (defensa en dos capas, no una).
+ * No exige empresa activa: las páginas se cuelgan de la empresa contenedora
+ * landing-studio. El JWT de super_admin pasa el RLS; cada mutación usa ese cliente.
  */
 
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { requireCompanyAccess } from '../../../lib/auth/api-auth-fixed'
 import { logger } from '../../../lib/logger'
-import { LANDING_PAGES_TABLE, LANDING_PAGE_LIST_COLUMNS } from '../../../lib/landings/db'
+import { requireLandingAdmin } from '../../../lib/landings/admin-auth'
 import { parseCreateLanding } from '../../../lib/landings/admin-schema'
+import { LANDING_PAGES_TABLE, LANDING_PAGE_LIST_COLUMNS } from '../../../lib/landings/db'
+import { ensureLandingStudioCompanyId } from '../../../lib/landings/studio-company'
 import { applyBusinessToTemplate, templateContentFor } from '../../../lib/landings/templates'
 import type { LandingPageListItem } from '../../../types/landing'
 
-/** Postgres: violación de índice único (slug global o título repetido en la empresa). */
 const UNIQUE_VIOLATION = '23505'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  let auth
-  try {
-    auth = await requireCompanyAccess(req, res)
-  } catch {
-    // requireCompanyAccess ya respondió con 401/403.
-    return
-  }
+  const auth = await requireLandingAdmin(req, res)
+  if (!auth) return
 
-  const { supabase, companyId, user } = auth
-  if (!companyId) {
-    return res.status(400).json({ error: 'Necesitas una empresa activa para administrar landings' })
-  }
+  const { supabase, adminClient, user, auditLog } = auth
 
   if (req.method === 'GET') {
     const { data, error } = await supabase
       .from(LANDING_PAGES_TABLE)
       .select(LANDING_PAGE_LIST_COLUMNS)
-      .eq('company_id', companyId)
       .order('updated_at', { ascending: false })
       .limit(200)
 
     if (error) {
-      logger.error('Error listando landings', { companyId, error: error.message })
+      logger.error('Error listando landings', { error: error.message, userId: user.id })
       return res.status(500).json({ error: 'No se pudieron cargar las landings' })
     }
 
@@ -53,10 +43,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: parsed.error.issues[0]?.message ?? 'Datos inválidos' })
     }
 
-    const { title, slug, templateType, leadNotifyEmail } = parsed.data
+    const { title, slug, templateType, city, address, phone, whatsapp, email, leadNotifyEmail } =
+      parsed.data
 
-    // El JSON inicial sale de la plantilla y se personaliza con el título elegido.
-    const content = applyBusinessToTemplate(templateContentFor(templateType), { name: title })
+    let companyId: string
+    try {
+      companyId = await ensureLandingStudioCompanyId(adminClient)
+    } catch (err: unknown) {
+      logger.error('Error resolviendo empresa contenedora de landings', {
+        error: err instanceof Error ? err.message : String(err),
+      })
+      return res.status(500).json({ error: 'No se pudo preparar el espacio para crear la landing' })
+    }
+
+    const content = applyBusinessToTemplate(templateContentFor(templateType), {
+      name: title,
+      city,
+      address,
+      phone,
+      whatsapp,
+      email,
+    })
 
     const { data, error } = await supabase
       .from(LANDING_PAGES_TABLE)
@@ -67,7 +74,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         template_type: templateType,
         status: 'draft',
         content_json: content,
-        lead_notify_email: leadNotifyEmail ?? null,
+        lead_notify_email: leadNotifyEmail ?? email ?? null,
         created_by: user.id,
         updated_by: user.id,
       })
@@ -80,7 +87,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(409).json({
           error: isSlug
             ? 'Ese slug ya está tomado. Prueba con otro (por ejemplo, agregando la ciudad).'
-            : 'Ya tienes una landing con ese título.',
+            : 'Ya existe una landing con ese título.',
         })
       }
       logger.error('Error creando landing', { companyId, slug, error: error.message })
@@ -88,6 +95,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const created = data as { id: string; slug: string }
+    await auditLog('landing_created', { landingId: created.id, slug: created.slug, templateType })
     logger.info('Landing creada', { companyId, landingId: created.id, templateType })
 
     return res.status(201).json({ landing: created })

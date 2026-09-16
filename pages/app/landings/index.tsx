@@ -1,9 +1,8 @@
 /**
- * Listado de landings de la empresa + creación desde plantilla.
+ * Listado de landings de ejemplo + creación desde plantilla.
  *
- * Auth: ProtectedRoute (gate de sesión del shell /app) y, sobre todo, los endpoints
- * con requireCompanyAccess. No usa DashboardLayout porque ese shell arrastra la
- * navegación y los permisos del dominio de RRHH, que no aplica a este módulo.
+ * Herramienta de superadmin para visitas a clientes: se capturan datos básicos
+ * del negocio y se genera un ejemplo publicable. No exige empresa de RRHH activa.
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
@@ -11,7 +10,7 @@ import Head from 'next/head'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
 import { ExternalLink, FileText, Inbox, Loader2, Pencil, Plus, X } from 'lucide-react'
-import ProtectedRoute from '../../../components/ProtectedRoute'
+import SuperAdminGuard from '../../../components/SuperAdminGuard'
 import AppMeshShell from '../../../components/landing/AppMeshShell'
 import { Badge } from '../../../components/ui/badge'
 import { Button } from '../../../components/ui/button'
@@ -54,6 +53,11 @@ function CreateLandingForm({
   const [slug, setSlug] = useState('')
   const [slugTouched, setSlugTouched] = useState(false)
   const [templateType, setTemplateType] = useState<LandingTemplateKey>('papeleria')
+  const [city, setCity] = useState('')
+  const [address, setAddress] = useState('')
+  const [phone, setPhone] = useState('')
+  const [whatsapp, setWhatsapp] = useState('')
+  const [email, setEmail] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
 
@@ -63,7 +67,16 @@ function CreateLandingForm({
     event.preventDefault()
     if (saving) return
 
-    const parsed = createLandingSchema.safeParse({ title, slug: effectiveSlug, templateType })
+    const parsed = createLandingSchema.safeParse({
+      title,
+      slug: effectiveSlug,
+      templateType,
+      city,
+      address,
+      phone,
+      whatsapp,
+      email,
+    })
     if (!parsed.success) {
       setError(parsed.error.issues[0]?.message ?? 'Datos inválidos')
       return
@@ -84,7 +97,7 @@ function CreateLandingForm({
   return (
     <Card variant="glass">
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="text-lg">Nueva landing</CardTitle>
+        <CardTitle className="text-lg">Nueva landing de ejemplo</CardTitle>
         <button type="button" onClick={onCancel} aria-label="Cerrar" className="text-gray-300 hover:text-white">
           <X className="h-5 w-5" />
         </button>
@@ -93,7 +106,7 @@ function CreateLandingForm({
         <form onSubmit={onSubmit} className="space-y-5" noValidate>
           <div>
             <label htmlFor="landing-title" className="mb-1 block text-sm font-medium text-gray-200">
-              Título interno
+              Nombre del negocio
             </label>
             <Input
               id="landing-title"
@@ -122,13 +135,12 @@ function CreateLandingForm({
               />
             </div>
             <p className="mt-1 text-xs text-gray-400">
-              Solo minúsculas, números y guiones. Es único en todo el sistema, así que conviene incluir el
-              nombre del negocio o la ciudad.
+              Solo minúsculas, números y guiones. Conviene incluir el nombre o la ciudad.
             </p>
           </div>
 
           <fieldset>
-            <legend className="mb-2 block text-sm font-medium text-gray-200">Plantilla</legend>
+            <legend className="mb-2 block text-sm font-medium text-gray-200">Rubro</legend>
             <div className="grid gap-2 sm:grid-cols-2">
               {LANDING_TEMPLATE_OPTIONS.map((option) => (
                 <label
@@ -158,6 +170,72 @@ function CreateLandingForm({
             </div>
           </fieldset>
 
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label htmlFor="landing-city" className="mb-1 block text-sm font-medium text-gray-200">
+                Ciudad
+              </label>
+              <Input
+                id="landing-city"
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                placeholder="Tegucigalpa"
+                className="bg-white/10 text-white placeholder:text-gray-400"
+              />
+            </div>
+            <div>
+              <label htmlFor="landing-address" className="mb-1 block text-sm font-medium text-gray-200">
+                Dirección
+              </label>
+              <Input
+                id="landing-address"
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                placeholder="Blvd. Morazán, local 12"
+                className="bg-white/10 text-white placeholder:text-gray-400"
+              />
+            </div>
+            <div>
+              <label htmlFor="landing-phone" className="mb-1 block text-sm font-medium text-gray-200">
+                Teléfono
+              </label>
+              <Input
+                id="landing-phone"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="2222-0000"
+                inputMode="tel"
+                className="bg-white/10 text-white placeholder:text-gray-400"
+              />
+            </div>
+            <div>
+              <label htmlFor="landing-whatsapp" className="mb-1 block text-sm font-medium text-gray-200">
+                WhatsApp
+              </label>
+              <Input
+                id="landing-whatsapp"
+                value={whatsapp}
+                onChange={(e) => setWhatsapp(e.target.value)}
+                placeholder="9999-0000"
+                inputMode="tel"
+                className="bg-white/10 text-white placeholder:text-gray-400"
+              />
+            </div>
+            <div className="sm:col-span-2">
+              <label htmlFor="landing-email" className="mb-1 block text-sm font-medium text-gray-200">
+                Correo
+              </label>
+              <Input
+                id="landing-email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="hola@negocio.com"
+                className="bg-white/10 text-white placeholder:text-gray-400"
+              />
+            </div>
+          </div>
+
           {error && <p className="text-sm text-red-400">{error}</p>}
 
           <div className="flex gap-3">
@@ -180,6 +258,7 @@ function LandingsContent() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
+  const [dismissedCreate, setDismissedCreate] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -200,13 +279,20 @@ function LandingsContent() {
 
   const visible = useMemo(() => landings.filter((row) => row.status !== 'archived'), [landings])
 
+  useEffect(() => {
+    if (!loading && visible.length === 0 && !dismissedCreate && !error) {
+      setCreating(true)
+    }
+  }, [loading, visible.length, dismissedCreate, error])
+
   return (
     <div className="mx-auto w-full max-w-6xl space-y-6 px-4 py-8">
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white">Páginas web</h1>
+          <h1 className="text-2xl font-bold text-white">Landings de ejemplo</h1>
           <p className="text-sm text-gray-300">
-            Crea la página de tu negocio desde una plantilla, edítala y publícala cuando esté lista.
+            En la visita, anota nombre, rubro, ciudad, teléfono y WhatsApp. Aquí se arma un ejemplo
+            para mostrárselo al cliente.
           </p>
         </div>
         {!creating && (
@@ -219,7 +305,10 @@ function LandingsContent() {
 
       {creating && (
         <CreateLandingForm
-          onCancel={() => setCreating(false)}
+          onCancel={() => {
+            setCreating(false)
+            setDismissedCreate(true)
+          }}
           onCreated={(id) => router.push(landingAdminEditPath(id))}
         />
       )}
@@ -241,15 +330,17 @@ function LandingsContent() {
           <span className="text-sm">Cargando…</span>
         </div>
       ) : visible.length === 0 ? (
-        <Card variant="glass">
-          <CardContent className="flex flex-col items-center gap-3 p-10 text-center">
-            <FileText className="h-8 w-8 text-gray-400" />
-            <p className="text-sm text-gray-300">
-              Todavía no tienes páginas. Empieza con una plantilla de tu rubro.
-            </p>
-            {!creating && <Button onClick={() => setCreating(true)}>Crear la primera</Button>}
-          </CardContent>
-        </Card>
+        !creating ? (
+          <Card variant="glass">
+            <CardContent className="flex flex-col items-center gap-3 p-10 text-center">
+              <FileText className="h-8 w-8 text-gray-400" />
+              <p className="text-sm text-gray-300">
+                Todavía no hay ejemplos. Crea uno con los datos del negocio que estás visitando.
+              </p>
+              <Button onClick={() => setCreating(true)}>Crear la primera</Button>
+            </CardContent>
+          </Card>
+        ) : null
       ) : (
         <Card variant="glass">
           <CardContent className="p-0">
@@ -319,14 +410,14 @@ function LandingsContent() {
 
 export default function LandingsPage() {
   return (
-    <ProtectedRoute>
+    <SuperAdminGuard redirectPath="/app/landings">
       <Head>
-        <title>Páginas web | Humano SISU</title>
+        <title>Landings de ejemplo | Humano SISU</title>
         <meta name="robots" content="noindex, nofollow" />
       </Head>
       <AppMeshShell>
         <LandingsContent />
       </AppMeshShell>
-    </ProtectedRoute>
+    </SuperAdminGuard>
   )
 }

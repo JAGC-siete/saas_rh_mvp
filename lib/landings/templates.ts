@@ -575,6 +575,8 @@ export function applyBusinessToTemplate(
       whatsapp: business.whatsapp ?? content.business.whatsapp,
       phone: business.phone ?? content.business.phone,
       email: business.email ?? content.business.email,
+      mapsQuery:
+        [business.address, business.city].filter(Boolean).join(', ') || content.business.mapsQuery,
     },
   }
 }

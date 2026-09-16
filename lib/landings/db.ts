@@ -3,7 +3,7 @@
  * de la fila publicada al objeto que consume el renderer.
  *
  * Reglas de lectura:
- * - Dashboard (/app/landings): sesión + RLS por company_id, además de .eq('company_id', companyId).
+ * - Dashboard (/app/landings): sesión de super_admin + RLS (sin exigir empresa activa).
  * - Público (/p/[slug]): cliente anon sin cookies. RLS solo expone filas publicadas y el GRANT
  *   por columna deja fuera content_json, company_id y lead_notify_email.
  */

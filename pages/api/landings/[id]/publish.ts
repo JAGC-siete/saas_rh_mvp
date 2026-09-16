@@ -1,19 +1,17 @@
 /**
- * Publicar / despublicar una landing.
+ * Publicar / despublicar una landing (solo superadmin).
  *
  * Publicar = validar el borrador con Zod estricto, copiarlo a published_content_json y
- * sellar published_at en la misma sentencia. Lo que queda público es exactamente el
- * último borrador validado, nunca un JSON a medio editar.
+ * sellar published_at en la misma sentencia.
  *
- * Despublicar = status 'draft'. El snapshot se conserva para poder republicar al
- * instante; la política del rol anon exige status='published', así que deja de verse.
+ * Despublicar = status 'draft'. El snapshot se conserva; el rol anon exige published.
  */
 
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { requireCompanyAccess } from '../../../../lib/auth/api-auth-fixed'
 import { logger } from '../../../../lib/logger'
-import { LANDING_PAGES_TABLE } from '../../../../lib/landings/db'
+import { parseLandingIdParam, requireLandingAdmin } from '../../../../lib/landings/admin-auth'
 import { parsePublishLanding } from '../../../../lib/landings/admin-schema'
+import { LANDING_PAGES_TABLE } from '../../../../lib/landings/db'
 import { landingContentFieldErrors, parseLandingPageContent } from '../../../../lib/landings/page-schema'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -22,21 +20,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ error: 'Método no permitido' })
   }
 
-  let auth
-  try {
-    auth = await requireCompanyAccess(req, res)
-  } catch {
-    return
-  }
+  const auth = await requireLandingAdmin(req, res)
+  if (!auth) return
 
-  const { supabase, companyId, user } = auth
-  if (!companyId) {
-    return res.status(400).json({ error: 'Necesitas una empresa activa para administrar landings' })
-  }
+  const { supabase, user, auditLog } = auth
 
-  const rawId = req.query.id
-  const id = Array.isArray(rawId) ? rawId[0] : rawId
-  if (!id || !/^[0-9a-f-]{36}$/i.test(id)) {
+  const id = parseLandingIdParam(req)
+  if (!id) {
     return res.status(400).json({ error: 'Identificador inválido' })
   }
 
@@ -49,11 +39,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     .from(LANDING_PAGES_TABLE)
     .select('id, slug, status, content_json')
     .eq('id', id)
-    .eq('company_id', companyId)
     .maybeSingle()
 
   if (readError) {
-    logger.error('Error leyendo landing para publicar', { companyId, landingId: id, error: readError.message })
+    logger.error('Error leyendo landing para publicar', { landingId: id, error: readError.message })
     return res.status(500).json({ error: 'No se pudo procesar la publicación' })
   }
   if (!current) {
@@ -67,14 +56,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .from(LANDING_PAGES_TABLE)
       .update({ status: 'draft', updated_by: user.id })
       .eq('id', id)
-      .eq('company_id', companyId)
 
     if (error) {
-      logger.error('Error despublicando landing', { companyId, landingId: id, error: error.message })
+      logger.error('Error despublicando landing', { landingId: id, error: error.message })
       return res.status(500).json({ error: 'No se pudo despublicar' })
     }
 
-    logger.info('Landing despublicada', { companyId, landingId: id, slug: row.slug })
+    await auditLog('landing_unpublished', { landingId: id, slug: row.slug })
+    logger.info('Landing despublicada', { landingId: id, slug: row.slug })
     return res.status(200).json({ success: true, status: 'draft' })
   }
 
@@ -101,19 +90,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       updated_by: user.id,
     })
     .eq('id', id)
-    .eq('company_id', companyId)
 
   if (error) {
-    logger.error('Error publicando landing', { companyId, landingId: id, error: error.message })
+    logger.error('Error publicando landing', { landingId: id, error: error.message })
     return res.status(500).json({ error: 'No se pudo publicar' })
   }
 
-  logger.info('Landing publicada', {
-    companyId,
-    landingId: id,
-    slug: row.slug,
-    blocks: content.data.blocks.length,
-  })
+  await auditLog('landing_published', { landingId: id, slug: row.slug, blocks: content.data.blocks.length })
+  logger.info('Landing publicada', { landingId: id, slug: row.slug, blocks: content.data.blocks.length })
 
   return res.status(200).json({ success: true, status: 'published', publishedAt, slug: row.slug })
 }

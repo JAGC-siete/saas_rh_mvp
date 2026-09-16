@@ -4,7 +4,12 @@
  */
 
 import { z } from 'zod'
-import { LANDING_TEMPLATE_KEYS, landingPageContentSchema, landingSlugSchema } from './page-schema'
+import {
+  LANDING_TEMPLATE_KEYS,
+  landingPageContentSchema,
+  landingPhoneSchema,
+  landingSlugSchema,
+} from './page-schema'
 
 export const landingTitleSchema = z
   .string()
@@ -19,14 +24,28 @@ export const landingNotifyEmailSchema = z
   .max(254)
   .refine((value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value), { message: 'Correo no válido.' })
 
+/** Campo de formulario: vacío → omitido, para no fallar validación en visita de campo. */
+function optionalFilled<T extends z.ZodTypeAny>(schema: T) {
+  return z.preprocess((value) => {
+    if (typeof value !== 'string') return value
+    const trimmed = value.trim()
+    return trimmed === '' ? undefined : trimmed
+  }, schema.optional())
+}
+
 export const createLandingSchema = z.object({
   title: landingTitleSchema,
   slug: landingSlugSchema,
   templateType: z.enum(LANDING_TEMPLATE_KEYS, { message: 'Elige una plantilla.' }),
-  leadNotifyEmail: landingNotifyEmailSchema.optional(),
+  city: optionalFilled(z.string().max(80)),
+  address: optionalFilled(z.string().max(160)),
+  phone: optionalFilled(landingPhoneSchema),
+  whatsapp: optionalFilled(landingPhoneSchema),
+  email: optionalFilled(landingNotifyEmailSchema),
+  leadNotifyEmail: optionalFilled(landingNotifyEmailSchema),
 })
 
-export type CreateLandingInput = z.input<typeof createLandingSchema>
+export type CreateLandingInput = z.infer<typeof createLandingSchema>
 
 /** Guardado del borrador. Todo opcional: el editor manda solo lo que cambió. */
 export const updateLandingSchema = z

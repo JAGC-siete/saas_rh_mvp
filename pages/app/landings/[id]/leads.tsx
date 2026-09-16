@@ -1,7 +1,7 @@
 /**
  * Bandeja de leads capturados por una landing de la empresa.
  *
- * Auth: ProtectedRoute + endpoint con requireCompanyAccess.
+ * Auth: SuperAdminGuard + endpoint con requireLandingAdmin.
  * Fetching: el mismo patrón useState/useEffect del listado (SWR no está en el repo).
  */
 
@@ -10,7 +10,7 @@ import Head from 'next/head'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
 import { ArrowLeft, Download, Inbox, Loader2, Pencil } from 'lucide-react'
-import ProtectedRoute from '../../../../components/ProtectedRoute'
+import SuperAdminGuard from '../../../../components/SuperAdminGuard'
 import AppMeshShell from '../../../../components/landing/AppMeshShell'
 import { Button } from '../../../../components/ui/button'
 import { Card, CardContent } from '../../../../components/ui/card'
@@ -169,7 +169,7 @@ export default function LandingLeadsPage() {
   const landingId = Array.isArray(rawId) ? rawId[0] : rawId
 
   return (
-    <ProtectedRoute>
+    <SuperAdminGuard redirectPath="/app/landings">
       <Head>
         <title>Leads capturados | Humano SISU</title>
         <meta name="robots" content="noindex, nofollow" />
@@ -181,6 +181,6 @@ export default function LandingLeadsPage() {
           <div className="px-6 py-10 text-sm text-gray-300">Cargando…</div>
         )}
       </AppMeshShell>
-    </ProtectedRoute>
+    </SuperAdminGuard>
   )
 }
