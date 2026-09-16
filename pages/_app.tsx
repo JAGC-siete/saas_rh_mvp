@@ -5,7 +5,12 @@ import { useRouter } from 'next/router'
 import { Montserrat } from 'next/font/google'
 import { ToastContainer } from '../lib/toast'
 import { cn } from '../lib/utils'
-import { isPublicMarketingRoute, isPublicKioskDisabledRoute } from '../lib/seo/public-ssr-routes'
+import {
+  isPublicMarketingRoute,
+  isPublicKioskDisabledRoute,
+  isPublicTenantLandingRoute,
+  isPublicToolRoute,
+} from '../lib/seo/public-ssr-routes'
 import MarketingAnalytics from '../components/marketing/MarketingAnalytics'
 import CookieBanner from '../components/marketing/CookieBanner'
 import { LandingPreferencesProvider } from '../components/landing/LandingPreferencesProvider'
@@ -75,9 +80,12 @@ export default function App({ Component, pageProps }: AppProps) {
 
   const isMarketingRoute = isPublicMarketingRoute(router.pathname)
   const isKioskDisabledRoute = isPublicKioskDisabledRoute(router.pathname)
+  const isToolRoute = isPublicToolRoute(router.pathname)
+  const isTenantLandingRoute = isPublicTenantLandingRoute(router.pathname)
 
   // SSR completo solo en landings SEO; shell /app y rutas legacy esperan hidratación.
-  const shouldRenderImmediately = isMarketingRoute || isAuthEntryRoute || isKioskDisabledRoute
+  const shouldRenderImmediately =
+    isMarketingRoute || isAuthEntryRoute || isKioskDisabledRoute || isToolRoute || isTenantLandingRoute
 
   const needsClientHydrationGate = !shouldRenderImmediately
 
@@ -92,7 +100,9 @@ export default function App({ Component, pageProps }: AppProps) {
   const fontShellClass = cn(
     montserrat.variable,
     'min-h-screen font-sans',
-    !isMeshAppRoute && !isMarketingRoute && 'bg-app'
+    isToolRoute && 'bg-mesh',
+    // La landing del tenant pinta su propio fondo desde el tema del JSON.
+    !isMeshAppRoute && !isMarketingRoute && !isToolRoute && !isTenantLandingRoute && 'bg-app'
   )
 
   const page = (
@@ -101,7 +111,7 @@ export default function App({ Component, pageProps }: AppProps) {
     </div>
   )
 
-  if (isKioskDisabledRoute) {
+  if (isKioskDisabledRoute || isToolRoute || isTenantLandingRoute) {
     return (
       <SupabaseContext.Provider value={null}>
         {page}

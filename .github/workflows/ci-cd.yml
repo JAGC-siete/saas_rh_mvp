@@ -50,6 +50,15 @@ jobs:
         run: npm test
         continue-on-error: true
 
+      # Sin continue-on-error: una fuga de permisos o una columna sin tipar debe romper el build.
+      # Si los secrets no existen, los casos se saltan solos y el paso queda verde.
+      - name: 🧱 Schema drift (landings)
+        run: npm run test:schema
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+
       - name: 🔒 Security audit
         run: npm audit --audit-level moderate
         continue-on-error: true

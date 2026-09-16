@@ -3,6 +3,7 @@
  * El resto de páginas públicas legacy mantienen gate de hidratación en _app.
  */
 
+import { isPublicLandingRoute } from '../landings/paths'
 import { INFO_FUNNEL_PUBLIC_PATH } from '../marketing/info-funnel-path'
 import { VIERNES_PUBLIC_PATH, VIERNES_INTERNAL_PATH } from '../marketing/viernes-copy'
 import { PRIVACY_PUBLIC_PATH, PRIVACY_LEGACY_PATH, TERMS_PUBLIC_PATH } from '../marketing/legal-paths'
@@ -43,6 +44,7 @@ const PUBLIC_SSR_EXACT = new Set([
   '/calculadora-prestaciones',
   '/calculadora-aguinaldo-honduras',
   '/calculadora-catorceavo-honduras',
+  '/demo-local',
 ])
 
 const PUBLIC_KIOSK_DISABLED = new Set([
@@ -51,16 +53,31 @@ const PUBLIC_KIOSK_DISABLED = new Set([
   '/app/attendance/register',
 ])
 
+function barePublicPath(pathname: string): string {
+  return pathname === '/en' ? '/' : pathname.startsWith('/en/') ? pathname.slice(3) : pathname
+}
+
 export function isPublicKioskDisabledRoute(pathname: string): boolean {
-  const bare =
-    pathname === '/en' ? '/' : pathname.startsWith('/en/') ? pathname.slice(3) : pathname
-  return PUBLIC_KIOSK_DISABLED.has(bare)
+  return PUBLIC_KIOSK_DISABLED.has(barePublicPath(pathname))
+}
+
+/** Herramientas públicas de mostrador (sin auth, sin marketing chrome). */
+export function isPublicToolRoute(pathname: string): boolean {
+  const bare = barePublicPath(pathname)
+  return bare === '/tools' || bare.startsWith('/tools/')
+}
+
+/**
+ * Landings publicadas por empresas cliente (/p/[slug]).
+ * Shell propio: el diseño lo define el JSON del tenant, no el chrome de nuestro marketing.
+ */
+export function isPublicTenantLandingRoute(pathname: string): boolean {
+  return isPublicLandingRoute(barePublicPath(pathname))
 }
 
 export function isPublicMarketingRoute(pathname: string): boolean {
   // /en rewrites strip prefix for page matching; still accept prefixed paths if seen.
-  const bare =
-    pathname === '/en' ? '/' : pathname.startsWith('/en/') ? pathname.slice(3) : pathname
+  const bare = barePublicPath(pathname)
   if (PUBLIC_SSR_EXACT.has(bare)) return true
   if (bare.startsWith('/recursos')) return true
   if (bare.startsWith(`${INFO_FUNNEL_PUBLIC_PATH}/m/`)) return true

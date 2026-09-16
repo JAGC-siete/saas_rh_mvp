@@ -129,6 +129,15 @@ export const RATE_LIMITS = {
     statusCode: 429
   },
   
+  // Formulario de las landings de clientes: varios vecinos pueden compartir la misma IP
+  // del operador móvil, así que es menos estricto que PUBLIC_EMAIL.
+  PUBLIC_LANDING_LEAD: {
+    windowMs: 10 * 60 * 1000, // 10 minutos
+    max: 6, // 6 envíos por IP
+    message: 'Demasiados envíos desde esta conexión. Intenta de nuevo en unos minutos.',
+    statusCode: 429
+  },
+
   // Rate limit para envío de emails de reportes (más restrictivo)
   PUBLIC_EMAIL: {
     windowMs: 15 * 60 * 1000, // 15 minutos
