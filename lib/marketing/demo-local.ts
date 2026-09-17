@@ -152,19 +152,15 @@ export const DEMO_LOCAL_COPY = {
     ctaPrimary: 'Quiero mi página y Maps',
   },
   offer: {
-    title: 'Qué contratás, cómo se hace y cuánto cuesta',
+    title: 'Cómo lo hacemos',
     steps: [
       {
         title: 'Tu página y sistema de reservas',
         body: 'Publicamos tus servicios y horarios. Tus clientes podrán agendar una cita directamente o escribirte por WhatsApp a un solo clic.',
       },
       {
-        title: 'Google Maps, al contratar',
-        body: 'Te listamos el negocio para que te busquen por zona. El modelo de ejemplo no te publica solo en Maps.',
-      },
-      {
-        title: 'Precio al confirmar el local',
-        body: 'Servicio cobrado, sin app que instalar. Te pasamos el precio cuando confirmamos rubro y dirección. El modelo vive en SISU; el sitio vendido va a tu dominio.',
+        title: 'Aparece en Google Maps',
+        body: 'Listamos tu negocio en Google maps para que sea encontrado en la búsqueda',
       },
     ],
   },

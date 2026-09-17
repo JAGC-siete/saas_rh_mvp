@@ -1,7 +1,6 @@
 import { useMemo, useState, type FormEvent } from 'react'
 import Link from 'next/link'
 import {
-  BanknotesIcon,
   BuildingStorefrontIcon,
   GlobeAltIcon,
   MapPinIcon,
@@ -37,7 +36,7 @@ import { trackCTAClick } from '../../lib/analytics/googleAds'
 
 const copy = DEMO_LOCAL_COPY
 
-const OFFER_ICONS = [GlobeAltIcon, MapPinIcon, BanknotesIcon] as const
+const OFFER_ICONS = [GlobeAltIcon, MapPinIcon] as const
 
 const fieldClass =
   'input-glass h-10 w-full border-white/15 bg-white/5 text-white placeholder:text-white/50 disabled:cursor-not-allowed disabled:opacity-50'
@@ -132,7 +131,7 @@ export default function DemoLocalLanding() {
               <h2 className="text-2xl font-bold text-white sm:text-3xl">{copy.offer.title}</h2>
             </div>
           </ScrollReveal>
-          <ul className="grid gap-4 md:grid-cols-3">
+          <ul className="grid gap-4 md:grid-cols-2">
             {copy.offer.steps.map((step, index) => {
               const Icon = OFFER_ICONS[index] ?? GlobeAltIcon
               return (
