@@ -10,6 +10,7 @@ import {
   buildDemoLocalOwnerEmail,
   DEMO_LOCAL_LEAD_SOURCE,
   DEMO_LOCAL_MARKETING_SOURCE,
+  formatDemoLocalServices,
   parseDemoLocalLead,
   rubroLabel,
 } from '../../../lib/marketing/demo-local'
@@ -168,6 +169,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   logger.info('Lead demo-local capturado', {
     email: maskEmail(lead.email),
     rubro: rubroLabel(lead.rubro),
+    services: formatDemoLocalServices(lead.services),
     receivedAtHn: formatDateTimeForHonduras(receivedAt),
     duration: Date.now() - started,
   })

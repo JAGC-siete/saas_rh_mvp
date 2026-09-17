@@ -10,6 +10,7 @@ import {
   buildDemoLocalInternalEmail,
   buildDemoLocalOwnerEmail,
   catalogForRubro,
+  formatDemoLocalServices,
   parseDemoLocalLead,
 } from '../lib/marketing/demo-local'
 import { getMarketingLanding } from '../lib/marketing/marketing-landings-registry'
@@ -24,6 +25,7 @@ const validLead = {
   phone: '3222-6773',
   rubro: 'barberia' as const,
   city: 'Tegucigalpa',
+  services: ['landing'] as const,
   consent: true,
 }
 
@@ -65,9 +67,10 @@ describe('demo-local landing', () => {
     assert.match(DEMO_LOCAL_COPY.offer.title, /máquina de clientes/i)
     assert.equal(DEMO_LOCAL_COPY.offer.steps.length, 3)
     assert.match(DEMO_LOCAL_COPY.offer.steps[2].title, /Google Maps/)
-    assert.equal(DEMO_LOCAL_COPY.offer.steps[2].badge, 'Incluido · gratis con tu web')
+    assert.equal(DEMO_LOCAL_COPY.offer.steps[2].badge, 'Incluido · gratis con tu página o tus reservas')
     assert.match(DEMO_LOCAL_COPY.form.title, /sin compromiso/i)
-    assert.match(DEMO_LOCAL_COPY.form.bookingLabel, /reserven citas/)
+    assert.match(DEMO_LOCAL_COPY.form.services.hint, /Google Maps/)
+    assert.match(DEMO_LOCAL_COPY.form.services.error, /página web/)
     assert.match(DEMO_LOCAL_COPY.seo.title, /Google Maps/)
     assert.equal(blob.includes('Antes perdía 2 horas'), false)
     assert.equal(blob.includes('Solo trabajamos con un negocio por rubro'), false)
@@ -93,14 +96,26 @@ describe('demo-local landing', () => {
     assert.equal(ok.success, true)
     if (ok.success) {
       assert.equal(ok.data.email, 'maria@example.com')
-      assert.equal(ok.data.wantsBooking, false)
+      assert.deepEqual(ok.data.services, ['landing'])
     }
 
-    const withBooking = parseDemoLocalLead({ ...validLead, wantsBooking: true })
-    assert.equal(withBooking.success, true)
-    if (withBooking.success) {
-      assert.equal(withBooking.data.wantsBooking, true)
+    const both = parseDemoLocalLead({ ...validLead, services: ['landing', 'booking'] })
+    assert.equal(both.success, true)
+    if (both.success) {
+      assert.equal(formatDemoLocalServices(both.data.services), 'Página web + Reservas / citas · Google Maps incluido')
     }
+
+    const bookingOnly = parseDemoLocalLead({ ...validLead, services: ['booking'] })
+    assert.equal(bookingOnly.success, true)
+    if (bookingOnly.success) {
+      assert.deepEqual(bookingOnly.data.services, ['booking'])
+    }
+
+    const missingServices = parseDemoLocalLead({ ...validLead, services: undefined })
+    assert.equal(missingServices.success, false)
+
+    const emptyServices = parseDemoLocalLead({ ...validLead, services: [] })
+    assert.equal(emptyServices.success, false)
 
     const cased = parseDemoLocalLead({ ...validLead, email: 'Maria.Lopez@Example.COM' })
     assert.equal(cased.success, true)
@@ -124,7 +139,7 @@ describe('demo-local landing', () => {
       ownerName: '<script>alert(1)</script>',
       businessName: 'Ferretería & Hijos',
       note: 'Vendo clavos',
-      wantsBooking: true,
+      services: ['booking'],
     })
     assert.equal(parsed.success, true)
     if (!parsed.success) return
@@ -136,6 +151,7 @@ describe('demo-local landing', () => {
     assert.equal(owner.html.includes('dominio tuyo'), true)
     assert.equal(internal.subject.includes('Ferretería & Hijos'), true)
     assert.equal(internal.html.includes('Vendo clavos'), true)
-    assert.match(internal.html, />Sí</)
+    assert.match(internal.html, /Reservas \/ citas/)
+    assert.match(internal.html, /Google Maps incluido/)
   })
 })

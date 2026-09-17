@@ -25,6 +25,20 @@ export const DEMO_LOCAL_RUBROS = [
 
 export type DemoLocalRubro = (typeof DEMO_LOCAL_RUBROS)[number]
 
+export const DEMO_LOCAL_SERVICES = ['landing', 'booking'] as const
+export type DemoLocalService = (typeof DEMO_LOCAL_SERVICES)[number]
+
+const SERVICE_LABEL: Record<DemoLocalService, string> = {
+  landing: 'Página web',
+  booking: 'Reservas / citas',
+}
+
+export function formatDemoLocalServices(services: readonly DemoLocalService[]): string {
+  const unique = DEMO_LOCAL_SERVICES.filter((id) => services.includes(id))
+  const chosen = unique.map((id) => SERVICE_LABEL[id]).join(' + ')
+  return `${chosen} · Google Maps incluido`
+}
+
 export interface DemoLocalCatalogItem {
   name: string
   detail: string
@@ -144,12 +158,11 @@ export const DEMO_LOCAL_COPY = {
       'más clientes negocio local Honduras, Google Maps barbería, reservas citas negocio, ferretería cerca de mí, perfil de empresa Google, landing negocio de barrio',
   },
   hero: {
-    kicker: 'Sistema de captación para negocios locales',
-    headline:
-      'Convierte a las personas que buscan en tu ciudad en clientes (y haz que reserven sin quitarte tiempo).',
-    subheadlineLead: 'Deja de perder ventas frente a tu competencia. Te creamos un ecosistema con',
-    subheadlineFeatures: 'Página Web, Sistema de Reservas y Perfil en Google Maps',
-    subheadlineTail: 'para que destaques en tu zona y llenes tu agenda automáticamente.',
+    kicker: 'Captación de clientes para negocios locales',
+    headline: 'Consigue más clientes en tu ciudad y automatiza tus reservas',
+    subheadlineLead: 'Crea hoy',
+    subheadlineFeatures: 'Página Web, Sistema de Reservas, y Perfil en Google Maps',
+    subheadlineTail: 'para que nuevos clientes te encuentren en la zona.',
     mapsBenefit:
       'Tus vecinos te buscan. Si no apareces, le compran al de al lado. El perfil en Maps va incluido.',
     ctaPrimary: 'Ver cómo funcionaría para mi negocio',
@@ -185,8 +198,8 @@ export const DEMO_LOCAL_COPY = {
       },
       {
         title: 'El bono: Perfil de Empresa en Google Maps',
-        body: 'Configuramos tu perfil para que aparezcas cuando tus vecinos te busquen en el mapa. Incluido al contratar la web: no es un extra aparte.',
-        badge: 'Incluido · gratis con tu web',
+        body: 'Configuramos tu perfil para que aparezcas cuando tus vecinos te busquen en el mapa. Incluido al contratar la página web o las reservas: no se cotiza aparte.',
+        badge: 'Incluido · gratis con tu página o tus reservas',
       },
     ],
   },
@@ -195,14 +208,25 @@ export const DEMO_LOCAL_COPY = {
     subtitle:
       'Déjanos los datos de tu local. Revisamos tu presencia actual, armamos un modelo de cómo se vería y te enviamos una cotización transparente. Si no te gusta, no pagas nada.',
     bullets: [
-      'Nombre del local y de quien atiende.',
-      'WhatsApp que quieres publicar.',
-      'Colonia o ciudad para Maps.',
+      'Elige página web, reservas, o las dos.',
+      'El perfil de Google Maps va incluido al contratar cualquiera.',
+      'Nombre, WhatsApp y zona para armar el boceto.',
     ],
     submit: 'Solicitar mi propuesta gratuita',
     submitting: 'Enviando…',
-    notePlaceholder: 'Cortes, menú… ¿Necesitas que agenden citas?',
-    bookingLabel: 'Quiero que mis clientes reserven citas sin escribirme al chat',
+    notePlaceholder: 'Cortes, menú… ¿Algo que debamos saber del local?',
+    services: {
+      legend: 'Qué armamos',
+      hint: 'Elige uno o los dos. El perfil de Google Maps se incluye al contratar cualquiera.',
+      error: 'Elige página web, reservas, o las dos.',
+      landingTitle: 'Página web',
+      landingBody: 'Tu local en internet: servicios, precios y WhatsApp.',
+      bookingTitle: 'Reservas / citas',
+      bookingBody: 'Que agenden solos, sin hilos de chat.',
+      mapsTitle: 'Perfil de Google Maps',
+      mapsBody: 'Incluido al contratar la página o las reservas. No se cotiza aparte.',
+      mapsBadge: 'Incluido',
+    },
     successTitle: 'Propuesta en camino',
     successBody:
       'Revisa tu correo (y spam). Te escribimos con el boceto, la cotización y para confirmar Maps y dominio.',
@@ -259,7 +283,16 @@ export const demoLocalLeadSchema = z.object({
     .max(500, 'La nota no puede pasar de 500 caracteres.')
     .optional()
     .transform((value) => (value && value.length > 0 ? value : undefined)),
-  wantsBooking: z.boolean().default(false),
+  services: z.preprocess(
+    (value) => (Array.isArray(value) ? value : []),
+    z
+      .array(z.enum(DEMO_LOCAL_SERVICES))
+      .min(1, DEMO_LOCAL_COPY.form.services.error)
+      .max(2)
+      .refine((value) => new Set(value).size === value.length, {
+        message: DEMO_LOCAL_COPY.form.services.error,
+      })
+  ),
   consent: z.boolean().refine((value) => value === true, {
     message: DEMO_LOCAL_COPY.form.errorConsent,
   }),
@@ -294,7 +327,7 @@ export function buildDemoLocalOwnerEmail(lead: DemoLocalLead): { subject: string
       `Recibimos la solicitud para <strong>${escapeHtml(lead.businessName)}</strong> (${escapeHtml(catalog.label)} en ${escapeHtml(lead.city)}).`
     ),
     liquidParagraph(
-      'El siguiente paso es un boceto: cómo se vería tu local en la web, con reservas y WhatsApp. Si contratas, te publicamos el Perfil de Empresa en Google Maps y un dominio tuyo. El modelo de ejemplo vive en SISU hasta esa compra.'
+      `Armamos: <strong>${escapeHtml(formatDemoLocalServices(lead.services))}</strong>. El siguiente paso es un boceto. Si contratas, te publicamos el Perfil de Empresa en Google Maps y un dominio tuyo. El modelo de ejemplo vive en SISU hasta esa compra.`
     ),
     liquidParagraph(
       'Te escribimos por este correo o por WhatsApp con el boceto, el precio y para confirmar zona y el número que quieres publicar. Si no te gusta, no pagas nada.'
@@ -318,7 +351,7 @@ export function buildDemoLocalInternalEmail(lead: DemoLocalLead, receivedAt: Dat
   const catalog = catalogForRubro(lead.rubro)
   const when = formatDateTimeForHonduras(receivedAt)
   const bodyHtml = [
-    liquidParagraph('Nuevo lead de /demo-local (presencia digital: página + reservas + Maps, cotizar).'),
+    liquidParagraph('Nuevo lead de /demo-local (página y/o reservas; Maps incluido al contratar).'),
     liquidKeyValueTable([
       { label: 'Dueño', value: lead.ownerName, emphasize: true },
       { label: 'Negocio', value: lead.businessName },
@@ -326,7 +359,7 @@ export function buildDemoLocalInternalEmail(lead: DemoLocalLead, receivedAt: Dat
       { label: 'Zona', value: lead.city },
       { label: 'Correo', value: lead.email },
       { label: 'Teléfono / WhatsApp', value: lead.phone },
-      { label: 'Reservas / citas', value: lead.wantsBooking ? 'Sí' : 'No' },
+      { label: 'Servicios', value: formatDemoLocalServices(lead.services) },
       { label: 'Nota', value: lead.note || '—' },
       { label: 'Recibido (HN)', value: when },
     ]),

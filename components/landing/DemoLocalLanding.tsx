@@ -22,6 +22,7 @@ import {
   demoLocalFieldErrors,
   parseDemoLocalLead,
   type DemoLocalRubro,
+  type DemoLocalService,
 } from '../../lib/marketing/demo-local'
 import {
   buildMetaApiTrackingFields,
@@ -246,7 +247,7 @@ function DemoLocalLeadForm({
     phone: '',
     city: '',
     note: '',
-    wantsBooking: false,
+    services: [] as DemoLocalService[],
     consent: false,
   })
 
@@ -261,11 +262,28 @@ function DemoLocalLeadForm({
     [form, selectedRubro]
   )
 
+  function toggleService(id: DemoLocalService) {
+    setForm((prev) => {
+      const selected = prev.services.includes(id)
+      const services = selected ? prev.services.filter((item) => item !== id) : [...prev.services, id]
+      return { ...prev, services }
+    })
+    setErrors((prev) => {
+      if (!prev.services) return prev
+      const next = { ...prev }
+      delete next.services
+      return next
+    })
+  }
+
   async function onSubmit(event: FormEvent) {
     event.preventDefault()
     const parsed = parseDemoLocalLead({ ...payloadPreview, consent: form.consent })
     if (!parsed.success) {
       setErrors(demoLocalFieldErrors(parsed.error))
+      if (parsed.error.issues.some((issue) => issue.path[0] === 'services')) {
+        document.getElementById('dl-services')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      }
       return
     }
 
@@ -414,6 +432,69 @@ function DemoLocalLeadForm({
             {errors.city ? <p className="mt-1 text-xs text-red-300">{errors.city}</p> : null}
           </div>
         </div>
+        <fieldset id="dl-services" className="space-y-3">
+          <legend className={labelClass}>{copy.form.services.legend}</legend>
+          <p className="text-sm text-slate-400">{copy.form.services.hint}</p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {(
+              [
+                {
+                  id: 'landing' as const,
+                  title: copy.form.services.landingTitle,
+                  body: copy.form.services.landingBody,
+                },
+                {
+                  id: 'booking' as const,
+                  title: copy.form.services.bookingTitle,
+                  body: copy.form.services.bookingBody,
+                },
+              ] as const
+            ).map((option) => {
+              const checked = form.services.includes(option.id)
+              return (
+                <label
+                  key={option.id}
+                  htmlFor={`dl-service-${option.id}`}
+                  className={`flex min-h-[48px] cursor-pointer items-start gap-3 rounded-xl border p-4 transition ${
+                    checked
+                      ? 'border-green-400/40 bg-green-500/10'
+                      : 'border-white/15 bg-white/5 hover:border-white/30'
+                  }`}
+                >
+                  <input
+                    id={`dl-service-${option.id}`}
+                    type="checkbox"
+                    className="mt-1 h-4 w-4 shrink-0 rounded border-white/20 bg-white/10"
+                    checked={checked}
+                    onChange={() => toggleService(option.id)}
+                  />
+                  <span>
+                    <span className="block text-sm font-semibold text-white">{option.title}</span>
+                    <span className="mt-1 block text-xs leading-relaxed text-slate-400">{option.body}</span>
+                  </span>
+                </label>
+              )
+            })}
+          </div>
+          <div
+            className={`rounded-xl border border-dashed p-4 ${
+              form.services.length > 0
+                ? 'border-amber-400/40 bg-amber-400/10'
+                : 'border-white/15 bg-white/[0.03]'
+            }`}
+          >
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
+              <div>
+                <p className="text-sm font-semibold text-white">{copy.form.services.mapsTitle}</p>
+                <p className="mt-1 text-xs leading-relaxed text-slate-400">{copy.form.services.mapsBody}</p>
+              </div>
+              <span className="shrink-0 rounded-full border border-amber-400/30 bg-amber-400/15 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-amber-200">
+                {copy.form.services.mapsBadge}
+              </span>
+            </div>
+          </div>
+          {errors.services ? <p className="text-xs text-red-300">{errors.services}</p> : null}
+        </fieldset>
         <div>
           <label htmlFor="dl-note" className={labelClass}>
             Qué ofreces (opcional)
@@ -427,16 +508,6 @@ function DemoLocalLeadForm({
           />
           {errors.note ? <p className="mt-1 text-xs text-red-300">{errors.note}</p> : null}
         </div>
-        <label htmlFor="dl-booking" className="flex items-start gap-3 text-sm text-slate-300">
-          <input
-            id="dl-booking"
-            type="checkbox"
-            className="mt-1 h-4 w-4 rounded border-white/20 bg-white/10"
-            checked={form.wantsBooking}
-            onChange={(e) => setForm((prev) => ({ ...prev, wantsBooking: e.target.checked }))}
-          />
-          <span>{copy.form.bookingLabel}</span>
-        </label>
         <label className="flex items-start gap-3 text-sm text-slate-300">
           <input
             type="checkbox"
