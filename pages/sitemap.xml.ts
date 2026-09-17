@@ -6,6 +6,7 @@ import { PRIVACY_PUBLIC_PATH, TERMS_PUBLIC_PATH } from '../lib/marketing/legal-p
 import { deductionCalculatorPublicPath } from '../lib/marketing/calculator-public-paths'
 import { localizedHref } from '../lib/i18n/locale'
 import { BILINGUAL_LANDING_PATHS } from '../lib/i18n/bilingual-paths'
+import { mercadoSitemapUrls } from '../lib/mercado/jsonld'
 
 interface SitemapUrl {
   loc: string
@@ -53,12 +54,7 @@ const publicPages: SitemapUrl[] = [
     priority: 0.8,
     lastmod: new Date().toISOString().split('T')[0],
   },
-  {
-    loc: '/mercado',
-    changefreq: 'weekly',
-    priority: 0.8,
-    lastmod: new Date().toISOString().split('T')[0],
-  },
+  ...mercadoSitemapUrls(),
   {
     loc: '/alternativa-odoo-honduras',
     changefreq: 'monthly',

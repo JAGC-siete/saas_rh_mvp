@@ -29,17 +29,17 @@ export const VENDOR_CATEGORY_LABEL: Record<VendorCategory, string> = {
 }
 
 export const VENDOR_CATEGORY_BLURB: Record<VendorCategory, string> = {
-  comida: 'Comedores, antojitos y comida corrida',
-  verduras: 'Hortalizas frescas del día',
-  frutas: 'Fruta de temporada',
-  carnes: 'Carnicerías y pollerías',
-  granos: 'Maíz, frijol, arroz y semilla',
-  abarrotes: 'Abarrotes y productos secos',
-  ropa: 'Ropa y textiles',
-  calzado: 'Zapatos y reparación',
-  artesanias: 'Hecho a mano',
-  servicios: 'Servicios dentro del mercado',
-  otros: 'Otros puestos',
+  comida: 'Caldo levantamuertos, tortillas al comal y el plato del día.',
+  verduras: 'Tomates rojitos, chiles vivos y el culantro para la sopa.',
+  frutas: 'Piña jugosa, banano madurito y sandía que se pide sola.',
+  carnes: 'Cortes frescos para la carnita asada del domingo, directo del gancho.',
+  granos: 'Maíz, frijol y arroz que rinden la olla.',
+  abarrotes: 'El mandado seco: aceite, jabón y lo que se acaba en la casa.',
+  ropa: 'Ropa de diario, uniformes y telas que se tocan.',
+  calzado: 'Zapatos que caminan el mercado y compostura al momento.',
+  artesanias: 'Hecho a mano, para llevar un pedazo del pueblo.',
+  servicios: 'Lo que se arregla adentro del mercado, sin irte lejos.',
+  otros: 'El puesto raro que siempre extrañás.',
 }
 
 export function isVendorCategory(value: unknown): value is VendorCategory {

@@ -24,6 +24,10 @@ export function mercadoVendorPath(slug: string): string {
   return `${MERCADO_PUBLIC_PREFIX}/${slug}`
 }
 
+export function mercadoCategoryPath(category: string): string {
+  return `${MERCADO_PUBLIC_PREFIX}?categoria=${category}`
+}
+
 export function mercadoAdminListPath(): string {
   return MERCADO_ADMIN_PATH
 }
