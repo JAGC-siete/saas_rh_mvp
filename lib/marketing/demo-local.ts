@@ -149,14 +149,10 @@ export const DEMO_LOCAL_COPY = {
     headline: 'Tu local, con página y ficha en Google Maps',
     subheadline:
       'Nosotros la armamos con tu nombre, tu lista y tu WhatsApp. Primero ves un modelo. Si lo contratás, va a un dominio tuyo y te abrimos la ficha en Maps.',
-    identity:
-      'Humano SISU trabaja con MIPYMES en Centroamérica. Esta oferta no es el software de planilla: es el servicio para que te encuentren en el barrio.',
     ctaPrimary: 'Quiero mi página y Maps',
-    ctaSecondary: 'Ver un ejemplo de catálogo',
   },
   offer: {
     title: 'Qué contratás, cómo se hace y cuánto cuesta',
-    subtitle: 'No es una plantilla para que la armes vos. Es un servicio.',
     steps: [
       {
         title: 'La página',
@@ -171,10 +167,6 @@ export const DEMO_LOCAL_COPY = {
         body: 'Servicio cobrado, sin app que instalar. Te pasamos el precio cuando confirmamos rubro y dirección. El modelo vive en SISU; el sitio vendido va a tu dominio.',
       },
     ],
-  },
-  catalog: {
-    title: 'Así se ve el catálogo en la página',
-    subtitle: 'Cambiá el rubro. Es un ejemplo; nombre y precios los ponemos con los tuyos.',
   },
   form: {
     title: 'Dejanos los datos del local',

@@ -1,16 +1,10 @@
 import { useMemo, useState, type FormEvent } from 'react'
 import Link from 'next/link'
 import {
-  AcademicCapIcon,
   BanknotesIcon,
   BuildingStorefrontIcon,
-  EllipsisHorizontalCircleIcon,
   GlobeAltIcon,
   MapPinIcon,
-  ScissorsIcon,
-  ShoppingBagIcon,
-  SparklesIcon,
-  WrenchScrewdriverIcon,
 } from '@heroicons/react/24/outline'
 import PublicPageShell from './PublicPageShell'
 import PublicPageHead from '../SEO/PublicPageHead'
@@ -19,7 +13,6 @@ import BorderBeam from './BorderBeam'
 import ScrollReveal from './ScrollReveal'
 import { Badge } from '../ui/badge'
 import { Button } from '../ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card'
 import { Input } from '../ui/input'
 import { Textarea } from '../ui/textarea'
 import { generateBreadcrumbListSchema, generateWebPageSchema } from '../../lib/seo/schema'
@@ -44,15 +37,6 @@ import {
 import { trackCTAClick } from '../../lib/analytics/googleAds'
 
 const copy = DEMO_LOCAL_COPY
-
-const RUBRO_ICONS = {
-  barberia: ScissorsIcon,
-  ferreteria: WrenchScrewdriverIcon,
-  cafeteria: SparklesIcon,
-  mercadito: ShoppingBagIcon,
-  escuela: AcademicCapIcon,
-  otro: EllipsisHorizontalCircleIcon,
-} as const
 
 const OFFER_ICONS = [GlobeAltIcon, MapPinIcon, BanknotesIcon] as const
 
@@ -114,7 +98,6 @@ export default function DemoLocalLanding() {
               {copy.hero.headline}
             </h1>
             <p className="landing-muted mt-5 max-w-2xl text-base font-medium sm:text-lg">{copy.hero.subheadline}</p>
-            <p className="mt-3 max-w-2xl text-sm text-slate-400">{copy.hero.identity}</p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <Button
                 type="button"
@@ -123,15 +106,6 @@ export default function DemoLocalLanding() {
                 onClick={() => scrollToId('solicitud', 'demo_local_solicitud', 'demo_local_hero')}
               >
                 {copy.hero.ctaPrimary}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="lg"
-                className="min-h-[48px] border-white/25 px-6 text-base font-medium text-white hover:bg-white/10"
-                onClick={() => scrollToId('catalogo', 'demo_local_catalogo', 'demo_local_hero')}
-              >
-                {copy.hero.ctaSecondary}
               </Button>
             </div>
           </div>
@@ -151,9 +125,6 @@ export default function DemoLocalLanding() {
                     <p className="mt-1 text-xs text-cyan-200">{catalog.hours}</p>
                   </div>
                 </div>
-                <p className="mt-4 text-xs leading-relaxed text-slate-400">
-                  Ejemplo de cómo se lee el local en el modelo. Nombre, zona y horario los ponemos con los tuyos.
-                </p>
               </div>
             </div>
           </BorderBeam>
@@ -165,7 +136,6 @@ export default function DemoLocalLanding() {
           <ScrollReveal>
             <div className="mb-8 text-center">
               <h2 className="text-2xl font-bold text-white sm:text-3xl">{copy.offer.title}</h2>
-              <p className="landing-muted mx-auto mt-2 max-w-2xl text-sm sm:text-base">{copy.offer.subtitle}</p>
             </div>
           </ScrollReveal>
           <ol className="grid gap-4 md:grid-cols-3">
@@ -189,65 +159,6 @@ export default function DemoLocalLanding() {
               )
             })}
           </ol>
-        </div>
-      </section>
-
-      <section id="catalogo" className="scroll-mt-28 px-4 sm:px-6 pb-12 sm:pb-16">
-        <div className="mx-auto max-w-7xl">
-          <ScrollReveal>
-            <div className="mb-6 text-center">
-              <h2 className="text-2xl font-bold text-white sm:text-3xl">{copy.catalog.title}</h2>
-              <p className="landing-muted mx-auto mt-2 max-w-2xl text-sm sm:text-base">{copy.catalog.subtitle}</p>
-            </div>
-          </ScrollReveal>
-          <div
-            className="mb-6 flex flex-wrap justify-center gap-2"
-            role="tablist"
-            aria-label="Tipo de negocio de ejemplo"
-          >
-            {DEMO_LOCAL_RUBROS.map((id) => {
-              const Icon = RUBRO_ICONS[id]
-              const selected = rubro === id
-              return (
-                <button
-                  key={id}
-                  type="button"
-                  role="tab"
-                  aria-selected={selected}
-                  onClick={() => setRubro(id)}
-                  className={`inline-flex min-h-[44px] items-center gap-2 rounded-full border px-3.5 py-2 text-sm font-medium transition-colors ${
-                    selected
-                      ? 'border-cyan-400/40 bg-cyan-400/15 text-cyan-100'
-                      : 'border-white/15 bg-white/5 text-slate-300 hover:bg-white/10'
-                  }`}
-                >
-                  <Icon className="h-4 w-4" aria-hidden />
-                  {DEMO_LOCAL_CATALOGS[id].label}
-                </button>
-              )
-            })}
-          </div>
-          <div className="mb-4 flex items-center gap-2 text-sm text-slate-400">
-            <BuildingStorefrontIcon className="h-4 w-4 text-cyan-300" aria-hidden />
-            <span>
-              {catalog.shopName} · {catalog.neighborhood}
-            </span>
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {catalog.items.map((item, index) => (
-              <ScrollReveal key={`${catalog.id}-${item.name}`} delay={index * 0.04}>
-                <Card variant="liquid" className="h-full border-white/10">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-lg text-white">{item.name}</CardTitle>
-                    <CardDescription className="text-slate-400">{item.detail}</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-base font-semibold tabular-nums text-cyan-200">{item.price}</p>
-                  </CardContent>
-                </Card>
-              </ScrollReveal>
-            ))}
-          </div>
         </div>
       </section>
 
