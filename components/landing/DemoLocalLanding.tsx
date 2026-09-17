@@ -190,19 +190,8 @@ export default function DemoLocalLanding() {
       </section>
 
       <section id="solicitud" className="scroll-mt-28 px-4 sm:px-6 pb-12 sm:pb-16">
-        <div className="mx-auto grid max-w-7xl items-start gap-8 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-          <div>
-            <h2 className="text-2xl font-bold text-white sm:text-3xl">{copy.form.title}</h2>
-            <p className="landing-muted mt-3 text-sm sm:text-base">{copy.form.subtitle}</p>
-            <ul className="mt-6 space-y-2 text-sm text-slate-300">
-              {copy.form.bullets.map((item) => (
-                <li key={item} className="flex gap-2">
-                  <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-green-400" aria-hidden />
-                  {item}
-                </li>
-              ))}
-            </ul>
-          </div>
+        <div className="mx-auto max-w-xl lg:max-w-2xl">
+          <h2 className="mb-8 text-center text-2xl font-bold text-white sm:text-3xl">{copy.form.title}</h2>
           <DemoLocalLeadForm selectedRubro={rubro} onRubroChange={setRubro} />
         </div>
       </section>

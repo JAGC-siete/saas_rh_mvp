@@ -68,7 +68,7 @@ describe('demo-local landing', () => {
     assert.equal(DEMO_LOCAL_COPY.offer.steps.length, 3)
     assert.match(DEMO_LOCAL_COPY.offer.steps[2].title, /Google Maps/)
     assert.equal(DEMO_LOCAL_COPY.offer.steps[2].badge, 'Incluido · gratis con tu página o tus reservas')
-    assert.match(DEMO_LOCAL_COPY.form.title, /sin compromiso/i)
+    assert.equal(DEMO_LOCAL_COPY.form.title, 'Solicitud de servicio')
     assert.match(DEMO_LOCAL_COPY.form.services.hint, /Google Maps/)
     assert.match(DEMO_LOCAL_COPY.form.services.error, /página web/)
     assert.match(DEMO_LOCAL_COPY.seo.title, /Google Maps/)

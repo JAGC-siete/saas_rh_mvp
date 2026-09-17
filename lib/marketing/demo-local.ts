@@ -204,14 +204,7 @@ export const DEMO_LOCAL_COPY = {
     ],
   },
   form: {
-    title: 'Solicita un boceto de tu nueva web (sin compromiso)',
-    subtitle:
-      'Déjanos los datos de tu local. Revisamos tu presencia actual, armamos un modelo de cómo se vería y te enviamos una cotización transparente. Si no te gusta, no pagas nada.',
-    bullets: [
-      'Elige página web, reservas, o las dos.',
-      'El perfil de Google Maps va incluido al contratar cualquiera.',
-      'Nombre, WhatsApp y zona para armar el boceto.',
-    ],
+    title: 'Solicitud de servicio',
     submit: 'Solicitar mi propuesta gratuita',
     submitting: 'Enviando…',
     notePlaceholder: 'Cortes, menú… ¿Algo que debamos saber del local?',
