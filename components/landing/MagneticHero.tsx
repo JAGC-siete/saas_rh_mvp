@@ -40,12 +40,12 @@ export default function MagneticHero() {
               </span>
             </div>
 
-            <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-5xl font-bold leading-tight">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold leading-[1.12] tracking-tight">
               <span className="landing-hero-gradient">{copy.title}</span>
-              <span className="block text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-4xl mt-2 landing-hero-gradient-sub font-semibold">
-                {copy.subtitle}
-              </span>
             </h1>
+            <p className="mt-3 text-lg sm:text-xl md:text-2xl landing-hero-gradient-sub font-semibold">
+              {copy.subtitle}
+            </p>
 
             <p className="text-base sm:text-lg landing-muted max-w-2xl mt-4 sm:mt-6 font-medium landing-dark-text">
               {copy.lead}

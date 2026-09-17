@@ -143,57 +143,51 @@ export default function LandingPage() {
           />
         ))}
 
-        <div className="testimonials-marquee-viewport relative">
-          <div className="testimonials-marquee">
-            {[...home.testimonials, ...home.testimonials].map((testimonial, i) => {
-              const isDuplicate = i >= home.testimonials.length
-              return (
-                <article
-                  key={`${testimonial.name}-${i}`}
-                  className="glass-modern rounded-2xl p-5 sm:p-6 w-[min(22rem,85vw)] sm:w-[24rem] shrink-0"
-                  aria-hidden={isDuplicate}
-                >
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="relative w-12 h-12 sm:w-14 sm:h-14 shrink-0 rounded-full overflow-hidden ring-2 ring-white/15 bg-brand-500/40">
-                      <Image
-                        src={testimonial.image}
-                        alt={isDuplicate ? '' : testimonial.name}
-                        fill
-                        className={`object-cover ${testimonial.imagePosition}`}
-                        sizes="56px"
-                      />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="landing-ink font-medium truncate">{testimonial.name}</p>
-                      {testimonial.company ? (
-                        <p className="landing-muted text-sm font-medium opacity-50 grayscale truncate">
-                          {testimonial.company}
-                        </p>
-                      ) : (
-                        <p className="landing-muted text-sm font-medium truncate">{testimonial.role}</p>
-                      )}
-                    </div>
-                  </div>
-                  <div className="mb-2" aria-hidden="true">
-                    {[...Array(5)].map((_, idx) => (
-                      <span
-                        key={idx}
-                        className={`text-lg ${idx < testimonial.rating ? 'text-yellow-400' : 'text-slate-600'}`}
-                      >
-                        ★
-                      </span>
-                    ))}
-                  </div>
-                  <blockquote className="landing-muted italic text-sm sm:text-base font-medium landing-dark-text line-clamp-5">
-                    &ldquo;{testimonial.quote}&rdquo;
-                  </blockquote>
-                  {testimonial.company && (
-                    <span className="mt-3 inline-block landing-brand-soft text-sm font-medium">{testimonial.role}</span>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-wrap justify-center gap-5">
+          {home.testimonials.map((testimonial) => (
+            <article
+              key={testimonial.name}
+              className="glass-modern rounded-2xl p-5 sm:p-6 w-[min(22rem,85vw)] sm:w-[24rem] shrink-0"
+            >
+              <div className="flex items-center gap-3 mb-3">
+                <div className="relative w-12 h-12 sm:w-14 sm:h-14 shrink-0 rounded-full overflow-hidden ring-2 ring-white/15 bg-brand-500/40">
+                  <Image
+                    src={testimonial.image}
+                    alt={testimonial.name}
+                    fill
+                    className={`object-cover ${testimonial.imagePosition}`}
+                    sizes="56px"
+                  />
+                </div>
+                <div className="min-w-0">
+                  <p className="landing-ink font-medium truncate">{testimonial.name}</p>
+                  {testimonial.company ? (
+                    <p className="landing-muted text-sm font-medium opacity-50 grayscale truncate">
+                      {testimonial.company}
+                    </p>
+                  ) : (
+                    <p className="landing-muted text-sm font-medium truncate">{testimonial.role}</p>
                   )}
-                </article>
-              )
-            })}
-          </div>
+                </div>
+              </div>
+              <div className="mb-2" aria-hidden="true">
+                {[...Array(5)].map((_, idx) => (
+                  <span
+                    key={idx}
+                    className={`text-lg ${idx < testimonial.rating ? 'text-yellow-400' : 'text-slate-600'}`}
+                  >
+                    ★
+                  </span>
+                ))}
+              </div>
+              <blockquote className="landing-muted italic text-sm sm:text-base font-medium landing-dark-text line-clamp-5">
+                &ldquo;{testimonial.quote}&rdquo;
+              </blockquote>
+              {testimonial.company && (
+                <span className="mt-3 inline-block landing-brand-soft text-sm font-medium">{testimonial.role}</span>
+              )}
+            </article>
+          ))}
         </div>
       </section>
 
