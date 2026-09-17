@@ -59,6 +59,13 @@ describe('demo-local landing', () => {
     assert.equal(blob.includes('Así se ve el catálogo en la página'), false)
     assert.equal(DEMO_LOCAL_COPY.hero.ctaPrimary, 'Quiero mi página y Maps')
     assert.equal(DEMO_LOCAL_COPY.form.submit, 'Pedir que armen mi página')
+    assert.match(DEMO_LOCAL_COPY.hero.headline, /reservas/i)
+    assert.match(DEMO_LOCAL_COPY.hero.subheadline, /servicios o menú/)
+    assert.equal(blob.includes('tu lista y tu WhatsApp'), false)
+    assert.equal(DEMO_LOCAL_COPY.offer.steps[0].title, 'Tu página y sistema de reservas')
+    assert.match(DEMO_LOCAL_COPY.offer.steps[0].body, /agendar una cita/)
+    assert.match(DEMO_LOCAL_COPY.hero.mapsBenefit, /reservar en el momento/)
+    assert.match(DEMO_LOCAL_COPY.form.bookingLabel, /reservas\/citas/)
     assert.match(DEMO_LOCAL_COPY.offer.steps[2].body, /precio/i)
     assert.match(DEMO_LOCAL_COPY.seo.title, /Google Maps/)
   })
@@ -82,6 +89,13 @@ describe('demo-local landing', () => {
     assert.equal(ok.success, true)
     if (ok.success) {
       assert.equal(ok.data.email, 'maria@example.com')
+      assert.equal(ok.data.wantsBooking, false)
+    }
+
+    const withBooking = parseDemoLocalLead({ ...validLead, wantsBooking: true })
+    assert.equal(withBooking.success, true)
+    if (withBooking.success) {
+      assert.equal(withBooking.data.wantsBooking, true)
     }
 
     const cased = parseDemoLocalLead({ ...validLead, email: 'Maria.Lopez@Example.COM' })
@@ -106,6 +120,7 @@ describe('demo-local landing', () => {
       ownerName: '<script>alert(1)</script>',
       businessName: 'Ferretería & Hijos',
       note: 'Vendo clavos',
+      wantsBooking: true,
     })
     assert.equal(parsed.success, true)
     if (!parsed.success) return
@@ -117,5 +132,6 @@ describe('demo-local landing', () => {
     assert.equal(owner.html.includes('dominio tuyo'), true)
     assert.equal(internal.subject.includes('Ferretería & Hijos'), true)
     assert.equal(internal.html.includes('Vendo clavos'), true)
+    assert.match(internal.html, />Sí</)
   })
 })

@@ -41,8 +41,8 @@ export const GUIDE_LINKS: Record<string, GuideLink> = {
   },
   demoLocal: {
     href: '/demo-local',
-    label: 'Página y Google Maps para tu negocio local',
-    description: 'Servicio: te armamos la página; al contratar, Maps y dominio propio'
+    label: 'Página, Google Maps y reservas para tu negocio local',
+    description: 'Servicio: página, citas y WhatsApp; al contratar, Maps y dominio propio'
   },
   domingosSinPlanilla: {
     href: '/domingos-sin-planilla',

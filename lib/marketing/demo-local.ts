@@ -137,26 +137,28 @@ export function catalogForRubro(rubro: string | undefined): DemoLocalCatalog {
 
 export const DEMO_LOCAL_COPY = {
   seo: {
-    title: 'Página y Google Maps para tu negocio local | Humano SISU',
+    title: 'Página, Google Maps y reservas para tu negocio local | Humano SISU',
     description:
-      'Servicio para barberías, ferreterías y locales de barrio: te armamos la página y, al contratar, te publicamos en Google Maps y en un dominio tuyo. Ves un modelo primero. Te cotizamos al confirmar el local.',
+      'Servicio para barberías, ferreterías y locales de barrio: te armamos la página, el sistema de reservas y WhatsApp. Al contratar, te publicamos en Google Maps y en un dominio tuyo. Ves un modelo primero. Te cotizamos al confirmar el local.',
     keywords:
-      'página web negocio local Honduras, Google Maps barbería, ferretería cerca de mí, presencia digital MIPYME, landing negocio de barrio',
+      'página web negocio local Honduras, Google Maps barbería, reservas citas negocio, ferretería cerca de mí, presencia digital MIPYME, landing negocio de barrio',
   },
   hero: {
     badge: 'Servicio de presencia digital · negocios de barrio',
-    kicker: 'Página del local · Google Maps · WhatsApp',
-    headline: 'Tu local, con página y ficha en Google Maps',
+    kicker: 'Página · Google Maps · Reservas · WhatsApp',
+    headline: 'Tu local en Google Maps, con página web, sistema de reservas y WhatsApp.',
     subheadline:
-      'Nosotros la armamos con tu nombre, tu lista y tu WhatsApp. Primero ves un modelo. Si lo contratás, va a un dominio tuyo y te abrimos la ficha en Maps.',
+      'Nosotros la armamos con el nombre de tu local, tus servicios o menú, tu WhatsApp y un sistema de citas. Primero ves un modelo. Si lo contratás, va a un dominio tuyo y te abrimos la ficha en Maps.',
+    mapsBenefit:
+      'Aparece primero cuando tus vecinos busquen lo que ofreces. Facilítales contactarte o reservar en el momento.',
     ctaPrimary: 'Quiero mi página y Maps',
   },
   offer: {
     title: 'Qué contratás, cómo se hace y cuánto cuesta',
     steps: [
       {
-        title: 'La página',
-        body: 'Nombre, servicios, horario y WhatsApp. Quien tiene el enlace te escribe sin pasar a preguntar.',
+        title: 'Tu página y sistema de reservas',
+        body: 'Publicamos tus servicios y horarios. Tus clientes podrán agendar una cita directamente o escribirte por WhatsApp a un solo clic.',
       },
       {
         title: 'Google Maps, al contratar',
@@ -179,18 +181,20 @@ export const DEMO_LOCAL_COPY = {
     ],
     submit: 'Pedir que armen mi página',
     submitting: 'Enviando…',
+    notePlaceholder: 'Cortes, menú... ¿Necesitas que agenden citas?',
+    bookingLabel: 'Quiero incluir un sistema para recibir reservas/citas',
     successTitle: 'Datos recibidos',
     successBody:
       'Revisá tu correo (y spam). Te escribimos para armar el modelo, cotizarte y confirmar Maps y dominio.',
     consent:
-      'Acepto que Humano SISU me contacte sobre este servicio de página y Google Maps, y reciba información comercial. Puedo darme de baja cuando quiera.',
+      'Acepto que Humano SISU me contacte sobre este servicio de página, reservas y Google Maps, y reciba información comercial. Puedo darme de baja cuando quiera.',
     privacy: 'Política de privacidad',
     terms: 'Términos',
     errorConsent: 'Marcá el consentimiento para enviar.',
   },
   close: {
     headline: 'Siguiente paso: armar tu modelo y cotizarte.',
-    sub: 'Página + Google Maps. Dominio propio cuando contratás.',
+    sub: 'Página + reservas + WhatsApp + Google Maps. Dominio propio cuando contratás.',
     primary: 'Quiero mi página y Maps',
   },
   footer: {
@@ -240,6 +244,7 @@ export const demoLocalLeadSchema = z.object({
     .max(500, 'La nota no puede pasar de 500 caracteres.')
     .optional()
     .transform((value) => (value && value.length > 0 ? value : undefined)),
+  wantsBooking: z.boolean().default(false),
   consent: z.boolean().refine((value) => value === true, {
     message: DEMO_LOCAL_COPY.form.errorConsent,
   }),
@@ -274,7 +279,7 @@ export function buildDemoLocalOwnerEmail(lead: DemoLocalLead): { subject: string
       `Recibimos la solicitud para <strong>${escapeHtml(lead.businessName)}</strong> (${escapeHtml(catalog.label)} en ${escapeHtml(lead.city)}).`
     ),
     liquidParagraph(
-      'El servicio es este: te armamos la página del local (nombre, lista, horario, WhatsApp). Si lo contratás, te publicamos en Google Maps y en un dominio tuyo. El modelo de ejemplo vive en SISU hasta esa compra.'
+      'El servicio es este: te armamos la página del local (nombre, servicios o menú, horario, WhatsApp y citas). Si lo contratás, te publicamos en Google Maps y en un dominio tuyo. El modelo de ejemplo vive en SISU hasta esa compra.'
     ),
     liquidParagraph(
       'Te escribimos por este correo o por WhatsApp para armar el modelo, pasarte el precio y confirmar zona y el número que querés publicar.'
@@ -286,7 +291,7 @@ export function buildDemoLocalOwnerEmail(lead: DemoLocalLead): { subject: string
     subject: `Tu página local — ${lead.businessName}`,
     html: wrapLiquidEmail({
       title: 'Datos recibidos',
-      subtitle: 'Página y Google Maps para tu negocio de barrio',
+      subtitle: 'Página, reservas y Google Maps para tu negocio de barrio',
       badge: 'Demo local',
       bodyHtml,
       footerNote: 'Humano SISU · presencia digital para negocios locales. Puedes responder este correo.',
@@ -298,7 +303,7 @@ export function buildDemoLocalInternalEmail(lead: DemoLocalLead, receivedAt: Dat
   const catalog = catalogForRubro(lead.rubro)
   const when = formatDateTimeForHonduras(receivedAt)
   const bodyHtml = [
-    liquidParagraph('Nuevo lead de /demo-local (presencia digital: página + Maps, cotizar).'),
+    liquidParagraph('Nuevo lead de /demo-local (presencia digital: página + reservas + Maps, cotizar).'),
     liquidKeyValueTable([
       { label: 'Dueño', value: lead.ownerName, emphasize: true },
       { label: 'Negocio', value: lead.businessName },
@@ -306,6 +311,7 @@ export function buildDemoLocalInternalEmail(lead: DemoLocalLead, receivedAt: Dat
       { label: 'Zona', value: lead.city },
       { label: 'Correo', value: lead.email },
       { label: 'Teléfono / WhatsApp', value: lead.phone },
+      { label: 'Reservas / citas', value: lead.wantsBooking ? 'Sí' : 'No' },
       { label: 'Nota', value: lead.note || '—' },
       { label: 'Recibido (HN)', value: when },
     ]),

@@ -114,6 +114,7 @@ export default function DemoLocalLanding() {
             <div className="glass-modern relative overflow-hidden rounded-2xl p-5 sm:p-6">
               <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Búsqueda en el barrio</p>
               <p className="mt-2 text-lg font-semibold text-white">“{catalog.mapsQuery}”</p>
+              <p className="mt-2 text-sm leading-relaxed text-slate-300">{copy.hero.mapsBenefit}</p>
               <div className="mt-4 rounded-xl border border-white/10 bg-black/20 p-4">
                 <div className="flex items-start gap-3">
                   <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-cyan-400/20 bg-cyan-400/10">
@@ -236,6 +237,7 @@ function DemoLocalLeadForm({
     phone: '',
     city: '',
     note: '',
+    wantsBooking: false,
     consent: false,
   })
 
@@ -412,10 +414,20 @@ function DemoLocalLeadForm({
             className={`${fieldClass} min-h-[88px]`}
             value={form.note}
             onChange={(e) => setForm((prev) => ({ ...prev, note: e.target.value }))}
-            placeholder="Cortes, menú, herramientas, horarios…"
+            placeholder={copy.form.notePlaceholder}
           />
           {errors.note ? <p className="mt-1 text-xs text-red-300">{errors.note}</p> : null}
         </div>
+        <label htmlFor="dl-booking" className="flex items-start gap-3 text-sm text-slate-300">
+          <input
+            id="dl-booking"
+            type="checkbox"
+            className="mt-1 h-4 w-4 rounded border-white/20 bg-white/10"
+            checked={form.wantsBooking}
+            onChange={(e) => setForm((prev) => ({ ...prev, wantsBooking: e.target.checked }))}
+          />
+          <span>{copy.form.bookingLabel}</span>
+        </label>
         <label className="flex items-start gap-3 text-sm text-slate-300">
           <input
             type="checkbox"
