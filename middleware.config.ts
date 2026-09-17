@@ -102,6 +102,7 @@ export const MIDDLEWARE_CONFIG = {
       '/demo-local',
       '/webycitas',
       '/mercado',
+      '/mercadosanpablosigua',
       '/sitemap.xml'
     ],
     
@@ -191,6 +192,8 @@ export function getAllPublicRoutes(): string[] {
     '/p/*',
     '/mercado',
     '/mercado/*',
+    '/mercadosanpablosigua',
+    '/mercadosanpablosigua/*',
     // SEO pages
     '/plan-basico',
     '/membresia-anual',

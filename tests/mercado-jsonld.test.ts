@@ -46,11 +46,11 @@ describe('mercado: metadata y sitemap', () => {
 
   it('lista home, categorías y cada puesto público', () => {
     const locs = mercadoSitemapUrls().map((entry) => entry.loc)
-    assert.ok(locs.includes('/mercado'))
-    assert.ok(locs.includes('/mercado/inscripcion'))
-    assert.ok(locs.includes('/mercado?categoria=verduras'))
-    assert.ok(locs.includes('/mercado/comedor-el-patio'))
-    assert.ok(locs.includes('/mercado/verduras-dona-marta'))
+    assert.ok(locs.includes('/mercadosanpablosigua'))
+    assert.ok(locs.includes('/mercadosanpablosigua/inscripcion'))
+    assert.ok(locs.includes('/mercadosanpablosigua?categoria=verduras'))
+    assert.ok(locs.includes('/mercadosanpablosigua/comedor-el-patio'))
+    assert.ok(locs.includes('/mercadosanpablosigua/verduras-dona-marta'))
     assert.equal(locs.some((loc) => loc.startsWith('/app/')), false)
   })
 })

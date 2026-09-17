@@ -1,6 +1,6 @@
 /**
  * Solicitud pública de inscripción al directorio. Sin cuenta, sin cobro, sin publicación automática.
- * Shell: isPublicTenantLandingRoute (/mercado/inscripcion).
+ * Shell: isPublicTenantLandingRoute (/mercadosanpablosigua/inscripcion).
  */
 
 import Head from 'next/head'

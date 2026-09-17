@@ -25,7 +25,7 @@ import {
   VENDOR_CATEGORY_LABEL,
   type VendorCategory,
 } from '../../../../lib/mercado/categories'
-import { MERCADO_ADMIN_ROLES, mercadoAdminNewPath } from '../../../../lib/mercado/paths'
+import { MERCADO_ADMIN_ROLES, mercadoAdminNewPath, mercadoApplicationsAdminPath, mercadoVendorPath } from '../../../../lib/mercado/paths'
 import type { CreateVendorPayload, VendorStatus } from '../../../../lib/mercado/schema'
 
 interface AdminVendorRow extends CreateVendorPayload {
@@ -56,12 +56,18 @@ function VendorsAdminList() {
         <div>
           <h1 className="text-2xl font-semibold text-white">Vendedores del mercado</h1>
           <p className="mt-1 text-sm text-gray-300">
-            Alta de puestos que se publican en /mercado. Persistencia API en el siguiente incremento.
+            Alta de puestos que se publican en /mercado. Persistencia de fichas en el siguiente
+            incremento. Las solicitudes públicas viven en la bandeja de inscripción.
           </p>
         </div>
-        <Link href={mercadoAdminNewPath()}>
-          <Button>Nuevo vendedor</Button>
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <Link href={mercadoApplicationsAdminPath()}>
+            <Button variant="outline">Solicitudes de inscripción</Button>
+          </Link>
+          <Link href={mercadoAdminNewPath()}>
+            <Button>Nuevo vendedor</Button>
+          </Link>
+        </div>
       </div>
 
       <Card variant="glass">
@@ -125,7 +131,7 @@ function VendorsAdminList() {
             submitLabel="Validar y agregar al listado"
             onValid={(payload) => {
               setRows((current) => [{ id: payload.slug, ...payload }, ...current])
-              setNotice(`Validado: ${payload.name} → /mercado/${payload.slug}`)
+              setNotice(`Validado: ${payload.name} → ${mercadoVendorPath(payload.slug)}`)
             }}
           />
         </CardContent>

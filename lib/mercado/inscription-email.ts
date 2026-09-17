@@ -10,7 +10,7 @@ import {
 } from '../emails/liquid-layout'
 import { formatDateTimeForHonduras } from '../timezone'
 import { mercadoInscriptionCanonical } from './meta'
-import { mercadoAdminListPath } from './paths'
+import { mercadoApplicationsAdminPath } from './paths'
 import { mercadoAbsoluteUrl } from './public-url'
 import type { MercadoInscription } from './inscription-schema'
 
@@ -30,7 +30,7 @@ export function buildMercadoInscriptionNotification(params: {
   receivedAt: Date
 }): { subject: string; html: string } {
   const { inscription, receivedAt } = params
-  const adminUrl = mercadoAbsoluteUrl(mercadoAdminListPath())
+  const adminUrl = mercadoAbsoluteUrl(mercadoApplicationsAdminPath())
 
   const bodyHtml = [
     liquidParagraph(

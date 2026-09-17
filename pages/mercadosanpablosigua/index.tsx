@@ -1,5 +1,5 @@
 /**
- * Home del directorio público. Shell: isPublicTenantLandingRoute (/mercado).
+ * Home del directorio público. Shell: isPublicTenantLandingRoute (/mercadosanpablosigua).
  * No usa AuthContext ni chrome de marketing de Humano SISU.
  * No pisa pages/index.tsx.
  */

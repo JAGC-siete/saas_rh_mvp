@@ -11,6 +11,8 @@ import {
   mercadoInscriptionNotifyEmail,
 } from '../lib/mercado/inscription-email'
 import {
+  MERCADO_APPLICATIONS_ADMIN_API_PATH,
+  MERCADO_APPLICATIONS_ADMIN_PATH,
   MERCADO_INSCRIPTION_API_PATH,
   MERCADO_INSCRIPTION_PATH,
   mercadoInscriptionPath,
@@ -18,6 +20,8 @@ import {
 import { getAllPublicRoutes } from '../middleware.config'
 import { isReservedVendorSlug } from '../lib/mercado/slug'
 import { parseCreateVendor } from '../lib/mercado/schema'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 
 const valid = {
   stallNumber: 'Pasillo 1, local 8',
@@ -69,12 +73,12 @@ describe('mercado: solicitud de inscripción', () => {
     assert.match(mail.subject, /Pasillo 1, local 8/)
     assert.ok(mail.html.includes('Carmen López'))
     assert.ok(mail.html.includes('pendiente de revisión'))
-    assert.ok(mail.html.includes('/app/admin/vendors'))
+    assert.ok(mail.html.includes('/app/admin/mercado-solicitudes'))
     assert.equal(/crear perfil|contraseña|cobro/i.test(mail.html), false)
   })
 
   it('reserva inscripcion para el formulario y deja el API en rutas públicas', () => {
-    assert.equal(mercadoInscriptionPath(), MERCADO_INSCRIPTION_PATH)
+    assert.equal(mercadoInscriptionPath(), '/mercadosanpablosigua/inscripcion')
     assert.equal(isReservedVendorSlug('inscripcion'), true)
     assert.equal(isReservedVendorSlug('solicitud'), true)
     assert.equal(
@@ -88,6 +92,16 @@ describe('mercado: solicitud de inscripción', () => {
       false
     )
     assert.ok(getAllPublicRoutes().includes(MERCADO_INSCRIPTION_API_PATH))
+    assert.equal(MERCADO_APPLICATIONS_ADMIN_PATH, '/app/admin/mercado-solicitudes')
+    assert.equal(MERCADO_APPLICATIONS_ADMIN_API_PATH, '/api/admin/mercado/applications')
+  })
+
+  it('el POST público no enrolla planilla ni crea vendor', () => {
+    const handler = readFileSync(join(process.cwd(), 'pages/api/mercado/inscriptions.ts'), 'utf8')
+    assert.equal(handler.includes('marketing_leads'), false)
+    assert.equal(handler.includes('enrollPublicToolLead'), false)
+    assert.equal(handler.includes("from('vendors')"), false)
+    assert.match(handler, /VENDOR_APPLICATIONS_TABLE/)
   })
 
   it('avisa al buzón de operación por default', () => {

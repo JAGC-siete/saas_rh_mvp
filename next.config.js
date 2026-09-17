@@ -172,6 +172,26 @@ const nextConfig = {
         destination: '/en/webycitas',
         permanent: true,
       },
+      {
+        source: '/mercado',
+        destination: '/mercadosanpablosigua',
+        permanent: true,
+      },
+      {
+        source: '/mercado/:path*',
+        destination: '/mercadosanpablosigua/:path*',
+        permanent: true,
+      },
+      {
+        source: '/en/mercado',
+        destination: '/en/mercadosanpablosigua',
+        permanent: true,
+      },
+      {
+        source: '/en/mercado/:path*',
+        destination: '/en/mercadosanpablosigua/:path*',
+        permanent: true,
+      },
       // Funnel TOFU: canonical /cerrar-planilla-en-paz (legacy /secreto, /info → 301)
       {
         source: '/secreto',

@@ -28,6 +28,7 @@ import {
   MapPin,
   Globe,
   CalendarDays,
+  Store,
 } from 'lucide-react'
 
 interface SuperAdminLayoutProps {
@@ -52,6 +53,7 @@ export default function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
     { name: 'Prospección leads', href: '/app/admin/prospection', icon: MapPin, description: 'Búsqueda local B2B y outreach Resend' },
     { name: 'Landings de ejemplo', href: '/app/landings', icon: Globe, description: 'Páginas de muestra para visitas a clientes' },
     { name: 'Web y citas', href: '/app/admin/webycitas', icon: CalendarDays, description: 'Solicitudes de /webycitas' },
+    { name: 'Mercado solicitudes', href: '/app/admin/mercado-solicitudes', icon: Store, description: 'Inscripciones al directorio /mercadosanpablosigua' },
     { name: 'Marketing KPIs', href: '/app/admin/marketing', icon: Activity, description: 'Conversiones: leads, email y cotizaciones' },
     { name: 'Comunicaciones', href: '/app/admin/communications', icon: Send, description: 'Campañas y secuencias de adopción' },
     { name: 'Recursos SEO', href: '/app/admin/recursos', icon: BookOpen, description: 'Artículos públicos en /recursos' },

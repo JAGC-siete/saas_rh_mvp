@@ -1,6 +1,6 @@
 /**
  * Perfil público de un puesto. SSR para SEO.
- * Shell: isPublicTenantLandingRoute (/mercado/[slug]).
+ * Shell: isPublicTenantLandingRoute (/mercadosanpablosigua/[slug]).
  */
 
 import Head from 'next/head'

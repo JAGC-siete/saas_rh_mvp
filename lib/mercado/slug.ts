@@ -11,6 +11,7 @@ export const RESERVED_VENDOR_SLUGS: readonly string[] = [
   'inscripcion',
   'login',
   'mercado',
+  'mercadosanpablosigua',
   'new',
   'nuevo',
   'sitemap',

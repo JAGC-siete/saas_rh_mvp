@@ -1,19 +1,21 @@
 /**
  * Rutas del directorio Mercado Municipal Siguatepeque.
  *
- * Público: /mercado, /mercado/inscripcion y /mercado/[slug] — mismo shell que /p/* (SSR, sin Auth, sin chrome marketing).
- * Admin tenant: /app/admin/vendors — shell autenticado de /app/*.
- *
- * No usa pages/index.tsx ni pages/[slug].tsx: esas rutas son Humano SISU.
+ * Público canónico: /mercadosanpablosigua, /inscripcion y /[slug].
+ * Legacy /mercado → 301. Assets estáticos siguen en /mercado/*.png.
+ * Solicitudes: /app/admin/mercado-solicitudes. Fichas admin: /app/admin/vendors.
  */
 
 import type { RoleId } from '../auth/role-access'
 
-export const MERCADO_PUBLIC_PREFIX = '/mercado'
+export const MERCADO_PUBLIC_PREFIX = '/mercadosanpablosigua'
+export const MERCADO_LEGACY_PREFIX = '/mercado'
 export const MERCADO_ADMIN_PATH = '/app/admin/vendors'
 export const MERCADO_VENDORS_API_PATH = '/api/mercado/vendors'
-export const MERCADO_INSCRIPTION_PATH = '/mercado/inscripcion'
+export const MERCADO_INSCRIPTION_PATH = `${MERCADO_PUBLIC_PREFIX}/inscripcion`
 export const MERCADO_INSCRIPTION_API_PATH = '/api/mercado/inscriptions'
+export const MERCADO_APPLICATIONS_ADMIN_PATH = '/app/admin/mercado-solicitudes'
+export const MERCADO_APPLICATIONS_ADMIN_API_PATH = '/api/admin/mercado/applications'
 
 /** Alta/edición de puestos: tenant admin, no SuperAdmin de Humano SISU. */
 export const MERCADO_ADMIN_ROLES = ['super_admin', 'admin', 'company_admin'] as const satisfies readonly RoleId[]
@@ -46,10 +48,17 @@ export function mercadoAdminEditPath(id: string): string {
   return `${MERCADO_ADMIN_PATH}/${id}`
 }
 
+export function mercadoApplicationsAdminPath(): string {
+  return MERCADO_APPLICATIONS_ADMIN_PATH
+}
+
 /**
- * Marca /mercado y /mercado/* como ruta pública SSR sin chrome de marketing.
- * La consume _app.tsx vía isPublicTenantLandingRoute.
+ * Marca el directorio público (canónico y legacy) como SSR sin chrome de marketing.
  */
 export function isPublicMercadoRoute(pathname: string): boolean {
-  return pathname === MERCADO_PUBLIC_PREFIX || pathname.startsWith(`${MERCADO_PUBLIC_PREFIX}/`)
+  return matchesPrefix(pathname, MERCADO_PUBLIC_PREFIX) || matchesPrefix(pathname, MERCADO_LEGACY_PREFIX)
+}
+
+function matchesPrefix(pathname: string, prefix: string): boolean {
+  return pathname === prefix || pathname.startsWith(`${prefix}/`)
 }
