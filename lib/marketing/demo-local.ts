@@ -144,11 +144,9 @@ export const DEMO_LOCAL_COPY = {
       'página web negocio local Honduras, Google Maps barbería, reservas citas negocio, ferretería cerca de mí, presencia digital MIPYME, landing negocio de barrio',
   },
   hero: {
-    badge: 'Servicio de presencia digital · negocios de barrio',
     kicker: 'Página · Google Maps · Reservas · WhatsApp',
-    headline: 'Tu local en Google Maps, con página web, sistema de reservas y WhatsApp.',
-    subheadline:
-      'Nosotros la armamos con el nombre de tu local, tus servicios o menú, tu WhatsApp y un sistema de citas. Primero ves un modelo. Si lo contratás, va a un dominio tuyo y te abrimos la ficha en Maps.',
+    headline: 'Tu comercio local en Internet hoy',
+    subheadline: 'Página web, Sistema de reservas, y Whatsapp',
     mapsBenefit:
       'Aparece primero cuando tus vecinos busquen lo que ofreces. Facilítales contactarte o reservar en el momento.',
     ctaPrimary: 'Quiero mi página y Maps',

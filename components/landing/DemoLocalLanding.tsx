@@ -11,7 +11,6 @@ import PublicPageHead from '../SEO/PublicPageHead'
 import SchemaMarkup from '../SEO/SchemaMarkup'
 import BorderBeam from './BorderBeam'
 import ScrollReveal from './ScrollReveal'
-import { Badge } from '../ui/badge'
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
 import { Textarea } from '../ui/textarea'
@@ -84,12 +83,6 @@ export default function DemoLocalLanding() {
         <div className="relative mx-auto grid max-w-7xl items-center gap-8 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] lg:gap-12">
           <div>
             <div className="mb-5 flex flex-wrap gap-2">
-              <Badge
-                variant="outline"
-                className="border-white/15 bg-white/8 px-3 py-1.5 text-xs font-medium text-slate-200"
-              >
-                {copy.hero.badge}
-              </Badge>
               <span className="inline-flex max-w-full items-center rounded-xl border border-cyan-400/25 bg-cyan-400/10 px-3 py-1.5 text-xs font-medium leading-snug text-cyan-200">
                 {copy.hero.kicker}
               </span>
@@ -139,18 +132,15 @@ export default function DemoLocalLanding() {
               <h2 className="text-2xl font-bold text-white sm:text-3xl">{copy.offer.title}</h2>
             </div>
           </ScrollReveal>
-          <ol className="grid gap-4 md:grid-cols-3">
+          <ul className="grid gap-4 md:grid-cols-3">
             {copy.offer.steps.map((step, index) => {
               const Icon = OFFER_ICONS[index] ?? GlobeAltIcon
               return (
                 <ScrollReveal key={step.title} delay={index * 0.06}>
                   <li className="glass-modern h-full rounded-2xl p-5 sm:p-6">
-                    <div className="mb-4 flex items-center gap-3">
+                    <div className="mb-4 flex items-center">
                       <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-brand-400/25 bg-brand-500/15">
                         <Icon className="h-5 w-5 text-brand-300" aria-hidden />
-                      </span>
-                      <span className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                        {index + 1}
                       </span>
                     </div>
                     <h3 className="text-lg font-semibold text-white">{step.title}</h3>
@@ -159,7 +149,7 @@ export default function DemoLocalLanding() {
                 </ScrollReveal>
               )
             })}
-          </ol>
+          </ul>
         </div>
       </section>
 
