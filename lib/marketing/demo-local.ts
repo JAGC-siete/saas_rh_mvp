@@ -12,8 +12,13 @@ import { formatDateTimeForHonduras } from '../timezone'
 export const DEMO_LOCAL_PUBLIC_PATH = '/webycitas'
 export const DEMO_LOCAL_LEGACY_PATH = '/demo-local'
 export const DEMO_LOCAL_API_PATH = '/api/public/send-demo-local-lead'
+export const DEMO_LOCAL_ADMIN_PATH = '/app/admin/webycitas'
+export const DEMO_LOCAL_ADMIN_API_PATH = '/api/admin/webycitas/leads'
 export const DEMO_LOCAL_MARKETING_SOURCE = 'demo-local'
-export const DEMO_LOCAL_LEAD_SOURCE = 'demo-local'
+export const WEBYCITAS_LEADS_TABLE = 'webycitas_leads'
+export const WEBYCITAS_LEAD_SOURCE = 'webycitas'
+export const WEBYCITAS_LEAD_STATUSES = ['received', 'reviewed', 'rejected'] as const
+export type WebycitasLeadStatus = (typeof WEBYCITAS_LEAD_STATUSES)[number]
 
 export const DEMO_LOCAL_RUBROS = [
   'barberia',
@@ -290,6 +295,7 @@ export const demoLocalLeadSchema = z.object({
   consent: z.boolean().refine((value) => value === true, {
     message: DEMO_LOCAL_COPY.form.errorConsent,
   }),
+  website: z.string().max(200).optional(),
 })
 
 export type DemoLocalLeadInput = z.input<typeof demoLocalLeadSchema>
@@ -297,6 +303,10 @@ export type DemoLocalLead = z.output<typeof demoLocalLeadSchema>
 
 export function parseDemoLocalLead(body: unknown) {
   return demoLocalLeadSchema.safeParse(body)
+}
+
+export function looksLikeDemoLocalBot(lead: DemoLocalLead): boolean {
+  return Boolean(lead.website && lead.website.trim().length > 0)
 }
 
 export function demoLocalFieldErrors(error: z.ZodError): Record<string, string> {
@@ -346,6 +356,7 @@ export function buildDemoLocalInternalEmail(lead: DemoLocalLead, receivedAt: Dat
   const when = formatDateTimeForHonduras(receivedAt)
   const bodyHtml = [
     liquidParagraph('Nuevo lead de /webycitas (página y/o reservas; Maps incluido al contratar).'),
+    liquidParagraph(`Bandeja: ${escapeHtml(DEMO_LOCAL_ADMIN_PATH)}`),
     liquidKeyValueTable([
       { label: 'Dueño', value: lead.ownerName, emphasize: true },
       { label: 'Negocio', value: lead.businessName },

@@ -240,6 +240,7 @@ function DemoLocalLeadForm({
     note: '',
     services: [] as DemoLocalService[],
     consent: false,
+    website: '',
   })
 
   const labelClass = 'mb-1.5 block text-xs font-medium uppercase tracking-wide text-slate-400'
@@ -297,13 +298,15 @@ function DemoLocalLeadForm({
         return
       }
 
-      trackDemoLocalLeadSubmit({
-        eventId: metaEventId,
-        email: parsed.data.email,
-        phone: parsed.data.phone,
-        firstName: parsed.data.ownerName,
-        rubro: parsed.data.rubro,
-      })
+      if (!parsed.data.website?.trim()) {
+        trackDemoLocalLeadSubmit({
+          eventId: metaEventId,
+          email: parsed.data.email,
+          phone: parsed.data.phone,
+          firstName: parsed.data.ownerName,
+          rubro: parsed.data.rubro,
+        })
+      }
       setSuccessEmail(parsed.data.email)
     } catch {
       setErrors({ submit: 'No se pudo enviar. Revise su conexión e intente de nuevo.' })
@@ -518,6 +521,18 @@ function DemoLocalLeadForm({
           </span>
         </label>
         {errors.consent ? <p className="text-xs text-red-300">{errors.consent}</p> : null}
+        <div className="hidden" aria-hidden="true">
+          <label htmlFor="dl-website">Sitio web</label>
+          <input
+            id="dl-website"
+            name="website"
+            type="text"
+            tabIndex={-1}
+            autoComplete="off"
+            value={form.website}
+            onChange={(e) => setForm((prev) => ({ ...prev, website: e.target.value }))}
+          />
+        </div>
         {errors.submit ? <p className="text-sm text-red-300">{errors.submit}</p> : null}
         <Button type="submit" disabled={isLoading} className="btn-shiny w-full bg-brand-500 hover:bg-brand-600">
           {isLoading ? copy.form.submitting : copy.form.submit}

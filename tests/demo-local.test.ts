@@ -1,6 +1,8 @@
 import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
 import {
+  DEMO_LOCAL_ADMIN_API_PATH,
+  DEMO_LOCAL_ADMIN_PATH,
   DEMO_LOCAL_API_PATH,
   DEMO_LOCAL_CATALOGS,
   DEMO_LOCAL_COPY,
@@ -8,16 +10,21 @@ import {
   DEMO_LOCAL_MARKETING_SOURCE,
   DEMO_LOCAL_PUBLIC_PATH,
   DEMO_LOCAL_RUBROS,
+  WEBYCITAS_LEAD_SOURCE,
+  WEBYCITAS_LEADS_TABLE,
   buildDemoLocalInternalEmail,
   buildDemoLocalOwnerEmail,
   catalogForRubro,
   formatDemoLocalServices,
+  looksLikeDemoLocalBot,
   parseDemoLocalLead,
 } from '../lib/marketing/demo-local'
 import { getMarketingLanding } from '../lib/marketing/marketing-landings-registry'
 import { isPublicMarketingRoute, isPublicToolRoute } from '../lib/seo/public-ssr-routes'
 import { MIDDLEWARE_CONFIG, getAllPublicRoutes } from '../middleware.config'
 import { GUIDE_LINKS, FOOTER_GUIDE_KEYS } from '../lib/seo/internal-links'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 
 const validLead = {
   ownerName: 'María López',
@@ -42,6 +49,10 @@ describe('demo-local landing', () => {
     assert.ok(MIDDLEWARE_CONFIG.protection.public.includes('/webycitas'))
     assert.ok(MIDDLEWARE_CONFIG.protection.public.includes('/demo-local'))
     assert.ok(getAllPublicRoutes().includes('/api/public/send-demo-local-lead'))
+    assert.equal(DEMO_LOCAL_ADMIN_PATH, '/app/admin/webycitas')
+    assert.equal(DEMO_LOCAL_ADMIN_API_PATH, '/api/admin/webycitas/leads')
+    assert.equal(WEBYCITAS_LEADS_TABLE, 'webycitas_leads')
+    assert.equal(WEBYCITAS_LEAD_SOURCE, 'webycitas')
   })
 
   it('está en registry, footer SEO y source de marketing', () => {
@@ -142,6 +153,25 @@ describe('demo-local landing', () => {
     assert.equal(badRubro.success, false)
   })
 
+  it('un honeypot lleno parece bot y uno vacío no', () => {
+    const clean = parseDemoLocalLead(validLead)
+    assert.equal(clean.success, true)
+    if (clean.success) assert.equal(looksLikeDemoLocalBot(clean.data), false)
+
+    const bot = parseDemoLocalLead({ ...validLead, website: 'http://spam.example' })
+    assert.equal(bot.success, true)
+    if (bot.success) assert.equal(looksLikeDemoLocalBot(bot.data), true)
+  })
+
+  it('el POST público no escribe calculadoras ni enrolla planilla', () => {
+    const handler = readFileSync(join(process.cwd(), 'pages/api/public/send-demo-local-lead.ts'), 'utf8')
+    assert.equal(handler.includes('leads_public_tools'), false)
+    assert.equal(handler.includes('enrollPublicToolLead'), false)
+    assert.equal(handler.includes('marketing_leads'), false)
+    assert.match(handler, /WEBYCITAS_LEADS_TABLE/)
+    assert.match(handler, /PUBLIC_LANDING_LEAD/)
+  })
+
   it('arma correos sin interpolar HTML del dueño', () => {
     const parsed = parseDemoLocalLead({
       ...validLead,
@@ -162,6 +192,7 @@ describe('demo-local landing', () => {
     assert.equal(internal.subject.includes('Ferretería & Hijos'), true)
     assert.match(internal.subject, /webycitas/)
     assert.match(internal.html, /\/webycitas/)
+    assert.match(internal.html, /\/app\/admin\/webycitas/)
     assert.equal(internal.html.includes('Vendo clavos'), true)
     assert.match(internal.html, /Reservas \/ citas/)
     assert.match(internal.html, /Google Maps incluido/)
