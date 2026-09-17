@@ -168,19 +168,19 @@ export const DEMO_LOCAL_COPY = {
     ctaPrimary: 'Probar gratis',
   },
   problem: {
-    title: '¿Te está pasando esto en tu negocio?',
+    title: '¿Necesitas más clientes en tu negocio?',
     items: [
       {
         title: 'Eres un “fantasma” en tu zona',
         body: 'Las personas buscan “salón de belleza / taller cerca de mí” en Google y le compran a tu competencia porque tú no apareces.',
       },
       {
-        title: 'Pierdes tiempo en WhatsApp',
-        body: 'Pasas horas respondiendo “¿qué precio tiene?” o “¿tienes turno el viernes?” en lugar de enfocarte en tu trabajo.',
+        title: 'No tienes reservas en línea',
+        body: 'El cliente quiere agendar solo. Si no hay turno en la web, te escribe, te espera, o se va al que sí tiene agenda.',
       },
       {
-        title: 'Clientes perdidos de noche',
-        body: 'Quieren reservar a las 10 de la noche. Si estás cerrado y no hay forma de agendar en la web, se van a otro lado.',
+        title: 'Cuando cierras, la venta se va con otro',
+        body: 'A las 10 de la noche buscan en el celular. Si no apareces y no pueden reservar, esa venta es del negocio que sí está en Google.',
       },
     ],
   },
