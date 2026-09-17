@@ -49,7 +49,7 @@ const publicPages: SitemapUrl[] = [
     lastmod: new Date().toISOString().split('T')[0],
   },
   {
-    loc: '/demo-local',
+    loc: '/webycitas',
     changefreq: 'weekly',
     priority: 0.8,
     lastmod: new Date().toISOString().split('T')[0],

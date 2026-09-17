@@ -9,7 +9,8 @@ import {
 } from '../emails/liquid-layout'
 import { formatDateTimeForHonduras } from '../timezone'
 
-export const DEMO_LOCAL_PUBLIC_PATH = '/demo-local'
+export const DEMO_LOCAL_PUBLIC_PATH = '/webycitas'
+export const DEMO_LOCAL_LEGACY_PATH = '/demo-local'
 export const DEMO_LOCAL_API_PATH = '/api/public/send-demo-local-lead'
 export const DEMO_LOCAL_MARKETING_SOURCE = 'demo-local'
 export const DEMO_LOCAL_LEAD_SOURCE = 'demo-local'
@@ -344,7 +345,7 @@ export function buildDemoLocalInternalEmail(lead: DemoLocalLead, receivedAt: Dat
   const catalog = catalogForRubro(lead.rubro)
   const when = formatDateTimeForHonduras(receivedAt)
   const bodyHtml = [
-    liquidParagraph('Nuevo lead de /demo-local (página y/o reservas; Maps incluido al contratar).'),
+    liquidParagraph('Nuevo lead de /webycitas (página y/o reservas; Maps incluido al contratar).'),
     liquidKeyValueTable([
       { label: 'Dueño', value: lead.ownerName, emphasize: true },
       { label: 'Negocio', value: lead.businessName },
@@ -359,13 +360,13 @@ export function buildDemoLocalInternalEmail(lead: DemoLocalLead, receivedAt: Dat
   ].join('')
 
   return {
-    subject: `Lead demo-local · ${lead.businessName} · ${catalog.label}`,
+    subject: `Lead webycitas · ${lead.businessName} · ${catalog.label}`,
     html: wrapLiquidEmail({
       title: 'Lead negocio local',
       subtitle: lead.businessName,
       badge: 'Prospección',
       bodyHtml,
-      footerNote: 'Aviso interno de captura /demo-local.',
+      footerNote: 'Aviso interno de captura /webycitas.',
     }),
   }
 }

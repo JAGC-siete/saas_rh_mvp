@@ -162,6 +162,16 @@ const nextConfig = {
         destination: '/membresia-anual',
         permanent: true,
       },
+      {
+        source: '/demo-local',
+        destination: '/webycitas',
+        permanent: true,
+      },
+      {
+        source: '/en/demo-local',
+        destination: '/en/webycitas',
+        permanent: true,
+      },
       // Funnel TOFU: canonical /cerrar-planilla-en-paz (legacy /secreto, /info → 301)
       {
         source: '/secreto',

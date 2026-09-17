@@ -100,6 +100,7 @@ export const MIDDLEWARE_CONFIG = {
       '/recursos',
       '/tools/sandbox',
       '/demo-local',
+      '/webycitas',
       '/mercado',
       '/sitemap.xml'
     ],

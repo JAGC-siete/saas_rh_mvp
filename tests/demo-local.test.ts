@@ -4,6 +4,7 @@ import {
   DEMO_LOCAL_API_PATH,
   DEMO_LOCAL_CATALOGS,
   DEMO_LOCAL_COPY,
+  DEMO_LOCAL_LEGACY_PATH,
   DEMO_LOCAL_MARKETING_SOURCE,
   DEMO_LOCAL_PUBLIC_PATH,
   DEMO_LOCAL_RUBROS,
@@ -31,20 +32,25 @@ const validLead = {
 
 describe('demo-local landing', () => {
   it('expone la ruta pública en el shell de landings SEO', () => {
-    assert.equal(DEMO_LOCAL_PUBLIC_PATH, '/demo-local')
+    assert.equal(DEMO_LOCAL_PUBLIC_PATH, '/webycitas')
+    assert.equal(DEMO_LOCAL_LEGACY_PATH, '/demo-local')
     assert.equal(DEMO_LOCAL_API_PATH, '/api/public/send-demo-local-lead')
+    assert.equal(isPublicMarketingRoute('/webycitas'), true)
+    assert.equal(isPublicMarketingRoute('/en/webycitas'), true)
     assert.equal(isPublicMarketingRoute('/demo-local'), true)
-    assert.equal(isPublicMarketingRoute('/en/demo-local'), true)
-    assert.equal(isPublicToolRoute('/demo-local'), false)
+    assert.equal(isPublicToolRoute('/webycitas'), false)
+    assert.ok(MIDDLEWARE_CONFIG.protection.public.includes('/webycitas'))
     assert.ok(MIDDLEWARE_CONFIG.protection.public.includes('/demo-local'))
     assert.ok(getAllPublicRoutes().includes('/api/public/send-demo-local-lead'))
   })
 
   it('está en registry, footer SEO y source de marketing', () => {
-    const entry = getMarketingLanding('/demo-local')
-    assert.equal(entry?.pageFile, 'pages/demo-local/index.tsx')
+    const entry = getMarketingLanding('/webycitas')
+    assert.equal(entry?.pageFile, 'pages/webycitas/index.tsx')
+    assert.deepEqual(entry?.aliases, ['/demo-local'])
+    assert.equal(getMarketingLanding('/demo-local')?.path, '/webycitas')
     assert.equal(entry?.kind, 'lead-magnet')
-    assert.equal(GUIDE_LINKS.demoLocal.href, '/demo-local')
+    assert.equal(GUIDE_LINKS.demoLocal.href, '/webycitas')
     assert.ok(FOOTER_GUIDE_KEYS.includes('demoLocal'))
     assert.equal(DEMO_LOCAL_MARKETING_SOURCE, 'demo-local')
   })
@@ -152,7 +158,10 @@ describe('demo-local landing', () => {
     assert.equal(owner.html.includes('<script>alert(1)</script>'), false)
     assert.equal(owner.html.includes('Instagram'), false)
     assert.equal(owner.html.includes('dominio tuyo'), true)
+    assert.match(owner.html, /\/webycitas/)
     assert.equal(internal.subject.includes('Ferretería & Hijos'), true)
+    assert.match(internal.subject, /webycitas/)
+    assert.match(internal.html, /\/webycitas/)
     assert.equal(internal.html.includes('Vendo clavos'), true)
     assert.match(internal.html, /Reservas \/ citas/)
     assert.match(internal.html, /Google Maps incluido/)

@@ -40,7 +40,7 @@ export const GUIDE_LINKS: Record<string, GuideLink> = {
     description: 'L. 6,500/año: recibos, asistencia sin reloj y empleados ilimitados'
   },
   demoLocal: {
-    href: '/demo-local',
+    href: '/webycitas',
     label: 'Página, Google Maps y reservas para tu negocio local',
     description: 'Servicio: página, citas y WhatsApp; al contratar, Maps y dominio propio'
   },

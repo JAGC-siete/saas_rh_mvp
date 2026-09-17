@@ -43,6 +43,7 @@ export const RESERVED_LANDING_SLUGS: readonly string[] = [
   'contacto',
   'demo',
   'demo-local',
+  'webycitas',
   'health',
   'landing',
   'legal',

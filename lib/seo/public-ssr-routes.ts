@@ -46,6 +46,7 @@ const PUBLIC_SSR_EXACT = new Set([
   '/calculadora-aguinaldo-honduras',
   '/calculadora-catorceavo-honduras',
   '/demo-local',
+  '/webycitas',
 ])
 
 const PUBLIC_KIOSK_DISABLED = new Set([

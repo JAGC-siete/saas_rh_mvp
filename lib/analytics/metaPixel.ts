@@ -298,7 +298,7 @@ export function trackViernesLeadSubmit(params: {
   })
 }
 
-/** Solicitud de página local en /demo-local */
+/** Solicitud de página local en /webycitas */
 export function trackDemoLocalLeadSubmit(params: {
   eventId: string
   email: string
