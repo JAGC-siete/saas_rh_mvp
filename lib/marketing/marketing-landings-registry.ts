@@ -117,6 +117,19 @@ export const MARKETING_LANDINGS: MarketingLandingEntry[] = [
       'Canónico /membresia-anual. /plan-basico → 301. Copy de invitación + SKU L. 6,500. Deslinde en badge, subhead, FAQ y consentimiento.',
   },
   {
+    path: '/demo-local',
+    pageFile: 'pages/demo-local/index.tsx',
+    name: 'Demo local (página de barrio)',
+    kind: 'lead-magnet',
+    status: 'experimental',
+    purpose:
+      'Servicio de presencia digital para negocios de barrio: modelo de página + cotización; Maps y dominio propio tras contratar.',
+    primaryCta: 'Formulario → /api/public/send-demo-local-lead',
+    launched: '2026-09-14',
+    notes:
+      'SSR. Nav chrome local (sin planilla). Copy: qué/cómo/cuánto. Source DB: demo-local.',
+  },
+  {
     path: '/calculadora',
     aliases: [
       '/calculadora-deducciones',

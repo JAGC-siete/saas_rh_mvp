@@ -298,6 +298,40 @@ export function trackViernesLeadSubmit(params: {
   })
 }
 
+/** Solicitud de página local en /demo-local */
+export function trackDemoLocalLeadSubmit(params: {
+  eventId: string
+  email: string
+  phone?: string
+  firstName?: string
+  rubro?: string
+}): void {
+  fireMetaPixelEvent(
+    'Lead',
+    {
+      content_name: 'demo-local',
+      content_category: 'local-landing',
+      value: 0,
+      currency: 'USD',
+      status: true,
+    },
+    params.eventId,
+    {
+      em: params.email,
+      ph: params.phone,
+      fn: params.firstName,
+    }
+  )
+
+  fireGoogleAdsLeadConversion(params.eventId)
+
+  trackGA4Event('demo_local_lead_submit', {
+    event_category: 'Lead',
+    event_label: params.rubro || 'demo-local',
+    has_phone: Boolean(params.phone?.trim()),
+  })
+}
+
 declare global {
   interface Window {
     fbq?: (

@@ -19,6 +19,9 @@ interface PublicPageShellProps {
   showFooter?: boolean
   showTrustBar?: boolean
   loginAlwaysVisible?: boolean
+  /** `local` oculta nav de planilla/calculadoras: esta página vende presencia digital, no RRHH. */
+  navChrome?: 'full' | 'local'
+  localCta?: { href: string; label: string }
   mainClassName?: string
   centered?: boolean
   /**
@@ -35,6 +38,8 @@ export default function PublicPageShell({
   showFooter = true,
   showTrustBar = false,
   loginAlwaysVisible = false,
+  navChrome = 'full',
+  localCta,
   mainClassName = '',
   centered = false,
   toneLock,
@@ -59,6 +64,8 @@ export default function PublicPageShell({
         loginAlwaysVisible={loginAlwaysVisible}
         tone={tone}
         toneLocked={Boolean(toneLock)}
+        chrome={navChrome}
+        localCta={localCta}
       />
       <main
         className={`relative z-10 pt-20 sm:pt-24 ${centered ? 'flex min-h-[calc(100vh-5rem)] items-center justify-center' : ''} ${mainClassName}`.trim()}

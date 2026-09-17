@@ -12,6 +12,10 @@ export function marketingSourceForPrestacionesCalculator(): string {
   return 'calculadora-prestaciones'
 }
 
+export function marketingSourceForDemoLocal(): string {
+  return 'demo-local'
+}
+
 /** Enroll after PDF send succeeds; non-blocking (same pattern as /activar). */
 export function enrollPublicToolLeadNonBlocking(email: string, source: string): void {
   void enrollMarketingLead({

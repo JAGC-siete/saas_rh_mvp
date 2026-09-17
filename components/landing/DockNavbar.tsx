@@ -15,6 +15,9 @@ interface DockNavbarProps {
   tone?: LandingTone
   /** When true (e.g. /paz toneLock), hide theme toggle — DOM is forced by shell. */
   toneLocked?: boolean
+  /** `local`: logo + CTA de la página. Sin enlaces de planilla, calculadora ni /activar. */
+  chrome?: 'full' | 'local'
+  localCta?: { href: string; label: string }
 }
 
 export default function DockNavbar({
@@ -22,7 +25,10 @@ export default function DockNavbar({
   topOffsetPx = 0,
   tone: toneProp,
   toneLocked = false,
+  chrome = 'full',
+  localCta,
 }: DockNavbarProps) {
+  const isLocalChrome = chrome === 'local'
   const { tone: prefTone, toggleTone, locale, href, switchLocaleHref, enabled } = useLandingPreferences()
   const tone = toneProp ?? prefTone
   const showThemeToggle = enabled && !toneLocked
@@ -116,7 +122,8 @@ export default function DockNavbar({
 
           {/* Desktop nav */}
           <div className="hidden md:flex items-center gap-1 flex-1 justify-center">
-            {nav.links.map((link) => (
+            {!isLocalChrome &&
+              nav.links.map((link) => (
               <Link
                 prefetch={false}
                 key={link.href}
@@ -126,6 +133,7 @@ export default function DockNavbar({
                 {link.label}
               </Link>
             ))}
+            {!isLocalChrome && (
             <div className="relative" ref={calculatorMenuRef}>
               <button
                 type="button"
@@ -176,6 +184,7 @@ export default function DockNavbar({
                 )}
               </AnimatePresence>
             </div>
+            )}
           </div>
 
           <div className="hidden md:flex items-center gap-1.5 ml-auto shrink-0">
@@ -195,6 +204,7 @@ export default function DockNavbar({
                 {locale === 'es' ? nav.switchToEn : nav.switchToEs}
               </Link>
             )}
+            {!isLocalChrome && (
             <Link
               prefetch={false}
               href={href('/activar')}
@@ -202,6 +212,16 @@ export default function DockNavbar({
             >
               {nav.activate}
             </Link>
+            )}
+            {isLocalChrome && localCta && (
+              <a
+                href={localCta.href}
+                className="bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-colors min-h-[36px] inline-flex items-center"
+              >
+                {localCta.label}
+              </a>
+            )}
+            {!isLocalChrome && (
             <AnimatePresence>
               {showLogin && (
                 <motion.div
@@ -220,6 +240,7 @@ export default function DockNavbar({
                 </motion.div>
               )}
             </AnimatePresence>
+            )}
           </div>
 
           {/* Mobile chrome + menu toggle */}
@@ -239,6 +260,14 @@ export default function DockNavbar({
                 {locale === 'es' ? 'EN' : 'ES'}
               </Link>
             )}
+            {isLocalChrome && localCta ? (
+              <a
+                href={localCta.href}
+                className="bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded-full text-xs font-medium min-h-[36px] inline-flex items-center"
+              >
+                {localCta.label}
+              </a>
+            ) : (
             <button
               type="button"
               className={iconBtnClass}
@@ -255,6 +284,7 @@ export default function DockNavbar({
                 </svg>
               )}
             </button>
+            )}
           </div>
         </div>
       </motion.nav>
