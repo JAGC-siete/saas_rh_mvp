@@ -100,6 +100,7 @@ export const MIDDLEWARE_CONFIG = {
       '/recursos',
       '/tools/sandbox',
       '/demo-local',
+      '/mercado',
       '/sitemap.xml'
     ],
     
@@ -186,6 +187,8 @@ export function getAllPublicRoutes(): string[] {
     // la auth sigue resolviéndose en cada endpoint/SSP, no aquí.
     '/api/landings/lead',
     '/p/*',
+    '/mercado',
+    '/mercado/*',
     // SEO pages
     '/plan-basico',
     '/membresia-anual',

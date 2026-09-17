@@ -47,6 +47,7 @@ export const RESERVED_LANDING_SLUGS: readonly string[] = [
   'landing',
   'legal',
   'login',
+  'mercado',
   'new',
   'precios',
   'privacidad',

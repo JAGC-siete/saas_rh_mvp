@@ -4,6 +4,7 @@
  */
 
 import { isPublicLandingRoute } from '../landings/paths'
+import { isPublicMercadoRoute } from '../mercado/paths'
 import { INFO_FUNNEL_PUBLIC_PATH } from '../marketing/info-funnel-path'
 import { VIERNES_PUBLIC_PATH, VIERNES_INTERNAL_PATH } from '../marketing/viernes-copy'
 import { PRIVACY_PUBLIC_PATH, PRIVACY_LEGACY_PATH, TERMS_PUBLIC_PATH } from '../marketing/legal-paths'
@@ -68,11 +69,13 @@ export function isPublicToolRoute(pathname: string): boolean {
 }
 
 /**
- * Landings publicadas por empresas cliente (/p/[slug]).
- * Shell propio: el diseño lo define el JSON del tenant, no el chrome de nuestro marketing.
+ * Landings publicadas por empresas cliente (/p/[slug]) y directorio público
+ * Mercado Municipal (/mercado, /mercado/[slug]).
+ * Shell propio: SSR, sin Auth, sin CookieBanner ni analytics de Humano SISU.
  */
 export function isPublicTenantLandingRoute(pathname: string): boolean {
-  return isPublicLandingRoute(barePublicPath(pathname))
+  const bare = barePublicPath(pathname)
+  return isPublicLandingRoute(bare) || isPublicMercadoRoute(bare)
 }
 
 export function isPublicMarketingRoute(pathname: string): boolean {
