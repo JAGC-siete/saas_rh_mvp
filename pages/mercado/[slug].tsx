@@ -7,6 +7,7 @@ import Head from 'next/head'
 import Link from 'next/link'
 import type { GetServerSideProps } from 'next'
 import MercadoPublicShell from '../../components/mercado/MercadoPublicShell'
+import { MercadoInscriptionCompactCta } from '../../components/mercado/InscriptionCta'
 import { Badge } from '../../components/ui/badge'
 import { VENDOR_CATEGORY_LABEL, type VendorCategory } from '../../lib/mercado/categories'
 import { MERCADO_SEO, findPreviewVendor } from '../../lib/mercado/home'
@@ -100,6 +101,7 @@ export default function MercadoVendorProfilePage({ vendor }: VendorProfileProps)
               <dd className="mt-1 text-stone-900">{vendor.hoursNote ?? 'Horario del mercado'}</dd>
             </div>
           </dl>
+          <MercadoInscriptionCompactCta />
         </article>
       </MercadoPublicShell>
     </>

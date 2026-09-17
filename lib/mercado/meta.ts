@@ -1,7 +1,7 @@
 import { VENDOR_CATEGORY_LABEL, type VendorCategory } from './categories'
 import type { PublicVendorCard } from './schema'
 import { mercadoAbsoluteUrl } from './public-url'
-import { mercadoHomePath, mercadoVendorPath } from './paths'
+import { mercadoHomePath, mercadoInscriptionPath, mercadoVendorPath } from './paths'
 
 const META_MAX = 155
 
@@ -55,6 +55,20 @@ export function mercadoAssetUrl(path: string | null | undefined) {
 
 export function mercadoHomeCanonical() {
   return mercadoAbsoluteUrl(mercadoHomePath())
+}
+
+export function mercadoInscriptionTitle() {
+  return 'Solicitud de inscripción | Mercado Municipal San Pablo'
+}
+
+export function mercadoInscriptionDescription() {
+  return clampMetaDescription(
+    'Pedí que tu puesto aparezca en el directorio del Mercado San Pablo. Es gratis. La publicación no es inmediata.'
+  )
+}
+
+export function mercadoInscriptionCanonical() {
+  return mercadoAbsoluteUrl(mercadoInscriptionPath())
 }
 
 export function mercadoVendorCanonical(slug: string) {

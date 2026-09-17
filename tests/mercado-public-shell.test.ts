@@ -15,6 +15,7 @@ describe('mercado: shell público', () => {
     assert.equal(mercadoHomePath(), '/mercado')
     assert.equal(mercadoVendorPath('comedor-el-patio'), '/mercado/comedor-el-patio')
     assert.equal(isPublicMercadoRoute('/mercado'), true)
+    assert.equal(isPublicMercadoRoute('/mercado/inscripcion'), true)
     assert.equal(isPublicMercadoRoute('/mercado/comedor-el-patio'), true)
     assert.equal(isPublicMercadoRoute('/mercaderia'), false)
     assert.equal(isPublicTenantLandingRoute('/mercado'), true)

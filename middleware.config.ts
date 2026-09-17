@@ -186,6 +186,7 @@ export function getAllPublicRoutes(): string[] {
     // Landings publicadas por empresas cliente. Inventario de rutas públicas:
     // la auth sigue resolviéndose en cada endpoint/SSP, no aquí.
     '/api/landings/lead',
+    '/api/mercado/inscriptions',
     '/p/*',
     '/mercado',
     '/mercado/*',

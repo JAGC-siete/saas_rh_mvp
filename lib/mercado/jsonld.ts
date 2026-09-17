@@ -1,7 +1,7 @@
 import { VENDOR_CATEGORIES, type VendorCategory } from './categories'
 import { MERCADO_GEO, MERCADO_HOME_PREVIEW_VENDORS, MERCADO_SEO } from './home'
 import { mercadoHomeCanonical, mercadoVendorCanonical, mercadoAssetUrl } from './meta'
-import { mercadoCategoryPath, mercadoHomePath, mercadoVendorPath } from './paths'
+import { mercadoCategoryPath, mercadoHomePath, mercadoInscriptionPath, mercadoVendorPath } from './paths'
 import { parseHoursWindow } from './stall-status'
 import { vendorWhatsAppDigits } from './whatsapp'
 import type { PublicVendorCard } from './schema'
@@ -159,6 +159,12 @@ export function mercadoSitemapUrls() {
       loc: mercadoHomePath(),
       changefreq: 'daily' as const,
       priority: 0.9,
+      lastmod: today,
+    },
+    {
+      loc: mercadoInscriptionPath(),
+      changefreq: 'monthly' as const,
+      priority: 0.6,
       lastmod: today,
     },
     ...VENDOR_CATEGORIES.map((category) => ({

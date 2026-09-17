@@ -11,6 +11,7 @@ import type { GetServerSideProps } from 'next'
 import { useRouter } from 'next/router'
 import { Search } from 'lucide-react'
 import MercadoPublicShell from '../../components/mercado/MercadoPublicShell'
+import { MercadoInscriptionBanner } from '../../components/mercado/InscriptionCta'
 import VendorCard from '../../components/mercado/VendorCard'
 import {
   VENDOR_CATEGORIES,
@@ -228,6 +229,8 @@ export default function MercadoHomePage({ vendors, category, query }: MercadoHom
             </div>
           )}
         </section>
+
+        <MercadoInscriptionBanner />
 
         <section className="mx-auto max-w-6xl px-4 pb-16">
           <div className="flex flex-col items-start gap-8 rounded-2xl border border-amber-100 bg-amber-50 p-8 md:flex-row md:items-center">

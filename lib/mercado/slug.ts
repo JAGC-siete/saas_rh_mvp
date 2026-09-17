@@ -7,11 +7,14 @@ export const RESERVED_VENDOR_SLUGS: readonly string[] = [
   'categoria',
   'categorias',
   'index',
+  'inscribir',
+  'inscripcion',
   'login',
   'mercado',
   'new',
   'nuevo',
   'sitemap',
+  'solicitud',
   'vendors',
 ]
 
