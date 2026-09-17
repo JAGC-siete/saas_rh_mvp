@@ -12,7 +12,6 @@ export type HomeCopy = {
     badgeSupport: string
     title: string
     subtitle: string
-    lead: string
     ctaQuote: string
     ctaTrial: string
     imageAlt: string
@@ -181,9 +180,8 @@ const byLocale: Record<LandingLocale, HomeCopy> = {
       badgeSpeed: 'Implementación rápida',
       badgeSupport: 'Soporte local',
       title:
-        'Del reloj biométrico de asistencia (huella o facial) a la planilla, sin intervención manual',
+        'Del reloj de asistencia a la planilla de pago, sin intervención manual',
       subtitle: 'Exclusivo para Honduras, El Salvador y Guatemala.',
-      lead: 'Sistema de RRHH integrado para MiPyMes. Asistencia, nómina y expedientes en un solo flujo — sin Excel ni USB.',
       ctaQuote: 'Solicitar cotización',
       ctaTrial: 'Probar gratis',
       imageAlt: 'Profesional de RRHH con café y libretas de trabajo',
@@ -250,9 +248,8 @@ const byLocale: Record<LandingLocale, HomeCopy> = {
       badgeSpeed: 'Fast implementation',
       badgeSupport: 'Local support',
       title:
-        'From the biometric attendance clock (fingerprint or facial) to payroll, without manual work',
+        'From the attendance clock to payroll, without manual work',
       subtitle: 'Exclusive to Honduras, El Salvador, and Guatemala.',
-      lead: 'Integrated HR system for SMBs. Attendance, payroll, and employee files in one flow — no Excel, no USB dumps.',
       ctaQuote: 'Request a quote',
       ctaTrial: 'Try free',
       imageAlt: 'HR professional with coffee and notebooks',

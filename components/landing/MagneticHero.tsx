@@ -47,10 +47,6 @@ export default function MagneticHero() {
               {copy.subtitle}
             </p>
 
-            <p className="text-base sm:text-lg landing-muted max-w-2xl mt-4 sm:mt-6 font-medium landing-dark-text">
-              {copy.lead}
-            </p>
-
             <div className="flex flex-col sm:flex-row gap-3 mt-8">
               <TrackedInternalCta
                 prefetch={false}
