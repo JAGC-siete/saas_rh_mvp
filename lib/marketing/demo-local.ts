@@ -165,7 +165,7 @@ export const DEMO_LOCAL_COPY = {
     subheadlineTail: 'para que nuevos clientes te encuentren en la zona.',
     mapsBenefit:
       'Tus vecinos te buscan. Si no apareces, le compran al de al lado. El perfil en Maps va incluido.',
-    ctaPrimary: 'Ver cómo funcionaría para mi negocio',
+    ctaPrimary: 'Probar gratis',
   },
   problem: {
     title: '¿Te está pasando esto en tu negocio?',
@@ -186,7 +186,7 @@ export const DEMO_LOCAL_COPY = {
   },
   offer: {
     title: 'Tu nueva máquina de clientes local en 3 pasos',
-    cta: 'Solicitar mi propuesta gratuita',
+    cta: 'Activar',
     steps: [
       {
         title: 'El vendedor 24/7 (tu página web)',
@@ -205,7 +205,7 @@ export const DEMO_LOCAL_COPY = {
   },
   form: {
     title: 'Solicitud de servicio',
-    submit: 'Solicitar mi propuesta gratuita',
+    submit: 'Activar',
     submitting: 'Enviando…',
     notePlaceholder: 'Cortes, menú… ¿Algo que debamos saber del local?',
     services: {

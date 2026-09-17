@@ -94,7 +94,7 @@ export default function DemoLocalLanding() {
                 type="button"
                 size="lg"
                 className="btn-shiny min-h-[48px] bg-green-600 px-6 text-base font-semibold shadow-[0_0_24px_rgba(34,197,94,0.28)] hover:bg-green-700"
-                onClick={() => scrollToId('como-funciona', 'demo_local_ver_sistema', 'demo_local_hero')}
+                onClick={() => scrollToId('solicitud', 'demo_local_probar_gratis', 'demo_local_hero')}
               >
                 {copy.hero.ctaPrimary}
               </Button>
