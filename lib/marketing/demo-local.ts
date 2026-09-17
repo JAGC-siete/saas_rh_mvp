@@ -172,32 +172,32 @@ export const DEMO_LOCAL_COPY = {
     items: [
       {
         title: 'Eres un “fantasma” en tu zona',
-        body: 'Las personas buscan “salón de belleza / taller cerca de mí” en Google y le compran a tu competencia porque tú no apareces.',
+        body: 'Las personas buscan “salón de belleza / taller cerca de mí” en Google y tú no apareces.',
       },
       {
-        title: 'No tienes reservas en línea',
-        body: 'El cliente quiere agendar solo. Si no hay turno en la web, te escribe, te espera, o se va al que sí tiene agenda.',
+        title: 'Sin sistema de reservas',
+        body: 'Te escriben para pedir turno y contestas uno por uno. Sin agenda, se te cruzan las citas o el cliente se va al que sí reserva solo.',
       },
       {
-        title: 'Cuando cierras, la venta se va con otro',
-        body: 'A las 10 de la noche buscan en el celular. Si no apareces y no pueden reservar, esa venta es del negocio que sí está en Google.',
+        title: 'Sin ventas por WhatsApp',
+        body: 'Te escriben para pedir precio o el mandado y el chat se queda ahí. Sin lista, sin botón de pedido, esa venta no se cierra o se la lleva otro.',
       },
     ],
   },
   offer: {
-    title: 'Tu nueva máquina de clientes local en 3 pasos',
+    title: 'Atrae nuevos clientes con nuestro servicio',
     cta: 'Activar',
     steps: [
       {
-        title: 'El vendedor 24/7 (tu página web)',
+        title: 'Página web',
         body: 'Un sitio claro y rápido que muestra tus servicios, precios y genera confianza inmediata en quien te visita.',
       },
       {
-        title: 'El asistente (reservas + WhatsApp)',
+        title: 'Sitio de Reservas',
         body: 'Tus clientes agendan según tu disponibilidad. Cero hilos infinitos. La agenda queda organizada.',
       },
       {
-        title: 'El bono: Perfil de Empresa en Google Maps',
+        title: 'Perfil de Empresa en Google Maps',
         body: 'Configuramos tu perfil para que aparezcas cuando tus vecinos te busquen en el mapa. Incluido al contratar la página web o las reservas: no se cotiza aparte.',
         badge: 'Incluido · gratis con tu página o tus reservas',
       },
