@@ -137,57 +137,83 @@ export function catalogForRubro(rubro: string | undefined): DemoLocalCatalog {
 
 export const DEMO_LOCAL_COPY = {
   seo: {
-    title: 'Página, Google Maps y reservas para tu negocio local | Humano SISU',
+    title: 'Más clientes locales: web, reservas y Google Maps | Humano SISU',
     description:
-      'Servicio para barberías, ferreterías y locales de barrio: te armamos la página, el sistema de reservas y WhatsApp. Al contratar, te publicamos en Google Maps y en un dominio tuyo. Ves un modelo primero. Te cotizamos al confirmar el local.',
+      'Deja de perder ventas en tu zona. Te armamos página, reservas y Perfil de Empresa en Google Maps para que tus vecinos te encuentren y agenden sin llenarte el WhatsApp. Boceto y cotización, sin compromiso.',
     keywords:
-      'página web negocio local Honduras, Google Maps barbería, reservas citas negocio, ferretería cerca de mí, presencia digital MIPYME, landing negocio de barrio',
+      'más clientes negocio local Honduras, Google Maps barbería, reservas citas negocio, ferretería cerca de mí, perfil de empresa Google, landing negocio de barrio',
   },
   hero: {
-    kicker: 'Página · Google Maps · Reservas · WhatsApp',
-    headline: 'Tu comercio local en Internet hoy',
-    subheadline: 'Página web, Sistema de reservas, y Whatsapp',
+    kicker: 'Sistema de captación para negocios locales',
+    headline:
+      'Convierte a las personas que buscan en tu ciudad en clientes (y haz que reserven sin quitarte tiempo).',
+    subheadlineLead: 'Deja de perder ventas frente a tu competencia. Te creamos un ecosistema con',
+    subheadlineFeatures: 'Página Web, Sistema de Reservas y Perfil en Google Maps',
+    subheadlineTail: 'para que destaques en tu zona y llenes tu agenda automáticamente.',
     mapsBenefit:
-      'Aparece primero cuando tus vecinos busquen lo que ofreces. Facilítales contactarte o reservar en el momento.',
-    ctaPrimary: 'Quiero mi página y Maps',
+      'Tus vecinos te buscan. Si no apareces, le compran al de al lado. El perfil en Maps va incluido.',
+    ctaPrimary: 'Ver cómo funcionaría para mi negocio',
   },
-  offer: {
-    title: 'Cómo lo hacemos',
-    steps: [
+  problem: {
+    title: '¿Te está pasando esto en tu negocio?',
+    items: [
       {
-        title: 'Tu página y sistema de reservas',
-        body: 'Publicamos tus servicios y horarios. Tus clientes podrán agendar una cita directamente o escribirte por WhatsApp a un solo clic.',
+        title: 'Eres un “fantasma” en tu zona',
+        body: 'Las personas buscan “salón de belleza / taller cerca de mí” en Google y le compran a tu competencia porque tú no apareces.',
       },
       {
-        title: 'Aparece en Google Maps',
-        body: 'Listamos tu negocio en Google maps para que sea encontrado en la búsqueda',
+        title: 'Pierdes tiempo en WhatsApp',
+        body: 'Pasas horas respondiendo “¿qué precio tiene?” o “¿tienes turno el viernes?” en lugar de enfocarte en tu trabajo.',
+      },
+      {
+        title: 'Clientes perdidos de noche',
+        body: 'Quieren reservar a las 10 de la noche. Si estás cerrado y no hay forma de agendar en la web, se van a otro lado.',
+      },
+    ],
+  },
+  offer: {
+    title: 'Tu nueva máquina de clientes local en 3 pasos',
+    cta: 'Solicitar mi propuesta gratuita',
+    steps: [
+      {
+        title: 'El vendedor 24/7 (tu página web)',
+        body: 'Un sitio claro y rápido que muestra tus servicios, precios y genera confianza inmediata en quien te visita.',
+      },
+      {
+        title: 'El asistente (reservas + WhatsApp)',
+        body: 'Tus clientes agendan según tu disponibilidad. Cero hilos infinitos. La agenda queda organizada.',
+      },
+      {
+        title: 'El bono: Perfil de Empresa en Google Maps',
+        body: 'Configuramos tu perfil para que aparezcas cuando tus vecinos te busquen en el mapa. Incluido al contratar la web: no es un extra aparte.',
+        badge: 'Incluido · gratis con tu web',
       },
     ],
   },
   form: {
-    title: 'Dejanos los datos del local',
+    title: 'Solicita un boceto de tu nueva web (sin compromiso)',
     subtitle:
-      'Con esto armamos el modelo y te cotizamos. No es el alta del sitio final.',
+      'Déjanos los datos de tu local. Revisamos tu presencia actual, armamos un modelo de cómo se vería y te enviamos una cotización transparente. Si no te gusta, no pagas nada.',
     bullets: [
       'Nombre del local y de quien atiende.',
-      'WhatsApp que querés publicar.',
+      'WhatsApp que quieres publicar.',
       'Colonia o ciudad para Maps.',
     ],
-    submit: 'Pedir que armen mi página',
+    submit: 'Solicitar mi propuesta gratuita',
     submitting: 'Enviando…',
-    notePlaceholder: 'Cortes, menú... ¿Necesitas que agenden citas?',
-    bookingLabel: 'Quiero incluir un sistema para recibir reservas/citas',
-    successTitle: 'Datos recibidos',
+    notePlaceholder: 'Cortes, menú… ¿Necesitas que agenden citas?',
+    bookingLabel: 'Quiero que mis clientes reserven citas sin escribirme al chat',
+    successTitle: 'Propuesta en camino',
     successBody:
-      'Revisá tu correo (y spam). Te escribimos para armar el modelo, cotizarte y confirmar Maps y dominio.',
+      'Revisa tu correo (y spam). Te escribimos con el boceto, la cotización y para confirmar Maps y dominio.',
     consent:
       'Acepto que Humano SISU me contacte sobre este servicio de página, reservas y Google Maps, y reciba información comercial. Puedo darme de baja cuando quiera.',
     privacy: 'Política de privacidad',
     terms: 'Términos',
-    errorConsent: 'Marcá el consentimiento para enviar.',
+    errorConsent: 'Marca el consentimiento para enviar.',
   },
   footer: {
-    blurb: 'Presencia digital para negocios de barrio. Humano SISU.',
+    blurb: 'Más clientes para negocios de barrio. Humano SISU.',
     payrollNote: 'Planilla y asistencia son otro producto.',
     payrollCta: 'Software de RRHH',
   },
@@ -268,10 +294,10 @@ export function buildDemoLocalOwnerEmail(lead: DemoLocalLead): { subject: string
       `Recibimos la solicitud para <strong>${escapeHtml(lead.businessName)}</strong> (${escapeHtml(catalog.label)} en ${escapeHtml(lead.city)}).`
     ),
     liquidParagraph(
-      'El servicio es este: te armamos la página del local (nombre, servicios o menú, horario, WhatsApp y citas). Si lo contratás, te publicamos en Google Maps y en un dominio tuyo. El modelo de ejemplo vive en SISU hasta esa compra.'
+      'El siguiente paso es un boceto: cómo se vería tu local en la web, con reservas y WhatsApp. Si contratas, te publicamos el Perfil de Empresa en Google Maps y un dominio tuyo. El modelo de ejemplo vive en SISU hasta esa compra.'
     ),
     liquidParagraph(
-      'Te escribimos por este correo o por WhatsApp para armar el modelo, pasarte el precio y confirmar zona y el número que querés publicar.'
+      'Te escribimos por este correo o por WhatsApp con el boceto, el precio y para confirmar zona y el número que quieres publicar. Si no te gusta, no pagas nada.'
     ),
     liquidCta(pageUrl, 'Volver a la página del servicio'),
   ].join('')
@@ -280,7 +306,7 @@ export function buildDemoLocalOwnerEmail(lead: DemoLocalLead): { subject: string
     subject: `Tu página local — ${lead.businessName}`,
     html: wrapLiquidEmail({
       title: 'Datos recibidos',
-      subtitle: 'Página, reservas y Google Maps para tu negocio de barrio',
+      subtitle: 'Boceto de tu web, reservas y Google Maps para tu negocio de barrio',
       badge: 'Demo local',
       bodyHtml,
       footerNote: 'Humano SISU · presencia digital para negocios locales. Puedes responder este correo.',

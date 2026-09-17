@@ -1,9 +1,6 @@
 import { useMemo, useState, type FormEvent } from 'react'
 import Link from 'next/link'
-import {
-  GlobeAltIcon,
-  MapPinIcon,
-} from '@heroicons/react/24/outline'
+import { MapPinIcon } from '@heroicons/react/24/outline'
 import PublicPageShell from './PublicPageShell'
 import PublicPageHead from '../SEO/PublicPageHead'
 import SchemaMarkup from '../SEO/SchemaMarkup'
@@ -35,8 +32,6 @@ import { trackCTAClick } from '../../lib/analytics/googleAds'
 
 const copy = DEMO_LOCAL_COPY
 
-const OFFER_ICONS = [GlobeAltIcon, MapPinIcon] as const
-
 const fieldClass =
   'input-glass h-10 w-full border-white/15 bg-white/5 text-white placeholder:text-white/50 disabled:cursor-not-allowed disabled:opacity-50'
 
@@ -64,7 +59,7 @@ export default function DemoLocalLanding() {
       showSpotlight
       showFooter={false}
       navChrome="local"
-      localCta={{ href: '#solicitud', label: copy.hero.ctaPrimary }}
+      localCta={{ href: '#solicitud', label: copy.form.submit }}
       mainClassName="flex flex-col"
     >
       <PublicPageHead
@@ -85,16 +80,20 @@ export default function DemoLocalLanding() {
                 {copy.hero.kicker}
               </span>
             </div>
-            <h1 className="landing-hero-gradient text-3xl font-bold leading-tight sm:text-4xl lg:text-5xl">
+            <h1 className="landing-hero-gradient text-2xl font-bold leading-tight sm:text-4xl lg:text-5xl">
               {copy.hero.headline}
             </h1>
-            <p className="landing-muted mt-5 max-w-2xl text-base font-medium sm:text-lg">{copy.hero.subheadline}</p>
+            <p className="landing-muted mt-5 max-w-2xl text-base font-medium sm:text-lg">
+              {copy.hero.subheadlineLead}{' '}
+              <strong className="font-semibold text-white">{copy.hero.subheadlineFeatures}</strong>{' '}
+              {copy.hero.subheadlineTail}
+            </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <Button
                 type="button"
                 size="lg"
                 className="btn-shiny min-h-[48px] bg-green-600 px-6 text-base font-semibold shadow-[0_0_24px_rgba(34,197,94,0.28)] hover:bg-green-700"
-                onClick={() => scrollToId('solicitud', 'demo_local_solicitud', 'demo_local_hero')}
+                onClick={() => scrollToId('como-funciona', 'demo_local_ver_sistema', 'demo_local_hero')}
               >
                 {copy.hero.ctaPrimary}
               </Button>
@@ -123,6 +122,29 @@ export default function DemoLocalLanding() {
         </div>
       </section>
 
+      <section id="problema" className="scroll-mt-28 px-4 sm:px-6 pb-12 sm:pb-16">
+        <div className="mx-auto max-w-7xl">
+          <ScrollReveal>
+            <div className="mb-8 text-center">
+              <h2 className="text-2xl font-bold text-white sm:text-3xl">{copy.problem.title}</h2>
+            </div>
+          </ScrollReveal>
+          <ul className="grid gap-4 md:grid-cols-3">
+            {copy.problem.items.map((item, index) => (
+              <ScrollReveal key={item.title} delay={index * 0.06}>
+                <li className="glass-modern h-full rounded-2xl p-5 sm:p-6">
+                  <span className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl border border-rose-400/25 bg-rose-500/15 text-lg font-semibold text-rose-300" aria-hidden>
+                    ×
+                  </span>
+                  <h3 className="text-lg font-semibold text-white">{item.title}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-slate-300">{item.body}</p>
+                </li>
+              </ScrollReveal>
+            ))}
+          </ul>
+        </div>
+      </section>
+
       <section id="como-funciona" className="scroll-mt-28 px-4 sm:px-6 pb-12 sm:pb-16">
         <div className="mx-auto max-w-7xl">
           <ScrollReveal>
@@ -130,16 +152,21 @@ export default function DemoLocalLanding() {
               <h2 className="text-2xl font-bold text-white sm:text-3xl">{copy.offer.title}</h2>
             </div>
           </ScrollReveal>
-          <ul className="grid gap-4 md:grid-cols-2">
+          <ul className="grid gap-4 md:grid-cols-3">
             {copy.offer.steps.map((step, index) => {
-              const Icon = OFFER_ICONS[index] ?? GlobeAltIcon
+              const badge = 'badge' in step ? step.badge : undefined
               return (
                 <ScrollReveal key={step.title} delay={index * 0.06}>
-                  <li className="glass-modern h-full rounded-2xl p-5 sm:p-6">
-                    <div className="mb-4 flex items-center">
-                      <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-brand-400/25 bg-brand-500/15">
-                        <Icon className="h-5 w-5 text-brand-300" aria-hidden />
+                  <li className="glass-modern relative h-full rounded-2xl p-5 sm:p-6">
+                    <div className="mb-4 flex items-center justify-between gap-3">
+                      <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-brand-400/25 bg-brand-500/15 text-sm font-semibold text-brand-200">
+                        {index + 1}
                       </span>
+                      {badge ? (
+                        <span className="rounded-full border border-amber-400/30 bg-amber-400/15 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-amber-200">
+                          {badge}
+                        </span>
+                      ) : null}
                     </div>
                     <h3 className="text-lg font-semibold text-white">{step.title}</h3>
                     <p className="mt-2 text-sm leading-relaxed text-slate-300">{step.body}</p>
@@ -148,6 +175,16 @@ export default function DemoLocalLanding() {
               )
             })}
           </ul>
+          <div className="mt-8 flex justify-center">
+            <Button
+              type="button"
+              size="lg"
+              className="btn-shiny min-h-[48px] bg-green-600 px-6 text-base font-semibold shadow-[0_0_24px_rgba(34,197,94,0.28)] hover:bg-green-700"
+              onClick={() => scrollToId('solicitud', 'demo_local_propuesta', 'demo_local_offer')}
+            >
+              {copy.offer.cta}
+            </Button>
+          </div>
         </div>
       </section>
 
