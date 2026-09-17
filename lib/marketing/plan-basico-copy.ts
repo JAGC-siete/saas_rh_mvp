@@ -7,47 +7,53 @@ export const PLAN_BASICO_COPY = {
   seo: {
     title: 'Membresía anual | L. 6,500/año | Humano SISU',
     description:
-      'Gestión profesional de empleados. L. 6,500 al año: expedientes, marcas a mano y recibos. Sin reloj biométrico. Software privado de Humano SISU.',
+      'Recibos de nómina, asistencia sin relojes costosos y respaldo ante reclamos laborales. Empleados ilimitados. L. 6,500 al año. Software privado de Humano SISU.',
     keywords:
-      'membresía anual RRHH Honduras, software empleados, asistencia manual, recibos de nómina, Humano SISU',
+      'membresía anual RRHH Honduras, software empleados, asistencia sin reloj, recibos de nómina, Humano SISU',
   },
 
   hero: {
-    badge: 'Oferta comercial · software privado',
-    kicker: 'Formalización y digitalización de la micro y pequeña empresa',
-    headline: 'Gestión profesional de empleados. Un pago al año.',
+    kicker: 'Empleados ilimitados · un pago al año',
+    headline: 'Protegé tu negocio y formalizá al equipo. Un pago al año.',
     subheadline: (price: string) =>
-      `${price} cubre expedientes, marcas a mano y recibos. Cualquier tamaño de equipo, sin reloj. Software privado — no es un trámite de gobierno.`,
-    quote:
-      'El que es fiel en lo muy poco, también en lo más es fiel; y el que en lo muy poco es injusto, también en lo más es injusto.',
-    quoteAttr: 'Lucas 16:10',
-    ctaPrimary: 'Recibir propuesta y acceso',
-    ctaSecondary: 'Probar el sistema',
+      `Recibos de nómina, asistencia sin relojes costosos y respaldo ante reclamos laborales. Empleados ilimitados por ${price} al año.`,
+    ctaPrimary: 'Activar acceso',
+    ctaSecondary: 'Probar gratis',
     priceLabel: 'Membresía anual',
-    priceFoot: 'Cualquier tamaño de equipo · sin reloj biométrico',
+    priceFoot: 'Empleados ilimitados · sin comprar reloj',
+    modules: ['Expedientes digitales', 'Asistencia sin hardware', 'Recibos de nómina'],
+  },
+
+  testimonial: {
+    quote:
+      'Perdía los domingos batallando con fórmulas de Excel. Ahora cierro planilla en minutos y las muchachas ya no me piden “una corrección más”.',
+    name: 'Felix G.',
+    role: 'Dueño',
+    company: "Tony's Mar Restaurante",
+    image: '/images/testimonials/felix.jpg',
   },
 
   honesty: {
-    title: 'Beneficios desde el inicio',
+    title: 'El costo de no tener controles',
     items: [
       {
-        title: 'Formalizar desde el inicio',
-        body: 'Procesos claros generan confianza y lealtad en el equipo.',
+        title: 'Ante un reclamo, tenés respaldo',
+        body: 'Recibos, asistencia y expedientes listos. El cuaderno y el cálculo al ojo no sirven cuando hay un malentendido laboral.',
       },
       {
-        title: 'Digitalizar libera tiempo',
-        body: 'Las tareas formales siguen siendo necesarias. Invertir horas en papel, ya no.',
+        title: 'Asistencia sin comprar reloj',
+        body: 'Entradas y salidas en el sistema, sin hardware. El reloj se cotiza aparte si lo necesitás después.',
       },
       {
-        title: 'Cuentas claras',
-        body: 'Con controles listos, el negocio está mejor preparado ante los malentendidos laborales.',
+        title: 'Un precio, equipo ilimitado',
+        body: 'El tamaño del equipo no cambia el precio. Sin cobro por usuario.',
       },
     ],
   },
 
   modules: {
-    title: 'Gestión profesional de empleados',
-    subtitle: 'Sin reloj, cualquier tamaño de equipo.',
+    title: 'Qué incluye',
+    subtitle: 'Sin hardware biométrico. El precio no cambia con el tamaño del equipo.',
     items: [
       {
         title: 'Empleados',
@@ -56,8 +62,8 @@ export const PLAN_BASICO_COPY = {
       },
       {
         title: 'Asistencia',
-        body: 'Marcas de entrada y salida a mano. El cuaderno y el cálculo al ojo se vuelven un problema cuando hay un malentendido.',
-        limit: 'Sin reloj, sin huella, sin reconocimiento facial.',
+        body: 'Registro simplificado de entradas y salidas. Control de asistencia sin comprar reloj.',
+        limit: 'Sin huella ni reconocimiento facial en este plan. El reloj se cotiza aparte.',
       },
       {
         title: 'Nómina',
@@ -70,10 +76,10 @@ export const PLAN_BASICO_COPY = {
   included: {
     title: 'Incluye',
     items: [
-      'Acceso anual a los tres módulos, sin límite de empleados en este plan',
+      'Acceso anual a los tres módulos, empleados ilimitados',
       'Permisos y ausencias en el sistema',
       'Sin contratar personal extra',
-      'Propuesta en PDF y credenciales al correo',
+      'Credenciales al correo el mismo día',
       'Modalidad anual únicamente (este plan no se vende mes a mes)',
     ],
   },
@@ -87,50 +93,47 @@ export const PLAN_BASICO_COPY = {
   },
 
   form: {
-    title: 'Recibir propuesta y acceso',
-    subtitle:
-      'Completá el formulario. Recibís la propuesta en PDF y las credenciales en el correo.',
+    title: 'Activar acceso',
+    subtitle: 'Dejá tus datos. Recibís las credenciales en el correo.',
     owner: 'Nombre del propietario o gerente',
     company: 'Nombre comercial',
     email: 'Correo',
     phone: 'Teléfono o WhatsApp',
-    employees: 'Número de colaboradores',
-    employeesHint:
-      'El rango queda en la cotización. El precio de esta membresía no cambia con el tamaño del equipo.',
     country: 'País de operación',
     consent:
-      'Acepto los términos de servicio y la política de privacidad. Entiendo que esta es una solicitud comercial de software, no un trámite estatal.',
-    submit: 'Recibir propuesta y acceso',
-    submitting: 'Generando propuesta…',
+      'Acepto los términos de servicio y la política de privacidad.',
+    submit: 'Activar acceso',
+    submitting: 'Enviando…',
     moreThanTen: '¿También querés relojes de asistencia? Cotizá con terminales.',
     termsPrefix: 'Acepto los',
     terms: 'términos de servicio',
     privacyJoin: 'y la',
     privacy: 'política de privacidad',
-    consentSuffix:
-      '. Entiendo que esta es una solicitud comercial de software, no un trámite estatal.',
+    consentSuffix: '',
+    legalMicro:
+      'Oferta comercial de software privado. No es un trámite estatal.',
     errorConsent: 'Marcá el consentimiento para continuar.',
     errorName: 'Indicá el nombre del responsable.',
     errorPhone: 'Indicá un teléfono de contacto.',
     whatsapp: 'Escribir por WhatsApp',
-    whatsappHint: 'Canal de ventas. No sustituye el PDF ni el contrato.',
+    whatsappHint: 'Canal de ventas.',
   },
 
   faq: [
     {
       question: '¿Cuánto cuesta y qué cubre?',
       answer: (price: string) =>
-        `${price} al año. Ese precio incluye expedientes, marcas a mano y recibos. No hay un producto “gratis” y un cobro aparte.`,
+        `${price} al año. Expedientes, asistencia sin reloj y recibos. Empleados ilimitados. No hay un producto “gratis” y un cobro aparte.`,
     },
     {
       question: '¿La asistencia es biométrica?',
       answer:
-        'En este plan, no. La asistencia se carga a mano en el sistema. El reloj se cotiza aparte.',
+        'En este plan, no. El equipo registra entrada y salida en el sistema, sin comprar reloj. El reloj se cotiza aparte.',
     },
     {
       question: '¿Qué pasa después de enviar el formulario?',
       answer:
-        'Recibís la propuesta en PDF y las credenciales en el correo. WhatsApp es un canal de seguimiento, no un contrato.',
+        'Recibís las credenciales en el correo. La propuesta en PDF queda como respaldo comercial. WhatsApp es un canal de seguimiento, no un contrato.',
     },
     {
       question: '¿Esto formaliza mi empresa?',
@@ -145,9 +148,9 @@ export const PLAN_BASICO_COPY = {
   ],
 
   close: {
-    headline: 'Controles mínimos de un empleador serio. Un pago al año.',
-    sub: 'Digital, sin personal extra. Precio visible. PDF y credenciales al correo.',
-    primary: 'Ir al formulario',
+    headline: 'Blindá tu empresa ante reclamos. Un pago al año.',
+    sub: 'Empleados ilimitados. Precio visible. Credenciales al correo.',
+    primary: 'Activar acceso',
     secondary: 'Cotizá con relojes',
   },
 } as const

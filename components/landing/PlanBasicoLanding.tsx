@@ -19,12 +19,11 @@ import { generateFAQPageSchema, generateWebPageSchema, generateBreadcrumbListSch
 import { PLAN_BASICO_COPY, PLAN_BASICO_PUBLIC_PATH } from '../../lib/marketing/plan-basico-copy'
 import { PRIVACY_PUBLIC_PATH, TERMS_PUBLIC_PATH } from '../../lib/marketing/legal-paths'
 import { VENTAS_BASIC_ANNUAL_PRICE } from '../../lib/ventas/business-rules'
-import { VENTAS_BASIC_MODULE_LABELS, VENTAS_BASIC_QUOTE_FLAGS } from '../../lib/ventas/product-catalog'
+import { VENTAS_BASIC_QUOTE_FLAGS } from '../../lib/ventas/product-catalog'
 import { convertVentasMoney, VENTAS_PRICE_LIST_CURRENCY } from '../../lib/ventas/currency'
 import { formatMoney, roundMoney } from '../../lib/ventas/pricing'
 import {
   findPublicTierForEmployees,
-  formatEmployeeRangeLabel,
   sortPublicTiers,
   VENTAS_COUNTRY_LABEL,
   type VentasPublicTier,
@@ -106,10 +105,6 @@ export default function PlanBasicoLanding() {
     question: item.question,
     answer: typeof item.answer === 'function' ? item.answer(priceLabel) : item.answer,
   }))
-  const honestyItems = copy.honesty.items.map((item) => ({
-    title: item.title,
-    body: typeof item.body === 'function' ? item.body(priceLabel) : item.body,
-  }))
   const whatsappHref = buildVentasSupportWhatsAppUrl(
     `Quiero la membresía anual de Humano SISU (${priceLabel}/año, sin reloj).`
   )
@@ -157,11 +152,8 @@ export default function PlanBasicoLanding() {
         <div className="pointer-events-none absolute bottom-0 left-10 h-56 w-56 rounded-full bg-brand-600/20 blur-3xl" />
         <div className="relative mx-auto grid max-w-7xl items-center gap-8 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] lg:gap-12">
           <div>
-            <div className="mb-5 flex flex-wrap gap-2">
-              <span className="inline-flex items-center rounded-full border border-white/15 bg-white/8 px-3 py-1.5 text-xs font-medium text-slate-200">
-                {copy.hero.badge}
-              </span>
-              <span className="inline-flex max-w-full items-center rounded-xl border border-cyan-400/25 bg-cyan-400/10 px-3 py-1.5 text-xs font-medium leading-snug text-cyan-200">
+            <div className="mb-5">
+              <span className="inline-flex max-w-full items-center rounded-full border border-cyan-400/25 bg-cyan-400/10 px-3 py-1.5 text-xs font-medium leading-snug text-cyan-200">
                 {copy.hero.kicker}
               </span>
             </div>
@@ -171,10 +163,23 @@ export default function PlanBasicoLanding() {
             <p className="landing-muted mt-5 max-w-2xl text-base font-medium sm:text-lg">
               {copy.hero.subheadline(priceLabel)}
             </p>
-            <blockquote className="mt-4 max-w-2xl">
-              <p className="text-sm italic leading-relaxed text-slate-400">«{copy.hero.quote}»</p>
-              <footer className="mt-1 text-xs text-slate-500">— {copy.hero.quoteAttr}</footer>
-            </blockquote>
+            <figure className="mt-5 flex max-w-2xl items-start gap-3">
+              <img
+                src={copy.testimonial.image}
+                alt=""
+                width={48}
+                height={48}
+                className="h-12 w-12 shrink-0 rounded-full object-cover object-top"
+              />
+              <figcaption>
+                <blockquote className="text-sm italic leading-relaxed text-slate-300">
+                  “{copy.testimonial.quote}”
+                </blockquote>
+                <p className="mt-1.5 text-xs text-slate-500">
+                  {copy.testimonial.name} · {copy.testimonial.role}, {copy.testimonial.company}
+                </p>
+              </figcaption>
+            </figure>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <button
                 type="button"
@@ -200,7 +205,7 @@ export default function PlanBasicoLanding() {
               <p className="mt-2 text-4xl font-bold tabular-nums text-white sm:text-5xl">{priceLabel}</p>
               <p className="mt-1 text-sm text-cyan-300">≈ {monthlyLabel} / mes · un solo cargo</p>
               <ul className="mt-6 space-y-3">
-                {VENTAS_BASIC_MODULE_LABELS.map((label, index) => {
+                {copy.hero.modules.map((label, index) => {
                   const Icon = MODULE_ICONS[index] ?? UserGroupIcon
                   return (
                     <li
@@ -227,7 +232,7 @@ export default function PlanBasicoLanding() {
             <h2 className="mb-6 text-center text-2xl font-bold text-white sm:text-3xl">{copy.honesty.title}</h2>
           </ScrollReveal>
           <div className="grid gap-4 md:grid-cols-3">
-            {honestyItems.map((item, i) => (
+            {copy.honesty.items.map((item, i) => (
               <ScrollReveal key={item.title} delay={i * 0.06}>
                 <div className="glass-modern h-full rounded-2xl p-5 sm:p-6">
                   <h3 className="text-lg font-semibold text-white">{item.title}</h3>
@@ -558,48 +563,25 @@ function PlanBasicoQuoteForm({
             {errors.phone ? <p className="mt-1 text-xs text-red-300">{errors.phone}</p> : null}
           </div>
         </div>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div>
-            <label htmlFor="pb-country" className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-slate-400">
-              {copy.form.country}
-            </label>
-            <select
-              id="pb-country"
-              className={fieldClass}
-              value={countryCode}
-              onChange={(e) => {
-                const value = e.target.value
-                if (isCountryCode(value)) onCountryCodeChange(value)
-              }}
-            >
-              {Object.entries(VENTAS_COUNTRY_LABEL).map(([code, label]) => (
-                <option key={code} value={code}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label htmlFor="pb-employees" className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-slate-400">
-              {copy.form.employees}
-            </label>
-            <select
-              id="pb-employees"
-              className={fieldClass}
-              value={form.employees_count}
-              onChange={(e) => setForm((f) => ({ ...f, employees_count: Number(e.target.value) }))}
-            >
-              {(publicTiers.length
-                ? publicTiers
-                : [{ min_employees: 2, max_employees: 10 }]
-              ).map((t) => (
-                <option key={`${t.min_employees}-${t.max_employees}`} value={t.min_employees}>
-                  {formatEmployeeRangeLabel(t.min_employees, t.max_employees)}
-                </option>
-              ))}
-            </select>
-            <p className="mt-1.5 text-xs text-slate-500">{copy.form.employeesHint}</p>
-          </div>
+        <div>
+          <label htmlFor="pb-country" className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-slate-400">
+            {copy.form.country}
+          </label>
+          <select
+            id="pb-country"
+            className={fieldClass}
+            value={countryCode}
+            onChange={(e) => {
+              const value = e.target.value
+              if (isCountryCode(value)) onCountryCodeChange(value)
+            }}
+          >
+            {Object.entries(VENTAS_COUNTRY_LABEL).map(([code, label]) => (
+              <option key={code} value={code}>
+                {label}
+              </option>
+            ))}
+          </select>
         </div>
         <label className="flex items-start gap-3 text-sm text-slate-300">
           <input
@@ -629,6 +611,7 @@ function PlanBasicoQuoteForm({
         >
           {isLoading ? copy.form.submitting : copy.form.submit}
         </button>
+        <p className="text-center text-xs text-slate-500">{copy.form.legalMicro}</p>
       </form>
     </BorderBeam>
   )
