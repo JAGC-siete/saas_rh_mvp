@@ -134,11 +134,13 @@ export default function DemoLocalLanding() {
             {copy.problem.items.map((item, index) => (
               <ScrollReveal key={item.title} delay={index * 0.06}>
                 <li className="glass-modern h-full rounded-2xl p-5 sm:p-6">
-                  <span className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl border border-rose-400/25 bg-rose-500/15 text-lg font-semibold text-rose-300" aria-hidden>
-                    ×
-                  </span>
-                  <h3 className="text-lg font-semibold text-white">{item.title}</h3>
-                  <p className="mt-2 text-sm leading-relaxed text-slate-300">{item.body}</p>
+                  <div className="mb-3 flex items-center gap-3">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-rose-400/25 bg-rose-500/15 text-lg font-semibold text-rose-300" aria-hidden>
+                      ×
+                    </span>
+                    <h3 className="min-w-0 text-lg font-semibold leading-snug text-white">{item.title}</h3>
+                  </div>
+                  <p className="text-sm leading-relaxed text-slate-300">{item.body}</p>
                 </li>
               </ScrollReveal>
             ))}
@@ -159,18 +161,18 @@ export default function DemoLocalLanding() {
               return (
                 <ScrollReveal key={step.title} delay={index * 0.06}>
                   <li className="glass-modern relative h-full rounded-2xl p-5 sm:p-6">
-                    <div className="mb-4 flex items-center justify-between gap-3">
-                      <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-brand-400/25 bg-brand-500/15 text-sm font-semibold text-brand-200">
+                    <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-2">
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-brand-400/25 bg-brand-500/15 text-sm font-semibold text-brand-200">
                         {index + 1}
                       </span>
+                      <h3 className="min-w-0 flex-1 text-lg font-semibold leading-snug text-white">{step.title}</h3>
                       {badge ? (
                         <span className="rounded-full border border-amber-400/30 bg-amber-400/15 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-amber-200">
                           {badge}
                         </span>
                       ) : null}
                     </div>
-                    <h3 className="text-lg font-semibold text-white">{step.title}</h3>
-                    <p className="mt-2 text-sm leading-relaxed text-slate-300">{step.body}</p>
+                    <p className="text-sm leading-relaxed text-slate-300">{step.body}</p>
                   </li>
                 </ScrollReveal>
               )
