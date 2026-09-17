@@ -186,11 +186,6 @@ export const DEMO_LOCAL_COPY = {
     terms: 'Términos',
     errorConsent: 'Marcá el consentimiento para enviar.',
   },
-  close: {
-    headline: 'Siguiente paso: armar tu modelo y cotizarte.',
-    sub: 'Página + reservas + WhatsApp + Google Maps. Dominio propio cuando contratás.',
-    primary: 'Quiero mi página y Maps',
-  },
   footer: {
     blurb: 'Presencia digital para negocios de barrio. Humano SISU.',
     payrollNote: 'Planilla y asistencia son otro producto.',

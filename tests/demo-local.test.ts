@@ -70,6 +70,7 @@ describe('demo-local landing', () => {
     assert.match(DEMO_LOCAL_COPY.offer.steps[1].body, /encontrado en la búsqueda/)
     assert.equal(DEMO_LOCAL_COPY.offer.steps.length, 2)
     assert.equal(blob.includes('Precio al confirmar el local'), false)
+    assert.equal(blob.includes('Siguiente paso: armar tu modelo'), false)
     assert.match(DEMO_LOCAL_COPY.hero.mapsBenefit, /reservar en el momento/)
     assert.match(DEMO_LOCAL_COPY.form.bookingLabel, /reservas\/citas/)
     assert.match(DEMO_LOCAL_COPY.seo.title, /Google Maps/)

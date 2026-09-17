@@ -1,7 +1,6 @@
 import { useMemo, useState, type FormEvent } from 'react'
 import Link from 'next/link'
 import {
-  BuildingStorefrontIcon,
   GlobeAltIcon,
   MapPinIcon,
 } from '@heroicons/react/24/outline'
@@ -167,22 +166,6 @@ export default function DemoLocalLanding() {
             </ul>
           </div>
           <DemoLocalLeadForm selectedRubro={rubro} onRubroChange={setRubro} />
-        </div>
-      </section>
-
-      <section className="px-4 sm:px-6 pb-16 sm:pb-20">
-        <div className="glass-modern mx-auto max-w-3xl rounded-3xl px-6 py-10 text-center sm:px-10">
-          <BuildingStorefrontIcon className="mx-auto mb-4 h-8 w-8 text-cyan-300" aria-hidden />
-          <h2 className="text-2xl font-bold text-white sm:text-3xl">{copy.close.headline}</h2>
-          <p className="landing-muted mx-auto mt-3 max-w-lg">{copy.close.sub}</p>
-          <Button
-            type="button"
-            size="lg"
-            className="btn-shiny mt-8 min-h-[48px] bg-green-600 px-6 text-base font-semibold hover:bg-green-700"
-            onClick={() => scrollToId('solicitud', 'demo_local_solicitud', 'demo_local_final')}
-          >
-            {copy.close.primary}
-          </Button>
         </div>
       </section>
 
