@@ -14,7 +14,7 @@ export const PLAN_BASICO_COPY = {
 
   hero: {
     kicker: 'Empleados ilimitados · un pago al año',
-    headline: 'Protegé tu negocio y formalizá al equipo. Un pago al año.',
+    headline: 'Formalizá tu gestión y protegé tu negocio. Un solo pago al año.',
     subheadline: (price: string) =>
       `Recibos de nómina, asistencia sin relojes costosos y respaldo ante reclamos laborales. Empleados ilimitados por ${price} al año.`,
     ctaPrimary: 'Activar acceso',
