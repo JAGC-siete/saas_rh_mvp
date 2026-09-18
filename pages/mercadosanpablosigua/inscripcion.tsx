@@ -48,9 +48,8 @@ export default function MercadoInscriptionPage() {
           </h1>
           <p className={`mt-4 ${styles.inscriptionLead}`}>
             Completá estos datos para pedir que tu comercio aparezca en el directorio de{' '}
-            {MERCADO_SEO.name}. No se crea una cuenta. El registro básico es gratuito. El perfil
-            destacado VIP es una aportación anual (L. 1,500) que se coordina después; este
-            formulario no cobra. La publicación no es inmediata.
+            {MERCADO_SEO.name}. El registro básico es gratuito. El perfil destacado con una
+            aportación anual (L. 1,500).
           </p>
           <div className="mt-8">
             <InscriptionForm />

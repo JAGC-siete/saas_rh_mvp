@@ -26,27 +26,15 @@ export const MERCADO_INSCRIPTION_AUTHORIZATION_TEXT =
 
 export const MERCADO_PRESENCE_PLAN_COPY: Record<
   MercadoPresencePlan,
-  { title: string; price: string; summary: string; benefits: readonly string[] }
+  { title: string; price: string }
 > = {
   basic: {
     title: 'Registro básico',
     price: 'Gratuito',
-    summary:
-      'Aparece en el directorio con nombre y descripción breve. Los clientes podrán ver esos datos cuando la ficha esté publicada.',
-    benefits: ['Nombre y descripción breve en el directorio, tras el alta manual'],
   },
   featured_vip: {
     title: 'Perfil destacado VIP',
     price: 'Aportación L. 1,500 / año',
-    summary:
-      'La aportación y el sticker se coordinan aparte. Este formulario no cobra ni publica el perfil destacado.',
-    benefits: [
-      'Posición preferencial en la búsqueda',
-      'Catálogo visual hasta 5 fotos',
-      'Botón «Enviar mensaje por WhatsApp»',
-      'Derecho a promociones cortas en la home',
-      'Insignia física / sticker (se entrega aparte)',
-    ],
   },
 }
 

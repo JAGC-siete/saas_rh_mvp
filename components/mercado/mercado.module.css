@@ -665,7 +665,7 @@
   display: grid;
   grid-template-columns: auto 1fr;
   gap: 0.7rem;
-  align-items: start;
+  align-items: center;
   border: 1px solid var(--mercado-line);
   background: #fff;
   border-radius: 0.9rem;
@@ -700,20 +700,6 @@
   font-size: 0.8rem;
   font-weight: 700;
   color: var(--mercado-chile);
-}
-
-.planCardSummary {
-  font-size: 0.85rem;
-  color: var(--mercado-muted);
-  line-height: 1.4;
-}
-
-.planCard ul {
-  margin: 0.35rem 0 0;
-  padding-left: 1.1rem;
-  font-size: 0.8rem;
-  color: var(--mercado-ink);
-  line-height: 1.4;
 }
 
 .inscriptionSubmit {

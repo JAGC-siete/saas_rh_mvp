@@ -167,14 +167,13 @@ describe('mercado: solicitud de registro de local', () => {
     assert.match(mercadoPresencePlanNotifyLabel('featured_vip'), /no registrada como pago/)
   })
 
-  it('corrige promociones cortas y acota el texto de autorización', () => {
-    assert.ok(MERCADO_PRESENCE_PLAN_COPY.featured_vip.benefits.some((item) => item.includes('promociones cortas')))
-    assert.equal(
-      MERCADO_PRESENCE_PLAN_COPY.featured_vip.benefits.some((item) => item.includes('promociones rtas')),
-      false
-    )
+  it('acota el texto de autorización y no arrastra el typo del papel', () => {
+    assert.equal(MERCADO_PRESENCE_PLAN_COPY.basic.title, 'Registro básico')
+    assert.equal(MERCADO_PRESENCE_PLAN_COPY.featured_vip.price, 'Aportación L. 1,500 / año')
     assert.ok(MERCADO_INSCRIPTION_AUTHORIZATION_TEXT.length >= 20)
     assert.ok(MERCADO_INSCRIPTION_AUTHORIZATION_TEXT.length <= 500)
+    const schemaSource = readFileSync(join(process.cwd(), 'lib/mercado/inscription-schema.ts'), 'utf8')
+    assert.equal(schemaSource.includes('promociones rtas'), false)
   })
 
   it('reserva inscripcion para el formulario y deja el API en rutas públicas', () => {

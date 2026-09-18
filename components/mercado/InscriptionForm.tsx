@@ -236,12 +236,6 @@ export default function InscriptionForm() {
                 <span className={styles.planCardBody}>
                   <span className={styles.planCardTitle}>{copy.title}</span>
                   <span className={styles.planCardPrice}>{copy.price}</span>
-                  <span className={styles.planCardSummary}>{copy.summary}</span>
-                  <ul>
-                    {copy.benefits.map((benefit) => (
-                      <li key={benefit}>{benefit}</li>
-                    ))}
-                  </ul>
                 </span>
               </label>
             )
