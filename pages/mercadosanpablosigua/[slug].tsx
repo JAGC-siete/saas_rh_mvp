@@ -1,11 +1,11 @@
 /**
- * Perfil público de un puesto. SSR para SEO.
+ * Perfil público de un puesto. ISR para SEO + CDN.
  * Shell: isPublicTenantLandingRoute (/mercadosanpablosigua/[slug]).
  * DB primero; preview hardcodeado si no hay fichas activas.
  */
 
 import Head from 'next/head'
-import type { GetServerSideProps } from 'next'
+import type { GetStaticPaths, GetStaticProps } from 'next'
 import MercadoPublicShell from '../../components/mercado/MercadoPublicShell'
 import VendorLanding from '../../components/mercado/VendorLanding'
 import { mercadoVendorJsonLd, serializeJsonLd } from '../../lib/mercado/jsonld'
@@ -16,7 +16,12 @@ import {
   mercadoVendorTitle,
 } from '../../lib/mercado/meta'
 import type { PublicVendorCard } from '../../lib/mercado/schema'
-import { resolvePublicVendor } from '../../lib/mercado/vendors-db'
+import {
+  MERCADO_ISR_REVALIDATE_SECONDS,
+  listActiveVendorSlugsFromDb,
+  previewVendorSlugs,
+  resolvePublicVendor,
+} from '../../lib/mercado/vendors-db'
 
 interface VendorProfileProps {
   vendor: PublicVendorCard
@@ -62,19 +67,31 @@ export default function MercadoVendorProfilePage({ vendor }: VendorProfileProps)
 
 const SLUG_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/
 
-export const getServerSideProps: GetServerSideProps<VendorProfileProps> = async (ctx) => {
+export const getStaticPaths: GetStaticPaths = async () => {
+  const dbSlugs = await listActiveVendorSlugsFromDb()
+  const slugs = dbSlugs.length > 0 ? dbSlugs : previewVendorSlugs()
+
+  return {
+    paths: slugs.map((slug) => ({ params: { slug } })),
+    fallback: 'blocking',
+  }
+}
+
+export const getStaticProps: GetStaticProps<VendorProfileProps> = async (ctx) => {
   const raw = ctx.params?.slug
   const slug = (Array.isArray(raw) ? raw[0] : raw)?.toLowerCase().trim() ?? ''
 
   if (!slug || !SLUG_PATTERN.test(slug) || slug.length > 63) {
-    return { notFound: true }
+    return { notFound: true, revalidate: MERCADO_ISR_REVALIDATE_SECONDS }
   }
 
   const resolved = await resolvePublicVendor(slug)
   if (!resolved.vendor) {
-    return { notFound: true }
+    return { notFound: true, revalidate: MERCADO_ISR_REVALIDATE_SECONDS }
   }
 
-  ctx.res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=600')
-  return { props: { vendor: resolved.vendor } }
+  return {
+    props: { vendor: resolved.vendor },
+    revalidate: MERCADO_ISR_REVALIDATE_SECONDS,
+  }
 }

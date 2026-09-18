@@ -1,6 +1,7 @@
 /**
  * Mapeo fila DB ↔ PublicVendorCard y lecturas públicas del directorio.
  * Pickup only: sin carrito ni stock.
+ * Lecturas públicas → anon client (RLS). Escrituras admin → createAdminClient.
  */
 
 import { createAdminClient } from '../supabase/server'
@@ -19,10 +20,11 @@ import {
 } from './home'
 import type { VendorCategory } from './categories'
 import { isVendorCategory } from './categories'
+import { createPublicMercadoClient } from './public-client'
 
 export type VendorRow = {
   id: string
-  application_id: string | null
+  application_id?: string | null
   name: string
   slug: string
   description: string
@@ -40,10 +42,16 @@ export type VendorRow = {
   updated_at?: string
 }
 
-export const VENDOR_PUBLIC_COLUMNS =
+/** Columnas permitidas al rol anon (GRANT). Sin application_id / company_id. */
+export const VENDOR_ANON_COLUMNS =
+  'id, name, slug, description, category, whatsapp, status, logo_url, stall_location, hours_note, featured, products, payment_methods, gallery, created_at, updated_at'
+
+export const VENDOR_PUBLIC_COLUMNS = VENDOR_ANON_COLUMNS
+
+export const VENDOR_ADMIN_COLUMNS =
   'id, application_id, name, slug, description, category, whatsapp, status, logo_url, stall_location, hours_note, featured, products, payment_methods, gallery, created_at, updated_at'
 
-export const VENDOR_ADMIN_COLUMNS = VENDOR_PUBLIC_COLUMNS
+export const MERCADO_ISR_REVALIDATE_SECONDS = 60
 
 function parseGallery(value: unknown): PublicVendorCard['gallery'] {
   if (!Array.isArray(value)) return []
@@ -91,12 +99,33 @@ export function sortVendorsForDirectory(vendors: PublicVendorCard[]): PublicVend
   })
 }
 
+export async function countActiveVendorsFromDb(): Promise<number> {
+  try {
+    const supabase = createPublicMercadoClient()
+    const { count, error } = await supabase
+      .from(VENDORS_TABLE)
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'active')
+
+    if (error) {
+      logger.error('mercado: countActiveVendorsFromDb', { error: error.message })
+      return 0
+    }
+    return count ?? 0
+  } catch (error) {
+    logger.error('mercado: countActiveVendorsFromDb crash', {
+      error: error instanceof Error ? error.message : 'unknown',
+    })
+    return 0
+  }
+}
+
 export async function listActiveVendorsFromDb(): Promise<PublicVendorCard[]> {
   try {
-    const supabase = createAdminClient()
+    const supabase = createPublicMercadoClient()
     const { data, error } = await supabase
       .from(VENDORS_TABLE)
-      .select(VENDOR_PUBLIC_COLUMNS)
+      .select(VENDOR_ANON_COLUMNS)
       .eq('status', 'active')
       .order('featured', { ascending: false })
       .order('name', { ascending: true })
@@ -119,12 +148,36 @@ export async function listActiveVendorsFromDb(): Promise<PublicVendorCard[]> {
   }
 }
 
-export async function findActiveVendorFromDb(slug: string): Promise<PublicVendorCard | null> {
+export async function listActiveVendorSlugsFromDb(): Promise<string[]> {
   try {
-    const supabase = createAdminClient()
+    const supabase = createPublicMercadoClient()
     const { data, error } = await supabase
       .from(VENDORS_TABLE)
-      .select(VENDOR_PUBLIC_COLUMNS)
+      .select('slug')
+      .eq('status', 'active')
+      .order('slug', { ascending: true })
+
+    if (error) {
+      logger.error('mercado: listActiveVendorSlugsFromDb', { error: error.message })
+      return []
+    }
+    return (data ?? [])
+      .map((row) => (typeof row.slug === 'string' ? row.slug : ''))
+      .filter(Boolean)
+  } catch (error) {
+    logger.error('mercado: listActiveVendorSlugsFromDb crash', {
+      error: error instanceof Error ? error.message : 'unknown',
+    })
+    return []
+  }
+}
+
+export async function findActiveVendorFromDb(slug: string): Promise<PublicVendorCard | null> {
+  try {
+    const supabase = createPublicMercadoClient()
+    const { data, error } = await supabase
+      .from(VENDORS_TABLE)
+      .select(VENDOR_ANON_COLUMNS)
       .eq('slug', slug.toLowerCase().trim())
       .eq('status', 'active')
       .maybeSingle()
@@ -143,15 +196,16 @@ export async function findActiveVendorFromDb(slug: string): Promise<PublicVendor
   }
 }
 
-/** DB primero; si no hay filas activas, preview hardcodeado. */
+/** DB si count > 0; si no, preview hardcodeado. */
 export async function resolvePublicVendors(category?: VendorCategory | null): Promise<{
   vendors: PublicVendorCard[]
   source: 'database' | 'preview'
 }> {
-  const fromDb = await listActiveVendorsFromDb()
-  if (fromDb.length === 0) {
+  const activeCount = await countActiveVendorsFromDb()
+  if (activeCount === 0) {
     return { vendors: previewVendorsByCategory(category), source: 'preview' }
   }
+  const fromDb = await listActiveVendorsFromDb()
   const filtered = category ? fromDb.filter((v) => v.category === category) : fromDb
   return { vendors: filtered, source: 'database' }
 }
@@ -160,15 +214,13 @@ export async function resolvePublicVendor(slug: string): Promise<{
   vendor: PublicVendorCard | null
   source: 'database' | 'preview'
 }> {
-  const fromDb = await findActiveVendorFromDb(slug)
-  if (fromDb) return { vendor: fromDb, source: 'database' }
-
-  const activeCount = (await listActiveVendorsFromDb()).length
-  if (activeCount > 0) {
-    return { vendor: null, source: 'database' }
+  const activeCount = await countActiveVendorsFromDb()
+  if (activeCount === 0) {
+    return { vendor: findPreviewVendor(slug), source: 'preview' }
   }
 
-  return { vendor: findPreviewVendor(slug), source: 'preview' }
+  const fromDb = await findActiveVendorFromDb(slug)
+  return { vendor: fromDb, source: 'database' }
 }
 
 export function publicCardToInsert(payload: {
@@ -207,4 +259,13 @@ export function publicCardToInsert(payload: {
     created_by: payload.userId ?? null,
     updated_by: payload.userId ?? null,
   }
+}
+
+/** Admin list still uses service role (needs application_id). */
+export function createMercadoAdminClient() {
+  return createAdminClient()
+}
+
+export function previewVendorSlugs(): string[] {
+  return MERCADO_HOME_PREVIEW_VENDORS.map((v) => v.slug)
 }

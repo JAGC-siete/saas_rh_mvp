@@ -172,8 +172,13 @@ export function mercadoVendorJsonLd(vendor: PublicVendorCard) {
   }
 }
 
-export function mercadoSitemapUrls() {
+export function mercadoSitemapUrls(vendorSlugs?: string[]) {
   const today = new Date().toISOString().split('T')[0]
+  const slugs =
+    vendorSlugs && vendorSlugs.length > 0
+      ? vendorSlugs
+      : MERCADO_HOME_PREVIEW_VENDORS.map((vendor) => vendor.slug)
+
   return [
     {
       loc: mercadoHomePath(),
@@ -193,8 +198,8 @@ export function mercadoSitemapUrls() {
       priority: 0.7,
       lastmod: today,
     })),
-    ...MERCADO_HOME_PREVIEW_VENDORS.map((vendor) => ({
-      loc: mercadoVendorPath(vendor.slug),
+    ...slugs.map((slug) => ({
+      loc: mercadoVendorPath(slug),
       changefreq: 'daily' as const,
       priority: 0.8,
       lastmod: today,

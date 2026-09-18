@@ -23,6 +23,7 @@ import {
   type VendorRow,
   vendorRowToPublicCard,
 } from '../../../../lib/mercado/vendors-db'
+import { revalidateMercadoPages } from '../../../../lib/mercado/revalidate'
 
 const patchFlagsSchema = z.object({
   id: z.string().uuid(),
@@ -102,6 +103,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           status: flags.data.status,
           featured: flags.data.featured,
         })
+        await revalidateMercadoPages(res, (data as VendorRow).slug)
         return res.status(200).json({ vendor: data })
       }
 
@@ -141,6 +143,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
       if (!data) return res.status(404).json({ error: 'Ficha no encontrada' })
       await auditLog('mercado_vendor_updated', { id })
+      await revalidateMercadoPages(res, (data as VendorRow).slug)
       return res.status(200).json({ vendor: data })
     }
 
@@ -220,6 +223,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         vendorId: vendor.id,
         applicationId: application.id,
       })
+      await revalidateMercadoPages(res, (vendor as VendorRow).slug)
 
       return res.status(201).json({
         vendor,
@@ -253,6 +257,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     await auditLog('mercado_vendor_created', { id: vendor.id, slug: vendor.slug })
+    await revalidateMercadoPages(res, (vendor as VendorRow).slug)
     return res.status(201).json({ vendor })
   } catch (error: unknown) {
     if (

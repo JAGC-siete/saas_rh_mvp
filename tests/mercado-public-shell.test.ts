@@ -119,6 +119,7 @@ describe('mercado: copy San Pablo y WhatsApp', () => {
     assert.ok(carniceria)
     const href = vendorReservationHref(carniceria)
     assert.match(href, new RegExp(`wa\\.me/${MERCADO_DIRECTORY_WHATSAPP}\\?text=`))
+    assert.match(href, /vengo%20del%20directorio%20San%20Pablo/)
     assert.match(href, /Lomo/)
     assert.match(href, /local%202/)
   })

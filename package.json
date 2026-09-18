@@ -10,6 +10,7 @@
     "dev": "next dev",
     "lint": "next lint --max-warnings=10000",
     "lint:ci": "next lint --quiet --max-warnings=10000",
+    "typecheck": "tsc --noEmit",
     "build": "next build",
     "analyze": "ANALYZE=true next build",
     "start": "next start",

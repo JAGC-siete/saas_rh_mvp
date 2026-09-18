@@ -7,6 +7,7 @@ import { deductionCalculatorPublicPath } from '../lib/marketing/calculator-publi
 import { localizedHref } from '../lib/i18n/locale'
 import { BILINGUAL_LANDING_PATHS } from '../lib/i18n/bilingual-paths'
 import { mercadoSitemapUrls } from '../lib/mercado/jsonld'
+import { listActiveVendorSlugsFromDb } from '../lib/mercado/vendors-db'
 
 interface SitemapUrl {
   loc: string
@@ -54,7 +55,6 @@ const publicPages: SitemapUrl[] = [
     priority: 0.8,
     lastmod: new Date().toISOString().split('T')[0],
   },
-  ...mercadoSitemapUrls(),
   {
     loc: '/alternativa-odoo-honduras',
     changefreq: 'monthly',
@@ -235,7 +235,10 @@ export const getServerSideProps: GetServerSideProps = async ({ res }) => {
     lastmod: recurso.dateModified ?? recurso.datePublished,
   }))
 
-  const sitemap = generateSitemap([...publicPages, ...recursoPages])
+  const mercadoSlugs = await listActiveVendorSlugsFromDb()
+  const mercadoPages = mercadoSitemapUrls(mercadoSlugs)
+
+  const sitemap = generateSitemap([...publicPages, ...mercadoPages, ...recursoPages])
 
   res.setHeader('Content-Type', 'text/xml')
   res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400')

@@ -6,8 +6,8 @@
 
 import Head from 'next/head'
 import Link from 'next/link'
-import { useMemo, useState, type FormEvent } from 'react'
-import type { GetServerSideProps } from 'next'
+import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import type { GetStaticProps } from 'next'
 import { useRouter } from 'next/router'
 import { Search } from 'lucide-react'
 import MercadoPublicShell from '../../components/mercado/MercadoPublicShell'
@@ -36,24 +36,36 @@ import {
 import { mercadoHomePath, mercadoVendorPath } from '../../lib/mercado/paths'
 import { mercadoStaticSrc } from '../../lib/mercado/assets'
 import type { PublicVendorCard } from '../../lib/mercado/schema'
-import { resolvePublicVendors } from '../../lib/mercado/vendors-db'
+import {
+  MERCADO_ISR_REVALIDATE_SECONDS,
+  resolvePublicVendors,
+} from '../../lib/mercado/vendors-db'
 
 interface MercadoHomeProps {
   vendors: PublicVendorCard[]
-  category: VendorCategory | null
-  query: string
   source: 'database' | 'preview'
 }
 
-export default function MercadoHomePage({ vendors, category, query }: MercadoHomeProps) {
+export default function MercadoHomePage({ vendors }: MercadoHomeProps) {
   const router = useRouter()
-  const [search, setSearch] = useState(query)
+  const rawCategory = typeof router.query.categoria === 'string' ? router.query.categoria : ''
+  const category: VendorCategory | null = isVendorCategory(rawCategory) ? rawCategory : null
+  const [search, setSearch] = useState('')
   const [hintsOpen, setHintsOpen] = useState(false)
+
+  useEffect(() => {
+    if (typeof router.query.q === 'string') setSearch(router.query.q)
+  }, [router.query.q])
+
+  const byCategory = useMemo(() => {
+    if (!category) return vendors
+    return vendors.filter((vendor) => vendor.category === category)
+  }, [vendors, category])
 
   const visible = useMemo(() => {
     const needle = search.trim().toLowerCase()
-    if (!needle) return vendors
-    return vendors.filter((vendor) => {
+    if (!needle) return byCategory
+    return byCategory.filter((vendor) => {
       const haystack = [
         vendor.name,
         vendor.description,
@@ -65,7 +77,7 @@ export default function MercadoHomePage({ vendors, category, query }: MercadoHom
         .toLowerCase()
       return haystack.includes(needle)
     })
-  }, [vendors, search])
+  }, [byCategory, search])
 
   const hints = useMemo(() => mercadoSearchHints(search), [search])
 
@@ -75,7 +87,7 @@ export default function MercadoHomePage({ vendors, category, query }: MercadoHom
     const nextQuery: Record<string, string> = {}
     if (category) nextQuery.categoria = category
     if (search.trim()) nextQuery.q = search.trim()
-    void router.push({ pathname: mercadoHomePath(), query: nextQuery })
+    void router.push({ pathname: mercadoHomePath(), query: nextQuery }, undefined, { shallow: true })
   }
 
   const title = category ? mercadoCategoryTitle(category) : mercadoHomeTitle()
@@ -270,21 +282,14 @@ export default function MercadoHomePage({ vendors, category, query }: MercadoHom
   )
 }
 
-export const getServerSideProps: GetServerSideProps<MercadoHomeProps> = async (ctx) => {
-  const rawCategory = typeof ctx.query.categoria === 'string' ? ctx.query.categoria : ''
-  const category = isVendorCategory(rawCategory) ? rawCategory : null
-  const query = typeof ctx.query.q === 'string' ? ctx.query.q : ''
-
-  const resolved = await resolvePublicVendors(category)
-
-  ctx.res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=600')
+export const getStaticProps: GetStaticProps<MercadoHomeProps> = async () => {
+  const resolved = await resolvePublicVendors(null)
 
   return {
     props: {
       vendors: resolved.vendors,
-      category,
-      query,
       source: resolved.source,
     },
+    revalidate: MERCADO_ISR_REVALIDATE_SECONDS,
   }
 }

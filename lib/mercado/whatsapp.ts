@@ -46,7 +46,7 @@ export function vendorReservationMessage(
       ? ` Me interesa: ${vendor.products.join(', ')}.`
       : ''
   const hint = perishableHint(vendor.category as VendorCategory)
-  return `Hola, vi tu puesto ${vendor.name} en el Mercado Municipal San Pablo.${stall}${interest}${hint}`
+  return `Hola, vengo del directorio San Pablo y quiero pedir en ${vendor.name}.${stall}${interest}${hint}`
 }
 
 export function vendorReadyForPickupMessage(
