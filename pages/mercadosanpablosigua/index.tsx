@@ -13,6 +13,7 @@ import { Search } from 'lucide-react'
 import MercadoPublicShell from '../../components/mercado/MercadoPublicShell'
 import { MercadoInscriptionBanner } from '../../components/mercado/InscriptionCta'
 import VendorCard from '../../components/mercado/VendorCard'
+import styles from '../../components/mercado/mercado.module.css'
 import {
   VENDOR_CATEGORIES,
   VENDOR_CATEGORY_BLURB,
@@ -20,6 +21,7 @@ import {
   isVendorCategory,
   type VendorCategory,
 } from '../../lib/mercado/categories'
+import { VENDOR_CATEGORY_ICON } from '../../lib/mercado/category-icons'
 import {
   MERCADO_GEO,
   MERCADO_SEO,
@@ -122,30 +124,21 @@ export default function MercadoHomePage({ vendors }: MercadoHomeProps) {
       </Head>
       <MercadoPublicShell>
         <section
-          className="relative overflow-hidden px-4 py-16 text-center sm:py-24"
+          className={styles.hero}
           style={{
-            backgroundColor: '#c2410c',
-            backgroundImage: `linear-gradient(180deg, rgba(124,45,18,0.78), rgba(194,65,12,0.82)), url(${mercadoStaticSrc(MERCADO_SEO.heroImage)})`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
+            backgroundImage: `url(${mercadoStaticSrc(MERCADO_SEO.heroImage)})`,
           }}
         >
-          <div className="relative mx-auto max-w-3xl">
-            <p className="text-sm font-semibold uppercase tracking-widest" style={{ color: '#ffedd5' }}>
-              Siguatepeque, Comayagua
-            </p>
-            <h1 className="mt-2 text-4xl font-extrabold tracking-tight sm:text-5xl" style={{ color: '#fff' }}>
-              {MERCADO_SEO.name}
-            </h1>
-            <p className="mx-auto mt-5 max-w-2xl text-lg sm:text-xl" style={{ color: '#fff7ed' }}>
-              {MERCADO_SEO.tagline}
-            </p>
+          <div className={styles.heroInner}>
+            <p className={styles.heroEyebrow}>Siguatepeque, Comayagua</p>
+            <h1 className={styles.heroTitle}>{MERCADO_SEO.name}</h1>
+            <p className={styles.heroLead}>{MERCADO_SEO.tagline}</p>
             <form
               onSubmit={onSearchSubmit}
               className="relative mx-auto mt-10 max-w-2xl"
               role="search"
             >
-              <div className="flex items-center overflow-hidden rounded-full bg-white p-1 shadow-lg">
+              <div className={styles.searchBar}>
                 <Search className="ml-4 h-6 w-6 shrink-0 text-stone-400" aria-hidden />
                 <label htmlFor="mercado-search" className="sr-only">
                   ¿De qué tienes ganas hoy?
@@ -168,11 +161,7 @@ export default function MercadoHomePage({ vendors }: MercadoHomeProps) {
                   aria-expanded={hintsOpen && hints.length > 0}
                   aria-controls="mercado-search-hints"
                 />
-                <button
-                  type="submit"
-                  className="shrink-0 rounded-full px-6 py-3 font-semibold text-white"
-                  style={{ backgroundColor: '#d97706' }}
-                >
+                <button type="submit" className={styles.searchSubmit}>
                   Buscar
                 </button>
               </div>
@@ -180,7 +169,7 @@ export default function MercadoHomePage({ vendors }: MercadoHomeProps) {
                 <ul
                   id="mercado-search-hints"
                   role="listbox"
-                  className="absolute z-10 mt-2 w-full overflow-hidden rounded-2xl border border-amber-100 bg-white text-left shadow-xl"
+                  className="absolute z-10 mt-2 w-full overflow-hidden rounded-2xl border border-stone-200 bg-white text-left shadow-xl"
                 >
                   {hints.map((hint) => (
                     <li key={hint.label} role="option">
@@ -200,9 +189,13 @@ export default function MercadoHomePage({ vendors }: MercadoHomeProps) {
 
         <section className="mx-auto max-w-6xl px-4 py-12">
           <div className="mb-6 flex items-end justify-between gap-4">
-            <h2 className="text-2xl font-bold text-stone-800">Categorías</h2>
+            <h2 className={styles.sectionTitle}>Categorías</h2>
             {category && (
-              <Link href={mercadoHomePath()} className="text-sm text-amber-800 underline">
+              <Link
+                href={mercadoHomePath()}
+                className="text-sm font-semibold underline"
+                style={{ color: 'var(--mercado-chile)' }}
+              >
                 Ver todas
               </Link>
             )}
@@ -210,18 +203,22 @@ export default function MercadoHomePage({ vendors }: MercadoHomeProps) {
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
             {VENDOR_CATEGORIES.map((key) => {
               const active = category === key
+              const Icon = VENDOR_CATEGORY_ICON[key]
               return (
                 <Link
                   key={key}
                   href={{ pathname: mercadoHomePath(), query: { categoria: key } }}
-                  className={`rounded-xl border bg-white px-5 py-5 text-left transition-colors ${
-                    active
-                      ? 'border-amber-500 bg-amber-50'
-                      : 'border-stone-100 hover:border-amber-200'
-                  }`}
+                  className={`${styles.categoryCard} ${active ? styles.categoryCardActive : ''}`}
                 >
-                  <p className="font-bold text-stone-900">{VENDOR_CATEGORY_LABEL[key]}</p>
-                  <p className="mt-1 text-sm text-stone-500">{VENDOR_CATEGORY_BLURB[key]}</p>
+                  <span className={styles.categoryIcon} aria-hidden>
+                    <Icon className="h-5 w-5" strokeWidth={2.25} />
+                  </span>
+                  <p className="font-bold" style={{ color: 'var(--mercado-cacao)' }}>
+                    {VENDOR_CATEGORY_LABEL[key]}
+                  </p>
+                  <p className="mt-1 text-sm" style={{ color: 'var(--mercado-muted)' }}>
+                    {VENDOR_CATEGORY_BLURB[key]}
+                  </p>
                 </Link>
               )
             })}
@@ -229,11 +226,14 @@ export default function MercadoHomePage({ vendors }: MercadoHomeProps) {
         </section>
 
         <section className="mx-auto max-w-6xl px-4 pb-12">
-          <h2 className="mb-6 text-2xl font-bold text-stone-800">
+          <h2 className={`${styles.sectionTitle} mb-6`}>
             {category ? VENDOR_CATEGORY_LABEL[category] : 'Puestos destacados'}
           </h2>
           {visible.length === 0 ? (
-            <p className="rounded-xl border border-stone-200 bg-white px-4 py-10 text-center text-stone-500">
+            <p
+              className="rounded-xl border px-4 py-10 text-center"
+              style={{ borderColor: 'var(--mercado-line)', color: 'var(--mercado-muted)' }}
+            >
               No hay puestos que coincidan con esa búsqueda.
             </p>
           ) : (
@@ -248,11 +248,16 @@ export default function MercadoHomePage({ vendors }: MercadoHomeProps) {
         <MercadoInscriptionBanner />
 
         <section className="mx-auto max-w-6xl px-4 pb-16">
-          <div className="flex flex-col items-start gap-8 rounded-2xl border border-amber-100 bg-amber-50 p-8 md:flex-row md:items-center">
+          <div className={`${styles.panelLocal} flex flex-col items-start gap-8 md:flex-row md:items-center`}>
             <div className="flex-1">
-              <h2 className="text-2xl font-bold text-stone-800">¿Cómo llegar al mercado?</h2>
-              <p className="mt-4 text-stone-700">{MERCADO_GEO.howToArrive}</p>
-              <p className="mt-4 inline-block rounded-lg bg-white px-4 py-2 font-mono text-sm text-stone-600">
+              <h2 className={styles.sectionTitle}>¿Cómo llegar al mercado?</h2>
+              <p className="mt-4" style={{ color: 'var(--mercado-ink)' }}>
+                {MERCADO_GEO.howToArrive}
+              </p>
+              <p
+                className="mt-4 inline-block rounded-lg px-4 py-2 font-mono text-sm"
+                style={{ background: '#fff', color: 'var(--mercado-muted)' }}
+              >
                 {MERCADO_GEO.label}
               </p>
               <div className="mt-4">
@@ -260,8 +265,7 @@ export default function MercadoHomePage({ vendors }: MercadoHomeProps) {
                   href={MERCADO_GEO.mapsUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center rounded-lg px-4 py-2 text-sm font-semibold text-white"
-                  style={{ backgroundColor: '#d97706' }}
+                  className={styles.ctaSolid}
                 >
                   Abrir en Google Maps
                 </a>
@@ -271,7 +275,12 @@ export default function MercadoHomePage({ vendors }: MercadoHomeProps) {
               href={MERCADO_GEO.mapsUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex h-48 w-full items-center justify-center rounded-xl border border-amber-200 bg-white text-center text-sm text-stone-500 md:w-1/3"
+              className="flex h-48 w-full items-center justify-center rounded-xl border text-center text-sm md:w-1/3"
+              style={{
+                borderColor: 'var(--mercado-line)',
+                background: '#fff',
+                color: 'var(--mercado-muted)',
+              }}
             >
               Mapa: {MERCADO_GEO.landmark}
             </a>

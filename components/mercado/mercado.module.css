@@ -1,17 +1,232 @@
+/**
+ * Identidad visual Mercado San Pablo — cálida, local, no-SaaS.
+ * CTA del hero: cacao oscuro (contrasta con overlay cálido).
+ * Trust: hoja de mercado, no verde corporativo.
+ */
+
 @keyframes mercadoWaPulse {
-  0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.55); }
+  0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.45); }
   70% { box-shadow: 0 0 0 12px rgba(34, 197, 94, 0); }
   100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
 }
 
+.shell {
+  --mercado-cacao: #2a1810;
+  --mercado-chile: #9f1239;
+  --mercado-hoja: #3f5d3a;
+  --mercado-hoja-deep: #2f452c;
+  --mercado-papel: #f6f1e8;
+  --mercado-ink: #292524;
+  --mercado-muted: #78716c;
+  --mercado-cream: #fffaf3;
+  --mercado-line: #e7e0d4;
+  --mercado-font: var(--font-mercado), ui-sans-serif, system-ui, sans-serif;
+
+  min-height: 100vh;
+  background-color: var(--mercado-papel);
+  color: var(--mercado-ink);
+  font-family: var(--mercado-font);
+  background-image:
+    radial-gradient(ellipse 120% 80% at 50% -20%, rgba(159, 18, 57, 0.06), transparent 55%),
+    linear-gradient(180deg, #f8f4ec 0%, var(--mercado-papel) 40%, #f0ebe1 100%);
+}
+
+.header {
+  border-bottom: 1px solid var(--mercado-line);
+  background: color-mix(in srgb, var(--mercado-cream) 92%, white);
+  backdrop-filter: blur(8px);
+}
+
+.brand {
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--mercado-cacao);
+}
+
+.trust {
+  background: linear-gradient(90deg, var(--mercado-hoja-deep), var(--mercado-hoja));
+  color: #f0fdf4;
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  text-align: center;
+  padding: 0.55rem 1rem;
+}
+
+.hero {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  padding: 4.5rem 1rem 5rem;
+  text-align: center;
+  background-color: #1c1410;
+  background-size: cover;
+  background-position: center 35%;
+}
+
+.hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  /* Overlay más corto: deja color del mercado arriba; oscurece abajo para leer. */
+  background:
+    linear-gradient(
+      180deg,
+      rgba(28, 20, 16, 0.28) 0%,
+      rgba(28, 20, 16, 0.42) 42%,
+      rgba(28, 20, 16, 0.78) 100%
+    );
+}
+
+.heroInner {
+  position: relative;
+  z-index: 1;
+  margin: 0 auto;
+  max-width: 42rem;
+}
+
+.heroEyebrow {
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #fde68a;
+}
+
+.heroTitle {
+  margin-top: 0.5rem;
+  font-size: clamp(2.1rem, 5vw, 3.15rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  color: #fff;
+  text-shadow: 0 2px 18px rgba(0, 0, 0, 0.35);
+}
+
+.heroLead {
+  margin: 1.15rem auto 0;
+  max-width: 36rem;
+  font-size: clamp(1.05rem, 2.4vw, 1.25rem);
+  line-height: 1.45;
+  color: #fff7ed;
+  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.3);
+}
+
+.searchBar {
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #fff;
+  padding: 0.3rem;
+  box-shadow:
+    0 12px 32px rgba(0, 0, 0, 0.28),
+    0 0 0 1px rgba(255, 255, 255, 0.35);
+}
+
+.searchSubmit {
+  flex-shrink: 0;
+  border-radius: 999px;
+  padding: 0.75rem 1.4rem;
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: #fffaf3;
+  background: var(--mercado-cacao);
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.searchSubmit:hover,
+.searchSubmit:focus-visible {
+  background: var(--mercado-chile);
+  outline: none;
+}
+
+.searchSubmit:active {
+  transform: scale(0.98);
+}
+
+.sectionTitle {
+  font-size: 1.55rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--mercado-cacao);
+}
+
+.categoryCard {
+  display: block;
+  border-radius: 1rem;
+  border: 1px solid var(--mercado-line);
+  background: var(--mercado-cream);
+  padding: 1.1rem 1.15rem;
+  text-align: left;
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
+}
+
+.categoryCard:hover {
+  border-color: #d6c7b0;
+  transform: translateY(-2px);
+}
+
+.categoryCardActive {
+  border-color: var(--mercado-chile);
+  background: #fff1f2;
+  box-shadow: inset 0 0 0 1px rgba(159, 18, 57, 0.12);
+}
+
+.categoryIcon {
+  display: inline-flex;
+  height: 2.5rem;
+  width: 2.5rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.75rem;
+  background: #efe6d8;
+  color: var(--mercado-hoja-deep);
+  margin-bottom: 0.75rem;
+}
+
+.categoryCardActive .categoryIcon {
+  background: #ffe4e6;
+  color: var(--mercado-chile);
+}
+
+.ctaSolid {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 0.65rem;
+  padding: 0.7rem 1.15rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #fffaf3;
+  background: var(--mercado-cacao);
+  transition: background 0.15s ease;
+}
+
+.ctaSolid:hover {
+  background: var(--mercado-chile);
+}
+
+.panelLocal {
+  border: 1px solid var(--mercado-line);
+  background: linear-gradient(135deg, #fffaf3 0%, #f3e9d8 100%);
+  border-radius: 1.15rem;
+  padding: 2rem;
+}
+
 .vendorCard {
   transition: transform 0.2s ease, box-shadow 0.2s ease;
+  border-color: var(--mercado-line) !important;
+  background: var(--mercado-cream) !important;
 }
 
 .vendorCard:hover,
 .vendorCard:active {
   transform: translateY(-4px);
-  box-shadow: 0 12px 28px rgba(120, 53, 15, 0.18);
+  box-shadow: 0 14px 30px rgba(42, 24, 16, 0.14);
 }
 
 .waPulse:hover,
@@ -34,6 +249,10 @@
 }
 
 @media (max-width: 640px) {
+  .hero {
+    padding: 3.25rem 1rem 4rem;
+  }
+
   .stickyReserve {
     display: block;
     position: fixed;
@@ -41,8 +260,8 @@
     bottom: 0;
     left: 0;
     z-index: 40;
-    border-top: 1px solid #e7e5e4;
-    background: #fff;
+    border-top: 1px solid var(--mercado-line);
+    background: var(--mercado-cream);
     padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
   }
 }

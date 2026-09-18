@@ -25,7 +25,7 @@ export default function VendorCard({ vendor }: { vendor: PublicVendorCard }) {
   const live = status.startsWith('Abierto') || status.startsWith('Recibiendo')
 
   return (
-    <Card className={`${styles.vendorCard} group flex h-full flex-col border-stone-200 bg-white`}>
+    <Card className={`${styles.vendorCard} group flex h-full flex-col`}>
       <CardContent className="flex h-full flex-col gap-4 p-5">
         <div className="flex items-start gap-4">
           {vendor.logoUrl ? (
@@ -34,19 +34,19 @@ export default function VendorCard({ vendor }: { vendor: PublicVendorCard }) {
               alt={vendor.name}
               width={80}
               height={80}
-              className="h-20 w-20 shrink-0 rounded-full object-cover ring-2 ring-amber-400 ring-offset-2"
+              className="h-20 w-20 shrink-0 rounded-full object-cover ring-2 ring-[#c4a574] ring-offset-2"
             />
           ) : (
             <div
               aria-hidden
-              className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-amber-100 text-lg font-bold text-amber-900 ring-2 ring-amber-400 ring-offset-2"
+              className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-[#efe6d8] text-lg font-bold text-[#2a1810] ring-2 ring-[#c4a574] ring-offset-2"
             >
               {initials(vendor.name)}
             </div>
           )}
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap gap-2">
-              <Badge className="w-fit border-amber-800/20 bg-amber-50 text-amber-900">
+              <Badge className="w-fit border border-[#e7e0d4] bg-[#efe6d8] text-[#2a1810]">
                 {VENDOR_CATEGORY_LABEL[category]}
               </Badge>
               <span
@@ -58,7 +58,7 @@ export default function VendorCard({ vendor }: { vendor: PublicVendorCard }) {
               </span>
             </div>
             <Link href={mercadoVendorPath(vendor.slug)} className="mt-2 block">
-              <h3 className="text-xl font-semibold text-stone-900 group-hover:text-amber-800">{vendor.name}</h3>
+              <h3 className="text-xl font-bold text-[#2a1810] group-hover:underline">{vendor.name}</h3>
             </Link>
           </div>
         </div>
