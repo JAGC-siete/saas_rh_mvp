@@ -8,7 +8,12 @@ import { z } from 'zod'
 
 export const VENDOR_APPLICATIONS_TABLE = 'vendor_applications'
 export const VENDOR_APPLICATION_SOURCE = 'mercado-public'
-export const VENDOR_APPLICATION_STATUSES = ['received', 'reviewed', 'rejected'] as const
+export const VENDOR_APPLICATION_STATUSES = [
+  'received',
+  'reviewed',
+  'approved',
+  'rejected',
+] as const
 
 export type VendorApplicationStatus = (typeof VENDOR_APPLICATION_STATUSES)[number]
 

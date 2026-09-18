@@ -3,22 +3,27 @@
  *
  * Público canónico: /mercadosanpablosigua, /inscripcion y /[slug].
  * Legacy /mercado → 301. Assets estáticos siguen en /mercado/*.png.
- * Solicitudes: /app/admin/mercado-solicitudes. Fichas admin: /app/admin/vendors.
+ * Solicitudes: /app/admin/mercado-solicitudes. Fichas SuperAdmin: /app/admin/mercado-fichas.
  */
 
 import type { RoleId } from '../auth/role-access'
 
 export const MERCADO_PUBLIC_PREFIX = '/mercadosanpablosigua'
 export const MERCADO_LEGACY_PREFIX = '/mercado'
-export const MERCADO_ADMIN_PATH = '/app/admin/vendors'
-export const MERCADO_VENDORS_API_PATH = '/api/mercado/vendors'
+export const MERCADO_ADMIN_PATH = '/app/admin/mercado-fichas'
+/** @deprecated alias; usar MERCADO_ADMIN_PATH */
+export const MERCADO_VENDORS_LEGACY_ADMIN_PATH = '/app/admin/vendors'
+export const MERCADO_VENDORS_API_PATH = '/api/admin/mercado/vendors'
+export const MERCADO_VENDORS_UPLOAD_API_PATH = '/api/admin/mercado/upload'
 export const MERCADO_INSCRIPTION_PATH = `${MERCADO_PUBLIC_PREFIX}/inscripcion`
 export const MERCADO_INSCRIPTION_API_PATH = '/api/mercado/inscriptions'
 export const MERCADO_APPLICATIONS_ADMIN_PATH = '/app/admin/mercado-solicitudes'
 export const MERCADO_APPLICATIONS_ADMIN_API_PATH = '/api/admin/mercado/applications'
 
-/** Alta/edición de puestos: tenant admin, no SuperAdmin de Humano SISU. */
-export const MERCADO_ADMIN_ROLES = ['super_admin', 'admin', 'company_admin'] as const satisfies readonly RoleId[]
+/** SuperAdmin opera el directorio municipal (sin tenant SISU). */
+export const MERCADO_ADMIN_ROLES = ['super_admin'] as const satisfies readonly RoleId[]
+
+export const MERCADO_STORAGE_BUCKET = 'mercado-san-pablo'
 
 export function mercadoHomePath(): string {
   return MERCADO_PUBLIC_PREFIX
@@ -40,8 +45,10 @@ export function mercadoAdminListPath(): string {
   return MERCADO_ADMIN_PATH
 }
 
-export function mercadoAdminNewPath(): string {
-  return `${MERCADO_ADMIN_PATH}/new`
+export function mercadoAdminNewPath(fromApplicationId?: string): string {
+  const base = `${MERCADO_ADMIN_PATH}/nueva`
+  if (!fromApplicationId) return base
+  return `${base}?from=${encodeURIComponent(fromApplicationId)}`
 }
 
 export function mercadoAdminEditPath(id: string): string {

@@ -1,13 +1,13 @@
 /**
  * Perfil público de un puesto. SSR para SEO.
  * Shell: isPublicTenantLandingRoute (/mercadosanpablosigua/[slug]).
+ * DB primero; preview hardcodeado si no hay fichas activas.
  */
 
 import Head from 'next/head'
 import type { GetServerSideProps } from 'next'
 import MercadoPublicShell from '../../components/mercado/MercadoPublicShell'
 import VendorLanding from '../../components/mercado/VendorLanding'
-import { findPreviewVendor } from '../../lib/mercado/home'
 import { mercadoVendorJsonLd, serializeJsonLd } from '../../lib/mercado/jsonld'
 import {
   mercadoAssetUrl,
@@ -16,6 +16,7 @@ import {
   mercadoVendorTitle,
 } from '../../lib/mercado/meta'
 import type { PublicVendorCard } from '../../lib/mercado/schema'
+import { resolvePublicVendor } from '../../lib/mercado/vendors-db'
 
 interface VendorProfileProps {
   vendor: PublicVendorCard
@@ -69,11 +70,11 @@ export const getServerSideProps: GetServerSideProps<VendorProfileProps> = async 
     return { notFound: true }
   }
 
-  const vendor = findPreviewVendor(slug)
-  if (!vendor) {
+  const resolved = await resolvePublicVendor(slug)
+  if (!resolved.vendor) {
     return { notFound: true }
   }
 
   ctx.res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=600')
-  return { props: { vendor } }
+  return { props: { vendor: resolved.vendor } }
 }

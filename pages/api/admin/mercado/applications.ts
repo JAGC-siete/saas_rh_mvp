@@ -20,7 +20,7 @@ const patchSchema = z.object({
 })
 
 const LIST_COLUMNS =
-  'id, stall_number, merchant_name, business_name, status, source, notified_at, created_at'
+  'id, stall_number, merchant_name, business_name, status, source, notified_at, created_at, vendor_id'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET' && req.method !== 'PATCH') {
@@ -56,11 +56,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const { id, status } = parsed.data
+    if (status === 'approved') {
+      return res.status(400).json({
+        error: 'Aprobá creando la ficha desde «Crear ficha».',
+      })
+    }
+
     const { data, error } = await adminClient
       .from(VENDOR_APPLICATIONS_TABLE)
       .update({ status })
       .eq('id', id)
-      .select('id, status')
+      .select('id, status, vendor_id')
       .maybeSingle()
 
     if (error) {

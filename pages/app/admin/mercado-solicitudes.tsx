@@ -1,6 +1,6 @@
 /**
- * Bandeja de solicitudes /mercado/inscripcion. Superadmin only.
- * No publica ficha ni crea empresa SISU.
+ * Bandeja de solicitudes /mercadosanpablosigua/inscripcion. Superadmin only.
+ * Crear ficha → approved + vendor_id. reviewed = en proceso.
  */
 
 import { useCallback, useEffect, useState } from 'react'
@@ -12,13 +12,12 @@ import { Badge } from '../../../components/ui/badge'
 import { Button } from '../../../components/ui/button'
 import { Card, CardContent } from '../../../components/ui/card'
 import { getBrowserAuthHeaders } from '../../../lib/auth/browser-auth-headers'
-import {
-  VENDOR_APPLICATION_STATUSES,
-  type VendorApplicationStatus,
-} from '../../../lib/mercado/inscription-schema'
+import type { VendorApplicationStatus } from '../../../lib/mercado/inscription-schema'
 import {
   MERCADO_APPLICATIONS_ADMIN_API_PATH,
+  mercadoAdminEditPath,
   mercadoAdminListPath,
+  mercadoAdminNewPath,
 } from '../../../lib/mercado/paths'
 import { formatDateTimeForHonduras } from '../../../lib/timezone'
 import { Loader2 } from 'lucide-react'
@@ -32,16 +31,21 @@ interface MercadoApplicationRow {
   source: string
   notified_at: string | null
   created_at: string
+  vendor_id: string | null
 }
+
+const MANUAL_STATUSES: VendorApplicationStatus[] = ['received', 'reviewed', 'rejected']
 
 const STATUS_LABEL: Record<VendorApplicationStatus, string> = {
   received: 'Recibida',
-  reviewed: 'Revisada',
+  reviewed: 'En proceso',
+  approved: 'Aprobada (ficha)',
   rejected: 'Descartada',
 }
 
 function statusClass(status: VendorApplicationStatus): string {
-  if (status === 'reviewed') return 'bg-emerald-500/15 text-emerald-300 border-emerald-400/30'
+  if (status === 'approved') return 'bg-emerald-500/15 text-emerald-300 border-emerald-400/30'
+  if (status === 'reviewed') return 'bg-sky-500/15 text-sky-300 border-sky-400/30'
   if (status === 'rejected') return 'bg-white/10 text-gray-300 border-white/20'
   return 'bg-amber-500/15 text-amber-300 border-amber-400/30'
 }
@@ -99,19 +103,20 @@ export default function MercadoSolicitudesPage() {
       <SuperAdminLayout>
         <Head>
           <title>Solicitudes mercado | Super Admin</title>
+          <meta name="robots" content="noindex, nofollow" />
         </Head>
         <div className="space-y-6 p-6">
           <header>
-            <h1 className="text-2xl font-bold text-white">Solicitudes /mercado</h1>
+            <h1 className="text-2xl font-bold text-white">Mercado San Pablo — Solicitudes</h1>
             <p className="mt-1 text-sm text-white/60">
-              Inscripción al directorio. No publica ficha ni crea empresa SISU. El alta de puesto
-              sigue siendo manual.
+              Inscripción al directorio Pickup. Revisá → Creá ficha (pasa a Aprobada). No crea
+              empresa SISU.
             </p>
             <Link
               href={mercadoAdminListPath()}
               className="mt-2 inline-block text-sm text-amber-200 underline-offset-2 hover:underline"
             >
-              Ir a vendedores (ficha manual)
+              Ir a fichas publicadas
             </Link>
           </header>
 
@@ -154,17 +159,30 @@ export default function MercadoSolicitudesPage() {
                       {row.notified_at ? ' · aviso interno enviado' : ' · aviso interno pendiente'}
                     </p>
                     <div className="flex flex-wrap gap-2">
-                      {VENDOR_APPLICATION_STATUSES.map((status) => (
+                      {MANUAL_STATUSES.map((status) => (
                         <Button
                           key={status}
                           size="sm"
                           variant={row.status === status ? 'default' : 'outline'}
-                          disabled={savingId === row.id || row.status === status}
+                          disabled={
+                            savingId === row.id ||
+                            row.status === status ||
+                            Boolean(row.vendor_id && status !== 'rejected')
+                          }
                           onClick={() => void patchStatus(row.id, status)}
                         >
                           {STATUS_LABEL[status]}
                         </Button>
                       ))}
+                      {row.vendor_id ? (
+                        <Button size="sm" variant="outline" asChild>
+                          <Link href={mercadoAdminEditPath(row.vendor_id)}>Ver ficha</Link>
+                        </Button>
+                      ) : (
+                        <Button size="sm" asChild>
+                          <Link href={mercadoAdminNewPath(row.id)}>Crear ficha</Link>
+                        </Button>
+                      )}
                     </div>
                   </CardContent>
                 </Card>

@@ -24,7 +24,6 @@ import {
   MERCADO_GEO,
   MERCADO_SEO,
   mercadoSearchHints,
-  previewVendorsByCategory,
 } from '../../lib/mercado/home'
 import { mercadoShoppingCenterJsonLd, serializeJsonLd } from '../../lib/mercado/jsonld'
 import {
@@ -37,11 +36,13 @@ import {
 import { mercadoHomePath, mercadoVendorPath } from '../../lib/mercado/paths'
 import { mercadoStaticSrc } from '../../lib/mercado/assets'
 import type { PublicVendorCard } from '../../lib/mercado/schema'
+import { resolvePublicVendors } from '../../lib/mercado/vendors-db'
 
 interface MercadoHomeProps {
   vendors: PublicVendorCard[]
   category: VendorCategory | null
   query: string
+  source: 'database' | 'preview'
 }
 
 export default function MercadoHomePage({ vendors, category, query }: MercadoHomeProps) {
@@ -274,15 +275,16 @@ export const getServerSideProps: GetServerSideProps<MercadoHomeProps> = async (c
   const category = isVendorCategory(rawCategory) ? rawCategory : null
   const query = typeof ctx.query.q === 'string' ? ctx.query.q : ''
 
-  const vendors = previewVendorsByCategory(category)
+  const resolved = await resolvePublicVendors(category)
 
   ctx.res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=600')
 
   return {
     props: {
-      vendors,
+      vendors: resolved.vendors,
       category,
       query,
+      source: resolved.source,
     },
   }
 }

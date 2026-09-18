@@ -11,6 +11,8 @@ import {
 } from '../ui/select'
 import { VENDOR_CATEGORIES, VENDOR_CATEGORY_LABEL, type VendorCategory } from '../../lib/mercado/categories'
 import { VENDOR_PAYMENT_METHOD_LABEL } from '../../lib/mercado/payments'
+import { MERCADO_VENDORS_UPLOAD_API_PATH } from '../../lib/mercado/paths'
+import { getBrowserAuthHeaders } from '../../lib/auth/browser-auth-headers'
 import {
   DEFAULT_VENDOR_PAYMENT_METHODS,
   parseCreateVendor,
@@ -29,11 +31,13 @@ export interface VendorFormValues {
   description: string
   whatsapp: string
   logoUrl: string
+  facadeUrl: string
   stallLocation: string
   hoursNote: string
   products: string[]
   paymentMethods: VendorPaymentMethod[]
   status: VendorStatus
+  featured: boolean
 }
 
 const EMPTY_VALUES: VendorFormValues = {
@@ -43,21 +47,40 @@ const EMPTY_VALUES: VendorFormValues = {
   description: '',
   whatsapp: '',
   logoUrl: '',
+  facadeUrl: '',
   stallLocation: '',
   hoursNote: '',
   products: ['', '', '', '', ''],
   paymentMethods: [...DEFAULT_VENDOR_PAYMENT_METHODS],
   status: 'active',
+  featured: false,
+}
+
+async function uploadImage(kind: 'logo' | 'facade' | 'product', file: File) {
+  const headers = await getBrowserAuthHeaders()
+  const body = new FormData()
+  body.append('kind', kind)
+  body.append('file', file)
+  const res = await fetch(MERCADO_VENDORS_UPLOAD_API_PATH, {
+    method: 'POST',
+    headers,
+    body,
+  })
+  const json = (await res.json().catch(() => ({}))) as { url?: string; error?: string; alt?: string }
+  if (!res.ok || !json.url) throw new Error(json.error || 'No se pudo subir')
+  return { url: json.url, alt: json.alt || kind }
 }
 
 export default function VendorForm({
   initialValues,
   submitLabel,
   onValid,
+  busy,
 }: {
   initialValues?: Partial<VendorFormValues>
   submitLabel: string
-  onValid: (payload: CreateVendorPayload) => void
+  onValid: (payload: CreateVendorPayload) => void | Promise<void>
+  busy?: boolean
 }) {
   const [values, setValues] = useState<VendorFormValues>(() => ({
     ...EMPTY_VALUES,
@@ -67,6 +90,7 @@ export default function VendorForm({
   }))
   const [slugTouched, setSlugTouched] = useState(Boolean(initialValues?.slug))
   const [error, setError] = useState<string | null>(null)
+  const [uploading, setUploading] = useState<string | null>(null)
 
   const effectiveSlug = slugTouched ? values.slug : slugifyVendorName(values.name)
 
@@ -80,8 +104,11 @@ export default function VendorForm({
     []
   )
 
-  function onSubmit(event: FormEvent<HTMLFormElement>) {
+  async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    const gallery = values.facadeUrl
+      ? [{ src: values.facadeUrl, alt: `Fachada de ${values.name || 'el puesto'}` }]
+      : []
     const parsed = parseCreateVendor({
       name: values.name,
       slug: effectiveSlug,
@@ -93,14 +120,34 @@ export default function VendorForm({
       hoursNote: values.hoursNote,
       products: values.products,
       paymentMethods: values.paymentMethods,
+      gallery,
       status: values.status,
+      featured: values.featured,
     })
     if (!parsed.success) {
       setError(parsed.error.issues[0]?.message ?? 'Datos inválidos')
       return
     }
     setError(null)
-    onValid(parsed.data)
+    await onValid(parsed.data)
+  }
+
+  async function onUpload(kind: 'logo' | 'facade', file: File | undefined) {
+    if (!file) return
+    setUploading(kind)
+    setError(null)
+    try {
+      const uploaded = await uploadImage(kind, file)
+      setValues((current) =>
+        kind === 'logo'
+          ? { ...current, logoUrl: uploaded.url }
+          : { ...current, facadeUrl: uploaded.url }
+      )
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Error al subir')
+    } finally {
+      setUploading(null)
+    }
   }
 
   return (
@@ -189,7 +236,7 @@ export default function VendorForm({
 
       <div>
         <label htmlFor="vendor-whatsapp" className="mb-1 block text-sm font-medium text-gray-200">
-          Teléfono / WhatsApp
+          WhatsApp del puesto
         </label>
         <Input
           id="vendor-whatsapp"
@@ -230,17 +277,43 @@ export default function VendorForm({
         </div>
       </fieldset>
 
-      <div>
-        <label htmlFor="vendor-logo" className="mb-1 block text-sm font-medium text-gray-200">
-          Imagen / logo (URL)
-        </label>
-        <Input
-          id="vendor-logo"
-          value={values.logoUrl}
-          onChange={(event) => setValues((current) => ({ ...current, logoUrl: event.target.value }))}
-          placeholder="https://…"
-          className={fieldClass}
-        />
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div>
+          <label className="mb-1 block text-sm font-medium text-gray-200">Logo / retrato</label>
+          <Input
+            value={values.logoUrl}
+            onChange={(event) => setValues((current) => ({ ...current, logoUrl: event.target.value }))}
+            placeholder="URL o subí archivo"
+            className={fieldClass}
+          />
+          <input
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            className="mt-2 block w-full text-xs text-gray-300"
+            onChange={(event) => void onUpload('logo', event.target.files?.[0])}
+          />
+          {uploading === 'logo' ? <p className="mt-1 text-xs text-amber-200">Subiendo…</p> : null}
+        </div>
+        <div>
+          <label className="mb-1 block text-sm font-medium text-gray-200">
+            Foto de fachada (pickup)
+          </label>
+          <Input
+            value={values.facadeUrl}
+            onChange={(event) =>
+              setValues((current) => ({ ...current, facadeUrl: event.target.value }))
+            }
+            placeholder="URL o subí archivo"
+            className={fieldClass}
+          />
+          <input
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            className="mt-2 block w-full text-xs text-gray-300"
+            onChange={(event) => void onUpload('facade', event.target.files?.[0])}
+          />
+          {uploading === 'facade' ? <p className="mt-1 text-xs text-amber-200">Subiendo…</p> : null}
+        </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
@@ -272,9 +345,41 @@ export default function VendorForm({
         </div>
       </div>
 
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div>
+          <label className="mb-1 block text-sm font-medium text-gray-200">Visibilidad</label>
+          <Select
+            value={values.status}
+            onValueChange={(value) =>
+              setValues((current) => ({ ...current, status: value as VendorStatus }))
+            }
+          >
+            <SelectTrigger className={fieldClass}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="active">Activo (público)</SelectItem>
+              <SelectItem value="inactive">Inactivo (baja)</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <label className="mt-6 flex items-center gap-2 text-sm text-gray-200">
+          <input
+            type="checkbox"
+            checked={values.featured}
+            onChange={(event) =>
+              setValues((current) => ({ ...current, featured: event.target.checked }))
+            }
+          />
+          Destacado (aportación anual al día)
+        </label>
+      </div>
+
       {error && <p className="text-sm text-red-400">{error}</p>}
 
-      <Button type="submit">{submitLabel}</Button>
+      <Button type="submit" disabled={busy || Boolean(uploading)}>
+        {busy ? 'Guardando…' : submitLabel}
+      </Button>
     </form>
   )
 }
