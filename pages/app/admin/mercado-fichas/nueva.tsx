@@ -34,6 +34,8 @@ export default function MercadoFichaNuevaPage() {
             business_name: string
             merchant_name: string
             stall_number: string
+            whatsapp?: string
+            presence_plan?: 'basic' | 'featured_vip'
             vendor_id?: string | null
           }>
         }
@@ -50,6 +52,8 @@ export default function MercadoFichaNuevaPage() {
         setInitial({
           name: app.business_name,
           stallLocation: app.stall_number,
+          whatsapp: app.whatsapp ?? '',
+          featured: app.presence_plan === 'featured_vip',
           description: `${app.business_name} de ${app.merchant_name} en el Mercado Municipal San Pablo. Pedí por WhatsApp y recogé en el local sin hacer fila.`,
           products: ['Consultar por WhatsApp', '', '', '', ''],
           category: 'otros',

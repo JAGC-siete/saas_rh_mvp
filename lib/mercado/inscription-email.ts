@@ -1,5 +1,5 @@
 /**
- * Aviso interno cuando un comerciante envía una solicitud de inscripción al directorio.
+ * Aviso interno cuando un locatario envía una solicitud de registro de local.
  */
 
 import {
@@ -12,7 +12,10 @@ import { formatDateTimeForHonduras } from '../timezone'
 import { mercadoInscriptionCanonical } from './meta'
 import { mercadoApplicationsAdminPath } from './paths'
 import { mercadoAbsoluteUrl } from './public-url'
-import type { MercadoInscription } from './inscription-schema'
+import {
+  mercadoPresencePlanNotifyLabel,
+  type MercadoInscription,
+} from './inscription-schema'
 
 /** Destino de operación del MVP. No es secreto; se puede sobreescribir por env. */
 export const MERCADO_INSCRIPTION_NOTIFY_DEFAULT = 'jorge7gomez@gmail.com'
@@ -31,31 +34,35 @@ export function buildMercadoInscriptionNotification(params: {
 }): { subject: string; html: string } {
   const { inscription, receivedAt } = params
   const adminUrl = mercadoAbsoluteUrl(mercadoApplicationsAdminPath())
+  const planLabel = mercadoPresencePlanNotifyLabel(inscription.presencePlan)
 
   const bodyHtml = [
     liquidParagraph(
-      `Llegó una <strong>solicitud de inscripción</strong> al directorio del Mercado Municipal San Pablo (${escapeHtml(mercadoInscriptionCanonical())}).`
+      `Llegó una <strong>solicitud de registro de local</strong> al directorio del Mercado Municipal San Pablo (${escapeHtml(mercadoInscriptionCanonical())}).`
     ),
     liquidKeyValueTable([
-      { label: 'Comercio', value: inscription.businessName, emphasize: true },
-      { label: 'Comerciante', value: inscription.merchantName },
-      { label: 'Número de local', value: inscription.stallNumber },
+      { label: 'Local', value: inscription.businessName, emphasize: true },
+      { label: 'Propietario', value: inscription.merchantName },
+      { label: 'Puesto / pasillo', value: inscription.stallNumber },
+      { label: 'WhatsApp', value: inscription.whatsapp },
+      { label: 'Nivel de presencia', value: planLabel },
+      { label: 'Autorización', value: 'Sí · autorizó publicar los datos del comercio' },
       { label: 'Estado', value: 'Recibida · pendiente de revisión' },
       { label: 'Recibido (HN)', value: formatDateTimeForHonduras(receivedAt) },
     ]),
     liquidParagraph(
-      `No se creó ficha pública ni cuenta. El alta se hace a mano en ${escapeHtml(adminUrl)}.`
+      `No se creó ficha pública ni cuenta. El plan VIP, si aplica, es intención de presencia: la aportación y el sticker se coordinan a mano. Alta en ${escapeHtml(adminUrl)}.`
     ),
   ].join('')
 
   return {
-    subject: `Solicitud de inscripción — ${inscription.businessName} (local ${inscription.stallNumber})`,
+    subject: `Solicitud de registro de local — ${inscription.businessName} (local ${inscription.stallNumber})`,
     html: wrapLiquidEmail({
-      title: 'Solicitud de inscripción',
+      title: 'Solicitud de registro de local',
       subtitle: 'Mercado Municipal San Pablo',
       badge: 'Directorio',
       bodyHtml,
-      footerNote: 'Aviso automático del formulario público. La solicitud queda pendiente de revisión.',
+      footerNote: 'Aviso automático del formulario público. La solicitud queda pendiente de revisión. VIP no significa pago registrado.',
     }),
   }
 }

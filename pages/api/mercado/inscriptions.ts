@@ -1,6 +1,6 @@
 /**
- * Recibe solicitudes de inscripción al directorio /mercado.
- * Sin sesión. No crea vendor, slug, WhatsApp ni ficha pública.
+ * Recibe solicitudes de registro de local al directorio /mercado.
+ * Sin sesión. No crea vendor, slug, ficha pública ni registra un cobro.
  *
  * Seguridad: rate limit por IP, honeypot y ráfaga global. Insert con service role
  * porque anon no tiene GRANT en vendor_applications.
@@ -20,8 +20,8 @@ import {
 import {
   looksLikeInscriptionBot,
   mercadoInscriptionFieldErrors,
+  mercadoInscriptionToApplicationRow,
   parseMercadoInscription,
-  VENDOR_APPLICATION_SOURCE,
   VENDOR_APPLICATIONS_TABLE,
 } from '../../../lib/mercado/inscription-schema'
 
@@ -125,13 +125,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
     const { data, error } = await supabase
       .from(VENDOR_APPLICATIONS_TABLE)
-      .insert({
-        stall_number: inscription.stallNumber,
-        merchant_name: inscription.merchantName,
-        business_name: inscription.businessName,
-        status: 'received',
-        source: VENDOR_APPLICATION_SOURCE,
-      })
+      .insert(mercadoInscriptionToApplicationRow(inscription, receivedAt))
       .select('id')
       .single()
 

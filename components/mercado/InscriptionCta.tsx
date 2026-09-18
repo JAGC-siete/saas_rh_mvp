@@ -4,8 +4,8 @@ import styles from './mercado.module.css'
 
 const CTA_TITLE = '¿Tenés puesto en el mercado?'
 const CTA_BODY =
-  'Pedí que tu comercio aparezca en este directorio. Es gratis. Recibimos la solicitud y el equipo publica el puesto a mano.'
-const CTA_ACTION = 'Solicitar inscripción'
+  'Pedí el registro de tu local en este directorio. El básico es gratis; el VIP es aportación anual que se coordina después. Recibimos la solicitud y el equipo publica el puesto a mano.'
+const CTA_ACTION = 'Solicitar registro'
 
 export function MercadoInscriptionHeaderLink() {
   return (
@@ -52,8 +52,8 @@ export function MercadoInscriptionCompactCta() {
         ¿Tu comercio no está en el directorio?
       </h2>
       <p className="mt-2 text-sm" style={{ color: 'var(--mercado-muted)' }}>
-        Enviá una solicitud de inscripción. Es gratis, no crea una cuenta y la publicación no es
-        inmediata.
+        Enviá una solicitud de registro. El básico es gratis; el VIP se coordina aparte. No crea
+        una cuenta y la publicación no es inmediata.
       </p>
       <Link href={mercadoInscriptionPath()} className={`${styles.ctaSolid} mt-4`}>
         {CTA_ACTION}

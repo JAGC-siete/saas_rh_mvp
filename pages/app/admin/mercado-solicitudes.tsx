@@ -12,7 +12,11 @@ import { Badge } from '../../../components/ui/badge'
 import { Button } from '../../../components/ui/button'
 import { Card, CardContent } from '../../../components/ui/card'
 import { getBrowserAuthHeaders } from '../../../lib/auth/browser-auth-headers'
-import type { VendorApplicationStatus } from '../../../lib/mercado/inscription-schema'
+import {
+  mercadoPresencePlanAdminLabel,
+  type MercadoPresencePlan,
+  type VendorApplicationStatus,
+} from '../../../lib/mercado/inscription-schema'
 import {
   MERCADO_APPLICATIONS_ADMIN_API_PATH,
   mercadoAdminEditPath,
@@ -27,6 +31,10 @@ interface MercadoApplicationRow {
   stall_number: string
   merchant_name: string
   business_name: string
+  whatsapp: string
+  presence_plan: MercadoPresencePlan
+  authorized_at: string
+  authorization_text: string | null
   status: VendorApplicationStatus
   source: string
   notified_at: string | null
@@ -151,11 +159,21 @@ export default function MercadoSolicitudesPage() {
                         <p className="text-sm text-white/70">
                           {row.merchant_name} · local {row.stall_number}
                         </p>
+                        <p className="mt-1 text-sm text-white/70">WhatsApp {row.whatsapp}</p>
+                        <p className="text-sm text-white/70">
+                          Plan {mercadoPresencePlanAdminLabel(row.presence_plan)}
+                          {row.presence_plan === 'featured_vip'
+                            ? ' · aportación, no cobrada aquí'
+                            : ''}
+                        </p>
                       </div>
                       <Badge className={statusClass(row.status)}>{STATUS_LABEL[row.status]}</Badge>
                     </div>
                     <p className="text-xs text-white/40">
                       {formatDateTimeForHonduras(row.created_at)}
+                      {row.authorized_at
+                        ? ` · autorizó ${formatDateTimeForHonduras(row.authorized_at)}`
+                        : ''}
                       {row.notified_at ? ' · aviso interno enviado' : ' · aviso interno pendiente'}
                     </p>
                     <div className="flex flex-wrap gap-2">

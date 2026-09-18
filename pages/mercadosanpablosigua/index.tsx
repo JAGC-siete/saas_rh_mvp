@@ -256,7 +256,9 @@ export default function MercadoHomePage({ vendors }: MercadoHomeProps) {
             <ol className="mt-4 grid gap-3 text-sm sm:grid-cols-3" style={{ color: 'var(--mercado-muted)' }}>
               <li>
                 <strong style={{ color: 'var(--mercado-cacao)' }}>1. Solicitud</strong>
-                <p className="mt-1">Enviás el local y el nombre del comercio. Es gratis.</p>
+                <p className="mt-1">
+                  Enviás el local, WhatsApp y el plan. El básico es gratis; el VIP se coordina aparte.
+                </p>
               </li>
               <li>
                 <strong style={{ color: 'var(--mercado-cacao)' }}>2. Revisión</strong>

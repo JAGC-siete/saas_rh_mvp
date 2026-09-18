@@ -20,7 +20,7 @@ const patchSchema = z.object({
 })
 
 const LIST_COLUMNS =
-  'id, stall_number, merchant_name, business_name, status, source, notified_at, created_at, vendor_id'
+  'id, stall_number, merchant_name, business_name, whatsapp, presence_plan, authorized_at, authorization_text, status, source, notified_at, created_at, vendor_id'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET' && req.method !== 'PATCH') {

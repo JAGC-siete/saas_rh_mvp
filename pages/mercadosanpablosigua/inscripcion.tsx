@@ -1,5 +1,5 @@
 /**
- * Solicitud pública de inscripción al directorio. Sin cuenta, sin cobro, sin publicación automática.
+ * Solicitud pública de registro de local. Sin cuenta, sin cobro en línea, sin publicación automática.
  * Shell: isPublicTenantLandingRoute (/mercadosanpablosigua/inscripcion).
  */
 
@@ -7,6 +7,7 @@ import Head from 'next/head'
 import Link from 'next/link'
 import InscriptionForm from '../../components/mercado/InscriptionForm'
 import MercadoPublicShell from '../../components/mercado/MercadoPublicShell'
+import styles from '../../components/mercado/mercado.module.css'
 import { MERCADO_SEO } from '../../lib/mercado/home'
 import {
   mercadoInscriptionCanonical,
@@ -38,16 +39,18 @@ export default function MercadoInscriptionPage() {
         <meta name="twitter:description" content={description} />
       </Head>
       <MercadoPublicShell>
-        <article className="mx-auto max-w-xl px-4 py-12">
+        <article className="mx-auto max-w-2xl px-4 py-12">
           <Link href={mercadoHomePath()} className="text-sm text-amber-900 underline">
             Volver al directorio
           </Link>
           <h1 className="mt-6 text-3xl font-bold tracking-tight text-stone-900 sm:text-4xl">
-            Solicitud de inscripción
+            Solicitud de registro de local en página web
           </h1>
-          <p className="mt-4 text-stone-600">
+          <p className={`mt-4 ${styles.inscriptionLead}`}>
             Completá estos datos para pedir que tu comercio aparezca en el directorio de{' '}
-            {MERCADO_SEO.name}. Es gratis. No se crea una cuenta y la publicación no es inmediata.
+            {MERCADO_SEO.name}. No se crea una cuenta. El registro básico es gratuito. El perfil
+            destacado VIP es una aportación anual (L. 1,500) que se coordina después; este
+            formulario no cobra. La publicación no es inmediata.
           </p>
           <div className="mt-8">
             <InscriptionForm />

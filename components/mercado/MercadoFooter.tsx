@@ -76,7 +76,8 @@ export default function MercadoFooter() {
             </li>
           </ul>
           <p className={styles.footerMuted}>
-            La inscripción es gratis. Revisamos a mano y publicamos el puesto cuando esté listo.
+            El registro básico es gratis. El VIP es aportación anual que se coordina aparte.
+            Revisamos a mano y publicamos el puesto cuando esté listo.
           </p>
           <div className="mt-3">
             <MercadoInscriptionHeaderLink />

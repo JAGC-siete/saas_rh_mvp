@@ -59,12 +59,12 @@ export function mercadoHomeCanonical() {
 }
 
 export function mercadoInscriptionTitle() {
-  return 'Solicitud de inscripción | Mercado Municipal San Pablo'
+  return 'Solicitud de registro de local en página web | Mercado Municipal San Pablo'
 }
 
 export function mercadoInscriptionDescription() {
   return clampMetaDescription(
-    'Pedí que tu puesto aparezca en el directorio del Mercado San Pablo. Es gratis. La publicación no es inmediata.'
+    'Registrá tu local en el directorio del Mercado San Pablo. El básico es gratis; el VIP es aportación anual que se coordina después. Sin cuenta. La publicación no es inmediata.'
   )
 }
 

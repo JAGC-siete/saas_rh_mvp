@@ -1,26 +1,39 @@
 /**
- * Formulario público de solicitud de inscripción.
- * Validación Zod compartida con el endpoint. Sin cuenta, sin cobro, sin publicación automática.
+ * Formulario público: Solicitud de registro de local en página web.
+ * Validación Zod compartida con el endpoint. Sin cuenta, sin cobro en línea, sin publicación automática.
  */
 
-import { useState, type FormEvent } from 'react'
+import { useId, useState, type FormEvent } from 'react'
 import { MERCADO_INSCRIPTION_API_PATH } from '../../lib/mercado/paths'
 import {
+  MERCADO_INSCRIPTION_AUTHORIZATION_TEXT,
+  MERCADO_PRESENCE_PLAN_COPY,
+  MERCADO_PRESENCE_PLANS,
   mercadoInscriptionFieldErrors,
   parseMercadoInscription,
+  type MercadoPresencePlan,
 } from '../../lib/mercado/inscription-schema'
+import styles from './mercado.module.css'
 
 const fieldClass =
-  'mt-1 w-full rounded-lg border border-stone-200 bg-white px-3 py-3 text-stone-900 shadow-none outline-none ring-0 placeholder:text-stone-400 focus:border-amber-500 focus:ring-2 focus:ring-amber-200'
+  'mt-1 w-full rounded-lg border px-3 py-3 text-stone-900 shadow-none outline-none ring-0 placeholder:text-stone-500 focus:border-amber-700 focus:ring-2 focus:ring-amber-200'
+const fieldStyle = {
+  borderColor: 'var(--mercado-line)',
+  background: '#fff',
+}
 
 export default function InscriptionForm() {
+  const formId = useId()
+  const [businessName, setBusinessName] = useState('')
   const [stallNumber, setStallNumber] = useState('')
   const [merchantName, setMerchantName] = useState('')
-  const [businessName, setBusinessName] = useState('')
+  const [whatsapp, setWhatsapp] = useState('')
+  const [presencePlan, setPresencePlan] = useState<MercadoPresencePlan | ''>('')
+  const [authorized, setAuthorized] = useState(false)
   const [honeypot, setHoneypot] = useState('')
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [sending, setSending] = useState(false)
-  const [sent, setSent] = useState(false)
+  const [sentPlan, setSentPlan] = useState<MercadoPresencePlan | null>(null)
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -30,6 +43,9 @@ export default function InscriptionForm() {
       stallNumber,
       merchantName,
       businessName,
+      whatsapp,
+      presencePlan,
+      authorized,
       website: honeypot,
     }
 
@@ -48,11 +64,14 @@ export default function InscriptionForm() {
         body: JSON.stringify(parsed.data),
       })
       if (!res.ok) {
-        const body = (await res.json().catch(() => ({}))) as { error?: string }
-        setErrors({ submit: body.error || 'No se pudo enviar. Intenta de nuevo.' })
+        const body = (await res.json().catch(() => ({}))) as {
+          error?: string
+          fields?: Record<string, string>
+        }
+        setErrors(body.fields ?? { submit: body.error || 'No se pudo enviar. Intenta de nuevo.' })
         return
       }
-      setSent(true)
+      setSentPlan(parsed.data.presencePlan)
     } catch {
       setErrors({ submit: 'Sin conexión. Revisa tu internet e intenta de nuevo.' })
     } finally {
@@ -60,73 +79,202 @@ export default function InscriptionForm() {
     }
   }
 
-  if (sent) {
+  if (sentPlan) {
     return (
-      <div className="rounded-2xl border border-amber-200 bg-white p-8" role="status">
-        <h2 className="text-xl font-semibold text-stone-900">Solicitud recibida</h2>
-        <p className="mt-3 text-stone-600">
-          Recibimos tu solicitud. La publicación no es inmediata: el equipo revisa los datos y da de
-          alta el puesto a mano.
+      <div className={styles.inscriptionSuccess} role="status">
+        <h2>Solicitud recibida</h2>
+        <p>
+          Recibimos tu solicitud de registro. Queda pendiente de revisión: la publicación no es
+          inmediata y el directorio no cambia hasta el alta a mano.
         </p>
+        {sentPlan === 'featured_vip' ? (
+          <p>
+            Elegiste el perfil destacado VIP. La aportación anual (L. 1,500) y el sticker se
+            coordinan aparte. Este envío no registra un pago.
+          </p>
+        ) : (
+          <p>Elegiste el registro básico, sin aportación.</p>
+        )}
       </div>
     )
   }
 
+  const stallErrorId = `${formId}-stall-error`
+  const merchantErrorId = `${formId}-merchant-error`
+  const businessErrorId = `${formId}-business-error`
+  const whatsappErrorId = `${formId}-whatsapp-error`
+  const planErrorId = `${formId}-plan-error`
+  const authorizedErrorId = `${formId}-authorized-error`
+
   return (
-    <form onSubmit={onSubmit} noValidate className="rounded-2xl border border-stone-200 bg-white p-6 sm:p-8">
-      <div>
-        <label htmlFor="stall-number" className="text-sm font-medium text-stone-700">
-          Número de local
-        </label>
-        <input
-          id="stall-number"
-          name="stallNumber"
-          value={stallNumber}
-          onChange={(event) => setStallNumber(event.target.value)}
-          placeholder="Ej. 8 o Pasillo 1, local 8"
-          autoComplete="off"
-          className={fieldClass}
-          aria-invalid={Boolean(errors.stallNumber)}
-          required
-        />
-        {errors.stallNumber && <p className="mt-1 text-sm text-red-600">{errors.stallNumber}</p>}
-      </div>
+    <form onSubmit={onSubmit} noValidate className={styles.inscriptionForm}>
+      <section className={styles.inscriptionSection} aria-labelledby={`${formId}-datos`}>
+        <h2 id={`${formId}-datos`}>1. Datos del comercio</h2>
 
-      <div className="mt-5">
-        <label htmlFor="merchant-name" className="text-sm font-medium text-stone-700">
-          Nombre del comerciante
-        </label>
-        <input
-          id="merchant-name"
-          name="merchantName"
-          value={merchantName}
-          onChange={(event) => setMerchantName(event.target.value)}
-          placeholder="Quién atiende el puesto"
-          autoComplete="name"
-          className={fieldClass}
-          aria-invalid={Boolean(errors.merchantName)}
-          required
-        />
-        {errors.merchantName && <p className="mt-1 text-sm text-red-600">{errors.merchantName}</p>}
-      </div>
+        <div>
+          <label htmlFor={`${formId}-business`} className={styles.inscriptionLabel}>
+            Nombre del local
+          </label>
+          <input
+            id={`${formId}-business`}
+            name="businessName"
+            value={businessName}
+            onChange={(event) => setBusinessName(event.target.value)}
+            placeholder="Cómo querés que aparezca el puesto"
+            autoComplete="organization"
+            className={fieldClass}
+            style={fieldStyle}
+            aria-invalid={Boolean(errors.businessName)}
+            aria-describedby={errors.businessName ? businessErrorId : undefined}
+            required
+          />
+          {errors.businessName && (
+            <p id={businessErrorId} className={styles.inscriptionError}>
+              {errors.businessName}
+            </p>
+          )}
+        </div>
 
-      <div className="mt-5">
-        <label htmlFor="business-name" className="text-sm font-medium text-stone-700">
-          Nombre del comercio
+        <div>
+          <label htmlFor={`${formId}-stall`} className={styles.inscriptionLabel}>
+            Número de puesto / pasillo
+          </label>
+          <input
+            id={`${formId}-stall`}
+            name="stallNumber"
+            value={stallNumber}
+            onChange={(event) => setStallNumber(event.target.value)}
+            placeholder="Pasillo 1, local 8"
+            autoComplete="off"
+            className={fieldClass}
+            style={fieldStyle}
+            aria-invalid={Boolean(errors.stallNumber)}
+            aria-describedby={errors.stallNumber ? stallErrorId : undefined}
+            required
+          />
+          {errors.stallNumber && (
+            <p id={stallErrorId} className={styles.inscriptionError}>
+              {errors.stallNumber}
+            </p>
+          )}
+        </div>
+
+        <div>
+          <label htmlFor={`${formId}-merchant`} className={styles.inscriptionLabel}>
+            Nombre del propietario
+          </label>
+          <input
+            id={`${formId}-merchant`}
+            name="merchantName"
+            value={merchantName}
+            onChange={(event) => setMerchantName(event.target.value)}
+            placeholder="Quién es dueño del puesto"
+            autoComplete="name"
+            className={fieldClass}
+            style={fieldStyle}
+            aria-invalid={Boolean(errors.merchantName)}
+            aria-describedby={errors.merchantName ? merchantErrorId : undefined}
+            required
+          />
+          {errors.merchantName && (
+            <p id={merchantErrorId} className={styles.inscriptionError}>
+              {errors.merchantName}
+            </p>
+          )}
+        </div>
+
+        <div>
+          <label htmlFor={`${formId}-whatsapp`} className={styles.inscriptionLabel}>
+            Teléfono / WhatsApp
+          </label>
+          <input
+            id={`${formId}-whatsapp`}
+            name="whatsapp"
+            type="tel"
+            inputMode="tel"
+            value={whatsapp}
+            onChange={(event) => setWhatsapp(event.target.value)}
+            placeholder="Ej. 9999-0000"
+            autoComplete="tel"
+            className={fieldClass}
+            style={fieldStyle}
+            aria-invalid={Boolean(errors.whatsapp)}
+            aria-describedby={errors.whatsapp ? whatsappErrorId : undefined}
+            required
+          />
+          {errors.whatsapp && (
+            <p id={whatsappErrorId} className={styles.inscriptionError}>
+              {errors.whatsapp}
+            </p>
+          )}
+        </div>
+      </section>
+
+      <fieldset className={styles.inscriptionSection} aria-describedby={errors.presencePlan ? planErrorId : undefined}>
+        <legend id={`${formId}-plan`}>2. Nivel de presencia</legend>
+        <p className={styles.inscriptionHint}>Elegí exactamente una opción. El VIP no se cobra en este envío.</p>
+        <div className={styles.planGrid} role="radiogroup" aria-labelledby={`${formId}-plan`} aria-required="true">
+          {MERCADO_PRESENCE_PLANS.map((plan) => {
+            const copy = MERCADO_PRESENCE_PLAN_COPY[plan]
+            const selected = presencePlan === plan
+            const inputId = `${formId}-plan-${plan}`
+            return (
+              <label
+                key={plan}
+                htmlFor={inputId}
+                className={`${styles.planCard} ${selected ? styles.planCardSelected : ''}`}
+              >
+                <input
+                  id={inputId}
+                  type="radio"
+                  name="presencePlan"
+                  value={plan}
+                  checked={selected}
+                  onChange={() => setPresencePlan(plan)}
+                  required
+                />
+                <span className={styles.planCardBody}>
+                  <span className={styles.planCardTitle}>{copy.title}</span>
+                  <span className={styles.planCardPrice}>{copy.price}</span>
+                  <span className={styles.planCardSummary}>{copy.summary}</span>
+                  <ul>
+                    {copy.benefits.map((benefit) => (
+                      <li key={benefit}>{benefit}</li>
+                    ))}
+                  </ul>
+                </span>
+              </label>
+            )
+          })}
+        </div>
+        {errors.presencePlan && (
+          <p id={planErrorId} className={styles.inscriptionError}>
+            {errors.presencePlan}
+          </p>
+        )}
+      </fieldset>
+
+      <section className={styles.inscriptionSection} aria-labelledby={`${formId}-auth`}>
+        <h2 id={`${formId}-auth`}>3. Autorización</h2>
+        <label className={styles.inscriptionCheck} htmlFor={`${formId}-authorized`}>
+          <input
+            id={`${formId}-authorized`}
+            name="authorized"
+            type="checkbox"
+            checked={authorized}
+            onChange={(event) => setAuthorized(event.target.checked)}
+            required
+            aria-invalid={Boolean(errors.authorized)}
+            aria-describedby={errors.authorized ? authorizedErrorId : undefined}
+          />
+          <span>{MERCADO_INSCRIPTION_AUTHORIZATION_TEXT}</span>
         </label>
-        <input
-          id="business-name"
-          name="businessName"
-          value={businessName}
-          onChange={(event) => setBusinessName(event.target.value)}
-          placeholder="Cómo querés que aparezca el puesto"
-          autoComplete="organization"
-          className={fieldClass}
-          aria-invalid={Boolean(errors.businessName)}
-          required
-        />
-        {errors.businessName && <p className="mt-1 text-sm text-red-600">{errors.businessName}</p>}
-      </div>
+        {errors.authorized && (
+          <p id={authorizedErrorId} className={styles.inscriptionError}>
+            {errors.authorized}
+          </p>
+        )}
+      </section>
 
       <div className="hidden" aria-hidden="true">
         <label htmlFor="inscription-website">Sitio web</label>
@@ -141,14 +289,9 @@ export default function InscriptionForm() {
         />
       </div>
 
-      {errors.submit && <p className="mt-4 text-sm text-red-600">{errors.submit}</p>}
+      {errors.submit && <p className={styles.inscriptionError}>{errors.submit}</p>}
 
-      <button
-        type="submit"
-        disabled={sending}
-        className="mt-6 w-full rounded-lg px-4 py-3 text-sm font-semibold text-white disabled:opacity-70"
-        style={{ backgroundColor: '#d97706' }}
-      >
+      <button type="submit" disabled={sending} className={styles.inscriptionSubmit}>
         {sending ? 'Enviando…' : 'Enviar solicitud'}
       </button>
     </form>

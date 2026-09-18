@@ -588,3 +588,181 @@
     padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
   }
 }
+
+.inscriptionLead {
+  color: var(--mercado-muted);
+  line-height: 1.55;
+}
+
+.inscriptionForm {
+  border: 1px solid var(--mercado-line);
+  background: var(--mercado-cream);
+  border-radius: 1.15rem;
+  padding: 1.5rem;
+  display: grid;
+  gap: 1.75rem;
+}
+
+.inscriptionSection {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+  display: grid;
+  gap: 1.1rem;
+}
+
+.inscriptionSection h2,
+.inscriptionSection legend {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--mercado-cacao);
+}
+
+.inscriptionLabel {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--mercado-ink);
+}
+
+.inscriptionHint {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--mercado-muted);
+  line-height: 1.45;
+}
+
+.inscriptionError {
+  margin: 0.35rem 0 0;
+  font-size: 0.875rem;
+  color: #9f1239;
+}
+
+.inscriptionCheck {
+  display: flex;
+  gap: 0.7rem;
+  align-items: flex-start;
+  font-size: 0.95rem;
+  line-height: 1.45;
+  color: var(--mercado-ink);
+}
+
+.inscriptionCheck input {
+  margin-top: 0.2rem;
+  flex-shrink: 0;
+  width: 1.1rem;
+  height: 1.1rem;
+  accent-color: var(--mercado-chile);
+}
+
+.planGrid {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.planCard {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.7rem;
+  align-items: start;
+  border: 1px solid var(--mercado-line);
+  background: #fff;
+  border-radius: 0.9rem;
+  padding: 1rem;
+  cursor: pointer;
+  color: var(--mercado-ink);
+}
+
+.planCard:focus-within,
+.planCardSelected {
+  border-color: var(--mercado-chile);
+  box-shadow: 0 0 0 3px rgba(159, 18, 57, 0.18);
+}
+
+.planCard input {
+  margin-top: 0.2rem;
+  accent-color: var(--mercado-chile);
+}
+
+.planCardBody {
+  display: grid;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.planCardTitle {
+  font-weight: 800;
+  color: var(--mercado-cacao);
+}
+
+.planCardPrice {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--mercado-chile);
+}
+
+.planCardSummary {
+  font-size: 0.85rem;
+  color: var(--mercado-muted);
+  line-height: 1.4;
+}
+
+.planCard ul {
+  margin: 0.35rem 0 0;
+  padding-left: 1.1rem;
+  font-size: 0.8rem;
+  color: var(--mercado-ink);
+  line-height: 1.4;
+}
+
+.inscriptionSubmit {
+  width: 100%;
+  border: 0;
+  border-radius: 0.65rem;
+  padding: 0.85rem 1rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #fffaf3;
+  background: var(--mercado-cacao);
+  cursor: pointer;
+}
+
+.inscriptionSubmit:hover:not(:disabled) {
+  background: var(--mercado-chile);
+}
+
+.inscriptionSubmit:disabled {
+  opacity: 0.7;
+  cursor: wait;
+}
+
+.inscriptionSuccess {
+  border: 1px solid #f5d0a8;
+  background: #fff;
+  border-radius: 1.15rem;
+  padding: 2rem;
+}
+
+.inscriptionSuccess h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--mercado-cacao);
+}
+
+.inscriptionSuccess p {
+  margin: 0.75rem 0 0;
+  color: var(--mercado-muted);
+  line-height: 1.5;
+}
+
+@media (min-width: 640px) {
+  .inscriptionForm {
+    padding: 2rem;
+  }
+
+  .planGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
