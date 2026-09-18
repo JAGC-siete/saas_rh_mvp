@@ -169,6 +169,7 @@ describe('mercado: solicitud de registro de local', () => {
 
   it('acota el texto de autorización y no arrastra el typo del papel', () => {
     assert.equal(MERCADO_PRESENCE_PLAN_COPY.basic.title, 'Registro básico')
+    assert.equal(MERCADO_PRESENCE_PLAN_COPY.featured_vip.title, 'Perfil destacado')
     assert.equal(MERCADO_PRESENCE_PLAN_COPY.featured_vip.price, 'Aportación L. 1,500 / año')
     assert.ok(MERCADO_INSCRIPTION_AUTHORIZATION_TEXT.length >= 20)
     assert.ok(MERCADO_INSCRIPTION_AUTHORIZATION_TEXT.length <= 500)

@@ -33,7 +33,7 @@ export const MERCADO_PRESENCE_PLAN_COPY: Record<
     price: 'Gratuito',
   },
   featured_vip: {
-    title: 'Perfil destacado VIP',
+    title: 'Perfil destacado',
     price: 'Aportación L. 1,500 / año',
   },
 }

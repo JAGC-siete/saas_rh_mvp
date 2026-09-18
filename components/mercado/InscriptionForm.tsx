@@ -89,7 +89,7 @@ export default function InscriptionForm() {
         </p>
         {sentPlan === 'featured_vip' ? (
           <p>
-            Elegiste el perfil destacado VIP. La aportación anual (L. 1,500) y el sticker se
+            Elegiste el perfil destacado. La aportación anual (L. 1,500) y el sticker se
             coordinan aparte. Este envío no registra un pago.
           </p>
         ) : (
