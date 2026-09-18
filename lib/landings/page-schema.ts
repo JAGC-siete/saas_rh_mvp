@@ -7,7 +7,16 @@ import { z } from 'zod'
 
 export const LANDING_SCHEMA_VERSION = 1
 
-export const LANDING_TEMPLATE_KEYS = ['papeleria', 'barberia', 'salon_belleza', 'comercial'] as const
+export const LANDING_TEMPLATE_KEYS = [
+  'papeleria',
+  'barberia',
+  'salon_belleza',
+  'comercial',
+  'ferreteria',
+  'mercadito',
+  'supermercado',
+  'clinica',
+] as const
 export type LandingTemplateKey = (typeof LANDING_TEMPLATE_KEYS)[number]
 
 export const LANDING_PAGE_STATUSES = ['draft', 'published', 'archived'] as const

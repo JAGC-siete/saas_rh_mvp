@@ -50,6 +50,8 @@ export interface LandingPageRow {
   updated_by: string | null
   created_at: string
   updated_at: string
+  is_lead_preview: boolean
+  webycitas_lead_id: string | null
 }
 
 export type LandingPageInsert = Pick<
@@ -59,7 +61,7 @@ export type LandingPageInsert = Pick<
   Partial<
     Pick<
       LandingPageRow,
-      'status' | 'schema_version' | 'content_json' | 'lead_notify_email' | 'created_by' | 'updated_by'
+      'status' | 'schema_version' | 'content_json' | 'published_content_json' | 'published_at' | 'lead_notify_email' | 'created_by' | 'updated_by' | 'is_lead_preview' | 'webycitas_lead_id'
     >
   >
 

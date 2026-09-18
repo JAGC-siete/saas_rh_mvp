@@ -46,6 +46,30 @@ export const LANDING_TEMPLATE_OPTIONS: readonly LandingTemplateOption[] = [
     description: 'Muebles, línea blanca y electrodomésticos con crédito propio.',
     slugHint: 'comercial',
   },
+  {
+    key: 'ferreteria',
+    label: 'Ferretería',
+    description: 'Tornillería, pintura, herramientas y pedido por WhatsApp.',
+    slugHint: 'ferreteria',
+  },
+  {
+    key: 'mercadito',
+    label: 'Mercadito',
+    description: 'Abarrotes, recargas y entrega a domicilio en la colonia.',
+    slugHint: 'mercadito',
+  },
+  {
+    key: 'supermercado',
+    label: 'Supermercado',
+    description: 'Canasta básica, ofertas de la semana y recoger en tienda.',
+    slugHint: 'supermercado',
+  },
+  {
+    key: 'clinica',
+    label: 'Clínica',
+    description: 'Consultas, controles y citas con horario reservado.',
+    slugHint: 'clinica',
+  },
 ]
 
 const CONSENT_TEXT =
@@ -539,6 +563,369 @@ const TEMPLATE_CONTENT: Record<LandingTemplateKey, LandingPageContentInput> = {
       },
     ],
   },
+
+  ferreteria: {
+    version: LANDING_SCHEMA_VERSION,
+    meta: {
+      seoTitle: 'Ferretería cerca de ti | Herramientas y materiales',
+      seoDescription:
+        'Tornillería, pintura, herramientas y materiales de construcción. Pide por WhatsApp y recógelo en el local.',
+      keywords: 'ferretería, tornillos, pintura, taladro, materiales de construcción',
+      noindex: false,
+    },
+    theme: {
+      tone: 'light',
+      primary: '#b45309',
+      accent: '#0f766e',
+      surface: '#fffbeb',
+      font: 'sans',
+      radius: 'md',
+    },
+    business: {
+      name: 'Ferretería Tu Nombre',
+      tagline: 'Lo que te falta para terminar la obra, a una cuadra',
+      address: 'Escribe aquí tu dirección exacta',
+      city: 'Tu ciudad',
+      mapsQuery: 'ferretería cerca de mí',
+      socials: {},
+    },
+    blocks: [
+      {
+        id: 'hero',
+        kind: 'hero',
+        badge: 'Pedido por WhatsApp',
+        headline: 'El material que te falta, sin ir al centro',
+        subheadline:
+          'Tornillería, pintura, herramientas y mangueras. Manda la lista por WhatsApp y pásalo a recoger.',
+        primaryCta: { label: 'Pedir por WhatsApp', action: 'whatsapp' },
+        secondaryCta: { label: 'Ver productos', action: 'lead-form' },
+      },
+      {
+        id: 'productos',
+        kind: 'items',
+        title: 'Lo que más piden',
+        subtitle: 'Precios de referencia. Ajústalos a tu inventario.',
+        layout: 'grid',
+        items: [
+          { name: 'Taladro 1/2"', detail: 'Uso profesional, garantía local', priceLabel: 'L. 1,250' },
+          { name: 'Pintura interior 1 gal', detail: 'Blanco y colores de línea', priceLabel: 'L. 385' },
+          { name: 'Kit tornillería', detail: 'Caja surtida 200 pzas', priceLabel: 'L. 95' },
+          { name: 'Manguera 15 m', detail: 'Jardín / obra ligera', priceLabel: 'L. 210' },
+          { name: 'Cemento', detail: 'Saco de línea', priceLabel: 'Según marca' },
+          { name: 'Brocas y discos', detail: 'Para metal, concreto y madera', priceLabel: 'Desde L. 35' },
+        ],
+      },
+      {
+        id: 'horario',
+        kind: 'hours',
+        title: 'Horario',
+        rows: [
+          { label: 'Lunes a sábado', value: '7:30 – 18:00' },
+          { label: 'Domingo', value: 'Cerrado' },
+        ],
+        note: 'Pedidos grandes se confirman el mismo día por WhatsApp.',
+      },
+      {
+        id: 'pedido',
+        kind: 'leadForm',
+        title: 'Manda tu lista',
+        subtitle: 'Dinos qué necesitas y te armamos el total.',
+        submitLabel: 'Enviar lista',
+        consentText: CONSENT_TEXT,
+        fields: { phone: true, message: true },
+        successTitle: 'Lista recibida',
+        successBody: 'Te confirmamos existencia y total por WhatsApp.',
+      },
+      {
+        id: 'contacto',
+        kind: 'contact',
+        title: 'Cómo llegar',
+        note: 'Sobre la calle principal, con área de carga al costado.',
+        showWhatsapp: true,
+        showPhone: true,
+        showEmail: false,
+        showAddress: true,
+        showMap: true,
+      },
+      {
+        id: 'cierre',
+        kind: 'cta',
+        headline: 'No pares la obra por un tornillo',
+        subheadline: 'Escribe la lista y te decimos qué hay en stock.',
+        primaryCta: { label: 'Escribir por WhatsApp', action: 'whatsapp' },
+      },
+    ],
+  },
+
+  mercadito: {
+    version: LANDING_SCHEMA_VERSION,
+    meta: {
+      seoTitle: 'Mercadito cerca de ti | Abarrotes y recargas',
+      seoDescription:
+        'Canasta básica, lácteos del día, recargas y entrega a domicilio en la colonia. Pide por WhatsApp.',
+      keywords: 'mercadito, abarrotería, pulpería, recargas, entrega a domicilio',
+      noindex: false,
+    },
+    theme: {
+      tone: 'light',
+      primary: '#15803d',
+      accent: '#ca8a04',
+      surface: '#f7fee7',
+      font: 'sans',
+      radius: 'lg',
+    },
+    business: {
+      name: 'Mercadito Tu Nombre',
+      tagline: 'El mandado de la cuadra, ahora por WhatsApp',
+      address: 'Escribe aquí tu dirección exacta',
+      city: 'Tu ciudad',
+      mapsQuery: 'abarrotería cerca de mí',
+      socials: {},
+    },
+    blocks: [
+      {
+        id: 'hero',
+        kind: 'hero',
+        badge: 'Entrega en la colonia',
+        headline: 'El mandado sin hacer fila',
+        subheadline:
+          'Arroz, frijol, lácteos y recargas. Manda la lista por WhatsApp y te lo llevamos o lo dejas listo para recoger.',
+        primaryCta: { label: 'Pedir el mandado', action: 'whatsapp' },
+        secondaryCta: { label: 'Ver qué hay', action: 'lead-form' },
+      },
+      {
+        id: 'productos',
+        kind: 'items',
+        title: 'Lo de todos los días',
+        layout: 'grid',
+        items: [
+          { name: 'Canasta básica', detail: 'Arroz, frijol, azúcar, aceite', priceLabel: 'Desde L. 180' },
+          { name: 'Lácteos del día', detail: 'Leche, queso, crema', priceLabel: 'Según peso' },
+          { name: 'Recarga / pagos', detail: 'Claro, Tigo, energía', priceLabel: 'Sin recargo' },
+          { name: 'Entrega a domicilio', detail: 'Radio 8 cuadras, pedido mínimo', priceLabel: 'L. 25' },
+        ],
+      },
+      {
+        id: 'horario',
+        kind: 'hours',
+        title: 'Horario',
+        rows: [
+          { label: 'Lunes a domingo', value: '6:30 – 21:00' },
+        ],
+        note: 'Última entrega 30 minutos antes del cierre.',
+      },
+      {
+        id: 'pedido',
+        kind: 'leadForm',
+        title: 'Manda tu lista',
+        subtitle: 'Escríbenos lo que necesitas y la colonia.',
+        submitLabel: 'Enviar pedido',
+        consentText: CONSENT_TEXT,
+        fields: { phone: true, message: true },
+        successTitle: 'Pedido recibido',
+        successBody: 'Te confirmamos total y hora de entrega por WhatsApp.',
+      },
+      {
+        id: 'contacto',
+        kind: 'contact',
+        title: 'Dónde estamos',
+        note: 'A media cuadra de la iglesia, portón verde.',
+        showWhatsapp: true,
+        showPhone: true,
+        showEmail: false,
+        showAddress: true,
+        showMap: true,
+      },
+      {
+        id: 'cierre',
+        kind: 'cta',
+        headline: 'Hoy no tienes que salir por el aceite',
+        subheadline: 'Manda la lista y te la armamos.',
+        primaryCta: { label: 'Pedir por WhatsApp', action: 'whatsapp' },
+      },
+    ],
+  },
+
+  supermercado: {
+    version: LANDING_SCHEMA_VERSION,
+    meta: {
+      seoTitle: 'Supermercado cerca de ti | Ofertas y recoger en tienda',
+      seoDescription:
+        'Canasta básica, carnes, lácteos y ofertas de la semana. Arma tu lista por WhatsApp y recógelo en tienda.',
+      keywords: 'supermercado, ofertas, canasta básica, recoger en tienda',
+      noindex: false,
+    },
+    theme: {
+      tone: 'light',
+      primary: '#1d4ed8',
+      accent: '#ea580c',
+      surface: '#f8fafc',
+      font: 'sans',
+      radius: 'md',
+    },
+    business: {
+      name: 'Súper Tu Nombre',
+      tagline: 'La compra de la semana, sin perder la tarde',
+      address: 'Escribe aquí tu dirección exacta',
+      city: 'Tu ciudad',
+      mapsQuery: 'supermercado cerca de mí',
+      socials: {},
+    },
+    blocks: [
+      {
+        id: 'hero',
+        kind: 'hero',
+        badge: 'Ofertas de la semana',
+        headline: 'Arma la lista y recógela lista',
+        subheadline:
+          'Abarrotes, lácteos, carnes y limpieza. Manda el pedido por WhatsApp y pasa a la hora que te quede.',
+        primaryCta: { label: 'Pedir por WhatsApp', action: 'whatsapp' },
+        secondaryCta: { label: 'Ver ofertas', action: 'lead-form' },
+      },
+      {
+        id: 'ofertas',
+        kind: 'items',
+        title: 'Lo que más se lleva',
+        layout: 'grid',
+        items: [
+          { name: 'Canasta de la semana', detail: 'Arroz, frijol, aceite, azúcar', priceLabel: 'Desde L. 220' },
+          { name: 'Pollo y res', detail: 'Cortes del día, según peso', priceLabel: 'Según peso' },
+          { name: 'Lácteos y huevos', detail: 'Leche, queso, cartón de huevos', priceLabel: 'Según marca' },
+          { name: 'Limpieza', detail: 'Jabón, cloro, detergente', priceLabel: 'Desde L. 45' },
+        ],
+      },
+      {
+        id: 'horario',
+        kind: 'hours',
+        title: 'Horario de tienda',
+        rows: [
+          { label: 'Lunes a sábado', value: '7:00 – 20:00' },
+          { label: 'Domingo', value: '8:00 – 18:00' },
+        ],
+      },
+      {
+        id: 'pedido',
+        kind: 'leadForm',
+        title: 'Arma tu lista',
+        subtitle: 'Dinos qué llevas y si recorres o pasas a recoger.',
+        submitLabel: 'Enviar lista',
+        consentText: CONSENT_TEXT,
+        fields: { phone: true, message: true },
+        successTitle: 'Lista recibida',
+        successBody: 'Te confirmamos existencias y total por WhatsApp.',
+      },
+      {
+        id: 'contacto',
+        kind: 'contact',
+        title: 'Cómo llegar',
+        note: 'Parqueo al frente. Recogés en caja 1.',
+        showWhatsapp: true,
+        showPhone: true,
+        showEmail: true,
+        showAddress: true,
+        showMap: true,
+      },
+      {
+        id: 'cierre',
+        kind: 'cta',
+        headline: 'La compra de la semana, sin dar vueltas',
+        subheadline: 'Manda la lista ahora y te la dejamos lista.',
+        primaryCta: { label: 'Escribir por WhatsApp', action: 'whatsapp' },
+      },
+    ],
+  },
+
+  clinica: {
+    version: LANDING_SCHEMA_VERSION,
+    meta: {
+      seoTitle: 'Clínica cerca de ti | Consultas y citas',
+      seoDescription:
+        'Consulta general, control y laboratorio. Reserva tu hora por WhatsApp y llega a tu cita sin espera.',
+      keywords: 'clínica, consulta médica, citas, laboratorio, control',
+      noindex: false,
+    },
+    theme: {
+      tone: 'light',
+      primary: '#0f766e',
+      accent: '#0369a1',
+      surface: '#f0fdfa',
+      font: 'sans',
+      radius: 'lg',
+    },
+    business: {
+      name: 'Clínica Tu Nombre',
+      tagline: 'Tu cita a la hora acordada',
+      address: 'Escribe aquí tu dirección exacta',
+      city: 'Tu ciudad',
+      mapsQuery: 'clínica cerca de mí',
+      socials: {},
+    },
+    blocks: [
+      {
+        id: 'hero',
+        kind: 'hero',
+        badge: 'Citas esta semana',
+        headline: 'Consulta con hora reservada',
+        subheadline:
+          'Medicina general, control y laboratorio. Aparta tu turno por WhatsApp y llega a tu hora.',
+        primaryCta: { label: 'Reservar cita', action: 'lead-form' },
+        secondaryCta: { label: 'Escribir por WhatsApp', action: 'whatsapp' },
+      },
+      {
+        id: 'servicios',
+        kind: 'items',
+        title: 'Servicios',
+        subtitle: 'Duración y precios de referencia. Ajústalos a tu consultorio.',
+        layout: 'grid',
+        items: [
+          { name: 'Consulta general', detail: '30 min, primera vez o control', priceLabel: 'L. 400' },
+          { name: 'Control de niño sano', detail: 'Crecimiento y vacunas', priceLabel: 'L. 350' },
+          { name: 'Toma de presión / glucosa', detail: 'Sin cita, mientras hay cupo', priceLabel: 'L. 80' },
+          { name: 'Laboratorio básico', detail: 'Sangre y orina, resultados el mismo día', priceLabel: 'Desde L. 250' },
+        ],
+      },
+      {
+        id: 'horario',
+        kind: 'hours',
+        title: 'Horario de citas',
+        rows: [
+          { label: 'Lunes a viernes', value: '8:00 – 17:00' },
+          { label: 'Sábado', value: '8:00 – 12:00' },
+          { label: 'Domingo', value: 'Cerrado' },
+        ],
+        note: 'Primera vez: llega 15 minutos antes con identidad.',
+      },
+      {
+        id: 'reserva',
+        kind: 'leadForm',
+        title: 'Reserva tu cita',
+        subtitle: 'Dinos el motivo y el día que prefieres.',
+        submitLabel: 'Solicitar cita',
+        consentText: CONSENT_TEXT,
+        fields: { phone: true, message: true },
+        successTitle: 'Cita solicitada',
+        successBody: 'Te confirmamos hora por WhatsApp. Revisa también tu correo.',
+      },
+      {
+        id: 'contacto',
+        kind: 'contact',
+        title: 'Cómo llegar',
+        note: 'Consultorio con sala de espera y parqueo.',
+        showWhatsapp: true,
+        showPhone: true,
+        showEmail: true,
+        showAddress: true,
+        showMap: true,
+      },
+      {
+        id: 'cierre',
+        kind: 'cta',
+        headline: 'Aparta tu hora antes de que se llene el día',
+        subheadline: 'Las citas de la mañana se agotan primero.',
+        primaryCta: { label: 'Reservar ahora', action: 'lead-form' },
+      },
+    ],
+  },
 }
 
 /**
@@ -559,13 +946,15 @@ export function applyBusinessToTemplate(
     whatsapp?: string
     phone?: string
     email?: string
-  }
+  },
+  options?: { noindex?: boolean }
 ): LandingPageContent {
   return {
     ...content,
     meta: {
       ...content.meta,
       seoTitle: `${business.name} | ${content.meta.seoTitle}`.slice(0, 70),
+      noindex: options?.noindex ?? content.meta.noindex,
     },
     business: {
       ...content.business,
@@ -597,7 +986,7 @@ export function suggestedSlugFor(key: LandingTemplateKey, businessName?: string)
   return fromName.length >= 3 ? fromName : templateOption(key).slugHint
 }
 
-/** Guardia de arranque: verifica que las 4 plantillas obligatorias existan y validen. */
+/** Guardia de arranque: verifica que las plantillas existan y validen. */
 export function assertTemplatesValid(): void {
   for (const key of LANDING_TEMPLATE_KEYS) {
     templateContentFor(key)
