@@ -20,16 +20,36 @@ export const WEBYCITAS_LEAD_SOURCE = 'webycitas'
 export const WEBYCITAS_LEAD_STATUSES = ['received', 'reviewed', 'rejected'] as const
 export type WebycitasLeadStatus = (typeof WEBYCITAS_LEAD_STATUSES)[number]
 
-export const DEMO_LOCAL_RUBROS = [
-  'barberia',
-  'ferreteria',
-  'cafeteria',
+export const WEBYCITAS_RETAIL_RUBROS = [
   'mercadito',
-  'escuela',
-  'otro',
+  'papeleria',
+  'supermercado',
+  'ferreteria',
 ] as const
 
+export const WEBYCITAS_SERVICE_RUBROS = ['spa', 'clinica', 'barberia', 'salon'] as const
+
+export const WEBYCITAS_FORM_RUBROS = [
+  ...WEBYCITAS_RETAIL_RUBROS,
+  ...WEBYCITAS_SERVICE_RUBROS,
+] as const
+
+/** Rubros que el form ya no ofrece; siguen válidos en filas históricas. */
+export const WEBYCITAS_LEGACY_RUBROS = ['cafeteria', 'escuela', 'otro'] as const
+
+export const DEMO_LOCAL_RUBROS = [...WEBYCITAS_FORM_RUBROS, ...WEBYCITAS_LEGACY_RUBROS] as const
+
+export type WebycitasRetailRubro = (typeof WEBYCITAS_RETAIL_RUBROS)[number]
+export type WebycitasFormRubro = (typeof WEBYCITAS_FORM_RUBROS)[number]
 export type DemoLocalRubro = (typeof DEMO_LOCAL_RUBROS)[number]
+
+export function isRetailRubro(rubro: string): rubro is WebycitasRetailRubro {
+  return (WEBYCITAS_RETAIL_RUBROS as readonly string[]).includes(rubro)
+}
+
+export function isWebycitasFormRubro(value: string): value is WebycitasFormRubro {
+  return (WEBYCITAS_FORM_RUBROS as readonly string[]).includes(value)
+}
 
 export const DEMO_LOCAL_SERVICES = ['landing', 'booking'] as const
 export type DemoLocalService = (typeof DEMO_LOCAL_SERVICES)[number]
@@ -88,6 +108,76 @@ export const DEMO_LOCAL_CATALOGS: Record<DemoLocalRubro, DemoLocalCatalog> = {
       { name: 'Pintura interior 1 gal', detail: 'Blanco y colores de línea', price: 'L. 385' },
       { name: 'Kit tornillería', detail: 'Caja surtida 200 pzas', price: 'L. 95' },
       { name: 'Manguera 15 m', detail: 'Jardín / obra ligera', price: 'L. 210' },
+    ],
+  },
+  papeleria: {
+    id: 'papeleria',
+    label: 'Papelería',
+    shopName: 'Papelería Central',
+    neighborhood: 'Frente al colegio, local 2',
+    mapsQuery: 'papelería cerca de mí',
+    hours: 'Lun–Vie 8:00–18:00 · Sáb 8:00–14:00',
+    items: [
+      { name: 'Copia carta B/N', detail: 'Por página', price: 'L. 1' },
+      { name: 'Impresión color', detail: 'Desde USB o WhatsApp', price: 'L. 8' },
+      { name: 'Engargolado', detail: 'Hasta 100 hojas', price: 'L. 45' },
+      { name: 'Útiles escolares', detail: 'Lista completa', price: 'Según lista' },
+    ],
+  },
+  supermercado: {
+    id: 'supermercado',
+    label: 'Supermercado',
+    shopName: 'Super La Colonia',
+    neighborhood: 'Boulevard principal, parqueo al frente',
+    mapsQuery: 'supermercado cerca de mí',
+    hours: 'Lun–Dom 7:00–21:00',
+    items: [
+      { name: 'Canasta básica', detail: 'Arroz, frijol, aceite, azúcar', price: 'Desde L. 180' },
+      { name: 'Carnes y lácteos', detail: 'Del día, por peso', price: 'Según peso' },
+      { name: 'Abarrotes', detail: 'Limpieza y despensa', price: 'Precio de góndola' },
+      { name: 'Entrega a domicilio', detail: 'Radio del barrio', price: 'L. 25' },
+    ],
+  },
+  spa: {
+    id: 'spa',
+    label: 'Spa',
+    shopName: 'Spa Luna',
+    neighborhood: 'Plaza del barrio, segundo nivel',
+    mapsQuery: 'spa cerca de mí',
+    hours: 'Mar–Sáb 9:00–18:00',
+    items: [
+      { name: 'Masaje relajante', detail: '50 min', price: 'L. 650' },
+      { name: 'Facial', detail: 'Limpieza y mascarilla', price: 'L. 480' },
+      { name: 'Manicura spa', detail: 'Exfoliación incluida', price: 'L. 280' },
+      { name: 'Paquete día', detail: 'Masaje + facial', price: 'L. 1,050' },
+    ],
+  },
+  clinica: {
+    id: 'clinica',
+    label: 'Clínica',
+    shopName: 'Clínica San José',
+    neighborhood: 'Media cuadra de la iglesia',
+    mapsQuery: 'clínica cerca de mí',
+    hours: 'Lun–Vie 8:00–17:00 · Sáb 8:00–12:00',
+    items: [
+      { name: 'Consulta general', detail: '30 min', price: 'L. 400' },
+      { name: 'Control / seguimiento', detail: 'Cita de 20 min', price: 'L. 250' },
+      { name: 'Inyectable', detail: 'Con receta', price: 'L. 80' },
+      { name: 'Certificado médico', detail: 'El mismo día', price: 'L. 150' },
+    ],
+  },
+  salon: {
+    id: 'salon',
+    label: 'Salón de belleza',
+    shopName: 'Salón Luna',
+    neighborhood: 'Plaza comercial, local 4',
+    mapsQuery: 'salón de belleza cerca de mí',
+    hours: 'Mar–Sáb 9:00–18:00',
+    items: [
+      { name: 'Manicura', detail: 'Esmalte tradicional', price: 'L. 180' },
+      { name: 'Uñas acrílicas', detail: 'Juego completo', price: 'L. 650' },
+      { name: 'Tinte / retoque', detail: 'Según largo', price: 'Desde L. 700' },
+      { name: 'Peinado de evento', detail: 'Boda, quince, graduación', price: 'Desde L. 500' },
     ],
   },
   cafeteria: {
@@ -217,6 +307,7 @@ export const DEMO_LOCAL_COPY = {
     services: {
       legend: 'Qué armamos',
       hint: 'Elige uno o los dos. El perfil de Google Maps se incluye al contratar cualquiera.',
+      hintRetail: 'En este rubro armamos la página. El perfil de Google Maps se incluye al contratar.',
       error: 'Elige página web, reservas, o las dos.',
       landingTitle: 'Página web',
       landingBody: 'Tu local en internet: servicios, precios y WhatsApp.',
@@ -270,7 +361,7 @@ export const demoLocalLeadSchema = z.object({
     .refine((value) => (value.match(/\d/g) || []).length >= 7, {
       message: 'Incluye un número de teléfono o WhatsApp real.',
     }),
-  rubro: z.enum(DEMO_LOCAL_RUBROS, { message: 'Elige el tipo de negocio.' }),
+  rubro: z.enum(WEBYCITAS_FORM_RUBROS, { message: 'Elige el tipo de negocio.' }),
   city: z
     .string()
     .trim()
@@ -296,7 +387,10 @@ export const demoLocalLeadSchema = z.object({
     message: DEMO_LOCAL_COPY.form.errorConsent,
   }),
   website: z.string().max(200).optional(),
-})
+}).transform((lead) => ({
+  ...lead,
+  services: isRetailRubro(lead.rubro) ? (['landing'] as DemoLocalService[]) : lead.services,
+}))
 
 export type DemoLocalLeadInput = z.input<typeof demoLocalLeadSchema>
 export type DemoLocalLead = z.output<typeof demoLocalLeadSchema>
@@ -322,21 +416,29 @@ export function rubroLabel(rubro: DemoLocalRubro): string {
   return DEMO_LOCAL_CATALOGS[rubro].label
 }
 
-export function buildDemoLocalOwnerEmail(lead: DemoLocalLead): { subject: string; html: string } {
+export function buildDemoLocalOwnerEmail(
+  lead: DemoLocalLead,
+  options?: { publicUrl?: string }
+): { subject: string; html: string } {
   const catalog = catalogForRubro(lead.rubro)
-  const pageUrl = `${SEO_BASE_URL}${DEMO_LOCAL_PUBLIC_PATH}`
+  const liveUrl = options?.publicUrl
+  const pageUrl = liveUrl || `${SEO_BASE_URL}${DEMO_LOCAL_PUBLIC_PATH}`
   const bodyHtml = [
     liquidParagraph(`Hola ${escapeHtml(lead.ownerName)},`),
     liquidParagraph(
       `Recibimos la solicitud para <strong>${escapeHtml(lead.businessName)}</strong> (${escapeHtml(catalog.label)} en ${escapeHtml(lead.city)}).`
     ),
+    liveUrl
+      ? liquidParagraph(
+          `Tu página ya está en Internet. Ábrela, revísala y respóndenos para reclamarla y dejarla permanente. Armamos: <strong>${escapeHtml(formatDemoLocalServices(lead.services))}</strong>. Al contratar, el Perfil de Empresa en Google Maps y un dominio tuyo.`
+        )
+      : liquidParagraph(
+          `Armamos: <strong>${escapeHtml(formatDemoLocalServices(lead.services))}</strong>. El siguiente paso es un boceto. Si contratas, te publicamos el Perfil de Empresa en Google Maps y un dominio tuyo. El modelo de ejemplo vive en SISU hasta esa compra.`
+        ),
     liquidParagraph(
-      `Armamos: <strong>${escapeHtml(formatDemoLocalServices(lead.services))}</strong>. El siguiente paso es un boceto. Si contratas, te publicamos el Perfil de Empresa en Google Maps y un dominio tuyo. El modelo de ejemplo vive en SISU hasta esa compra.`
+      'Te escribimos por este correo o por WhatsApp con el precio y para confirmar zona y el número que quieres publicar. Si no te gusta, no pagas nada.'
     ),
-    liquidParagraph(
-      'Te escribimos por este correo o por WhatsApp con el boceto, el precio y para confirmar zona y el número que quieres publicar. Si no te gusta, no pagas nada.'
-    ),
-    liquidCta(pageUrl, 'Volver a la página del servicio'),
+    liquidCta(pageUrl, liveUrl ? 'Ver mi página' : 'Volver a la página del servicio'),
   ].join('')
 
   return {
@@ -351,7 +453,11 @@ export function buildDemoLocalOwnerEmail(lead: DemoLocalLead): { subject: string
   }
 }
 
-export function buildDemoLocalInternalEmail(lead: DemoLocalLead, receivedAt: Date): { subject: string; html: string } {
+export function buildDemoLocalInternalEmail(
+  lead: DemoLocalLead,
+  receivedAt: Date,
+  options?: { publicUrl?: string }
+): { subject: string; html: string } {
   const catalog = catalogForRubro(lead.rubro)
   const when = formatDateTimeForHonduras(receivedAt)
   const bodyHtml = [
@@ -366,6 +472,7 @@ export function buildDemoLocalInternalEmail(lead: DemoLocalLead, receivedAt: Dat
       { label: 'Teléfono / WhatsApp', value: lead.phone },
       { label: 'Servicios', value: formatDemoLocalServices(lead.services) },
       { label: 'Nota', value: lead.note || '—' },
+      { label: 'Maqueta', value: options?.publicUrl || '—' },
       { label: 'Recibido (HN)', value: when },
     ]),
   ].join('')

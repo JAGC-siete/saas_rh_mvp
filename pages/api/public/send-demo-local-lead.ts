@@ -1,7 +1,7 @@
 /**
- * Captura pública de /webycitas. Sin sesión. No crea tenant, landing, Maps ni
- * secuencia de planilla. Insert en webycitas_leads con service role porque
- * anon no tiene GRANT.
+ * Captura pública de /webycitas. Sin sesión. Insert en webycitas_leads y, si
+ * el puente funciona, una landing_pages is_lead_preview servida en /p/[slug].
+ * No crea tenant de planilla. JSON de plantilla se regenera en servidor.
  *
  * Seguridad: rate limit por IP, honeypot, tope de body y ráfaga global.
  */
@@ -30,6 +30,9 @@ import {
   parseMetaTrackingPayload,
   sendMetaWebsiteConversionFireAndForget,
 } from '../../../lib/analytics/metaCapiServer'
+import { SEO_BASE_URL } from '../../../lib/seo/assets'
+import { ensureLandingStudioCompanyId } from '../../../lib/landings/studio-company'
+import { publishWebycitasPreview } from '../../../lib/marketing/webycitas-publish'
 
 const MAX_BODY_BYTES = 8 * 1024
 const BURST_WINDOW_MS = 60 * 1000
@@ -155,9 +158,27 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     return res.status(500).json({ success: false, error: 'No se pudo registrar la solicitud' })
   }
 
+  let publicPath: string | undefined
+  try {
+    const companyId = await ensureLandingStudioCompanyId(supabase as never)
+    const preview = await publishWebycitasPreview({
+      adminClient: supabase,
+      companyId,
+      leadId,
+      lead,
+    })
+    if (preview) publicPath = preview.publicPath
+  } catch (err: unknown) {
+    logger.error('No se pudo publicar maqueta webycitas', {
+      leadId,
+      error: err instanceof Error ? err.message : 'Unknown',
+    })
+  }
+
+  const publicUrl = publicPath ? `${SEO_BASE_URL}${publicPath}` : undefined
   const fromEmail = getResendFromContact()
   const replyTo = getResendContactEmail()
-  const ownerMail = buildDemoLocalOwnerEmail(lead)
+  const ownerMail = buildDemoLocalOwnerEmail(lead, publicUrl ? { publicUrl } : undefined)
 
   try {
     const sent = await sendResendEmail({
@@ -182,7 +203,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     })
   }
 
-  const internalMail = buildDemoLocalInternalEmail(lead, receivedAt)
+  const internalMail = buildDemoLocalInternalEmail(lead, receivedAt, publicUrl ? { publicUrl } : undefined)
   try {
     const notify = await sendResendEmail({
       from: fromEmail,
@@ -231,11 +252,12 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     email: maskEmail(lead.email),
     rubro: rubroLabel(lead.rubro),
     services: formatDemoLocalServices(lead.services),
+    publicPath: publicPath ?? null,
     receivedAtHn: formatDateTimeForHonduras(receivedAt),
     duration: Date.now() - started,
   })
 
-  return res.status(200).json({ success: true })
+  return res.status(200).json({ success: true, publicPath: publicPath ?? null })
 }
 
 export default withRateLimit(RATE_LIMITS.PUBLIC_LANDING_LEAD, handler)

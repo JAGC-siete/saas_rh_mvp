@@ -1,5 +1,5 @@
 /**
- * Bandeja de solicitudes /webycitas. Superadmin only. No crea tenant ni landing.
+ * Bandeja de solicitudes /webycitas. Superadmin only. No crea tenant de planilla.
  */
 
 import { useCallback, useEffect, useState } from 'react'
@@ -33,7 +33,8 @@ interface WebycitasLeadRow {
   note: string | null
   services: DemoLocalService[]
   status: WebycitasLeadStatus
-  source: string
+  preview_slug: string | null
+  landing_id: string | null
   consented_at: string
   notified_at: string | null
   created_at: string
@@ -106,7 +107,7 @@ export default function WebycitasLeadsPage() {
           <header>
             <h1 className="text-2xl font-bold text-white">Solicitudes /webycitas</h1>
             <p className="mt-1 text-sm text-white/60">
-              Página web y reservas. No crea empresa SISU ni landing de ejemplo.
+              Página web y reservas. La maqueta vive en /p/slug; no crea empresa de planilla.
             </p>
           </header>
 
@@ -154,6 +155,19 @@ export default function WebycitasLeadsPage() {
                         {lead.phone}
                       </a>
                     </p>
+                    {lead.preview_slug ? (
+                      <p className="text-sm text-white/70">
+                        Maqueta:{' '}
+                        <a
+                          className="underline-offset-2 hover:underline"
+                          href={`/p/${lead.preview_slug}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          /p/{lead.preview_slug}
+                        </a>
+                      </p>
+                    ) : null}
                     {lead.note ? <p className="text-sm text-white/60">{lead.note}</p> : null}
                     <p className="text-xs text-white/40">
                       {formatDateTimeForHonduras(lead.created_at)}

@@ -9,9 +9,10 @@ import {
   DEMO_LOCAL_LEGACY_PATH,
   DEMO_LOCAL_MARKETING_SOURCE,
   DEMO_LOCAL_PUBLIC_PATH,
-  DEMO_LOCAL_RUBROS,
+  WEBYCITAS_FORM_RUBROS,
   WEBYCITAS_LEAD_SOURCE,
   WEBYCITAS_LEADS_TABLE,
+  WEBYCITAS_RETAIL_RUBROS,
   buildDemoLocalInternalEmail,
   buildDemoLocalOwnerEmail,
   catalogForRubro,
@@ -98,16 +99,19 @@ describe('demo-local landing', () => {
   })
 
   it('cambia el catálogo modular por rubro', () => {
-    assert.deepEqual([...DEMO_LOCAL_RUBROS], [
-      'barberia',
-      'ferreteria',
-      'cafeteria',
+    assert.deepEqual([...WEBYCITAS_FORM_RUBROS], [
       'mercadito',
-      'escuela',
-      'otro',
+      'papeleria',
+      'supermercado',
+      'ferreteria',
+      'spa',
+      'clinica',
+      'barberia',
+      'salon',
     ])
     assert.equal(catalogForRubro('ferreteria').shopName, DEMO_LOCAL_CATALOGS.ferreteria.shopName)
     assert.equal(catalogForRubro('no-existe').id, 'barberia')
+    assert.ok(catalogForRubro('papeleria').items.length >= 3)
     assert.ok(catalogForRubro('cafeteria').items.length >= 3)
   })
 
@@ -131,6 +135,22 @@ describe('demo-local landing', () => {
       assert.deepEqual(bookingOnly.data.services, ['booking'])
     }
 
+    const retailBooking = parseDemoLocalLead({
+      ...validLead,
+      rubro: 'ferreteria',
+      services: ['landing', 'booking'],
+    })
+    assert.equal(retailBooking.success, true)
+    if (retailBooking.success) {
+      assert.deepEqual(retailBooking.data.services, ['landing'])
+    }
+
+    for (const rubro of WEBYCITAS_RETAIL_RUBROS) {
+      const parsed = parseDemoLocalLead({ ...validLead, rubro, services: ['booking'] })
+      assert.equal(parsed.success, true)
+      if (parsed.success) assert.deepEqual(parsed.data.services, ['landing'])
+    }
+
     const missingServices = parseDemoLocalLead({ ...validLead, services: undefined })
     assert.equal(missingServices.success, false)
 
@@ -151,6 +171,9 @@ describe('demo-local landing', () => {
 
     const badRubro = parseDemoLocalLead({ ...validLead, rubro: 'nomina' })
     assert.equal(badRubro.success, false)
+
+    const legacyRubro = parseDemoLocalLead({ ...validLead, rubro: 'cafeteria' })
+    assert.equal(legacyRubro.success, false)
   })
 
   it('un honeypot lleno parece bot y uno vacío no', () => {
@@ -170,6 +193,7 @@ describe('demo-local landing', () => {
     assert.equal(handler.includes('marketing_leads'), false)
     assert.match(handler, /WEBYCITAS_LEADS_TABLE/)
     assert.match(handler, /PUBLIC_LANDING_LEAD/)
+    assert.match(handler, /publishWebycitasPreview/)
   })
 
   it('arma correos sin interpolar HTML del dueño', () => {
@@ -184,11 +208,16 @@ describe('demo-local landing', () => {
     if (!parsed.success) return
 
     const owner = buildDemoLocalOwnerEmail(parsed.data)
+    const live = buildDemoLocalOwnerEmail(parsed.data, {
+      publicUrl: 'https://humanosisu.net/p/ferreteria-hijos-4f8a',
+    })
     const internal = buildDemoLocalInternalEmail(parsed.data, new Date('2026-09-14T18:00:00.000Z'))
     assert.equal(owner.html.includes('<script>alert(1)</script>'), false)
     assert.equal(owner.html.includes('Instagram'), false)
     assert.equal(owner.html.includes('dominio tuyo'), true)
     assert.match(owner.html, /\/webycitas/)
+    assert.match(live.html, /\/p\/ferreteria-hijos-4f8a/)
+    assert.match(live.html, /ya está en Internet/)
     assert.equal(internal.subject.includes('Ferretería & Hijos'), true)
     assert.match(internal.subject, /webycitas/)
     assert.match(internal.html, /\/webycitas/)

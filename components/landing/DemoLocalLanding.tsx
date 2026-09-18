@@ -17,13 +17,17 @@ import {
   DEMO_LOCAL_COPY,
   DEMO_LOCAL_MARKETING_SOURCE,
   DEMO_LOCAL_PUBLIC_PATH,
-  DEMO_LOCAL_RUBROS,
+  WEBYCITAS_RETAIL_RUBROS,
+  WEBYCITAS_SERVICE_RUBROS,
   catalogForRubro,
   demoLocalFieldErrors,
+  isRetailRubro,
   parseDemoLocalLead,
-  type DemoLocalRubro,
   type DemoLocalService,
+  type WebycitasFormRubro,
 } from '../../lib/marketing/demo-local'
+import { buildWebycitasPreviewPage } from '../../lib/marketing/webycitas-preview'
+import WebycitasLivePreview from './WebycitasLivePreview'
 import {
   buildMetaApiTrackingFields,
   createMetaEventId,
@@ -42,8 +46,19 @@ function scrollToId(id: string, cta: string, location: string) {
 }
 
 export default function DemoLocalLanding() {
-  const [rubro, setRubro] = useState<DemoLocalRubro>('barberia')
+  const [rubro, setRubro] = useState<WebycitasFormRubro>('barberia')
+  const [draft, setDraft] = useState({ businessName: '', phone: '', city: '' })
   const catalog = catalogForRubro(rubro)
+  const previewPage = useMemo(
+    () =>
+      buildWebycitasPreviewPage({
+        rubro,
+        businessName: draft.businessName,
+        city: draft.city,
+        phone: draft.phone,
+      }),
+    [rubro, draft]
+  )
 
   const webPageSchema = generateWebPageSchema({
     url: DEMO_LOCAL_PUBLIC_PATH,
@@ -192,9 +207,17 @@ export default function DemoLocalLanding() {
       </section>
 
       <section id="solicitud" className="scroll-mt-28 px-4 sm:px-6 pb-12 sm:pb-16">
-        <div className="mx-auto max-w-xl lg:max-w-2xl">
+        <div className="mx-auto max-w-7xl">
           <h2 className="mb-8 text-center text-2xl font-bold text-white sm:text-3xl">{copy.form.title}</h2>
-          <DemoLocalLeadForm selectedRubro={rubro} onRubroChange={setRubro} />
+          <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,28rem)_minmax(0,1fr)] lg:gap-10">
+            <DemoLocalLeadForm
+              selectedRubro={rubro}
+              onRubroChange={setRubro}
+              draft={draft}
+              onDraftChange={setDraft}
+            />
+            <WebycitasLivePreview page={previewPage} />
+          </div>
         </div>
       </section>
 
@@ -224,34 +247,51 @@ export default function DemoLocalLanding() {
 function DemoLocalLeadForm({
   selectedRubro,
   onRubroChange,
+  draft,
+  onDraftChange,
 }: {
-  selectedRubro: DemoLocalRubro
-  onRubroChange: (rubro: DemoLocalRubro) => void
+  selectedRubro: WebycitasFormRubro
+  onRubroChange: (rubro: WebycitasFormRubro) => void
+  draft: { businessName: string; phone: string; city: string }
+  onDraftChange: (draft: { businessName: string; phone: string; city: string }) => void
 }) {
+  const retail = isRetailRubro(selectedRubro)
   const [isLoading, setIsLoading] = useState(false)
   const [successEmail, setSuccessEmail] = useState<string | null>(null)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [form, setForm] = useState({
     ownerName: '',
-    businessName: '',
     email: '',
-    phone: '',
-    city: '',
     note: '',
-    services: [] as DemoLocalService[],
+    services: ['landing'] as DemoLocalService[],
     consent: false,
     website: '',
   })
+
+  function patchDraft(patch: Partial<{ businessName: string; phone: string; city: string }>) {
+    onDraftChange({ ...draft, ...patch })
+  }
+
+  function changeRubro(next: WebycitasFormRubro) {
+    onRubroChange(next)
+    if (isRetailRubro(next)) {
+      setForm((prev) => ({ ...prev, services: ['landing'] }))
+    }
+  }
 
   const labelClass = 'mb-1.5 block text-xs font-medium uppercase tracking-wide text-slate-400'
 
   const payloadPreview = useMemo(
     () => ({
       ...form,
+      businessName: draft.businessName,
+      phone: draft.phone,
+      city: draft.city,
       rubro: selectedRubro,
+      services: retail ? (['landing'] as DemoLocalService[]) : form.services,
       note: form.note.trim() || undefined,
     }),
-    [form, selectedRubro]
+    [form, draft, selectedRubro, retail]
   )
 
   function toggleService(id: DemoLocalService) {
@@ -292,7 +332,7 @@ function DemoLocalLeadForm({
           ...buildMetaApiTrackingFields(metaEventId),
         }),
       })
-      const data = (await resp.json()) as { error?: string; success?: boolean }
+      const data = (await resp.json()) as { error?: string; success?: boolean; publicPath?: string | null }
       if (!resp.ok) {
         setErrors({ submit: data.error || 'No se pudo enviar la solicitud.' })
         return
@@ -306,6 +346,10 @@ function DemoLocalLeadForm({
           firstName: parsed.data.ownerName,
           rubro: parsed.data.rubro,
         })
+      }
+      if (data.publicPath) {
+        window.location.assign(data.publicPath)
+        return
       }
       setSuccessEmail(parsed.data.email)
     } catch {
@@ -358,8 +402,8 @@ function DemoLocalLeadForm({
             id="dl-business"
             className={fieldClass}
             autoComplete="organization"
-            value={form.businessName}
-            onChange={(e) => setForm((prev) => ({ ...prev, businessName: e.target.value }))}
+            value={draft.businessName}
+            onChange={(e) => patchDraft({ businessName: e.target.value })}
           />
           {errors.businessName ? <p className="mt-1 text-xs text-red-300">{errors.businessName}</p> : null}
         </div>
@@ -387,8 +431,8 @@ function DemoLocalLeadForm({
               type="tel"
               className={fieldClass}
               autoComplete="tel"
-              value={form.phone}
-              onChange={(e) => setForm((prev) => ({ ...prev, phone: e.target.value }))}
+              value={draft.phone}
+              onChange={(e) => patchDraft({ phone: e.target.value })}
             />
             {errors.phone ? <p className="mt-1 text-xs text-red-300">{errors.phone}</p> : null}
           </div>
@@ -402,13 +446,22 @@ function DemoLocalLeadForm({
               id="dl-rubro"
               className={fieldClass}
               value={selectedRubro}
-              onChange={(e) => onRubroChange(e.target.value as DemoLocalRubro)}
+              onChange={(e) => changeRubro(e.target.value as WebycitasFormRubro)}
             >
-              {DEMO_LOCAL_RUBROS.map((id) => (
-                <option key={id} value={id}>
-                  {DEMO_LOCAL_CATALOGS[id].label}
-                </option>
-              ))}
+              <optgroup label="Comercio">
+                {WEBYCITAS_RETAIL_RUBROS.map((id) => (
+                  <option key={id} value={id}>
+                    {DEMO_LOCAL_CATALOGS[id].label}
+                  </option>
+                ))}
+              </optgroup>
+              <optgroup label="Servicios con cita">
+                {WEBYCITAS_SERVICE_RUBROS.map((id) => (
+                  <option key={id} value={id}>
+                    {DEMO_LOCAL_CATALOGS[id].label}
+                  </option>
+                ))}
+              </optgroup>
             </select>
             {errors.rubro ? <p className="mt-1 text-xs text-red-300">{errors.rubro}</p> : null}
           </div>
@@ -420,16 +473,18 @@ function DemoLocalLeadForm({
               id="dl-city"
               className={fieldClass}
               autoComplete="address-level2"
-              value={form.city}
-              onChange={(e) => setForm((prev) => ({ ...prev, city: e.target.value }))}
+              value={draft.city}
+              onChange={(e) => patchDraft({ city: e.target.value })}
             />
             {errors.city ? <p className="mt-1 text-xs text-red-300">{errors.city}</p> : null}
           </div>
         </div>
         <fieldset id="dl-services" className="space-y-3">
           <legend className={labelClass}>{copy.form.services.legend}</legend>
-          <p className="text-sm text-slate-400">{copy.form.services.hint}</p>
-          <div className="grid gap-3 sm:grid-cols-2">
+          <p className="text-sm text-slate-400">
+            {retail ? copy.form.services.hintRetail : copy.form.services.hint}
+          </p>
+          <div className={`grid gap-3 ${retail ? '' : 'sm:grid-cols-2'}`}>
             {(
               [
                 {
@@ -437,31 +492,37 @@ function DemoLocalLeadForm({
                   title: copy.form.services.landingTitle,
                   body: copy.form.services.landingBody,
                 },
-                {
-                  id: 'booking' as const,
-                  title: copy.form.services.bookingTitle,
-                  body: copy.form.services.bookingBody,
-                },
+                ...(retail
+                  ? []
+                  : [
+                      {
+                        id: 'booking' as const,
+                        title: copy.form.services.bookingTitle,
+                        body: copy.form.services.bookingBody,
+                      },
+                    ]),
               ] as const
             ).map((option) => {
-              const checked = form.services.includes(option.id)
-              return (
-                <label
-                  key={option.id}
-                  htmlFor={`dl-service-${option.id}`}
-                  className={`flex min-h-[48px] cursor-pointer items-start gap-3 rounded-xl border p-4 transition ${
-                    checked
-                      ? 'border-green-400/40 bg-green-500/10'
-                      : 'border-white/15 bg-white/5 hover:border-white/30'
-                  }`}
-                >
-                  <input
-                    id={`dl-service-${option.id}`}
-                    type="checkbox"
-                    className="mt-1 h-4 w-4 shrink-0 rounded border-white/20 bg-white/10"
-                    checked={checked}
-                    onChange={() => toggleService(option.id)}
-                  />
+                  const checked =
+                    retail && option.id === 'landing' ? true : form.services.includes(option.id)
+                  return (
+                    <label
+                      key={option.id}
+                      htmlFor={`dl-service-${option.id}`}
+                      className={`flex min-h-[48px] cursor-pointer items-start gap-3 rounded-xl border p-4 transition ${
+                        checked
+                          ? 'border-green-400/40 bg-green-500/10'
+                          : 'border-white/15 bg-white/5 hover:border-white/30'
+                      }`}
+                    >
+                      <input
+                        id={`dl-service-${option.id}`}
+                        type="checkbox"
+                        className="mt-1 h-4 w-4 shrink-0 rounded border-white/20 bg-white/10"
+                        checked={checked}
+                        disabled={retail && option.id === 'landing'}
+                        onChange={() => toggleService(option.id)}
+                      />
                   <span>
                     <span className="block text-sm font-semibold text-white">{option.title}</span>
                     <span className="mt-1 block text-xs leading-relaxed text-slate-400">{option.body}</span>

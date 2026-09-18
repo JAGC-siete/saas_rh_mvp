@@ -20,7 +20,7 @@ const patchSchema = z.object({
 })
 
 const LIST_COLUMNS =
-  'id, owner_name, business_name, email, phone, rubro, city, note, services, status, source, consented_at, notified_at, created_at'
+  'id, owner_name, business_name, email, phone, rubro, city, note, services, status, source, preview_slug, landing_id, consented_at, notified_at, created_at'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET' && req.method !== 'PATCH') {
