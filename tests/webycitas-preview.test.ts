@@ -49,5 +49,7 @@ describe('webycitas preview bridge', () => {
     }
     const branded = applyBusinessToTemplate(templateContentFor('clinica'), { name: 'Clínica Norte' })
     assert.match(branded.business.name, /Clínica Norte/)
+    assert.equal(branded.meta.seoTitle.startsWith('Clínica Norte'), true)
+    assert.ok(branded.meta.seoTitle.length <= 70)
   })
 })

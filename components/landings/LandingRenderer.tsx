@@ -10,6 +10,8 @@
 import React, { type CSSProperties, type ReactNode } from 'react'
 import { Card } from '../ui/card'
 import { resolveCta } from '../../lib/landings/cta'
+import { heroCopyClass, heroLayoutClass, landingThemeCssVars } from '../../lib/landings/theme-css'
+import { cn } from '../../lib/utils'
 import LandingLeadForm from './LandingLeadForm'
 import type { LandingBlock, LandingCta, LandingPageBusiness, PublicLandingPage } from '../../types/landing'
 
@@ -40,14 +42,7 @@ export default function LandingRenderer({ page }: LandingRendererProps) {
         theme.font === 'serif' ? 'font-serif' : 'font-sans',
         dark ? 'text-white' : 'text-slate-900',
       ].join(' ')}
-      style={
-        {
-          backgroundColor: theme.surface,
-          '--lp-primary': theme.primary,
-          '--lp-accent': theme.accent,
-          '--lp-surface': theme.surface,
-        } as CSSProperties
-      }
+      style={landingThemeCssVars(theme) as CSSProperties}
     >
       {visible.map((block) => (
         <BlockSwitch key={block.id} block={block} context={context} dark={dark} />
@@ -104,7 +99,7 @@ function Section({
   className?: string
 }) {
   return (
-    <section id={id} className={`px-5 py-12 sm:px-8 sm:py-16 ${className}`}>
+    <section id={id} className={cn('px-5 py-12 sm:px-8 sm:py-16', className)}>
       <div className="mx-auto w-full max-w-5xl">{children}</div>
     </section>
   )
@@ -132,11 +127,11 @@ function CtaLink({
   if (!resolved) return null
 
   const base =
-    'inline-flex h-11 items-center justify-center rounded-lg px-6 text-sm font-semibold transition-opacity hover:opacity-90'
+    'inline-flex h-11 items-center justify-center rounded-lp px-6 text-sm font-semibold transition-opacity hover:opacity-90'
   const styles =
     variant === 'primary'
-      ? 'bg-[var(--lp-primary)] text-white'
-      : 'border border-current bg-transparent text-current'
+      ? 'bg-lp-primary text-white'
+      : 'border border-lp-accent bg-transparent text-lp-accent'
 
   return (
     <a
@@ -152,32 +147,35 @@ function CtaLink({
 /* ------------------------------- bloques ------------------------------ */
 
 function HeroBlock({ block, context }: { block: BlockOf<'hero'>; context: BlockContext }) {
+  const hasImage = Boolean(block.imageUrl)
   return (
-    <Section id={block.id} className="pt-16">
-      <div className="grid items-center gap-10 md:grid-cols-2">
-        <div>
+    <Section id={block.id} className="py-16 md:py-24">
+      <div className={heroLayoutClass(block.imageUrl)}>
+        <div className={heroCopyClass(block.imageUrl)}>
           {block.badge && (
-            <span className="mb-4 inline-block rounded-full bg-[var(--lp-accent)] px-3 py-1 text-xs font-semibold text-slate-900">
+            <span className="inline-block rounded-full bg-lp-accent px-3 py-1 text-xs font-semibold text-slate-900">
               {block.badge}
             </span>
           )}
-          <h1 className="text-3xl font-bold leading-tight tracking-tight sm:text-5xl">{block.headline}</h1>
-          {block.subheadline && <p className="mt-4 text-base opacity-85 sm:text-lg">{block.subheadline}</p>}
-          <div className="mt-8 flex flex-wrap gap-3">
+          <h1 className="text-4xl font-bold leading-tight tracking-tight md:text-5xl">{block.headline}</h1>
+          {block.subheadline && <p className="text-lg opacity-85">{block.subheadline}</p>}
+          <div className={`flex flex-wrap gap-3 ${hasImage ? '' : 'justify-center'}`}>
             <CtaLink cta={block.primaryCta} context={context} variant="primary" />
             {block.secondaryCta && (
               <CtaLink cta={block.secondaryCta} context={context} variant="secondary" />
             )}
           </div>
         </div>
-        {block.imageUrl && (
-          <img
-            src={block.imageUrl}
-            alt={context.business.name}
-            className="h-64 w-full rounded-2xl object-cover sm:h-80"
-            loading="eager"
-          />
-        )}
+        {hasImage && block.imageUrl ? (
+          <div className="relative h-64 overflow-hidden rounded-lp md:h-96">
+            <img
+              src={block.imageUrl}
+              alt={context.business.name}
+              className="h-full w-full object-cover"
+              loading="eager"
+            />
+          </div>
+        ) : null}
       </div>
     </Section>
   )
@@ -194,7 +192,7 @@ function ItemsBlock({ block, dark }: { block: BlockOf<'items'>; dark: boolean })
           <Card
             key={`${block.id}-${index}`}
             variant="solid"
-            className={dark ? 'border-white/10 bg-white/5 text-white shadow-none' : ''}
+            className={`rounded-lp ${dark ? 'border-white/10 bg-white/5 text-white shadow-none' : ''}`}
           >
             <div className="flex items-start justify-between gap-4 p-5">
               <div>
@@ -202,7 +200,7 @@ function ItemsBlock({ block, dark }: { block: BlockOf<'items'>; dark: boolean })
                 {item.detail && <p className="mt-1 text-sm opacity-75">{item.detail}</p>}
               </div>
               {item.priceLabel && (
-                <span className="whitespace-nowrap text-sm font-bold text-[var(--lp-primary)]">
+                <span className="whitespace-nowrap text-sm font-bold text-lp-primary">
                   {item.priceLabel}
                 </span>
               )}
@@ -211,7 +209,7 @@ function ItemsBlock({ block, dark }: { block: BlockOf<'items'>; dark: boolean })
               <img
                 src={item.imageUrl}
                 alt={item.name}
-                className="h-40 w-full rounded-b-lg object-cover"
+                className="h-40 w-full object-cover"
                 loading="lazy"
               />
             )}
@@ -232,7 +230,7 @@ function GalleryBlock({ block }: { block: BlockOf<'gallery'> }) {
             key={`${block.id}-${index}`}
             src={image.url}
             alt={image.alt}
-            className="h-48 w-full rounded-xl object-cover"
+            className="h-48 w-full rounded-lp object-cover"
             loading="lazy"
           />
         ))}
@@ -275,7 +273,7 @@ function TestimonialsBlock({ block, dark }: { block: BlockOf<'testimonials'>; da
         {block.items.map((item, index) => (
           <blockquote
             key={`${block.id}-${index}`}
-            className={`rounded-xl border p-5 ${dark ? 'border-white/10 bg-white/5' : 'border-slate-200 bg-white'}`}
+            className={`rounded-lp border p-5 ${dark ? 'border-white/10 bg-white/5' : 'border-slate-200 bg-white'}`}
           >
             <p className="text-sm italic opacity-90">“{item.quote}”</p>
             <footer className="mt-3 text-xs font-semibold">
@@ -297,7 +295,7 @@ function FaqBlock({ block, dark }: { block: BlockOf<'faq'>; dark: boolean }) {
         {block.items.map((item, index) => (
           <details
             key={`${block.id}-${index}`}
-            className={`rounded-lg border p-4 ${dark ? 'border-white/10 bg-white/5' : 'border-slate-200 bg-white'}`}
+            className={`rounded-lp border p-4 ${dark ? 'border-white/10 bg-white/5' : 'border-slate-200 bg-white'}`}
           >
             <summary className="cursor-pointer text-sm font-semibold">{item.question}</summary>
             <p className="mt-2 text-sm opacity-80">{item.answer}</p>
@@ -363,7 +361,7 @@ function ContactBlock({
               {row.href ? (
                 <a
                   href={row.href}
-                  className="underline decoration-[var(--lp-primary)] underline-offset-4"
+                  className="underline decoration-lp-accent underline-offset-4"
                   {...(row.external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
                 >
                   {row.value}
@@ -380,17 +378,21 @@ function ContactBlock({
 }
 
 function CtaBlock({ block, context }: { block: BlockOf<'cta'>; context: BlockContext }) {
+  const resolved = resolveCta(block.primaryCta, context.business, context.leadFormAnchor)
+  if (!resolved) return null
+
   return (
     <Section id={block.id}>
-      <div className="rounded-2xl bg-[var(--lp-primary)] px-6 py-10 text-center text-white">
+      <div className="rounded-lp bg-lp-primary px-6 py-10 text-center text-white">
         <h2 className="text-2xl font-bold sm:text-3xl">{block.headline}</h2>
         {block.subheadline && <p className="mx-auto mt-3 max-w-2xl text-sm opacity-90">{block.subheadline}</p>}
         <div className="mt-6 flex justify-center">
           <a
-            href={resolveCta(block.primaryCta, context.business, context.leadFormAnchor)?.href ?? '#'}
-            className="inline-flex h-11 items-center justify-center rounded-lg bg-white px-6 text-sm font-semibold text-[var(--lp-primary)] transition-opacity hover:opacity-90"
+            href={resolved.href}
+            className="inline-flex h-11 items-center justify-center rounded-lp bg-white px-6 text-sm font-semibold text-lp-primary transition-opacity hover:opacity-90"
+            {...(resolved.external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
           >
-            {block.primaryCta.label}
+            {resolved.label}
           </a>
         </div>
       </div>

@@ -9,9 +9,12 @@
 import Head from 'next/head'
 import type { GetServerSideProps } from 'next'
 import LandingRenderer from '../../components/landings/LandingRenderer'
+import SchemaMarkup from '../../components/SEO/SchemaMarkup'
 import { LANDING_PAGE_PUBLIC_COLUMNS, LANDING_PAGES_TABLE, toPublicLandingPage } from '../../lib/landings/db'
+import { landingLocalBusinessJsonLd } from '../../lib/landings/jsonld'
 import { landingPublicUrl } from '../../lib/landings/paths'
 import { createPublicLandingClient } from '../../lib/landings/public-client'
+import { seoAbsoluteUrl } from '../../lib/seo/assets'
 import { logger } from '../../lib/logger'
 import type { LandingPagePublicRow, PublicLandingPage } from '../../types/landing'
 
@@ -24,6 +27,7 @@ const SLUG_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/
 export default function PublicLandingPageView({ page }: PublicLandingPageProps) {
   const { meta } = page.content
   const canonical = landingPublicUrl(page.slug)
+  const jsonLd = landingLocalBusinessJsonLd(page)
 
   return (
     <>
@@ -42,8 +46,9 @@ export default function PublicLandingPageView({ page }: PublicLandingPageProps) 
         <meta property="og:title" content={meta.seoTitle} />
         <meta property="og:description" content={meta.seoDescription} />
         <meta property="og:url" content={canonical} />
-        {meta.ogImageUrl && <meta property="og:image" content={meta.ogImageUrl} />}
+        {meta.ogImageUrl && <meta property="og:image" content={seoAbsoluteUrl(meta.ogImageUrl)} />}
       </Head>
+      {jsonLd ? <SchemaMarkup schema={jsonLd} /> : null}
       <LandingRenderer page={page} />
     </>
   )

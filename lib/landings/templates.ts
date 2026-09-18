@@ -12,6 +12,8 @@ import {
   type LandingPageContentInput,
   type LandingTemplateKey,
 } from './page-schema'
+import { brandedSeoTitle } from './seo-title'
+import { LANDING_STOCK } from './stock'
 
 export interface LandingTemplateOption {
   key: LandingTemplateKey
@@ -79,10 +81,10 @@ const TEMPLATE_CONTENT: Record<LandingTemplateKey, LandingPageContentInput> = {
   papeleria: {
     version: LANDING_SCHEMA_VERSION,
     meta: {
-      seoTitle: 'Papelería y copias cerca de ti | Impresiones y útiles',
+      seoTitle: 'Copias e impresiones',
       seoDescription:
-        'Copias en blanco y negro o color, impresiones desde USB, engargolados, plastificado y útiles escolares. Cotiza por WhatsApp y recoge en el local.',
-      keywords: 'papelería, copias, impresiones, engargolado, útiles escolares, plastificado',
+        'Copias B/N y color, impresiones desde USB o WhatsApp, engargolados y útiles escolares. Recoge en el local el mismo día.',
+      keywords: 'papelería, copias, impresiones, engargolado, útiles escolares',
       noindex: false,
     },
     theme: {
@@ -96,7 +98,7 @@ const TEMPLATE_CONTENT: Record<LandingTemplateKey, LandingPageContentInput> = {
     business: {
       name: 'Papelería Tu Nombre',
       tagline: 'Copias, impresiones y útiles a una cuadra de ti',
-      address: 'Escribe aquí tu dirección exacta',
+      address: 'Calle principal, frente al colegio',
       city: 'Tu ciudad',
       mapsQuery: 'papelería cerca de mí',
       socials: {},
@@ -116,7 +118,7 @@ const TEMPLATE_CONTENT: Record<LandingTemplateKey, LandingPageContentInput> = {
         id: 'servicios',
         kind: 'items',
         title: 'Servicios de mostrador',
-        subtitle: 'Precios de referencia. Ajusta cada línea a tu tarifa real.',
+        subtitle: 'Precios de mostrador. Confirmamos el total al ver el archivo.',
         layout: 'grid',
         items: [
           { name: 'Copia carta B/N', detail: 'Por página, desde 1 copia', priceLabel: 'L. 1' },
@@ -134,10 +136,10 @@ const TEMPLATE_CONTENT: Record<LandingTemplateKey, LandingPageContentInput> = {
         subtitle: 'Lo que más piden padres, oficinas y estudiantes.',
         layout: 'list',
         items: [
-          { name: 'Lista escolar completa', detail: 'La armamos con tu lista del colegio', priceLabel: 'Según lista' },
+          { name: 'Lista escolar completa', detail: 'La armamos con la lista del colegio', priceLabel: 'Según lista' },
           { name: 'Resma carta 500 hojas', detail: 'Marca de línea', priceLabel: 'L. 140' },
           { name: 'Cuadernos y folders', detail: 'Unidad o por docena', priceLabel: 'Desde L. 18' },
-          { name: 'Tinta y recargas', detail: 'Consulta modelo de impresora', priceLabel: 'Desde L. 120' },
+          { name: 'Tinta y recargas', detail: 'Consulta el modelo de impresora', priceLabel: 'Desde L. 120' },
         ],
       },
       {
@@ -158,15 +160,16 @@ const TEMPLATE_CONTENT: Record<LandingTemplateKey, LandingPageContentInput> = {
         items: [
           {
             question: '¿Puedo enviar el archivo por WhatsApp?',
-            answer: 'Sí. Envía el PDF o la foto, te confirmamos el total y lo dejamos listo para recoger.',
+            answer:
+              'Sí. Envía el PDF o la foto, te confirmamos el total y lo dejamos listo para recoger el mismo día.',
           },
           {
             question: '¿Hacen trabajos urgentes?',
-            answer: 'Copias e impresiones salen en minutos. Engargolados y plastificados el mismo día.',
+            answer: 'Copias e impresiones salen en minutos. Engargolados y plastificados, el mismo día.',
           },
           {
             question: '¿Aceptan tarjeta o transferencia?',
-            answer: 'Edita esta respuesta con los medios de pago que realmente aceptas.',
+            answer: 'Efectivo, transferencia y tarjeta. El total se confirma antes de imprimir.',
           },
         ],
       },
@@ -205,10 +208,11 @@ const TEMPLATE_CONTENT: Record<LandingTemplateKey, LandingPageContentInput> = {
   barberia: {
     version: LANDING_SCHEMA_VERSION,
     meta: {
-      seoTitle: 'Barbería cerca de ti | Cortes, barba y citas',
+      seoTitle: 'Cortes y barba',
       seoDescription:
-        'Corte clásico, fade, perfilado de barba y atención a niños. Reserva por WhatsApp y evita la espera. Encuéntranos en el mapa.',
+        'Corte clásico, fade, perfilado de barba y atención a niños. Reserva por WhatsApp y evita la espera.',
       keywords: 'barbería, corte de cabello, fade, barba, barbero cerca de mí',
+      ogImageUrl: LANDING_STOCK.barberiaHero,
       noindex: false,
     },
     theme: {
@@ -222,7 +226,7 @@ const TEMPLATE_CONTENT: Record<LandingTemplateKey, LandingPageContentInput> = {
     business: {
       name: 'Barbería Tu Nombre',
       tagline: 'Cortes de barrio, acabado de barbería',
-      address: 'Escribe aquí tu dirección exacta',
+      address: 'A dos cuadras del parque, portón negro',
       city: 'Tu ciudad',
       mapsQuery: 'barbería cerca de mí',
       socials: {},
@@ -235,6 +239,7 @@ const TEMPLATE_CONTENT: Record<LandingTemplateKey, LandingPageContentInput> = {
         headline: 'Tu corte listo a la hora que pasas',
         subheadline:
           'Fade, corte clásico y barba con toalla caliente. Aparta tu turno por WhatsApp y llega cuando te toque.',
+        imageUrl: LANDING_STOCK.barberiaHero,
         primaryCta: { label: 'Apartar turno', action: 'whatsapp' },
         secondaryCta: { label: 'Ver servicios', action: 'lead-form' },
       },
@@ -242,7 +247,7 @@ const TEMPLATE_CONTENT: Record<LandingTemplateKey, LandingPageContentInput> = {
         id: 'servicios',
         kind: 'items',
         title: 'Servicios y precios',
-        subtitle: 'Tiempos reales por silla. Ajusta a tu tarifa.',
+        subtitle: 'Tiempo real por silla. El fade lleva 40 minutos.',
         layout: 'grid',
         items: [
           { name: 'Corte clásico', detail: 'Máquina y tijera, 30 min', priceLabel: 'L. 150' },
@@ -269,13 +274,14 @@ const TEMPLATE_CONTENT: Record<LandingTemplateKey, LandingPageContentInput> = {
         title: 'Lo que dicen los clientes',
         items: [
           {
-            author: 'Cliente frecuente',
+            author: 'Kevin M.',
             role: 'Vecino de la colonia',
-            quote: 'Reemplaza esta reseña con una real de tus clientes. Pídela después del corte.',
+            quote: 'Pido el turno en el camino y llego cuando me toca. Ya no me quedo una hora en la silla de espera.',
           },
           {
-            author: 'Papá de familia',
-            quote: 'Traigo a los dos niños y salimos en media hora. Escribe aquí tu propio testimonio.',
+            author: 'Don Raúl',
+            role: 'Papá de dos',
+            quote: 'Traigo a los dos niños un sábado y salimos en media hora. El fade queda parejo.',
           },
         ],
       },
@@ -314,10 +320,11 @@ const TEMPLATE_CONTENT: Record<LandingTemplateKey, LandingPageContentInput> = {
   salon_belleza: {
     version: LANDING_SCHEMA_VERSION,
     meta: {
-      seoTitle: 'Salón de belleza cerca de ti | Uñas, color y tratamientos',
+      seoTitle: 'Uñas, color y citas',
       seoDescription:
         'Manicura, pedicura, color, keratina y peinados para eventos. Reserva tu cita por WhatsApp y llega a tu hora.',
-      keywords: 'salón de belleza, uñas acrílicas, keratina, tinte, peinado de novia, spa de pies',
+      keywords: 'salón de belleza, uñas acrílicas, keratina, tinte, peinado de novia',
+      ogImageUrl: LANDING_STOCK.salonHero,
       noindex: false,
     },
     theme: {
@@ -331,7 +338,7 @@ const TEMPLATE_CONTENT: Record<LandingTemplateKey, LandingPageContentInput> = {
     business: {
       name: 'Salón Tu Nombre',
       tagline: 'Cita puntual, resultado que dura',
-      address: 'Escribe aquí tu dirección exacta',
+      address: 'Plaza comercial, local 4',
       city: 'Tu ciudad',
       mapsQuery: 'salón de belleza cerca de mí',
       socials: {},
@@ -344,14 +351,24 @@ const TEMPLATE_CONTENT: Record<LandingTemplateKey, LandingPageContentInput> = {
         headline: 'Tu cita de belleza, sin esperas',
         subheadline:
           'Uñas, color, tratamiento y peinado con hora reservada. Te confirmamos por WhatsApp y respetamos tu tiempo.',
+        imageUrl: LANDING_STOCK.salonHero,
         primaryCta: { label: 'Reservar cita', action: 'lead-form' },
         secondaryCta: { label: 'Ver servicios', action: 'whatsapp' },
+      },
+      {
+        id: 'espacio',
+        kind: 'gallery',
+        title: 'El salón',
+        images: [
+          { url: LANDING_STOCK.salonHero, alt: 'Estación de peinado y espejos del salón' },
+          { url: LANDING_STOCK.salonManicura, alt: 'Mesa de manicura con esmaltes' },
+        ],
       },
       {
         id: 'servicios',
         kind: 'items',
         title: 'Servicios',
-        subtitle: 'Duración aproximada por servicio. Ajusta precios a tu salón.',
+        subtitle: 'Duración aproximada. La keratina lleva tres horas.',
         layout: 'grid',
         items: [
           { name: 'Manicura tradicional', detail: 'Limado, cutícula y esmalte', priceLabel: 'L. 180' },
@@ -366,7 +383,7 @@ const TEMPLATE_CONTENT: Record<LandingTemplateKey, LandingPageContentInput> = {
         id: 'paquetes',
         kind: 'items',
         title: 'Paquetes',
-        subtitle: 'Combinaciones que ya piden tus clientas.',
+        subtitle: 'Combinaciones que ya piden las clientas.',
         layout: 'list',
         items: [
           { name: 'Manos y pies', detail: 'Manicura + pedicura el mismo día', priceLabel: 'L. 430' },
@@ -396,7 +413,7 @@ const TEMPLATE_CONTENT: Record<LandingTemplateKey, LandingPageContentInput> = {
           },
           {
             question: '¿Cuánto dura la keratina?',
-            answer: 'Edita esta respuesta con la duración real según el producto que usas.',
+            answer: 'Tres horas en salón. El alisado se mantiene de 8 a 12 semanas según el cabello y el lavado.',
           },
         ],
       },
@@ -435,10 +452,10 @@ const TEMPLATE_CONTENT: Record<LandingTemplateKey, LandingPageContentInput> = {
   comercial: {
     version: LANDING_SCHEMA_VERSION,
     meta: {
-      seoTitle: 'Muebles, línea blanca y electrodomésticos | Crédito propio',
+      seoTitle: 'Muebles y línea blanca',
       seoDescription:
-        'Salas, comedores, refrigeradoras, lavadoras y estufas con crédito propio y entrega a domicilio. Cotiza tu plan de pagos hoy.',
-      keywords: 'muebles, línea blanca, electrodomésticos, refrigeradora, lavadora, crédito propio',
+        'Salas, comedores, refrigeradoras y lavadoras con crédito propio y entrega a domicilio. Cotiza tu plan de pagos hoy.',
+      keywords: 'muebles, línea blanca, electrodomésticos, crédito propio',
       noindex: false,
     },
     theme: {
@@ -452,7 +469,7 @@ const TEMPLATE_CONTENT: Record<LandingTemplateKey, LandingPageContentInput> = {
     business: {
       name: 'Comercial Tu Nombre',
       tagline: 'Muebles y línea blanca con crédito que sí aprueban',
-      address: 'Escribe aquí tu dirección exacta',
+      address: 'Boulevard principal, sala de ventas',
       city: 'Tu ciudad',
       mapsQuery: 'mueblería cerca de mí',
       socials: {},
@@ -501,7 +518,7 @@ const TEMPLATE_CONTENT: Record<LandingTemplateKey, LandingPageContentInput> = {
         kind: 'text',
         title: 'Cómo funciona el crédito',
         body:
-          'Con tu identidad y un comprobante de ingreso definimos prima y abono semanal o quincenal. Te entregamos a domicilio dentro de la ciudad y el producto sale con garantía de fábrica. Edita este texto con tus requisitos reales, el plazo máximo y el costo de envío fuera de la ciudad.',
+          'Con tu identidad y un comprobante de ingreso definimos prima y abono semanal o quincenal. Te entregamos a domicilio dentro de la ciudad y el producto sale con garantía de fábrica. Plazo de 3 a 12 meses según el monto.',
       },
       {
         id: 'horario',
@@ -520,15 +537,15 @@ const TEMPLATE_CONTENT: Record<LandingTemplateKey, LandingPageContentInput> = {
         items: [
           {
             question: '¿Qué necesito para el crédito?',
-            answer: 'Identidad vigente y comprobante de ingreso. Ajusta esta lista a tus requisitos.',
+            answer: 'Identidad vigente y un comprobante de ingreso. La aprobación es el mismo día con los papeles en mano.',
           },
           {
             question: '¿La entrega tiene costo?',
-            answer: 'Dentro de la ciudad es gratis. Fuera de la ciudad se cotiza según distancia.',
+            answer: 'Dentro de la ciudad es gratis. Fuera de la ciudad se cotiza según la distancia.',
           },
           {
             question: '¿Los productos tienen garantía?',
-            answer: 'Sí, garantía de fábrica. Indica aquí el plazo por categoría.',
+            answer: 'Sí. Un año de garantía de fábrica en línea blanca y 90 días en muebles por defectos de costura.',
           },
         ],
       },
@@ -567,10 +584,10 @@ const TEMPLATE_CONTENT: Record<LandingTemplateKey, LandingPageContentInput> = {
   ferreteria: {
     version: LANDING_SCHEMA_VERSION,
     meta: {
-      seoTitle: 'Ferretería cerca de ti | Herramientas y materiales',
+      seoTitle: 'Materiales y herramientas',
       seoDescription:
-        'Tornillería, pintura, herramientas y materiales de construcción. Pide por WhatsApp y recógelo en el local.',
-      keywords: 'ferretería, tornillos, pintura, taladro, materiales de construcción',
+        'Herramientas, cemento, hierro y pinturas al mejor precio. Cotiza tu lista y visítanos hoy.',
+      keywords: 'ferretería, cemento, hierro, pintura, herramientas, tornillería',
       noindex: false,
     },
     theme: {
@@ -584,7 +601,7 @@ const TEMPLATE_CONTENT: Record<LandingTemplateKey, LandingPageContentInput> = {
     business: {
       name: 'Ferretería Tu Nombre',
       tagline: 'Lo que te falta para terminar la obra, a una cuadra',
-      address: 'Escribe aquí tu dirección exacta',
+      address: 'Calle principal, con área de carga',
       city: 'Tu ciudad',
       mapsQuery: 'ferretería cerca de mí',
       socials: {},
@@ -593,43 +610,52 @@ const TEMPLATE_CONTENT: Record<LandingTemplateKey, LandingPageContentInput> = {
       {
         id: 'hero',
         kind: 'hero',
-        badge: 'Pedido por WhatsApp',
-        headline: 'El material que te falta, sin ir al centro',
+        badge: 'Mostrador y carga',
+        headline: 'Materiales de construcción y ferretería cerca de ti',
         subheadline:
-          'Tornillería, pintura, herramientas y mangueras. Manda la lista por WhatsApp y pásalo a recoger.',
-        primaryCta: { label: 'Pedir por WhatsApp', action: 'whatsapp' },
-        secondaryCta: { label: 'Ver productos', action: 'lead-form' },
+          'Herramientas, cemento, hierro y pinturas al mejor precio. Visítanos hoy o manda la lista por WhatsApp.',
+        primaryCta: { label: 'Ver cómo llegar', action: 'maps' },
+        secondaryCta: { label: 'Cotizar lista', action: 'whatsapp' },
       },
       {
-        id: 'productos',
+        id: 'catalogo',
         kind: 'items',
-        title: 'Lo que más piden',
-        subtitle: 'Precios de referencia. Ajústalos a tu inventario.',
+        title: 'Nuestro catálogo',
+        subtitle: 'Ocho líneas para obra, casa y mantenimiento.',
         layout: 'grid',
         items: [
-          { name: 'Taladro 1/2"', detail: 'Uso profesional, garantía local', priceLabel: 'L. 1,250' },
-          { name: 'Pintura interior 1 gal', detail: 'Blanco y colores de línea', priceLabel: 'L. 385' },
-          { name: 'Kit tornillería', detail: 'Caja surtida 200 pzas', priceLabel: 'L. 95' },
-          { name: 'Manguera 15 m', detail: 'Jardín / obra ligera', priceLabel: 'L. 210' },
-          { name: 'Cemento', detail: 'Saco de línea', priceLabel: 'Según marca' },
-          { name: 'Brocas y discos', detail: 'Para metal, concreto y madera', priceLabel: 'Desde L. 35' },
+          { name: 'Cemento y agregados', detail: 'Saco de línea, arena y piedra' },
+          { name: 'Hierro y acero', detail: 'Varilla, malla y perfiles' },
+          { name: 'Pinturas y solventes', detail: 'Interior, exterior y thinner' },
+          { name: 'Herramienta manual', detail: 'Taladros, discos, brocas' },
+          { name: 'Plomería', detail: 'Tubos, pegamento y llaves' },
+          { name: 'Electricidad', detail: 'Cable, breakers e iluminación' },
+          { name: 'Madera', detail: 'Tablas, triplay y listones' },
+          { name: 'Tornillería', detail: 'Caja surtida y por kilo' },
         ],
+      },
+      {
+        id: 'credito',
+        kind: 'text',
+        title: '¿Construyes a gran escala?',
+        body:
+          'Pregunta por nuestras líneas de crédito para proyectos de obra. Cotiza tu lista de materiales y te mejoramos el precio. Pedidos grandes se confirman el mismo día; el área de carga está al costado.',
       },
       {
         id: 'horario',
         kind: 'hours',
-        title: 'Horario',
+        title: 'Horario de mostrador',
         rows: [
           { label: 'Lunes a sábado', value: '7:30 – 18:00' },
           { label: 'Domingo', value: 'Cerrado' },
         ],
-        note: 'Pedidos grandes se confirman el mismo día por WhatsApp.',
+        note: 'Los sábados de obra el mostrador abre a las 7:00.',
       },
       {
         id: 'pedido',
         kind: 'leadForm',
-        title: 'Manda tu lista',
-        subtitle: 'Dinos qué necesitas y te armamos el total.',
+        title: 'Cotiza tu lista',
+        subtitle: 'Dinos qué necesitas y te armamos el total con existencia.',
         submitLabel: 'Enviar lista',
         consentText: CONSENT_TEXT,
         fields: { phone: true, message: true },
@@ -651,8 +677,8 @@ const TEMPLATE_CONTENT: Record<LandingTemplateKey, LandingPageContentInput> = {
         id: 'cierre',
         kind: 'cta',
         headline: 'No pares la obra por un tornillo',
-        subheadline: 'Escribe la lista y te decimos qué hay en stock.',
-        primaryCta: { label: 'Escribir por WhatsApp', action: 'whatsapp' },
+        subheadline: 'Abre el mapa y pásate hoy. La lista la cotizamos en el mostrador.',
+        primaryCta: { label: 'Ver cómo llegar', action: 'maps' },
       },
     ],
   },
@@ -660,9 +686,9 @@ const TEMPLATE_CONTENT: Record<LandingTemplateKey, LandingPageContentInput> = {
   mercadito: {
     version: LANDING_SCHEMA_VERSION,
     meta: {
-      seoTitle: 'Mercadito cerca de ti | Abarrotes y recargas',
+      seoTitle: 'Abarrotes de la colonia',
       seoDescription:
-        'Canasta básica, lácteos del día, recargas y entrega a domicilio en la colonia. Pide por WhatsApp.',
+        'Canasta básica, lácteos del día, recargas y entrega a domicilio en un radio de 8 cuadras. Pide el mandado por WhatsApp.',
       keywords: 'mercadito, abarrotería, pulpería, recargas, entrega a domicilio',
       noindex: false,
     },
@@ -677,7 +703,7 @@ const TEMPLATE_CONTENT: Record<LandingTemplateKey, LandingPageContentInput> = {
     business: {
       name: 'Mercadito Tu Nombre',
       tagline: 'El mandado de la cuadra, ahora por WhatsApp',
-      address: 'Escribe aquí tu dirección exacta',
+      address: 'A media cuadra de la iglesia, portón verde',
       city: 'Tu ciudad',
       mapsQuery: 'abarrotería cerca de mí',
       socials: {},
@@ -686,33 +712,54 @@ const TEMPLATE_CONTENT: Record<LandingTemplateKey, LandingPageContentInput> = {
       {
         id: 'hero',
         kind: 'hero',
-        badge: 'Entrega en la colonia',
-        headline: 'El mandado sin hacer fila',
+        badge: 'Entrega en 8 cuadras',
+        headline: 'Tu mercadito de confianza a la vuelta de la esquina',
         subheadline:
-          'Arroz, frijol, lácteos y recargas. Manda la lista por WhatsApp y te lo llevamos o lo dejas listo para recoger.',
+          'Abarrotes, verduras frescas y lácteos de la mejor calidad. Todo sin hacer grandes filas.',
         primaryCta: { label: 'Pedir el mandado', action: 'whatsapp' },
         secondaryCta: { label: 'Ver qué hay', action: 'lead-form' },
       },
       {
-        id: 'productos',
+        id: 'diario',
         kind: 'items',
-        title: 'Lo de todos los días',
-        layout: 'grid',
+        title: 'Productos frescos a diario',
+        subtitle: 'Lo que entra en la mañana, se acaba en la tarde.',
+        layout: 'list',
         items: [
+          { name: 'Lácteos y huevos', detail: 'Leche, queso, crema y cartón del día', priceLabel: 'Variado' },
+          { name: 'Verduras del día', detail: 'Según lo que llegó del mercado', priceLabel: 'Por libra' },
           { name: 'Canasta básica', detail: 'Arroz, frijol, azúcar, aceite', priceLabel: 'Desde L. 180' },
-          { name: 'Lácteos del día', detail: 'Leche, queso, crema', priceLabel: 'Según peso' },
           { name: 'Recarga / pagos', detail: 'Claro, Tigo, energía', priceLabel: 'Sin recargo' },
-          { name: 'Entrega a domicilio', detail: 'Radio 8 cuadras, pedido mínimo', priceLabel: 'L. 25' },
         ],
+      },
+      {
+        id: 'entrega',
+        kind: 'text',
+        title: 'Estamos en tu barrio',
+        body:
+          'Ubicados a media cuadra de la iglesia. Atendemos un radio de 8 cuadras para compras de última hora. A pie, si vives a menos de 4 cuadras; en bici o moto hasta las 8.',
       },
       {
         id: 'horario',
         kind: 'hours',
-        title: 'Horario',
-        rows: [
-          { label: 'Lunes a domingo', value: '6:30 – 21:00' },
+        title: 'Abierto los 7 días',
+        rows: [{ label: 'Lunes a domingo', value: '6:30 – 21:00' }],
+        note: 'Domingo la recarga de energía cierra a las 20:00.',
+      },
+      {
+        id: 'preguntas',
+        kind: 'faq',
+        title: 'Antes de pedir',
+        items: [
+          {
+            question: '¿Hacen entregas a domicilio?',
+            answer: 'Entregamos a pie si vives a menos de 4 cuadras. Hasta 8 cuadras en bici o moto. Llama para confirmar disponibilidad.',
+          },
+          {
+            question: '¿Hacen recargas de noche?',
+            answer: 'Hasta las 20:30. Después solo abarrotes y lácteos.',
+          },
         ],
-        note: 'Última entrega 30 minutos antes del cierre.',
       },
       {
         id: 'pedido',
@@ -749,10 +796,11 @@ const TEMPLATE_CONTENT: Record<LandingTemplateKey, LandingPageContentInput> = {
   supermercado: {
     version: LANDING_SCHEMA_VERSION,
     meta: {
-      seoTitle: 'Supermercado cerca de ti | Ofertas y recoger en tienda',
+      seoTitle: 'Ofertas y recoger en tienda',
       seoDescription:
-        'Canasta básica, carnes, lácteos y ofertas de la semana. Arma tu lista por WhatsApp y recógelo en tienda.',
+        'Canasta básica, carnes, lácteos y ofertas de la semana. Arma tu lista por WhatsApp y recógela en caja 1, con parqueo al frente.',
       keywords: 'supermercado, ofertas, canasta básica, recoger en tienda',
+      ogImageUrl: LANDING_STOCK.supermercadoHero,
       noindex: false,
     },
     theme: {
@@ -766,7 +814,7 @@ const TEMPLATE_CONTENT: Record<LandingTemplateKey, LandingPageContentInput> = {
     business: {
       name: 'Súper Tu Nombre',
       tagline: 'La compra de la semana, sin perder la tarde',
-      address: 'Escribe aquí tu dirección exacta',
+      address: 'Boulevard principal, parqueo al frente',
       city: 'Tu ciudad',
       mapsQuery: 'supermercado cerca de mí',
       socials: {},
@@ -776,22 +824,48 @@ const TEMPLATE_CONTENT: Record<LandingTemplateKey, LandingPageContentInput> = {
         id: 'hero',
         kind: 'hero',
         badge: 'Ofertas de la semana',
-        headline: 'Arma la lista y recógela lista',
+        headline: 'Frescura, variedad y ahorro en cada pasillo',
         subheadline:
-          'Abarrotes, lácteos, carnes y limpieza. Manda el pedido por WhatsApp y pasa a la hora que te quede.',
+          'Abastece tu hogar con productos nacionales e importados. Manda la lista por WhatsApp y recógela en caja 1, con parqueo al frente.',
+        imageUrl: LANDING_STOCK.supermercadoHero,
         primaryCta: { label: 'Pedir por WhatsApp', action: 'whatsapp' },
         secondaryCta: { label: 'Ver ofertas', action: 'lead-form' },
       },
       {
         id: 'ofertas',
         kind: 'items',
-        title: 'Lo que más se lleva',
+        title: 'Ofertas de la semana',
+        subtitle: 'Vigentes hasta el domingo o agotar existencia.',
         layout: 'grid',
         items: [
+          { name: 'Carnes con 15% OFF', detail: 'Cortes del día, según peso', priceLabel: 'Mostrador' },
+          { name: 'Día de frutas y verduras', detail: 'Producto fresco de la mañana', priceLabel: 'Por libra' },
+          { name: 'Descuentos en limpieza', detail: 'Detergente, cloro y jabón', priceLabel: 'Desde L. 45' },
           { name: 'Canasta de la semana', detail: 'Arroz, frijol, aceite, azúcar', priceLabel: 'Desde L. 220' },
-          { name: 'Pollo y res', detail: 'Cortes del día, según peso', priceLabel: 'Según peso' },
-          { name: 'Lácteos y huevos', detail: 'Leche, queso, cartón de huevos', priceLabel: 'Según marca' },
-          { name: 'Limpieza', detail: 'Jabón, cloro, detergente', priceLabel: 'Desde L. 45' },
+          { name: 'Cartón de huevos 30', detail: 'De granja, esta semana', priceLabel: 'L. 115' },
+          { name: 'Pan del día', detail: 'Horno propio, hasta las 11:00', priceLabel: 'Desde L. 8' },
+        ],
+      },
+      {
+        id: 'pasillos',
+        kind: 'gallery',
+        title: 'Carnicería y verduras',
+        images: [
+          { url: LANDING_STOCK.supermercadoCarniceria, alt: 'Mostrador de carnes del supermercado' },
+          { url: LANDING_STOCK.supermercadoVerduras, alt: 'Pasillo de frutas y verduras' },
+        ],
+      },
+      {
+        id: 'departamentos',
+        kind: 'items',
+        title: 'Departamentos',
+        subtitle: 'La compra completa en un solo pasillo de recoger.',
+        layout: 'grid',
+        items: [
+          { name: 'Carnes y pollo', detail: 'Cortes del día, según peso', priceLabel: 'Mostrador' },
+          { name: 'Lácteos y huevos', detail: 'Cadena de frío', priceLabel: 'Góndola' },
+          { name: 'Abarrotes', detail: 'Canasta y enlatados', priceLabel: 'Góndola' },
+          { name: 'Limpieza', detail: 'Hogar y ropa', priceLabel: 'Góndola' },
         ],
       },
       {
@@ -802,12 +876,32 @@ const TEMPLATE_CONTENT: Record<LandingTemplateKey, LandingPageContentInput> = {
           { label: 'Lunes a sábado', value: '7:00 – 20:00' },
           { label: 'Domingo', value: '8:00 – 18:00' },
         ],
+        note: 'Pedidos para recoger se confirman 45 minutos antes.',
+      },
+      {
+        id: 'preguntas',
+        kind: 'faq',
+        title: 'Recoger y parqueo',
+        items: [
+          {
+            question: '¿Dónde recojo el pedido?',
+            answer: 'Caja 1, a la izquierda al entrar. Di tu nombre; el mandado ya va embolsado.',
+          },
+          {
+            question: '¿Tienen amplio parqueo?',
+            answer: 'Sí. Parqueo al frente, 20 minutos sin cobro mientras recoges. Hay personal de seguridad en el lote.',
+          },
+          {
+            question: '¿Puedo pedir para recoger?',
+            answer: 'Sí. Envía tu lista por WhatsApp y te la tenemos lista en caja 1, embolsada con tu nombre.',
+          },
+        ],
       },
       {
         id: 'pedido',
         kind: 'leadForm',
         title: 'Arma tu lista',
-        subtitle: 'Dinos qué llevas y si recorres o pasas a recoger.',
+        subtitle: 'Dinos qué llevas y a qué hora pasas.',
         submitLabel: 'Enviar lista',
         consentText: CONSENT_TEXT,
         fields: { phone: true, message: true },
@@ -818,7 +912,7 @@ const TEMPLATE_CONTENT: Record<LandingTemplateKey, LandingPageContentInput> = {
         id: 'contacto',
         kind: 'contact',
         title: 'Cómo llegar',
-        note: 'Parqueo al frente. Recogés en caja 1.',
+        note: 'Parqueo al frente. Recoges en caja 1.',
         showWhatsapp: true,
         showPhone: true,
         showEmail: true,
@@ -829,7 +923,7 @@ const TEMPLATE_CONTENT: Record<LandingTemplateKey, LandingPageContentInput> = {
         id: 'cierre',
         kind: 'cta',
         headline: 'La compra de la semana, sin dar vueltas',
-        subheadline: 'Manda la lista ahora y te la dejamos lista.',
+        subheadline: 'Manda la lista ahora y te la dejamos lista en caja.',
         primaryCta: { label: 'Escribir por WhatsApp', action: 'whatsapp' },
       },
     ],
@@ -838,10 +932,11 @@ const TEMPLATE_CONTENT: Record<LandingTemplateKey, LandingPageContentInput> = {
   clinica: {
     version: LANDING_SCHEMA_VERSION,
     meta: {
-      seoTitle: 'Clínica cerca de ti | Consultas y citas',
+      seoTitle: 'Consultas y citas',
       seoDescription:
-        'Consulta general, control y laboratorio. Reserva tu hora por WhatsApp y llega a tu cita sin espera.',
+        'Consulta general, control y laboratorio. Reserva tu hora por WhatsApp y llega a tu cita sin espera en sala.',
       keywords: 'clínica, consulta médica, citas, laboratorio, control',
+      ogImageUrl: LANDING_STOCK.clinicaHero,
       noindex: false,
     },
     theme: {
@@ -855,7 +950,7 @@ const TEMPLATE_CONTENT: Record<LandingTemplateKey, LandingPageContentInput> = {
     business: {
       name: 'Clínica Tu Nombre',
       tagline: 'Tu cita a la hora acordada',
-      address: 'Escribe aquí tu dirección exacta',
+      address: 'Consultorio con sala de espera y parqueo',
       city: 'Tu ciudad',
       mapsQuery: 'clínica cerca de mí',
       socials: {},
@@ -865,23 +960,72 @@ const TEMPLATE_CONTENT: Record<LandingTemplateKey, LandingPageContentInput> = {
         id: 'hero',
         kind: 'hero',
         badge: 'Citas esta semana',
-        headline: 'Consulta con hora reservada',
+        headline: 'Atención médica general, humana y profesional',
         subheadline:
-          'Medicina general, control y laboratorio. Aparta tu turno por WhatsApp y llega a tu hora.',
-        primaryCta: { label: 'Reservar cita', action: 'lead-form' },
-        secondaryCta: { label: 'Escribir por WhatsApp', action: 'whatsapp' },
+          'Cuidamos la salud de tu familia con diagnósticos claros y un trato cálido. Reserva por WhatsApp y llega a tu hora.',
+        imageUrl: LANDING_STOCK.clinicaHero,
+        primaryCta: { label: 'Agendar cita por WhatsApp', action: 'whatsapp' },
+        secondaryCta: { label: 'Ver servicios', action: 'lead-form' },
+      },
+      {
+        id: 'espacio',
+        kind: 'gallery',
+        title: 'El consultorio',
+        images: [
+          { url: LANDING_STOCK.clinicaHero, alt: 'Sala de espera de la clínica' },
+          { url: LANDING_STOCK.clinicaConsultorio, alt: 'Consultorio de medicina general' },
+        ],
       },
       {
         id: 'servicios',
         kind: 'items',
-        title: 'Servicios',
-        subtitle: 'Duración y precios de referencia. Ajústalos a tu consultorio.',
+        title: 'Nuestros servicios',
+        subtitle: 'Primera vez: llega 15 minutos antes con tu identidad.',
         layout: 'grid',
         items: [
-          { name: 'Consulta general', detail: '30 min, primera vez o control', priceLabel: 'L. 400' },
-          { name: 'Control de niño sano', detail: 'Crecimiento y vacunas', priceLabel: 'L. 350' },
-          { name: 'Toma de presión / glucosa', detail: 'Sin cita, mientras hay cupo', priceLabel: 'L. 80' },
+          { name: 'Consulta médica general', detail: '30 min, primera vez o control', priceLabel: 'L. 400' },
+          { name: 'Toma de presión y glucosa', detail: 'Sin cita, mientras hay cupo', priceLabel: 'L. 80' },
+          { name: 'Nebulizaciones', detail: 'En consultorio, con indicación', priceLabel: 'L. 120' },
+          { name: 'Pequeñas cirugías', detail: 'Sutura y curación, con evaluación previa', priceLabel: 'Cotización' },
+          { name: 'Certificados médicos', detail: 'El mismo día, con consulta', priceLabel: 'L. 150' },
           { name: 'Laboratorio básico', detail: 'Sangre y orina, resultados el mismo día', priceLabel: 'Desde L. 250' },
+        ],
+      },
+      {
+        id: 'pacientes',
+        kind: 'testimonials',
+        title: 'Pacientes de la colonia',
+        items: [
+          {
+            author: 'María E.',
+            role: 'Control de presión',
+            quote: 'Excelente atención. El doctor fue paciente y explicó todo el tratamiento con claridad.',
+          },
+          {
+            author: 'Luis P.',
+            role: 'Papá de un niño de 4',
+            quote: 'El control del niño sale el mismo día con receta clara. El laboratorio nos entregó resultados a las 3.',
+          },
+        ],
+      },
+      {
+        id: 'preguntas',
+        kind: 'faq',
+        title: 'Antes de tu cita',
+        items: [
+          {
+            question: '¿Qué llevo a la primera consulta?',
+            answer: 'Identidad y, si tienes, exámenes previos. Llega 15 minutos antes para el registro.',
+          },
+          {
+            question: '¿Atienden emergencias?',
+            answer:
+              'Atendemos urgencias menores en horario de clínica. Para emergencias mayores referimos al hospital más cercano.',
+          },
+          {
+            question: '¿Hay parqueo?',
+            answer: 'Sí, dos espacios frente al consultorio. No dejes el carro sobre la acera.',
+          },
         ],
       },
       {
@@ -893,7 +1037,7 @@ const TEMPLATE_CONTENT: Record<LandingTemplateKey, LandingPageContentInput> = {
           { label: 'Sábado', value: '8:00 – 12:00' },
           { label: 'Domingo', value: 'Cerrado' },
         ],
-        note: 'Primera vez: llega 15 minutos antes con identidad.',
+        note: 'Las citas de la mañana se agotan primero.',
       },
       {
         id: 'reserva',
@@ -921,8 +1065,8 @@ const TEMPLATE_CONTENT: Record<LandingTemplateKey, LandingPageContentInput> = {
         id: 'cierre',
         kind: 'cta',
         headline: 'Aparta tu hora antes de que se llene el día',
-        subheadline: 'Las citas de la mañana se agotan primero.',
-        primaryCta: { label: 'Reservar ahora', action: 'lead-form' },
+        subheadline: 'Te confirmamos por WhatsApp. Llega a tu hora, no a hacer fila.',
+        primaryCta: { label: 'Agendar cita por WhatsApp', action: 'whatsapp' },
       },
     ],
   },
@@ -949,11 +1093,15 @@ export function applyBusinessToTemplate(
   },
   options?: { noindex?: boolean }
 ): LandingPageContent {
+  const hero = content.blocks.find((block) => block.kind === 'hero')
+  const ogFromHero = hero && hero.kind === 'hero' ? hero.imageUrl : undefined
+
   return {
     ...content,
     meta: {
       ...content.meta,
-      seoTitle: `${business.name} | ${content.meta.seoTitle}`.slice(0, 70),
+      seoTitle: brandedSeoTitle(business.name, content.meta.seoTitle),
+      ogImageUrl: content.meta.ogImageUrl ?? ogFromHero,
       noindex: options?.noindex ?? content.meta.noindex,
     },
     business: {

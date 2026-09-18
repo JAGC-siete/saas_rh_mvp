@@ -50,6 +50,9 @@ module.exports = {
           DEFAULT: "hsl(var(--accent))",
           foreground: "hsl(var(--accent-foreground))",
         },
+        /** Tokens del tenant en /p/[slug]. No pisan `accent` de shadcn. */
+        'lp-accent': 'var(--lp-accent)',
+        'lp-primary': 'var(--lp-primary)',
         popover: {
           DEFAULT: "hsl(var(--popover))",
           foreground: "hsl(var(--popover-foreground))",
@@ -75,6 +78,7 @@ module.exports = {
         md: "12px", 
         sm: "calc(var(--radius) - 4px)",
         '2xl': '20px',
+        lp: 'var(--lp-radius)',
       },
       backdropBlur: {
         'xs': '2px',
