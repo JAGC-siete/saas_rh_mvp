@@ -2,20 +2,20 @@ import { useCallback, useEffect, useState } from 'react'
 import Head from 'next/head'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
-import SuperAdminGuard from '../../../../../components/SuperAdminGuard'
-import SuperAdminLayout from '../../../../../components/SuperAdminLayout'
-import VendorForm, { type VendorFormValues } from '../../../../../components/mercado/VendorForm'
-import { Card, CardContent, CardHeader, CardTitle } from '../../../../../components/ui/card'
-import { getBrowserAuthHeaders } from '../../../../../lib/auth/browser-auth-headers'
+import SuperAdminGuard from '../../../../components/SuperAdminGuard'
+import SuperAdminLayout from '../../../../components/SuperAdminLayout'
+import VendorForm, { type VendorFormValues } from '../../../../components/mercado/VendorForm'
+import { Card, CardContent, CardHeader, CardTitle } from '../../../../components/ui/card'
+import { getBrowserAuthHeaders } from '../../../../lib/auth/browser-auth-headers'
 import {
   MERCADO_VENDORS_API_PATH,
   mercadoAdminEditPath,
   mercadoAdminListPath,
-} from '../../../../../lib/mercado/paths'
-import type { CreateVendorPayload, VendorPaymentMethod, VendorStatus } from '../../../../../lib/mercado/schema'
-import type { VendorRow } from '../../../../../lib/mercado/vendors-db'
-import { isVendorCategory } from '../../../../../lib/mercado/categories'
-import { DEFAULT_VENDOR_PAYMENT_METHODS } from '../../../../../lib/mercado/schema'
+} from '../../../../lib/mercado/paths'
+import type { CreateVendorPayload, VendorPaymentMethod, VendorStatus } from '../../../../lib/mercado/schema'
+import type { VendorRow } from '../../../../lib/mercado/vendors-db'
+import { isVendorCategory } from '../../../../lib/mercado/categories'
+import { DEFAULT_VENDOR_PAYMENT_METHODS } from '../../../../lib/mercado/schema'
 
 function rowToFormValues(row: VendorRow): VendorFormValues {
   const gallery = Array.isArray(row.gallery) ? row.gallery : []

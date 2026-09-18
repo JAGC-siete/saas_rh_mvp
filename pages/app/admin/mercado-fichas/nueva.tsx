@@ -2,17 +2,17 @@ import { useEffect, useState } from 'react'
 import Head from 'next/head'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
-import SuperAdminGuard from '../../../../../components/SuperAdminGuard'
-import SuperAdminLayout from '../../../../../components/SuperAdminLayout'
-import VendorForm, { type VendorFormValues } from '../../../../../components/mercado/VendorForm'
-import { Card, CardContent, CardHeader, CardTitle } from '../../../../../components/ui/card'
-import { getBrowserAuthHeaders } from '../../../../../lib/auth/browser-auth-headers'
+import SuperAdminGuard from '../../../../components/SuperAdminGuard'
+import SuperAdminLayout from '../../../../components/SuperAdminLayout'
+import VendorForm, { type VendorFormValues } from '../../../../components/mercado/VendorForm'
+import { Card, CardContent, CardHeader, CardTitle } from '../../../../components/ui/card'
+import { getBrowserAuthHeaders } from '../../../../lib/auth/browser-auth-headers'
 import {
   MERCADO_APPLICATIONS_ADMIN_API_PATH,
   MERCADO_VENDORS_API_PATH,
   mercadoAdminListPath,
-} from '../../../../../lib/mercado/paths'
-import type { CreateVendorPayload } from '../../../../../lib/mercado/schema'
+} from '../../../../lib/mercado/paths'
+import type { CreateVendorPayload } from '../../../../lib/mercado/schema'
 
 export default function MercadoFichaNuevaPage() {
   const router = useRouter()
