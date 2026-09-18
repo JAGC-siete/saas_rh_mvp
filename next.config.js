@@ -178,8 +178,9 @@ const nextConfig = {
         permanent: true,
       },
       {
-        source: '/mercado/:path*',
-        destination: '/mercadosanpablosigua/:path*',
+        // No reescribir /mercado/*.png (assets de public/mercado).
+        source: '/mercado/:path((?!.*\\.).*)',
+        destination: '/mercadosanpablosigua/:path',
         permanent: true,
       },
       {
@@ -188,8 +189,8 @@ const nextConfig = {
         permanent: true,
       },
       {
-        source: '/en/mercado/:path*',
-        destination: '/en/mercadosanpablosigua/:path*',
+        source: '/en/mercado/:path((?!.*\\.).*)',
+        destination: '/en/mercadosanpablosigua/:path',
         permanent: true,
       },
       // Funnel TOFU: canonical /cerrar-planilla-en-paz (legacy /secreto, /info → 301)

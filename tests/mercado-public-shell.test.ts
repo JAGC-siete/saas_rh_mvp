@@ -1,8 +1,12 @@
 import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { MERCADO_GEO, MERCADO_HOME_PREVIEW_VENDORS, MERCADO_SEO, mercadoSearchHints } from '../lib/mercado/home'
+import { vendorBuySteps } from '../lib/mercado/buy-flow'
 import { isPublicMercadoRoute, mercadoHomePath, mercadoVendorPath } from '../lib/mercado/paths'
-import { vendorWhatsAppHref } from '../lib/mercado/whatsapp'
+import { MERCADO_DIRECTORY_WHATSAPP, vendorReservationHref, vendorWhatsAppHref } from '../lib/mercado/whatsapp'
+import { mercadoStaticSrc } from '../lib/mercado/assets'
 import {
   isPublicMarketingRoute,
   isPublicTenantLandingRoute,
@@ -36,6 +40,17 @@ describe('mercado: shell público', () => {
     assert.ok(getAllPublicRoutes().includes('/mercado/*'))
   })
 
+  it('el 301 de /mercado no se lleva los png de public/mercado', () => {
+    const config = readFileSync(join(process.cwd(), 'next.config.js'), 'utf8')
+    assert.match(config, /\/mercado\/:path\(\(\?!\.\*\\\\.\)\.\*\)/)
+    assert.equal(config.includes("source: '/mercado/:path*'"), false)
+  })
+
+  it('cache-bustea png de /mercado para no heredar un 308 viejo', () => {
+    assert.equal(mercadoStaticSrc('/mercado/dona-marta.png'), '/mercado/dona-marta.png?v=2')
+    assert.equal(mercadoStaticSrc('/otro.png'), '/otro.png')
+  })
+
   it('no pisa el home de Humano SISU', () => {
     assert.equal(isPublicMarketingRoute('/'), true)
     assert.equal(isPublicTenantLandingRoute('/'), false)
@@ -63,6 +78,31 @@ describe('mercado: copy San Pablo y WhatsApp', () => {
     assert.equal(patio.whatsapp, null)
   })
 
+  it('deja cada mini landing con rubro, 5 productos y galería', () => {
+    for (const vendor of MERCADO_HOME_PREVIEW_VENDORS) {
+      assert.equal(vendor.products.length, 5)
+      assert.ok(vendor.paymentMethods.includes('efectivo'))
+      assert.ok(vendor.paymentMethods.includes('transferencia_bac'))
+      assert.equal(vendor.gallery.length, 3)
+      assert.equal(vendor.whatsapp, null)
+    }
+    const carniceria = MERCADO_HOME_PREVIEW_VENDORS.find((vendor) => vendor.slug === 'carniceria-la-esquina')
+    assert.ok(carniceria)
+    assert.ok(carniceria.products.includes('Lomo de res'))
+    assert.match(carniceria.description, /WhatsApp/)
+    assert.match(carniceria.description, /transferencia/)
+  })
+
+  it('explica comprar en 3 pasos con recoger en el local', () => {
+    const carniceria = MERCADO_HOME_PREVIEW_VENDORS.find((vendor) => vendor.slug === 'carniceria-la-esquina')
+    assert.ok(carniceria)
+    const steps = vendorBuySteps(carniceria)
+    assert.equal(steps.length, 3)
+    assert.equal(steps[0]?.title, 'Escríbenos')
+    assert.match(steps[1]?.body ?? '', /BAC/)
+    assert.match(steps[2]?.body ?? '', /local 2/)
+  })
+
   it('sugiere antojo al teclear sopa', () => {
     const hints = mercadoSearchHints('Sop')
     assert.ok(hints.some((hint) => /mondongo/i.test(hint.label)))
@@ -70,7 +110,16 @@ describe('mercado: copy San Pablo y WhatsApp', () => {
 
   it('arma wa.me sin inventar el número', () => {
     const href = vendorWhatsAppHref('9999-0000', 'Comedor El Patio')
-    assert.match(href, /^https:\/\/wa\.me\/99990000\?text=/)
+    assert.match(href, /^https:\/\/wa\.me\/50499990000\?text=/)
     assert.match(href, /San%20Pablo/)
+  })
+
+  it('reserva por el WhatsApp del directorio y nombra productos y local', () => {
+    const carniceria = MERCADO_HOME_PREVIEW_VENDORS.find((vendor) => vendor.slug === 'carniceria-la-esquina')
+    assert.ok(carniceria)
+    const href = vendorReservationHref(carniceria)
+    assert.match(href, new RegExp(`wa\\.me/${MERCADO_DIRECTORY_WHATSAPP}\\?text=`))
+    assert.match(href, /Lomo/)
+    assert.match(href, /local%202/)
   })
 })

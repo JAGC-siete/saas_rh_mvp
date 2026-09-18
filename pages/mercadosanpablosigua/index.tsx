@@ -35,6 +35,7 @@ import {
   mercadoHomeTitle,
 } from '../../lib/mercado/meta'
 import { mercadoHomePath, mercadoVendorPath } from '../../lib/mercado/paths'
+import { mercadoStaticSrc } from '../../lib/mercado/assets'
 import type { PublicVendorCard } from '../../lib/mercado/schema'
 
 interface MercadoHomeProps {
@@ -57,6 +58,7 @@ export default function MercadoHomePage({ vendors, category, query }: MercadoHom
         vendor.description,
         VENDOR_CATEGORY_LABEL[vendor.category],
         vendor.stallLocation ?? '',
+        ...vendor.products,
       ]
         .join(' ')
         .toLowerCase()
@@ -110,7 +112,7 @@ export default function MercadoHomePage({ vendors, category, query }: MercadoHom
           className="relative overflow-hidden px-4 py-16 text-center sm:py-24"
           style={{
             backgroundColor: '#c2410c',
-            backgroundImage: `linear-gradient(180deg, rgba(124,45,18,0.78), rgba(194,65,12,0.82)), url(${MERCADO_SEO.heroImage})`,
+            backgroundImage: `linear-gradient(180deg, rgba(124,45,18,0.78), rgba(194,65,12,0.82)), url(${mercadoStaticSrc(MERCADO_SEO.heroImage)})`,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
           }}

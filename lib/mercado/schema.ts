@@ -84,6 +84,47 @@ export const vendorHoursNoteSchema = z
   .min(2, 'El horario necesita al menos 2 caracteres.')
   .max(80, 'El horario no puede pasar de 80 caracteres.')
 
+export const vendorProductNameSchema = z
+  .string()
+  .trim()
+  .min(2, 'Cada producto necesita al menos 2 caracteres.')
+  .max(40, 'Cada producto no puede pasar de 40 caracteres.')
+
+export const vendorProductsSchema = z
+  .array(vendorProductNameSchema)
+  .min(1, 'Incluí al menos 1 producto principal.')
+  .max(5, 'Máximo 5 productos principales.')
+
+export const VENDOR_PAYMENT_METHODS = ['efectivo', 'transferencia_bac'] as const
+export type VendorPaymentMethod = (typeof VENDOR_PAYMENT_METHODS)[number]
+
+export const DEFAULT_VENDOR_PAYMENT_METHODS: VendorPaymentMethod[] = [
+  'efectivo',
+  'transferencia_bac',
+]
+
+export const vendorPaymentMethodSchema = z.enum(VENDOR_PAYMENT_METHODS, {
+  message: 'Elegí efectivo o transferencia BAC.',
+})
+
+export const vendorPaymentMethodsSchema = z
+  .array(vendorPaymentMethodSchema)
+  .min(1, 'Elegí al menos un método de pago.')
+  .max(4)
+  .transform((methods) => [...new Set(methods)])
+
+export const vendorGalleryItemSchema = z.object({
+  src: vendorLogoUrlSchema,
+  alt: z.string().trim().min(2, 'Cada foto necesita un texto alternativo.').max(80),
+})
+
+export const vendorGallerySchema = z.array(vendorGalleryItemSchema).max(4)
+
+function compactStringList(value: unknown) {
+  if (!Array.isArray(value)) return value
+  return value.filter((item) => typeof item === 'string' && item.trim() !== '')
+}
+
 const createVendorFields = {
   name: vendorNameSchema,
   slug: optionalFilled(vendorSlugSchema),
@@ -93,6 +134,12 @@ const createVendorFields = {
   logoUrl: optionalFilled(vendorLogoUrlSchema),
   stallLocation: optionalFilled(vendorStallLocationSchema),
   hoursNote: optionalFilled(vendorHoursNoteSchema),
+  products: z.preprocess(compactStringList, vendorProductsSchema),
+  paymentMethods: z.preprocess(
+    (value) => (value === undefined || value === null ? DEFAULT_VENDOR_PAYMENT_METHODS : value),
+    vendorPaymentMethodsSchema.default(DEFAULT_VENDOR_PAYMENT_METHODS)
+  ),
+  gallery: z.preprocess((value) => (value === undefined || value === null ? [] : value), vendorGallerySchema.default([])),
   status: vendorStatusSchema.default('active'),
   featured: z.boolean().default(false),
 }
@@ -112,6 +159,9 @@ export const updateVendorSchema = z
     logoUrl: vendorLogoUrlSchema.nullable().optional(),
     stallLocation: vendorStallLocationSchema.nullable().optional(),
     hoursNote: vendorHoursNoteSchema.nullable().optional(),
+    products: vendorProductsSchema.optional(),
+    paymentMethods: vendorPaymentMethodsSchema.optional(),
+    gallery: vendorGallerySchema.optional(),
     status: vendorStatusSchema.optional(),
     featured: z.boolean().optional(),
   })
@@ -125,6 +175,9 @@ export const updateVendorSchema = z
       payload.logoUrl !== undefined ||
       payload.stallLocation !== undefined ||
       payload.hoursNote !== undefined ||
+      payload.products !== undefined ||
+      payload.paymentMethods !== undefined ||
+      payload.gallery !== undefined ||
       payload.status !== undefined ||
       payload.featured !== undefined,
     { message: 'No hay cambios que guardar.' }
@@ -162,6 +215,9 @@ export const publicVendorCardSchema = z.object({
   logoUrl: vendorLogoUrlSchema.nullable(),
   stallLocation: vendorStallLocationSchema.nullable(),
   hoursNote: vendorHoursNoteSchema.nullable(),
+  products: vendorProductsSchema,
+  paymentMethods: vendorPaymentMethodsSchema,
+  gallery: vendorGallerySchema,
   featured: z.boolean(),
 })
 

@@ -4,13 +4,10 @@
  */
 
 import Head from 'next/head'
-import Link from 'next/link'
 import type { GetServerSideProps } from 'next'
 import MercadoPublicShell from '../../components/mercado/MercadoPublicShell'
-import { MercadoInscriptionCompactCta } from '../../components/mercado/InscriptionCta'
-import { Badge } from '../../components/ui/badge'
-import { VENDOR_CATEGORY_LABEL, type VendorCategory } from '../../lib/mercado/categories'
-import { MERCADO_SEO, findPreviewVendor } from '../../lib/mercado/home'
+import VendorLanding from '../../components/mercado/VendorLanding'
+import { findPreviewVendor } from '../../lib/mercado/home'
 import { mercadoVendorJsonLd, serializeJsonLd } from '../../lib/mercado/jsonld'
 import {
   mercadoAssetUrl,
@@ -18,16 +15,13 @@ import {
   mercadoVendorDescription,
   mercadoVendorTitle,
 } from '../../lib/mercado/meta'
-import { mercadoHomePath } from '../../lib/mercado/paths'
 import type { PublicVendorCard } from '../../lib/mercado/schema'
-import VendorWhatsAppButton from '../../components/mercado/VendorWhatsAppButton'
 
 interface VendorProfileProps {
   vendor: PublicVendorCard
 }
 
 export default function MercadoVendorProfilePage({ vendor }: VendorProfileProps) {
-  const categoryLabel = VENDOR_CATEGORY_LABEL[vendor.category as VendorCategory]
   const title = mercadoVendorTitle(vendor)
   const description = mercadoVendorDescription(vendor)
   const canonical = mercadoVendorCanonical(vendor.slug)
@@ -59,50 +53,7 @@ export default function MercadoVendorProfilePage({ vendor }: VendorProfileProps)
         />
       </Head>
       <MercadoPublicShell>
-        <article className="mx-auto max-w-3xl px-4 py-12">
-          <Link href={mercadoHomePath()} className="text-sm text-amber-900 underline">
-            Volver al directorio
-          </Link>
-          <div className="mt-6 flex items-start gap-5">
-            {vendor.logoUrl && (
-              <img
-                src={vendor.logoUrl}
-                alt={vendor.name}
-                width={112}
-                height={112}
-                className="h-28 w-28 shrink-0 rounded-full object-cover ring-2 ring-amber-400 ring-offset-2"
-              />
-            )}
-            <div>
-              <Badge className="border-amber-800/20 bg-amber-50 text-amber-900">{categoryLabel}</Badge>
-              <h1 className="mt-3 text-4xl font-semibold tracking-tight text-stone-900">{vendor.name}</h1>
-              <p className="mt-4 text-lg text-stone-600">{vendor.description}</p>
-            </div>
-          </div>
-
-          <div className="mt-8">
-            {vendor.whatsapp ? (
-              <VendorWhatsAppButton vendor={vendor} size="hero" />
-            ) : (
-              <p className="rounded-xl border border-stone-200 bg-white px-4 py-4 text-stone-600">
-                Preguntá en el puesto. El WhatsApp se publica cuando el administrador lo carga.
-              </p>
-            )}
-          </div>
-
-          <h2 className="mt-10 text-xl font-semibold text-stone-900">Ubicación y horario</h2>
-          <dl className="mt-4 grid gap-4 sm:grid-cols-2">
-            <div className="rounded-xl border border-stone-200 bg-white p-5">
-              <dt className="text-sm font-medium text-stone-500">Ubicación en el mercado</dt>
-              <dd className="mt-1 text-stone-900">{vendor.stallLocation ?? MERCADO_SEO.addressLine}</dd>
-            </div>
-            <div className="rounded-xl border border-stone-200 bg-white p-5">
-              <dt className="text-sm font-medium text-stone-500">Horario</dt>
-              <dd className="mt-1 text-stone-900">{vendor.hoursNote ?? 'Horario del mercado'}</dd>
-            </div>
-          </dl>
-          <MercadoInscriptionCompactCta />
-        </article>
+        <VendorLanding vendor={vendor} />
       </MercadoPublicShell>
     </>
   )

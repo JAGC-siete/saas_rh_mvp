@@ -5,6 +5,7 @@ import { Card, CardContent } from '../ui/card'
 import VendorWhatsAppButton from './VendorWhatsAppButton'
 import { VENDOR_CATEGORY_LABEL, type VendorCategory } from '../../lib/mercado/categories'
 import { mercadoVendorPath } from '../../lib/mercado/paths'
+import { mercadoStaticSrc } from '../../lib/mercado/assets'
 import { stallStatusLabel } from '../../lib/mercado/stall-status'
 import type { PublicVendorCard } from '../../lib/mercado/schema'
 import styles from './mercado.module.css'
@@ -29,7 +30,7 @@ export default function VendorCard({ vendor }: { vendor: PublicVendorCard }) {
         <div className="flex items-start gap-4">
           {vendor.logoUrl ? (
             <img
-              src={vendor.logoUrl}
+              src={mercadoStaticSrc(vendor.logoUrl)}
               alt={vendor.name}
               width={80}
               height={80}
@@ -62,6 +63,18 @@ export default function VendorCard({ vendor }: { vendor: PublicVendorCard }) {
           </div>
         </div>
         <p className="line-clamp-4 flex-1 text-sm leading-relaxed text-stone-600">{vendor.description}</p>
+        {vendor.products.length > 0 && (
+          <ul className="flex flex-wrap gap-1.5">
+            {vendor.products.slice(0, 5).map((product) => (
+              <li
+                key={product}
+                className="rounded-full bg-stone-100 px-2.5 py-0.5 text-xs font-medium text-stone-700"
+              >
+                {product}
+              </li>
+            ))}
+          </ul>
+        )}
         {vendor.stallLocation && (
           <p className="flex items-center gap-2 text-sm text-stone-500">
             <MapPin className="h-4 w-4 shrink-0" aria-hidden />

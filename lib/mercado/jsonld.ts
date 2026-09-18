@@ -139,6 +139,26 @@ export function mercadoVendorJsonLd(vendor: PublicVendorCard) {
     },
     hasMap: MERCADO_GEO.mapsUrl,
     ...(hours ? { openingHoursSpecification: hours } : {}),
+    ...(vendor.products.length
+      ? {
+          makesOffer: vendor.products.map((name) => ({
+            '@type': 'Offer',
+            name,
+            itemOffered: {
+              '@type': 'Product',
+              name,
+            },
+            availability: 'https://schema.org/InStoreOnly',
+          })),
+        }
+      : {}),
+    ...(vendor.paymentMethods.length
+      ? {
+          acceptedPaymentMethod: vendor.paymentMethods.map((method) =>
+            method === 'efectivo' ? 'https://schema.org/Cash' : 'https://schema.org/ByBankTransferInAdvance'
+          ),
+        }
+      : {}),
     containedInPlace: {
       '@type': 'ShoppingCenter',
       '@id': mercadoPlaceId(),

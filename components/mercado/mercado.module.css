@@ -20,3 +20,29 @@
 .vendorCard:active .waPulse {
   animation: mercadoWaPulse 1.4s ease-out infinite;
 }
+
+.heroWa {
+  animation: mercadoWaPulse 2.4s ease-out infinite;
+}
+
+.vendorLanding {
+  padding-bottom: 7rem;
+}
+
+.stickyReserve {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .stickyReserve {
+    display: block;
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 40;
+    border-top: 1px solid #e7e5e4;
+    background: #fff;
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+  }
+}

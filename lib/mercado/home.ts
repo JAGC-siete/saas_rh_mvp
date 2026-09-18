@@ -1,5 +1,6 @@
 import type { PublicVendorCard } from './schema'
 import type { VendorCategory } from './categories'
+import { DEFAULT_VENDOR_PAYMENT_METHODS } from './schema'
 
 export const MERCADO_SEO = {
   name: 'Mercado Municipal San Pablo',
@@ -28,9 +29,16 @@ export const MERCADO_GEO = {
     'El Mercado Municipal San Pablo está en el corazón comercial de Siguatepeque, a pasos del Escenario al Aire Libre y la Plaza la Amistad.',
 } as const
 
+function gallery(
+  items: Array<{ src: string; alt: string }>
+): PublicVendorCard['gallery'] {
+  return items
+}
+
 /**
  * Catálogo de arranque para pintar Home y perfiles hasta que el admin publique filas en `vendors`.
- * WhatsApp queda null a propósito: no se inventan números.
+ * WhatsApp del locatario queda null a propósito: no se inventan números de puesto.
+ * El CTA de reserva usa MERCADO_DIRECTORY_WHATSAPP.
  */
 export const MERCADO_HOME_PREVIEW_VENDORS: PublicVendorCard[] = [
   {
@@ -38,11 +46,18 @@ export const MERCADO_HOME_PREVIEW_VENDORS: PublicVendorCard[] = [
     name: 'Comedor El Patio',
     category: 'comida',
     description:
-      'Caldo de res hirviendo y tortillas que te queman las manos. Escríbele a Doña Carmen antes de que se acabe la olla.',
+      'Caldo de res hirviendo y tortillas que te queman las manos. Pedí a Doña Carmen por WhatsApp, apartá tu plato y pasá recogiéndolo al local 8 sin hacer fila.',
     whatsapp: null,
     logoUrl: '/mercado/dona-carmen.png',
     stallLocation: 'Pasillo 1, local 8',
     hoursNote: 'Lun–Sáb 6:00–15:00',
+    products: ['Caldo de res', 'Sopa de mondongo', 'Plato del día', 'Tortillas hechas a mano', 'Café de olla'],
+    paymentMethods: [...DEFAULT_VENDOR_PAYMENT_METHODS],
+    gallery: gallery([
+      { src: '/mercado/comedor-el-patio-plato.png', alt: 'Caldo de res y tortillas en Comedor El Patio' },
+      { src: '/mercado/comedor-el-patio-local.png', alt: 'Fachada del Comedor El Patio en el mercado' },
+      { src: '/mercado/dona-carmen.png', alt: 'Doña Carmen en el Comedor El Patio' },
+    ]),
     featured: true,
   },
   {
@@ -50,11 +65,18 @@ export const MERCADO_HOME_PREVIEW_VENDORS: PublicVendorCard[] = [
     name: 'Verduras Doña Marta',
     category: 'verduras',
     description:
-      'Tomates rojitos, chiles vivos y el culantro para la sopa. Doña Marta te fía el tomate y te regala un ramito.',
+      'Tomates rojitos, chiles vivos y el culantro para la sopa. Pedí a Doña Marta por WhatsApp, confirmá con transferencia o efectivo, y pasá a recoger a la mesa 14.',
     whatsapp: null,
     logoUrl: '/mercado/dona-marta.png',
     stallLocation: 'Pasillo de verduras, mesa 14',
     hoursNote: 'Lun–Sáb 5:30–14:00',
+    products: ['Tomate', 'Chile jalapeño', 'Culantro', 'Cebolla', 'Papa'],
+    paymentMethods: [...DEFAULT_VENDOR_PAYMENT_METHODS],
+    gallery: gallery([
+      { src: '/mercado/verduras-dona-marta-mesa.png', alt: 'Mesa de tomate, chile y culantro de Doña Marta' },
+      { src: '/mercado/verduras-dona-marta-local.png', alt: 'Puesto de verduras de Doña Marta' },
+      { src: '/mercado/dona-marta.png', alt: 'Doña Marta en su mesa de verduras' },
+    ]),
     featured: true,
   },
   {
@@ -62,11 +84,18 @@ export const MERCADO_HOME_PREVIEW_VENDORS: PublicVendorCard[] = [
     name: 'Frutas Don Chepe',
     category: 'frutas',
     description:
-      'Piña jugosa, banano madurito y sandía fría. Don Chepe te la corta ahí mismo, que se te haga agua la boca.',
+      'Piña jugosa, banano madurito y sandía fría. Pedí a Don Chepe por WhatsApp, confirmá el pedido y pasá recogiéndolo a la mesa 3, ya cortado.',
     whatsapp: null,
     logoUrl: '/mercado/don-chepe.png',
     stallLocation: 'Pasillo de frutas, mesa 3',
     hoursNote: 'Lun–Sáb 5:30–14:00',
+    products: ['Piña', 'Banano', 'Sandía', 'Mango', 'Naranja'],
+    paymentMethods: [...DEFAULT_VENDOR_PAYMENT_METHODS],
+    gallery: gallery([
+      { src: '/mercado/frutas-don-chepe-fruta.png', alt: 'Piña, banano y sandía en el puesto de Don Chepe' },
+      { src: '/mercado/frutas-don-chepe-local.png', alt: 'Fachada del puesto de frutas de Don Chepe' },
+      { src: '/mercado/don-chepe.png', alt: 'Don Chepe en su puesto de frutas' },
+    ]),
     featured: true,
   },
   {
@@ -74,11 +103,18 @@ export const MERCADO_HOME_PREVIEW_VENDORS: PublicVendorCard[] = [
     name: 'Carnicería La Esquina',
     category: 'carnes',
     description:
-      'Cortes frescos para la carnita asada del domingo, directo del gancho. Pedí temprano que el lomo se va primero.',
+      'Cortes frescos para la carnita asada del domingo, directo del gancho. Pedí temprano por WhatsApp, asegurá tu lomo con una transferencia, y pasá recogiéndolo directo al local sin hacer fila.',
     whatsapp: null,
     logoUrl: '/mercado/carniceria-la-esquina.png',
     stallLocation: 'Ala de carnes, local 2',
     hoursNote: 'Lun–Sáb 6:00–13:00',
+    products: ['Lomo de res', 'Costilla de cerdo', 'Carne para asar', 'Molida fresca', 'Pollo entero'],
+    paymentMethods: [...DEFAULT_VENDOR_PAYMENT_METHODS],
+    gallery: gallery([
+      { src: '/mercado/carniceria-la-esquina-cortes.png', alt: 'Cortes frescos de res, cerdo y pollo' },
+      { src: '/mercado/carniceria-la-esquina-local.png', alt: 'Fachada de Carnicería La Esquina, local 2' },
+      { src: '/mercado/carniceria-la-esquina.png', alt: 'Carnicería La Esquina en el Mercado San Pablo' },
+    ]),
     featured: true,
   },
   {
@@ -86,11 +122,18 @@ export const MERCADO_HOME_PREVIEW_VENDORS: PublicVendorCard[] = [
     name: 'Ropa Pasillo Central',
     category: 'ropa',
     description:
-      'Uniformes que aguantan el recreo, telas por yarda y ropa de diario. Pasá, tocá la tela y preguntá el precio.',
+      'Uniformes que aguantan el recreo, telas por yarda y ropa de diario. Pedí talla y tela por WhatsApp, apartá con transferencia y pasá a recoger al local 21.',
     whatsapp: null,
     logoUrl: '/mercado/ropa-pasillo-central.png',
     stallLocation: 'Pasillo central, local 21',
     hoursNote: 'Lun–Sáb 8:00–16:00',
+    products: ['Uniformes escolares', 'Camisetas de diario', 'Tela por yarda', 'Pantalón de trabajo', 'Blusas'],
+    paymentMethods: [...DEFAULT_VENDOR_PAYMENT_METHODS],
+    gallery: gallery([
+      { src: '/mercado/ropa-pasillo-central-tela.png', alt: 'Telas, uniformes y ropa de diario' },
+      { src: '/mercado/ropa-pasillo-central-local.png', alt: 'Puesto de ropa en el pasillo central' },
+      { src: '/mercado/ropa-pasillo-central.png', alt: 'Ropa Pasillo Central en el mercado' },
+    ]),
     featured: true,
   },
   {
@@ -98,11 +141,18 @@ export const MERCADO_HOME_PREVIEW_VENDORS: PublicVendorCard[] = [
     name: 'Abarrotes El Ahorro',
     category: 'abarrotes',
     description:
-      'Frijol, arroz, aceite y el detergente del mes. Lo que te falta para la cocina, en un solo puesto.',
+      'Frijol, arroz, aceite y el detergente del mes. Pedí el mandado por WhatsApp, pagá con transferencia BAC o efectivo, y recogé en el local 5.',
     whatsapp: null,
     logoUrl: '/mercado/abarrotes-el-ahorro.png',
     stallLocation: 'Pasillo 4, local 5',
     hoursNote: 'Lun–Sáb 7:00–17:00',
+    products: ['Frijol', 'Arroz', 'Aceite', 'Azúcar', 'Detergente'],
+    paymentMethods: [...DEFAULT_VENDOR_PAYMENT_METHODS],
+    gallery: gallery([
+      { src: '/mercado/abarrotes-el-ahorro-anaquel.png', alt: 'Frijol, arroz, aceite y detergente en El Ahorro' },
+      { src: '/mercado/abarrotes-el-ahorro-local.png', alt: 'Fachada de Abarrotes El Ahorro' },
+      { src: '/mercado/abarrotes-el-ahorro.png', alt: 'Abarrotes El Ahorro en el mercado' },
+    ]),
     featured: true,
   },
 ]

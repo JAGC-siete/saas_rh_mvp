@@ -22,6 +22,9 @@ describe('mercado: JSON-LD de perfil', () => {
     assert.ok(!('telephone' in jsonLd))
     assert.equal(jsonLd.openingHoursSpecification?.[0]?.opens, '06:00')
     assert.equal(jsonLd.openingHoursSpecification?.[0]?.closes, '15:00')
+    assert.equal(jsonLd.makesOffer?.length, 5)
+    assert.ok(jsonLd.acceptedPaymentMethod?.includes('https://schema.org/Cash'))
+    assert.ok(jsonLd.acceptedPaymentMethod?.includes('https://schema.org/ByBankTransferInAdvance'))
   })
 
   it('no inventa teléfono si el WhatsApp no está publicado', () => {

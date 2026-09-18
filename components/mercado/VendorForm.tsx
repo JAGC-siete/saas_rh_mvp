@@ -10,7 +10,14 @@ import {
   SelectValue,
 } from '../ui/select'
 import { VENDOR_CATEGORIES, VENDOR_CATEGORY_LABEL, type VendorCategory } from '../../lib/mercado/categories'
-import { parseCreateVendor, type CreateVendorPayload, type VendorStatus } from '../../lib/mercado/schema'
+import { VENDOR_PAYMENT_METHOD_LABEL } from '../../lib/mercado/payments'
+import {
+  DEFAULT_VENDOR_PAYMENT_METHODS,
+  parseCreateVendor,
+  type CreateVendorPayload,
+  type VendorPaymentMethod,
+  type VendorStatus,
+} from '../../lib/mercado/schema'
 import { slugifyVendorName } from '../../lib/mercado/slug'
 
 const fieldClass = 'bg-white/10 text-white placeholder:text-gray-400'
@@ -24,6 +31,8 @@ export interface VendorFormValues {
   logoUrl: string
   stallLocation: string
   hoursNote: string
+  products: string[]
+  paymentMethods: VendorPaymentMethod[]
   status: VendorStatus
 }
 
@@ -36,6 +45,8 @@ const EMPTY_VALUES: VendorFormValues = {
   logoUrl: '',
   stallLocation: '',
   hoursNote: '',
+  products: ['', '', '', '', ''],
+  paymentMethods: [...DEFAULT_VENDOR_PAYMENT_METHODS],
   status: 'active',
 }
 
@@ -48,7 +59,12 @@ export default function VendorForm({
   submitLabel: string
   onValid: (payload: CreateVendorPayload) => void
 }) {
-  const [values, setValues] = useState<VendorFormValues>({ ...EMPTY_VALUES, ...initialValues })
+  const [values, setValues] = useState<VendorFormValues>(() => ({
+    ...EMPTY_VALUES,
+    ...initialValues,
+    products: [...(initialValues?.products ?? EMPTY_VALUES.products), '', '', '', '', ''].slice(0, 5),
+    paymentMethods: initialValues?.paymentMethods ?? [...DEFAULT_VENDOR_PAYMENT_METHODS],
+  }))
   const [slugTouched, setSlugTouched] = useState(Boolean(initialValues?.slug))
   const [error, setError] = useState<string | null>(null)
 
@@ -75,6 +91,8 @@ export default function VendorForm({
       logoUrl: values.logoUrl,
       stallLocation: values.stallLocation,
       hoursNote: values.hoursNote,
+      products: values.products,
+      paymentMethods: values.paymentMethods,
       status: values.status,
     })
     if (!parsed.success) {
@@ -147,6 +165,28 @@ export default function VendorForm({
         />
       </div>
 
+      <fieldset>
+        <legend className="mb-2 text-sm font-medium text-gray-200">5 productos principales</legend>
+        <div className="grid gap-2">
+          {values.products.map((product, index) => (
+            <Input
+              key={index}
+              id={`vendor-product-${index}`}
+              value={product}
+              onChange={(event) =>
+                setValues((current) => {
+                  const products = [...current.products]
+                  products[index] = event.target.value
+                  return { ...current, products }
+                })
+              }
+              placeholder={index === 0 ? 'Lomo de res' : `Producto ${index + 1}`}
+              className={fieldClass}
+            />
+          ))}
+        </div>
+      </fieldset>
+
       <div>
         <label htmlFor="vendor-whatsapp" className="mb-1 block text-sm font-medium text-gray-200">
           Teléfono / WhatsApp
@@ -160,6 +200,35 @@ export default function VendorForm({
           className={fieldClass}
         />
       </div>
+
+      <fieldset>
+        <legend className="mb-2 text-sm font-medium text-gray-200">Métodos de pago</legend>
+        <div className="grid gap-2 sm:grid-cols-2">
+          {(['efectivo', 'transferencia_bac'] as VendorPaymentMethod[]).map((method) => {
+            const checked = values.paymentMethods.includes(method)
+            return (
+              <label
+                key={method}
+                className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-gray-200"
+              >
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  onChange={() =>
+                    setValues((current) => {
+                      const paymentMethods = checked
+                        ? current.paymentMethods.filter((item) => item !== method)
+                        : [...current.paymentMethods, method]
+                      return { ...current, paymentMethods }
+                    })
+                  }
+                />
+                {VENDOR_PAYMENT_METHOD_LABEL[method]}
+              </label>
+            )
+          })}
+        </div>
+      </fieldset>
 
       <div>
         <label htmlFor="vendor-logo" className="mb-1 block text-sm font-medium text-gray-200">

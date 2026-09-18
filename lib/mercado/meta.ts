@@ -2,6 +2,7 @@ import { VENDOR_CATEGORY_LABEL, type VendorCategory } from './categories'
 import type { PublicVendorCard } from './schema'
 import { mercadoAbsoluteUrl } from './public-url'
 import { mercadoHomePath, mercadoInscriptionPath, mercadoVendorPath } from './paths'
+import { mercadoStaticSrc } from './assets'
 
 const META_MAX = 155
 
@@ -45,12 +46,12 @@ export function mercadoVendorTitle(vendor: Pick<PublicVendorCard, 'name' | 'cate
 }
 
 export function mercadoVendorDescription(vendor: Pick<PublicVendorCard, 'description'>) {
-  return clampMetaDescription(`${vendor.description} En Siguatepeque. Escribile al vendedor.`)
+  return clampMetaDescription(`${vendor.description} Reservá por WhatsApp y recogé en Siguatepeque.`)
 }
 
 export function mercadoAssetUrl(path: string | null | undefined) {
   if (!path) return undefined
-  return mercadoAbsoluteUrl(path)
+  return mercadoAbsoluteUrl(mercadoStaticSrc(path))
 }
 
 export function mercadoHomeCanonical() {

@@ -8,6 +8,7 @@ const valid = {
   category: 'comida',
   description: 'Comida corrida y caldo de res en el pasillo de comedores.',
   whatsapp: '9999-0000',
+  products: ['Caldo de res', 'Sopa de mondongo', 'Plato del día', 'Tortillas hechas a mano', 'Café de olla'],
 }
 
 describe('mercado: alta de vendedor', () => {
@@ -69,6 +70,20 @@ describe('mercado: alta de vendedor', () => {
   it('rechaza logo http', () => {
     const parsed = parseCreateVendor({ ...valid, logoUrl: 'http://example.com/logo.png' })
     assert.equal(parsed.success, false)
+  })
+
+  it('exige al menos un producto principal', () => {
+    const parsed = parseCreateVendor({ ...valid, products: ['', '  '] })
+    assert.equal(parsed.success, false)
+  })
+
+  it('guarda productos y pagos BAC', () => {
+    const parsed = parseCreateVendor(valid)
+    assert.equal(parsed.success, true)
+    if (parsed.success) {
+      assert.equal(parsed.data.products.length, 5)
+      assert.deepEqual(parsed.data.paymentMethods, ['efectivo', 'transferencia_bac'])
+    }
   })
 })
 
