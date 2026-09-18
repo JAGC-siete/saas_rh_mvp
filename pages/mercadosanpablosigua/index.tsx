@@ -187,7 +187,7 @@ export default function MercadoHomePage({ vendors }: MercadoHomeProps) {
           </div>
         </section>
 
-        <section className="mx-auto max-w-6xl px-4 py-12">
+        <section id="categorias" className="mx-auto max-w-6xl scroll-mt-36 px-4 py-12">
           <div className="mb-6 flex items-end justify-between gap-4">
             <h2 className={styles.sectionTitle}>Categorías</h2>
             {category && (
@@ -225,7 +225,7 @@ export default function MercadoHomePage({ vendors }: MercadoHomeProps) {
           </div>
         </section>
 
-        <section className="mx-auto max-w-6xl px-4 pb-12">
+        <section id="puestos" className="mx-auto max-w-6xl scroll-mt-36 px-4 pb-12">
           <h2 className={`${styles.sectionTitle} mb-6`}>
             {category ? VENDOR_CATEGORY_LABEL[category] : 'Puestos destacados'}
           </h2>
@@ -247,7 +247,30 @@ export default function MercadoHomePage({ vendors }: MercadoHomeProps) {
 
         <MercadoInscriptionBanner />
 
-        <section className="mx-auto max-w-6xl px-4 pb-16">
+        <section
+          id="como-funciona-locatarios"
+          className="mx-auto max-w-6xl scroll-mt-36 px-4 pb-12"
+        >
+          <div className={styles.panelLocal}>
+            <h2 className={styles.sectionTitle}>Cómo aparece tu ficha (locatarios)</h2>
+            <ol className="mt-4 grid gap-3 text-sm sm:grid-cols-3" style={{ color: 'var(--mercado-muted)' }}>
+              <li>
+                <strong style={{ color: 'var(--mercado-cacao)' }}>1. Solicitud</strong>
+                <p className="mt-1">Enviás el local y el nombre del comercio. Es gratis.</p>
+              </li>
+              <li>
+                <strong style={{ color: 'var(--mercado-cacao)' }}>2. Revisión</strong>
+                <p className="mt-1">El equipo revisa a mano y arma la ficha Pickup.</p>
+              </li>
+              <li>
+                <strong style={{ color: 'var(--mercado-cacao)' }}>3. Publicación</strong>
+                <p className="mt-1">Tu puesto queda visible para que te pidan por WhatsApp.</p>
+              </li>
+            </ol>
+          </div>
+        </section>
+
+        <section id="ubicacion" className="mx-auto max-w-6xl scroll-mt-36 px-4 pb-16">
           <div className={`${styles.panelLocal} flex flex-col items-start gap-8 md:flex-row md:items-center`}>
             <div className="flex-1">
               <h2 className={styles.sectionTitle}>¿Cómo llegar al mercado?</h2>
