@@ -55,6 +55,43 @@ describe('mercado: shell público', () => {
     assert.equal(isPublicMarketingRoute('/'), true)
     assert.equal(isPublicTenantLandingRoute('/'), false)
   })
+
+  it('home pone #puestos antes que #categorias', () => {
+    const home = readFileSync(join(process.cwd(), 'pages/mercadosanpablosigua/index.tsx'), 'utf8')
+    const puestos = home.indexOf('id="puestos"')
+    const categorias = home.indexOf('id="categorias"')
+    assert.ok(puestos > 0)
+    assert.ok(categorias > 0)
+    assert.ok(puestos < categorias)
+    assert.match(home, /category \? VENDOR_CATEGORY_LABEL\[category\] : 'Puestos destacados'/)
+    assert.match(home, /id="mercado-search"/)
+    assert.equal(home.includes('mercado-header-search'), false)
+    assert.match(home, /styles\.categoryStrip/)
+    assert.equal(home.includes('grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4'), false)
+  })
+
+  it('shell quita el buscador del header y navega Puestos → Categorías → Ubicación', () => {
+    const shell = readFileSync(join(process.cwd(), 'components/mercado/MercadoPublicShell.tsx'), 'utf8')
+    assert.equal(shell.includes('headerSearch'), false)
+    assert.equal(shell.includes('mercado-header-search'), false)
+    const puestos = shell.indexOf("homeAnchor('puestos')")
+    const categorias = shell.indexOf("homeAnchor('categorias')")
+    const ubicacion = shell.indexOf("homeAnchor('ubicacion')")
+    assert.ok(puestos > 0)
+    assert.ok(puestos < categorias)
+    assert.ok(categorias < ubicacion)
+  })
+
+  it('hero queda sticky bajo el chrome y el CSS no deja headerSearch', () => {
+    const css = readFileSync(join(process.cwd(), 'components/mercado/mercado.module.css'), 'utf8')
+    assert.equal(css.includes('.headerSearch'), false)
+    assert.match(css, /\.hero\s*\{[^}]*position:\s*sticky/)
+    assert.match(css, /top:\s*var\(--mercado-chrome-h\)/)
+    assert.match(css, /\.homeSection\s*\{[^}]*scroll-margin-top/)
+    assert.match(css, /\.searchHints\s*\{[^}]*max-height/)
+    assert.match(css, /\.categoryStrip\s*\{[^}]*overflow-x:\s*auto/)
+    assert.match(css, /\.categoryIcon\s*\{[^}]*border-radius:\s*999px/)
+  })
 })
 
 describe('mercado: copy San Pablo y WhatsApp', () => {

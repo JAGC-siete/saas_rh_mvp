@@ -16,7 +16,6 @@ import VendorCard from '../../components/mercado/VendorCard'
 import styles from '../../components/mercado/mercado.module.css'
 import {
   VENDOR_CATEGORIES,
-  VENDOR_CATEGORY_BLURB,
   VENDOR_CATEGORY_LABEL,
   isVendorCategory,
   type VendorCategory,
@@ -135,7 +134,7 @@ export default function MercadoHomePage({ vendors }: MercadoHomeProps) {
             <p className={styles.heroLead}>{MERCADO_SEO.tagline}</p>
             <form
               onSubmit={onSearchSubmit}
-              className="relative mx-auto mt-10 max-w-2xl"
+              className={styles.searchForm}
               role="search"
             >
               <div className={styles.searchBar}>
@@ -166,17 +165,10 @@ export default function MercadoHomePage({ vendors }: MercadoHomeProps) {
                 </button>
               </div>
               {hintsOpen && hints.length > 0 && (
-                <ul
-                  id="mercado-search-hints"
-                  role="listbox"
-                  className="absolute z-10 mt-2 w-full overflow-hidden rounded-2xl border border-stone-200 bg-white text-left shadow-xl"
-                >
+                <ul id="mercado-search-hints" role="listbox" className={styles.searchHints}>
                   {hints.map((hint) => (
                     <li key={hint.label} role="option">
-                      <Link
-                        href={mercadoVendorPath(hint.slug)}
-                        className="block px-5 py-3 text-sm text-stone-800 hover:bg-amber-50"
-                      >
+                      <Link href={mercadoVendorPath(hint.slug)} className={styles.searchHintLink}>
                         {hint.label}
                       </Link>
                     </li>
@@ -187,45 +179,7 @@ export default function MercadoHomePage({ vendors }: MercadoHomeProps) {
           </div>
         </section>
 
-        <section id="categorias" className="mx-auto max-w-6xl scroll-mt-36 px-4 py-12">
-          <div className="mb-6 flex items-end justify-between gap-4">
-            <h2 className={styles.sectionTitle}>Categorías</h2>
-            {category && (
-              <Link
-                href={mercadoHomePath()}
-                className="text-sm font-semibold underline"
-                style={{ color: 'var(--mercado-chile)' }}
-              >
-                Ver todas
-              </Link>
-            )}
-          </div>
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-            {VENDOR_CATEGORIES.map((key) => {
-              const active = category === key
-              const Icon = VENDOR_CATEGORY_ICON[key]
-              return (
-                <Link
-                  key={key}
-                  href={{ pathname: mercadoHomePath(), query: { categoria: key } }}
-                  className={`${styles.categoryCard} ${active ? styles.categoryCardActive : ''}`}
-                >
-                  <span className={styles.categoryIcon} aria-hidden>
-                    <Icon className="h-5 w-5" strokeWidth={2.25} />
-                  </span>
-                  <p className="font-bold" style={{ color: 'var(--mercado-cacao)' }}>
-                    {VENDOR_CATEGORY_LABEL[key]}
-                  </p>
-                  <p className="mt-1 text-sm" style={{ color: 'var(--mercado-muted)' }}>
-                    {VENDOR_CATEGORY_BLURB[key]}
-                  </p>
-                </Link>
-              )
-            })}
-          </div>
-        </section>
-
-        <section id="puestos" className="mx-auto max-w-6xl scroll-mt-36 px-4 pb-12">
+        <section id="puestos" className={`${styles.homeSection} mx-auto max-w-6xl px-4 py-12`}>
           <h2 className={`${styles.sectionTitle} mb-6`}>
             {category ? VENDOR_CATEGORY_LABEL[category] : 'Puestos destacados'}
           </h2>
@@ -245,11 +199,44 @@ export default function MercadoHomePage({ vendors }: MercadoHomeProps) {
           )}
         </section>
 
+        <section id="categorias" className={`${styles.homeSection} mx-auto max-w-6xl px-4 pb-12`}>
+          <div className="mb-6 flex items-end justify-between gap-4">
+            <h2 className={styles.sectionTitle}>Categorías</h2>
+            {category && (
+              <Link
+                href={mercadoHomePath()}
+                className="text-sm font-semibold underline"
+                style={{ color: 'var(--mercado-chile)' }}
+              >
+                Ver todas
+              </Link>
+            )}
+          </div>
+          <div className={styles.categoryStrip}>
+            {VENDOR_CATEGORIES.map((key) => {
+              const active = category === key
+              const Icon = VENDOR_CATEGORY_ICON[key]
+              return (
+                <Link
+                  key={key}
+                  href={{ pathname: mercadoHomePath(), query: { categoria: key } }}
+                  className={`${styles.categoryCard} ${active ? styles.categoryCardActive : ''}`}
+                >
+                  <span className={styles.categoryIcon} aria-hidden>
+                    <Icon className="h-9 w-9" strokeWidth={1.75} />
+                  </span>
+                  <p>{VENDOR_CATEGORY_LABEL[key]}</p>
+                </Link>
+              )
+            })}
+          </div>
+        </section>
+
         <MercadoInscriptionBanner />
 
         <section
           id="como-funciona-locatarios"
-          className="mx-auto max-w-6xl scroll-mt-36 px-4 pb-12"
+          className={`${styles.homeSection} mx-auto max-w-6xl px-4 pb-12`}
         >
           <div className={styles.panelLocal}>
             <h2 className={styles.sectionTitle}>Cómo aparece tu ficha (locatarios)</h2>
@@ -272,7 +259,7 @@ export default function MercadoHomePage({ vendors }: MercadoHomeProps) {
           </div>
         </section>
 
-        <section id="ubicacion" className="mx-auto max-w-6xl scroll-mt-36 px-4 pb-16">
+        <section id="ubicacion" className={`${styles.homeSection} mx-auto max-w-6xl px-4 pb-16`}>
           <div className={`${styles.panelLocal} flex flex-col items-start gap-8 md:flex-row md:items-center`}>
             <div className="flex-1">
               <h2 className={styles.sectionTitle}>¿Cómo llegar al mercado?</h2>
