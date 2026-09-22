@@ -321,6 +321,10 @@
   font-weight: 700;
 }
 
+.headerNavVisit {
+  display: flex;
+}
+
 @media (min-width: 768px) {
   .headerNav {
     display: flex;
@@ -753,6 +757,180 @@
 .inscriptionSubmit:disabled {
   opacity: 0.7;
   cursor: wait;
+}
+
+.heroVisit {
+  position: relative;
+  top: auto;
+  z-index: 1;
+}
+
+.v2Section {
+  scroll-margin-top: calc(var(--mercado-chrome-h) + 0.85rem);
+}
+
+.heroCtas {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.65rem;
+  margin: 1.5rem auto 0;
+}
+
+.ctaGhost {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 0.65rem;
+  padding: 0.7rem 1.15rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #fffaf3;
+  background: transparent;
+  border: 1px solid rgba(255, 250, 243, 0.55);
+  text-decoration: none;
+}
+
+.ctaGhost:hover {
+  background: rgba(255, 250, 243, 0.12);
+}
+
+.benefitGrid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: 1fr;
+}
+
+.benefitCard {
+  border: 1px solid var(--mercado-line);
+  background: var(--mercado-cream);
+  border-radius: 1rem;
+  padding: 1.15rem 1.2rem;
+}
+
+.benefitIcon {
+  display: inline-flex;
+  height: 2.35rem;
+  min-width: 2.35rem;
+  padding: 0 0.35rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: #efe6d8;
+  color: var(--mercado-cacao);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.benefitCard h3 {
+  margin: 0.7rem 0 0;
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--mercado-cacao);
+}
+
+.benefitCard p {
+  margin: 0.35rem 0 0;
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: var(--mercado-muted);
+}
+
+.areaGrid {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.areaCard {
+  overflow: hidden;
+  border: 1px solid var(--mercado-line);
+  background: var(--mercado-cream);
+  border-radius: 1.15rem;
+}
+
+.areaPhoto {
+  display: block;
+  width: 100%;
+  height: 13rem;
+  object-fit: cover;
+}
+
+.areaBody {
+  padding: 1.2rem 1.25rem 1.35rem;
+}
+
+.areaAisle {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--mercado-chile);
+}
+
+.areaCard h3 {
+  margin: 0.35rem 0 0;
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--mercado-cacao);
+}
+
+.areaCard p {
+  margin: 0.55rem 0 0;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: var(--mercado-muted);
+}
+
+.areaCta {
+  display: inline-flex;
+  margin-top: 0.95rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--mercado-cacao);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.areaCta:hover {
+  color: var(--mercado-chile);
+}
+
+.locatariosLink {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--mercado-muted);
+  text-decoration: none;
+}
+
+.locatariosLink:hover {
+  color: var(--mercado-cacao);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+@media (min-width: 640px) {
+  .benefitGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .areaGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (min-width: 1024px) {
+  .benefitGrid {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+
+  .areaGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .areaPhoto {
+    height: 15rem;
+  }
 }
 
 .inscriptionSuccess {

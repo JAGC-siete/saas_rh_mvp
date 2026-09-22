@@ -7,6 +7,7 @@ import { deductionCalculatorPublicPath } from '../lib/marketing/calculator-publi
 import { localizedHref } from '../lib/i18n/locale'
 import { BILINGUAL_LANDING_PATHS } from '../lib/i18n/bilingual-paths'
 import { mercadoSitemapUrls } from '../lib/mercado/jsonld'
+import { mercadoV2SitemapEntry } from '../lib/mercado/v2'
 import { listActiveVendorSlugsFromDb } from '../lib/mercado/vendors-db'
 
 interface SitemapUrl {
@@ -236,7 +237,7 @@ export const getServerSideProps: GetServerSideProps = async ({ res }) => {
   }))
 
   const mercadoSlugs = await listActiveVendorSlugsFromDb()
-  const mercadoPages = mercadoSitemapUrls(mercadoSlugs)
+  const mercadoPages = [...mercadoSitemapUrls(mercadoSlugs), mercadoV2SitemapEntry()]
 
   const sitemap = generateSitemap([...publicPages, ...mercadoPages, ...recursoPages])
 

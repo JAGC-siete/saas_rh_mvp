@@ -71,7 +71,7 @@ export function isPublicToolRoute(pathname: string): boolean {
 
 /**
  * Landings publicadas por empresas cliente (/p/[slug]) y directorio público
- * Mercado Municipal (/mercadosanpablosigua; /mercado → 301).
+ * Mercado Municipal (/mercadosanpablosigua, /mercadosanpablosiguav2; /mercado → 301).
  * Shell propio: SSR, sin Auth, sin CookieBanner ni analytics de Humano SISU.
  */
 export function isPublicTenantLandingRoute(pathname: string): boolean {

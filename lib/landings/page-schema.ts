@@ -59,6 +59,7 @@ export const RESERVED_LANDING_SLUGS: readonly string[] = [
   'login',
   'mercado',
   'mercadosanpablosigua',
+  'mercadosanpablosiguav2',
   'new',
   'precios',
   'privacidad',

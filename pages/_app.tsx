@@ -78,10 +78,14 @@ export default function App({ Component, pageProps }: AppProps) {
   const isAuthEntryRoute =
     router.pathname === '/app/login' || router.pathname === '/app/forgot-password'
 
+  const asPathBare = router.asPath.split('#')[0].split('?')[0]
   const isMarketingRoute = isPublicMarketingRoute(router.pathname)
   const isKioskDisabledRoute = isPublicKioskDisabledRoute(router.pathname)
   const isToolRoute = isPublicToolRoute(router.pathname)
-  const isTenantLandingRoute = isPublicTenantLandingRoute(router.pathname)
+  const isTenantLandingRoute =
+    isPublicTenantLandingRoute(router.pathname) ||
+    isPublicTenantLandingRoute(asPathBare) ||
+    pageProps?.publicTenantLanding === true
 
   // SSR completo solo en landings SEO; shell /app y rutas legacy esperan hidratación.
   const shouldRenderImmediately =

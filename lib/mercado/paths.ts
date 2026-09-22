@@ -2,6 +2,7 @@
  * Rutas del directorio Mercado Municipal Siguatepeque.
  *
  * Público canónico: /mercadosanpablosigua, /inscripcion y /[slug].
+ * Institucional v2 (visita física): /mercadosanpablosiguav2.
  * Legacy /mercado → 301. Assets estáticos siguen en /mercado/*.png.
  * Solicitudes: /app/admin/mercado-solicitudes. Fichas SuperAdmin: /app/admin/mercado-fichas.
  */
@@ -9,6 +10,7 @@
 import type { RoleId } from '../auth/role-access'
 
 export const MERCADO_PUBLIC_PREFIX = '/mercadosanpablosigua'
+export const MERCADO_V2_PREFIX = '/mercadosanpablosiguav2'
 export const MERCADO_LEGACY_PREFIX = '/mercado'
 export const MERCADO_ADMIN_PATH = '/app/admin/mercado-fichas'
 /** @deprecated alias; usar MERCADO_ADMIN_PATH */
@@ -27,6 +29,10 @@ export const MERCADO_STORAGE_BUCKET = 'mercado-san-pablo'
 
 export function mercadoHomePath(): string {
   return MERCADO_PUBLIC_PREFIX
+}
+
+export function mercadoV2HomePath(): string {
+  return MERCADO_V2_PREFIX
 }
 
 export function mercadoVendorPath(slug: string): string {
@@ -63,7 +69,11 @@ export function mercadoApplicationsAdminPath(): string {
  * Marca el directorio público (canónico y legacy) como SSR sin chrome de marketing.
  */
 export function isPublicMercadoRoute(pathname: string): boolean {
-  return matchesPrefix(pathname, MERCADO_PUBLIC_PREFIX) || matchesPrefix(pathname, MERCADO_LEGACY_PREFIX)
+  return (
+    matchesPrefix(pathname, MERCADO_PUBLIC_PREFIX) ||
+    matchesPrefix(pathname, MERCADO_V2_PREFIX) ||
+    matchesPrefix(pathname, MERCADO_LEGACY_PREFIX)
+  )
 }
 
 function matchesPrefix(pathname: string, prefix: string): boolean {

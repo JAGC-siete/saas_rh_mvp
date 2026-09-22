@@ -1,0 +1,111 @@
+import { describe, it } from 'node:test'
+import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
+import { isPublicMercadoRoute, mercadoV2HomePath } from '../lib/mercado/paths'
+import { isReservedVendorSlug } from '../lib/mercado/slug'
+import {
+  isPublicMarketingRoute,
+  isPublicTenantLandingRoute,
+  isPublicToolRoute,
+} from '../lib/seo/public-ssr-routes'
+import { MIDDLEWARE_CONFIG, getAllPublicRoutes } from '../middleware.config'
+import {
+  MERCADO_V2_AREAS,
+  MERCADO_V2_COPY,
+  MERCADO_V2_SEO,
+  mercadoV2AreasMatching,
+  mercadoV2JsonLd,
+  mercadoV2SearchHints,
+  mercadoV2SitemapEntry,
+} from '../lib/mercado/v2'
+
+const v2Files = [
+  'pages/mercadosanpablosiguav2/index.tsx',
+  'components/mercado/MercadoV2Shell.tsx',
+  'components/mercado/MercadoV2Footer.tsx',
+  'lib/mercado/v2.ts',
+]
+
+function v2Source() {
+  return v2Files.map((file) => readFileSync(join(process.cwd(), file), 'utf8')).join('\n')
+}
+
+describe('mercado v2: ruta institucional', () => {
+  it('vive en /mercadosanpablosiguav2 y usa el shell de tenant landing', () => {
+    assert.equal(mercadoV2HomePath(), '/mercadosanpablosiguav2')
+    assert.equal(isPublicMercadoRoute('/mercadosanpablosiguav2'), true)
+    assert.equal(isPublicTenantLandingRoute('/mercadosanpablosiguav2'), true)
+    assert.equal(isPublicTenantLandingRoute('/en/mercadosanpablosiguav2'), true)
+    assert.equal(isPublicMarketingRoute('/mercadosanpablosiguav2'), false)
+    assert.equal(isPublicToolRoute('/mercadosanpablosiguav2'), false)
+    assert.ok(MIDDLEWARE_CONFIG.protection.public.includes('/mercadosanpablosiguav2'))
+    assert.ok(getAllPublicRoutes().includes('/mercadosanpablosiguav2'))
+    assert.ok(getAllPublicRoutes().includes('/mercadosanpablosiguav2/*'))
+    assert.equal(isReservedVendorSlug('mercadosanpablosiguav2'), true)
+  })
+
+  it('no pisa el directorio v1', () => {
+    assert.equal(isPublicMercadoRoute('/mercadosanpablosigua'), true)
+    assert.notEqual(mercadoV2HomePath(), '/mercadosanpablosigua')
+  })
+})
+
+describe('mercado v2: visita física, no directorio', () => {
+  it('vende la visita presencial en hero y SEO', () => {
+    assert.match(MERCADO_V2_SEO.heroLead, /colores, sabores y la frescura/i)
+    assert.match(MERCADO_V2_SEO.heroLead, /corazón comercial de Siguatepeque/i)
+    assert.match(MERCADO_V2_SEO.tagline, /corazón comercial de Siguatepeque/i)
+    assert.equal(MERCADO_V2_SEO.title.includes('WhatsApp'), false)
+    assert.equal(MERCADO_V2_SEO.description.includes('WhatsApp'), false)
+    assert.equal(MERCADO_V2_COPY.h1, 'Mercado Municipal San Pablo')
+  })
+
+  it('muestra áreas del recinto, no puestos nombrados', () => {
+    const titles = MERCADO_V2_AREAS.map((area) => area.title)
+    assert.ok(titles.includes('Área de Comedores'))
+    assert.ok(titles.includes('Frutas y Verduras'))
+    assert.ok(titles.includes('Carnicería'))
+    assert.ok(titles.includes('Abarrotes'))
+    assert.ok(titles.includes('Ropa y telas'))
+    for (const area of MERCADO_V2_AREAS) {
+      assert.equal(/Doña|Don |El Patio|La Esquina|El Ahorro/i.test(area.title), false)
+      assert.equal(/Doña|Don Chepe|El Patio/i.test(area.description), false)
+      assert.equal(/WhatsApp|Pedir y Recoger/i.test(area.description), false)
+    }
+  })
+
+  it('la búsqueda apunta a pasillo/área, no a un locatario', () => {
+    const hints = mercadoV2SearchHints('Sopa')
+    assert.ok(hints.some((hint) => /Pasillo 1/i.test(hint.label)))
+    assert.equal(hints.some((hint) => /Patio|Lety|Carmen/i.test(hint.label)), false)
+    const areas = mercadoV2AreasMatching('sopa')
+    assert.deepEqual(areas.map((area) => area.id), ['comedores'])
+    assert.equal(mercadoV2AreasMatching('res')[0]?.id, 'carniceria')
+  })
+
+  it('el cuerpo de la landing no recluta locatarios ni abre WhatsApp', () => {
+    const source = v2Source()
+    assert.equal(source.includes('Pedir y Recoger'), false)
+    assert.equal(source.includes('wa.me'), false)
+    assert.equal(source.includes('Inscribir mi puesto'), false)
+    assert.equal(source.includes('¿Tenés puesto en el mercado?'), false)
+    assert.equal(source.includes('Cómo aparece tu ficha'), false)
+    assert.match(source, /Portal para locatarios/)
+    assert.match(source, /id="visita"/)
+    assert.match(source, /id="horarios"/)
+    assert.match(source, /id="beneficios"/)
+    assert.match(source, /id="encontraras"/)
+  })
+
+  it('JSON-LD es ShoppingCenter con departamentos, sin fichas de puesto', () => {
+    const jsonLd = mercadoV2JsonLd()
+    assert.equal(jsonLd['@type'], 'ShoppingCenter')
+    assert.equal(jsonLd.containsPlace.length, MERCADO_V2_AREAS.length)
+    assert.equal(
+      jsonLd.containsPlace.some((place) => /Patio|Marta|Chepe/i.test(place.name)),
+      false
+    )
+    assert.equal(mercadoV2SitemapEntry().loc, '/mercadosanpablosiguav2')
+  })
+})
