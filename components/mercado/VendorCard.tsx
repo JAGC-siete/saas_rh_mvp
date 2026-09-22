@@ -19,10 +19,17 @@ function initials(name: string) {
     .toUpperCase()
 }
 
-export default function VendorCard({ vendor }: { vendor: PublicVendorCard }) {
+export default function VendorCard({
+  vendor,
+  titleAs = 'h3',
+}: {
+  vendor: PublicVendorCard
+  titleAs?: 'h3' | 'p'
+}) {
   const category = vendor.category as VendorCategory
   const status = stallStatusLabel({ category, hoursNote: vendor.hoursNote })
   const live = status.startsWith('Abierto') || status.startsWith('Recibiendo')
+  const TitleTag = titleAs
 
   return (
     <Card className={`${styles.vendorCard} group flex h-full flex-col`}>
@@ -58,7 +65,7 @@ export default function VendorCard({ vendor }: { vendor: PublicVendorCard }) {
               </span>
             </div>
             <Link href={mercadoVendorPath(vendor.slug)} className="mt-2 block">
-              <h3 className="text-xl font-bold text-[#2a1810] group-hover:underline">{vendor.name}</h3>
+              <TitleTag className="text-xl font-bold text-[#2a1810] group-hover:underline">{vendor.name}</TitleTag>
             </Link>
           </div>
         </div>

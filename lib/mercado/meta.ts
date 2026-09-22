@@ -1,3 +1,4 @@
+import { MERCADO_SEO } from './home'
 import { VENDOR_CATEGORY_LABEL, type VendorCategory } from './categories'
 import type { PublicVendorCard } from './schema'
 import { mercadoAbsoluteUrl } from './public-url'
@@ -27,13 +28,11 @@ export function clampMetaDescription(text: string, max = META_MAX) {
 }
 
 export function mercadoHomeTitle() {
-  return 'Mercado Municipal San Pablo | Verduras, Comida y Más en Siguatepeque'
+  return MERCADO_SEO.title
 }
 
 export function mercadoHomeDescription() {
-  return clampMetaDescription(
-    'Verduras frescas, comida corrida y más en el Mercado San Pablo, Siguatepeque. Buscá el puesto y escribile al vendedor.'
-  )
+  return clampMetaDescription(MERCADO_SEO.description)
 }
 
 export function mercadoCategoryTitle(category: VendorCategory) {

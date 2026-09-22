@@ -402,10 +402,10 @@
 
 .heroTitle {
   margin-top: 0.5rem;
-  font-size: clamp(2.1rem, 5vw, 3.15rem);
+  font-size: clamp(1.45rem, 3.8vw, 2.45rem);
   font-weight: 800;
   letter-spacing: -0.03em;
-  line-height: 1.1;
+  line-height: 1.15;
   color: #fff;
   text-shadow: 0 2px 18px rgba(0, 0, 0, 0.35);
 }
@@ -490,6 +490,13 @@
 
 .sectionTitle {
   font-size: 1.55rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--mercado-cacao);
+}
+
+.groupTitle {
+  font-size: 1.15rem;
   font-weight: 800;
   letter-spacing: -0.02em;
   color: var(--mercado-cacao);

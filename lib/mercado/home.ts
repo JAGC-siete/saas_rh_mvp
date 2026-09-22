@@ -4,9 +4,9 @@ import { DEFAULT_VENDOR_PAYMENT_METHODS } from './schema'
 
 export const MERCADO_SEO = {
   name: 'Mercado Municipal San Pablo',
-  title: 'Mercado Municipal San Pablo | Verduras, Comida y Más en Siguatepeque',
+  title: 'Mercado Municipal San Pablo | Productos Locales de Siguatepeque por WhatsApp',
   description:
-    'Verduras frescas, comida corrida y más en el Mercado San Pablo, Siguatepeque. Buscá el puesto y escribile al vendedor.',
+    'Descubre la herencia agrícola del "Cerro de las Mujeres". Verduras, frutas y carnes del Mercado San Pablo, Siguatepeque, por WhatsApp. Cero intermediarios.',
   city: 'Siguatepeque',
   region: 'Comayagua',
   country: 'HN',
@@ -28,6 +28,34 @@ export const MERCADO_GEO = {
   howToArrive:
     'El Mercado Municipal San Pablo está en el corazón comercial de Siguatepeque, a pasos del Escenario al Aire Libre y la Plaza la Amistad.',
 } as const
+
+export const MERCADO_HOME_COPY = {
+  h1: 'Mercado Municipal San Pablo: El Corazón Agrícola de Siguatepeque, Directo en tu WhatsApp',
+  traditionTitle: 'Tradición Centenaria del "Cerro de las Mujeres"',
+  traditionBody:
+    'Siguatepeque — el Cerro de las Mujeres — vive de la tierra. En el Mercado San Pablo esa cosecha llega al pasillo: verdura del día, fruta madura y el caldo que ya conocés.',
+  producerTitle: 'Apoya al Productor Local: Del Campo Hondureño a tu Mesa',
+  producerBody:
+    'Cada pedido por WhatsApp va al locatario, no a un intermediario. Apartás con transferencia o efectivo y recogés en el puesto. El campo hondureño se paga en la mesa.',
+  howToBuyTitle: '¿Cómo Comprar en el Mercado San Pablo Sin Hacer Fila?',
+  howToBuyBody:
+    'Pedí por WhatsApp, confirmá el pedido y pasá a recoger al local. El locatario te tiene el mandado listo; no hay que hacer fila en la caja.',
+} as const
+
+export const MERCADO_FEATURED_GROUPS = [
+  {
+    heading: 'Verduras y Frutas Frescas',
+    slugs: ['verduras-dona-marta', 'frutas-don-chepe'],
+  },
+  {
+    heading: 'Carnes y Cortes Diarios',
+    slugs: ['carniceria-la-esquina'],
+  },
+  {
+    heading: 'Caldos y Comida Tradicional',
+    slugs: ['comedor-el-patio'],
+  },
+] as const
 
 function gallery(
   items: Array<{ src: string; alt: string }>

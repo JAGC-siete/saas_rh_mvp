@@ -22,7 +22,9 @@ import {
 } from '../../lib/mercado/categories'
 import { VENDOR_CATEGORY_ICON } from '../../lib/mercado/category-icons'
 import {
+  MERCADO_FEATURED_GROUPS,
   MERCADO_GEO,
+  MERCADO_HOME_COPY,
   MERCADO_SEO,
   mercadoSearchHints,
 } from '../../lib/mercado/home'
@@ -34,6 +36,7 @@ import {
   mercadoHomeDescription,
   mercadoHomeTitle,
 } from '../../lib/mercado/meta'
+import { MERCADO_HOW_IT_WORKS_STEPS } from '../../lib/mercado/how-it-works'
 import { mercadoHomePath, mercadoVendorPath } from '../../lib/mercado/paths'
 import { mercadoStaticSrc } from '../../lib/mercado/assets'
 import type { PublicVendorCard } from '../../lib/mercado/schema'
@@ -79,6 +82,22 @@ export default function MercadoHomePage({ vendors }: MercadoHomeProps) {
       return haystack.includes(needle)
     })
   }, [byCategory, search])
+
+  const grouped = useMemo(() => {
+    if (category || search.trim()) return null
+    const used = new Set<string>()
+    const groups = MERCADO_FEATURED_GROUPS.map((group) => ({
+      heading: group.heading,
+      vendors: group.slugs
+        .map((slug) => visible.find((vendor) => vendor.slug === slug))
+        .filter((vendor): vendor is PublicVendorCard => Boolean(vendor)),
+    })).filter((group) => {
+      group.vendors.forEach((vendor) => used.add(vendor.slug))
+      return group.vendors.length > 0
+    })
+    const rest = visible.filter((vendor) => !used.has(vendor.slug))
+    return { groups, rest }
+  }, [visible, category, search])
 
   const hints = useMemo(() => mercadoSearchHints(search), [search])
 
@@ -130,7 +149,7 @@ export default function MercadoHomePage({ vendors }: MercadoHomeProps) {
         >
           <div className={styles.heroInner}>
             <p className={styles.heroEyebrow}>Siguatepeque, Comayagua</p>
-            <h1 className={styles.heroTitle}>{MERCADO_SEO.name}</h1>
+            <h1 className={styles.heroTitle}>{MERCADO_HOME_COPY.h1}</h1>
             <p className={styles.heroLead}>{MERCADO_SEO.tagline}</p>
             <form
               onSubmit={onSearchSubmit}
@@ -179,10 +198,26 @@ export default function MercadoHomePage({ vendors }: MercadoHomeProps) {
           </div>
         </section>
 
+        <section className={`${styles.homeSection} mx-auto max-w-6xl px-4 pt-12`}>
+          <h2 className={styles.sectionTitle}>{MERCADO_HOME_COPY.traditionTitle}</h2>
+          <p className="mt-3 max-w-3xl" style={{ color: 'var(--mercado-muted)' }}>
+            {MERCADO_HOME_COPY.traditionBody}
+          </p>
+        </section>
+
         <section id="puestos" className={`${styles.homeSection} mx-auto max-w-6xl px-4 py-12`}>
-          <h2 className={`${styles.sectionTitle} mb-6`}>
-            {category ? VENDOR_CATEGORY_LABEL[category] : 'Puestos destacados'}
+          <h2 className={`${styles.sectionTitle} mb-3`}>
+            {category
+              ? VENDOR_CATEGORY_LABEL[category]
+              : search.trim()
+                ? 'Puestos destacados'
+                : MERCADO_HOME_COPY.producerTitle}
           </h2>
+          {!category && !search.trim() && (
+            <p className="mb-6 max-w-3xl" style={{ color: 'var(--mercado-muted)' }}>
+              {MERCADO_HOME_COPY.producerBody}
+            </p>
+          )}
           {visible.length === 0 ? (
             <p
               className="rounded-xl border px-4 py-10 text-center"
@@ -190,6 +225,26 @@ export default function MercadoHomePage({ vendors }: MercadoHomeProps) {
             >
               No hay puestos que coincidan con esa búsqueda.
             </p>
+          ) : grouped ? (
+            <div className="grid gap-10">
+              {grouped.groups.map((group) => (
+                <div key={group.heading}>
+                  <h3 className={styles.groupTitle}>{group.heading}</h3>
+                  <div className="mt-4 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                    {group.vendors.map((vendor) => (
+                      <VendorCard key={vendor.slug} vendor={vendor} titleAs="p" />
+                    ))}
+                  </div>
+                </div>
+              ))}
+              {grouped.rest.length > 0 ? (
+                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                  {grouped.rest.map((vendor) => (
+                    <VendorCard key={vendor.slug} vendor={vendor} />
+                  ))}
+                </div>
+              ) : null}
+            </div>
           ) : (
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {visible.map((vendor) => (
@@ -197,6 +252,25 @@ export default function MercadoHomePage({ vendors }: MercadoHomeProps) {
               ))}
             </div>
           )}
+        </section>
+
+        <section id="como-comprar" className={`${styles.homeSection} mx-auto max-w-6xl px-4 pb-12`}>
+          <div className={styles.panelLocal}>
+            <h2 className={styles.sectionTitle}>{MERCADO_HOME_COPY.howToBuyTitle}</h2>
+            <p className="mt-3 max-w-3xl" style={{ color: 'var(--mercado-muted)' }}>
+              {MERCADO_HOME_COPY.howToBuyBody}
+            </p>
+            <ol className="mt-5 grid gap-3 text-sm sm:grid-cols-3" style={{ color: 'var(--mercado-muted)' }}>
+              {MERCADO_HOW_IT_WORKS_STEPS.map((step) => (
+                <li key={step.n}>
+                  <strong style={{ color: 'var(--mercado-cacao)' }}>
+                    {step.n}. {step.title}
+                  </strong>
+                  <p className="mt-1">{step.body}</p>
+                </li>
+              ))}
+            </ol>
+          </div>
         </section>
 
         <section id="categorias" className={`${styles.homeSection} mx-auto max-w-6xl px-4 pb-12`}>

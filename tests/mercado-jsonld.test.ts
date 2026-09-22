@@ -7,7 +7,7 @@ import {
   schemaTelephone,
   vendorSchemaType,
 } from '../lib/mercado/jsonld'
-import { clampMetaDescription, mercadoHomeDescription, mercadoVendorTitle } from '../lib/mercado/meta'
+import { clampMetaDescription, mercadoHomeDescription, mercadoHomeTitle, mercadoVendorTitle } from '../lib/mercado/meta'
 
 describe('mercado: JSON-LD de perfil', () => {
   it('marca el comedor como FoodEstablishment anidado en el mercado', () => {
@@ -39,7 +39,14 @@ describe('mercado: JSON-LD de perfil', () => {
 
 describe('mercado: metadata y sitemap', () => {
   it('acorta meta a 155 y arma title de específico a general', () => {
+    assert.equal(
+      mercadoHomeTitle(),
+      'Mercado Municipal San Pablo | Productos Locales de Siguatepeque por WhatsApp'
+    )
+    assert.ok(mercadoHomeTitle().length <= 76)
     assert.ok(mercadoHomeDescription().length <= 155)
+    assert.match(mercadoHomeDescription(), /Cerro de las Mujeres/)
+    assert.match(mercadoHomeDescription(), /WhatsApp/)
     assert.equal(
       mercadoVendorTitle({ name: 'Comedor El Patio', category: 'comida' }),
       'Comedor El Patio - Comida Corrida en Mercado San Pablo, Siguatepeque'
