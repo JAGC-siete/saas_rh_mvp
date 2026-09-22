@@ -20,7 +20,7 @@
   --mercado-muted: #78716c;
   --mercado-cream: #fffaf3;
   --mercado-line: #e7e0d4;
-  --mercado-font: var(--font-mercado), ui-sans-serif, system-ui, sans-serif;
+  --mercado-font: "Nunito", ui-sans-serif, system-ui, sans-serif;
 
   --mercado-chrome-h: 4.85rem;
   --mercado-hero-h: 26rem;

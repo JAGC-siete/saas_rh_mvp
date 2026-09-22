@@ -1,6 +1,6 @@
+import Head from 'next/head'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
-import { Nunito } from 'next/font/google'
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { MercadoInscriptionHeaderLink } from './InscriptionCta'
 import MercadoFooter from './MercadoFooter'
@@ -9,13 +9,6 @@ import { marketOpenStatus } from '../../lib/mercado/market-hours'
 import { mercadoHomePath, mercadoInscriptionPath } from '../../lib/mercado/paths'
 import { MERCADO_SEO } from '../../lib/mercado/home'
 import styles from './mercado.module.css'
-
-const nunito = Nunito({
-  subsets: ['latin'],
-  weight: ['400', '600', '700', '800'],
-  display: 'swap',
-  variable: '--font-mercado',
-})
 
 function homeAnchor(hash: string) {
   return `${mercadoHomePath()}#${hash}`
@@ -42,7 +35,15 @@ export default function MercadoPublicShell({ children }: { children: ReactNode }
   )
 
   return (
-    <div className={`${nunito.variable} ${styles.shell}`}>
+    <div className={styles.shell}>
+      <Head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap"
+          rel="stylesheet"
+        />
+      </Head>
       <div className={styles.stickyChrome}>
         <div
           className={`${styles.trust} ${status.open ? styles.trustOpen : styles.trustClosed}`}
