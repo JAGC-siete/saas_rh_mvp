@@ -97,15 +97,17 @@ describe('landings: contenedor de superadmin', () => {
 })
 
 describe('webycitas: preview sobre plantillas existentes', () => {
-  it('valida las 8 plantillas', () => {
+  it('valida las plantillas del constructor', () => {
     assertTemplatesValid()
   })
 
   it('mapea retail y servicios a template_type', () => {
     assert.equal(templateKeyForRubro('ferreteria'), 'ferreteria')
     assert.equal(templateKeyForRubro('papeleria'), 'papeleria')
+    assert.equal(templateKeyForRubro('mercadito'), 'mercadito')
+    assert.equal(templateKeyForRubro('supermercado'), 'supermercado')
     assert.equal(templateKeyForRubro('salon'), 'salon_belleza')
-    assert.equal(templateKeyForRubro('spa'), 'salon_belleza')
+    assert.equal(templateKeyForRubro('spa'), 'spa')
     assert.equal(templateKeyForRubro('clinica'), 'clinica')
   })
 

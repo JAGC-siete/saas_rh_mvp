@@ -9,6 +9,12 @@ import {
 import { brandedSeoTitle, LANDING_SEO_TITLE_MAX } from '../lib/landings/seo-title'
 import { LANDING_STOCK } from '../lib/landings/stock'
 import { applyBusinessToTemplate, templateContentFor } from '../lib/landings/templates'
+import { retailAreasMatching, retailSearchHints } from '../lib/landings/retail-visit'
+import {
+  collectServiceOptions,
+  groupServiceItems,
+  isServiceBookingContent,
+} from '../lib/landings/service-booking'
 import { heroLayoutClass, landingRadiusCss } from '../lib/landings/theme-css'
 import type { PublicLandingPage } from '../types/landing'
 
@@ -80,44 +86,55 @@ describe('landings: semillas profesionales', () => {
     }
   })
 
-  it('rompe el esqueleto A: ferretería, mercadito, súper y clínica no comparten árbol', () => {
+  it('retail comparte el árbol de visita de mercadosanpablosiguav2; servicios no', () => {
+    const papeleria = kindsOf('papeleria').join('>')
     const ferreteria = kindsOf('ferreteria').join('>')
     const mercadito = kindsOf('mercadito').join('>')
     const superKinds = kindsOf('supermercado').join('>')
     const clinica = kindsOf('clinica').join('>')
-    assert.equal(ferreteria === mercadito, false)
-    assert.equal(mercadito === superKinds, false)
-    assert.equal(superKinds === clinica, false)
-    assert.equal(ferreteria === clinica, false)
+    const visitTree = 'hero>visit>hours>benefits>areas'
+    assert.equal(papeleria, visitTree)
+    assert.equal(ferreteria, visitTree)
+    assert.equal(mercadito, visitTree)
+    assert.equal(superKinds, visitTree)
+    assert.equal(clinica === visitTree, false)
+    assert.equal(kindsOf('barberia').includes('visit'), false)
   })
 
-  it('ferretería: sin foto de hero, catálogo, crédito y CTA maps', () => {
+  it('ferretería: portada de visita, mapa y áreas, sin formulario', () => {
     const content = templateContentFor('ferreteria')
     const hero = content.blocks.find((block) => block.kind === 'hero')
-    assert.equal(hero && hero.kind === 'hero' ? hero.imageUrl : 'missing', undefined)
-    assert.equal(content.blocks.some((block) => block.kind === 'text'), true)
-    assert.equal(content.blocks.some((block) => block.kind === 'cta' && block.primaryCta.action === 'maps'), true)
-    assert.ok((content.blocks.find((block) => block.kind === 'items') as { items: unknown[] } | undefined)?.items.length >= 6)
+    assert.equal(hero && hero.kind === 'hero' ? hero.layout : undefined, 'visit')
+    assert.equal(hero && hero.kind === 'hero' ? hero.primaryCta.action : undefined, 'maps')
+    assert.equal(content.blocks.some((block) => block.kind === 'leadForm'), false)
+    assert.equal(content.blocks.some((block) => block.kind === 'areas'), true)
+    const blob = JSON.stringify(content)
+    assert.equal(/whatsapp|wa\.me/i.test(blob), false)
   })
 
-  it('clínica: foto, galería, testimonios, FAQ y CTA WhatsApp', () => {
+  it('clínica: foto, galería, testimonios, FAQ y motor de reserva', () => {
     const content = templateContentFor('clinica')
     const hero = content.blocks.find((block) => block.kind === 'hero')
     assert.equal(hero && hero.kind === 'hero' ? hero.imageUrl : undefined, LANDING_STOCK.clinicaHero)
+    assert.equal(hero && hero.kind === 'hero' ? hero.layout : undefined, 'booking')
     assert.equal(content.blocks.some((block) => block.kind === 'gallery'), true)
     assert.equal(content.blocks.some((block) => block.kind === 'testimonials'), true)
     assert.equal(content.blocks.some((block) => block.kind === 'faq'), true)
-    const cierre = content.blocks.find((block) => block.kind === 'cta')
-    assert.equal(cierre && cierre.kind === 'cta' ? cierre.primaryCta.action : undefined, 'whatsapp')
+    assert.equal(content.blocks.some((block) => block.kind === 'team'), true)
+    const reserva = content.blocks.find((block) => block.kind === 'leadForm')
+    assert.equal(reserva && reserva.kind === 'leadForm' ? reserva.layout : undefined, 'booking')
   })
 
-  it('súper trae foto y galería; mercadito no', () => {
+  it('súper y mercadito traen foto de recinto; papelería no depende de galería', () => {
     const superContent = templateContentFor('supermercado')
     const superHero = superContent.blocks.find((block) => block.kind === 'hero')
     const miniHero = templateContentFor('mercadito').blocks.find((block) => block.kind === 'hero')
+    const paperHero = templateContentFor('papeleria').blocks.find((block) => block.kind === 'hero')
     assert.equal(superHero && superHero.kind === 'hero' ? Boolean(superHero.imageUrl) : false, true)
-    assert.equal(superContent.blocks.some((block) => block.kind === 'gallery'), true)
-    assert.equal(miniHero && miniHero.kind === 'hero' ? miniHero.imageUrl : 'x', undefined)
+    assert.equal(miniHero && miniHero.kind === 'hero' ? Boolean(miniHero.imageUrl) : false, true)
+    assert.equal(paperHero && paperHero.kind === 'hero' ? paperHero.layout : undefined, 'visit')
+    assert.equal(superContent.blocks.some((block) => block.kind === 'areas'), true)
+    assert.equal(superContent.blocks.some((block) => block.kind === 'gallery'), false)
   })
 
   it('al aplicar nombre, el título SEO cabe y el og hereda la foto', () => {
@@ -147,6 +164,74 @@ describe('landings: JSON-LD LocalBusiness', () => {
     assert.equal(landingSchemaType('ferreteria'), 'HardwareStore')
     assert.equal(landingSchemaType('mercadito'), 'GroceryStore')
     assert.equal(landingSchemaType('barberia'), 'HairSalon')
+    assert.equal(landingSchemaType('spa'), 'DaySpa')
     assert.equal(landingSchemaTelephone('9999-0000'), '+50499990000')
+    const superPage = asPage('supermercado', { name: 'Súper Norte', city: 'SPS', phone: '3222-6773' })
+    const superLd = landingLocalBusinessJsonLd(superPage)
+    assert.ok(Array.isArray(superLd?.containsPlace))
+    assert.ok((superLd?.containsPlace as unknown[]).length >= 3)
+  })
+})
+
+describe('landings: búsqueda de áreas retail', () => {
+  it('filtra por needles y cae al título si no hay match exacto', () => {
+    const areas = templateContentFor('supermercado').blocks.find((block) => block.kind === 'areas')
+    assert.equal(areas?.kind, 'areas')
+    if (!areas || areas.kind !== 'areas') return
+    assert.deepEqual(
+      retailAreasMatching(areas.items, 'carne').map((item) => item.id),
+      ['carniceria']
+    )
+    assert.deepEqual(
+      retailSearchHints(areas.items, 'tomate').map((hint) => hint.areaId),
+      ['frutas-verduras']
+    )
+    assert.equal(retailAreasMatching(areas.items, 'góndola')[0]?.id, 'abarrotes')
+  })
+})
+
+describe('landings: semillas de reserva (service)', () => {
+  const SERVICE_KEYS = ['barberia', 'salon_belleza', 'spa', 'clinica'] as const
+
+  it('disparan el renderer de reserva: hero booking, menú con precio, equipo, FAQ y form 3 pasos', () => {
+    for (const key of SERVICE_KEYS) {
+      const content = templateContentFor(key)
+      const hero = content.blocks.find((block) => block.kind === 'hero')
+      const reserva = content.blocks.find((block) => block.kind === 'leadForm')
+      const items = content.blocks.filter((block) => block.kind === 'items')
+      assert.equal(hero && hero.kind === 'hero' ? hero.layout : undefined, 'booking', key)
+      assert.equal(hero && hero.kind === 'hero' ? hero.primaryCta.action : undefined, 'lead-form', key)
+      assert.equal(reserva && reserva.kind === 'leadForm' ? reserva.layout : undefined, 'booking', key)
+      assert.equal(content.blocks.some((block) => block.kind === 'team'), true, key)
+      assert.equal(content.blocks.some((block) => block.kind === 'faq'), true, key)
+      assert.equal(content.blocks.some((block) => block.kind === 'testimonials'), true, key)
+      assert.ok(items.length >= 1, key)
+      assert.equal(
+        items.every((block) => block.kind === 'items' && block.items.every((item) => Boolean(item.priceLabel))),
+        true,
+        key
+      )
+    }
+  })
+
+  it('belleza es visual; salud explica la primera visita', () => {
+    assert.equal(kindsOf('salon_belleza').includes('gallery'), true)
+    assert.equal(kindsOf('spa').includes('gallery'), true)
+    assert.equal(kindsOf('clinica').includes('benefits'), true)
+    assert.equal(kindsOf('barberia').includes('benefits'), false)
+    const spa = templateContentFor('spa')
+    const clinica = templateContentFor('clinica')
+    assert.notEqual(spa.theme.primary, clinica.theme.primary)
+    assert.equal(spa.blocks.some((block) => block.kind === 'items' && block.id === 'paquetes'), true)
+  })
+
+  it('agrupa el menú por categoría', () => {
+    const salon = templateContentFor('salon_belleza')
+    assert.equal(isServiceBookingContent(salon), true)
+    const groups = groupServiceItems(collectServiceOptions(salon))
+    const labels = groups.map((group) => group.category)
+    assert.equal(labels.includes('Uñas'), true)
+    assert.equal(labels.includes('Cabello'), true)
+    assert.equal(labels.includes('Paquetes'), true)
   })
 })

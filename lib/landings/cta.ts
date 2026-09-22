@@ -48,7 +48,10 @@ export function resolveCta(
 ): ResolvedCta | null {
   switch (cta.action) {
     case 'whatsapp': {
-      const href = whatsappHref(business, `Hola ${business.name}, vi su página y quiero información.`)
+      const href = whatsappHref(
+        business,
+        cta.message || `Hola ${business.name}, vi su página y quiero información.`
+      )
       return href ? { label: cta.label, href, external: true } : null
     }
     case 'call': {

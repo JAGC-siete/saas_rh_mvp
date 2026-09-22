@@ -1,6 +1,8 @@
 /**
  * Mapeo rubro → plantilla y JSON de preview. Seguro para el bundle del lead magnet.
- * El insert en landing_pages vive en webycitas-publish.ts (solo servidor).
+ * Retail (mercadito, papelería, súper, ferretería) usa la plantilla de visita
+ * copiada de /mercadosanpablosiguav2. Service (barbería, salón, spa, clínica)
+ * usa la plantilla de reserva. El insert en landing_pages vive en webycitas-publish.ts.
  */
 
 import { landingPhoneSchema } from '../landings/page-schema'
@@ -20,7 +22,7 @@ const RUBRO_TEMPLATE: Record<WebycitasFormRubro, LandingTemplateKey> = {
   papeleria: 'papeleria',
   supermercado: 'supermercado',
   ferreteria: 'ferreteria',
-  spa: 'salon_belleza',
+  spa: 'spa',
   clinica: 'clinica',
   barberia: 'barberia',
   salon: 'salon_belleza',

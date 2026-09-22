@@ -13,6 +13,10 @@ import { resolveCta } from '../../lib/landings/cta'
 import { heroCopyClass, heroLayoutClass, landingThemeCssVars } from '../../lib/landings/theme-css'
 import { cn } from '../../lib/utils'
 import LandingLeadForm from './LandingLeadForm'
+import RetailVisitRenderer from './RetailVisitRenderer'
+import ServiceBookingRenderer from './ServiceBookingRenderer'
+import { isRetailVisitContent } from '../../lib/landings/retail-visit'
+import { isServiceBookingContent } from '../../lib/landings/service-booking'
 import type { LandingBlock, LandingCta, LandingPageBusiness, PublicLandingPage } from '../../types/landing'
 
 interface LandingRendererProps {
@@ -28,6 +32,13 @@ interface BlockContext {
 }
 
 export default function LandingRenderer({ page }: LandingRendererProps) {
+  if (isRetailVisitContent(page.content)) {
+    return <RetailVisitRenderer page={page} />
+  }
+  if (isServiceBookingContent(page.content)) {
+    return <ServiceBookingRenderer page={page} />
+  }
+
   const { theme, business, blocks } = page.content
   const visible = blocks.filter((block) => block.visible)
   const leadFormAnchor = visible.find((block) => block.kind === 'leadForm')?.id ?? null
@@ -82,6 +93,14 @@ function BlockSwitch({
       return <ContactBlock block={block} context={context} dark={dark} />
     case 'cta':
       return <CtaBlock block={block} context={context} />
+    case 'visit':
+      return null
+    case 'benefits':
+      return <BenefitsBlock block={block} dark={dark} />
+    case 'areas':
+      return null
+    case 'team':
+      return <TeamBlock block={block} dark={dark} />
     default:
       return null
   }
@@ -343,7 +362,13 @@ function ContactBlock({
     rows.push({ label: 'Correo', value: business.email, href: `mailto:${business.email}` })
   }
   if (block.showAddress && business.address) {
-    rows.push({ label: 'Dirección', value: business.address })
+    const maps = resolveCta({ label: 'Ver en el mapa', action: 'maps' }, business, null)
+    rows.push({
+      label: 'Dirección',
+      value: business.address,
+      href: maps?.href,
+      external: Boolean(maps),
+    })
   }
   if (block.showMap) {
     const maps = resolveCta({ label: 'Ver en el mapa', action: 'maps' }, business, null)
@@ -373,6 +398,60 @@ function ContactBlock({
           </div>
         ))}
       </dl>
+    </Section>
+  )
+}
+
+function BenefitsBlock({ block, dark }: { block: BlockOf<'benefits'>; dark: boolean }) {
+  return (
+    <Section id={block.id}>
+      <SectionTitle title={block.title} />
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {block.items.map((item) => (
+          <article
+            key={item.mark}
+            className={`rounded-lp border p-5 ${dark ? 'border-white/10 bg-white/5' : 'border-slate-200 bg-white'}`}
+          >
+            <p className="text-xs font-bold text-lp-primary">{item.mark}</p>
+            <h3 className="mt-1 font-semibold">{item.title}</h3>
+            <p className="mt-2 text-sm opacity-80">{item.body}</p>
+          </article>
+        ))}
+      </div>
+    </Section>
+  )
+}
+
+function TeamBlock({ block, dark }: { block: BlockOf<'team'>; dark: boolean }) {
+  return (
+    <Section id={block.id}>
+      <SectionTitle title={block.title} subtitle={block.subtitle} />
+      <div className="grid gap-4 sm:grid-cols-2">
+        {block.items.map((member) => (
+          <article
+            key={member.name}
+            className={`flex gap-4 rounded-lp border p-5 ${dark ? 'border-white/10 bg-white/5' : 'border-slate-200 bg-white'}`}
+          >
+            {member.imageUrl ? (
+              <img
+                src={member.imageUrl}
+                alt={member.name}
+                className="h-14 w-14 rounded-full object-cover"
+                loading="lazy"
+              />
+            ) : (
+              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-lp-primary text-lg font-bold text-white">
+                {member.name.slice(0, 1)}
+              </div>
+            )}
+            <div>
+              <p className="font-semibold">{member.name}</p>
+              <p className="text-xs font-medium text-lp-primary">{member.role}</p>
+              {member.bio ? <p className="mt-1 text-sm opacity-80">{member.bio}</p> : null}
+            </div>
+          </article>
+        ))}
+      </div>
     </Section>
   )
 }

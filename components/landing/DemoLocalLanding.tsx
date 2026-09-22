@@ -45,8 +45,12 @@ function scrollToId(id: string, cta: string, location: string) {
   document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 
-export default function DemoLocalLanding() {
-  const [rubro, setRubro] = useState<WebycitasFormRubro>('barberia')
+export default function DemoLocalLanding({
+  initialRubro = 'barberia',
+}: {
+  initialRubro?: WebycitasFormRubro
+}) {
+  const [rubro, setRubro] = useState<WebycitasFormRubro>(initialRubro)
   const [draft, setDraft] = useState({ businessName: '', phone: '', city: '' })
   const catalog = catalogForRubro(rubro)
   const previewPage = useMemo(

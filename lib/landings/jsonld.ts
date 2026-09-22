@@ -11,6 +11,7 @@ const SCHEMA_TYPE: Record<LandingTemplateKey, string> = {
   papeleria: 'Store',
   barberia: 'HairSalon',
   salon_belleza: 'BeautySalon',
+  spa: 'DaySpa',
   comercial: 'FurnitureStore',
   ferreteria: 'HardwareStore',
   mercadito: 'GroceryStore',
@@ -44,6 +45,10 @@ function firstImage(page: PublicLandingPage): string | undefined {
   for (const block of page.content.blocks) {
     if (block.kind === 'hero' && block.imageUrl) return absoluteAssetUrl(block.imageUrl)
     if (block.kind === 'gallery' && block.images[0]) return absoluteAssetUrl(block.images[0].url)
+    if (block.kind === 'areas') {
+      const photo = block.items.find((item) => item.imageUrl)
+      if (photo?.imageUrl) return absoluteAssetUrl(photo.imageUrl)
+    }
   }
   return undefined
 }
@@ -72,6 +77,15 @@ export function landingLocalBusinessJsonLd(page: PublicLandingPage): Record<stri
       ...(business.city ? { addressLocality: business.city } : {}),
       addressCountry: 'HN',
     }
+  }
+
+  const areas = page.content.blocks.find((block) => block.kind === 'areas')
+  if (areas && areas.kind === 'areas') {
+    jsonLd.containsPlace = areas.items.map((item) => ({
+      '@type': 'Place',
+      name: item.title,
+      description: item.description,
+    }))
   }
 
   return jsonLd

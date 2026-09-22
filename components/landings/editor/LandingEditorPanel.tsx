@@ -55,6 +55,10 @@ const BLOCK_LABEL: Record<LandingBlockKind, string> = {
   leadForm: 'Formulario',
   contact: 'Contacto',
   cta: 'Llamado final',
+  visit: 'Cómo llegar',
+  benefits: 'Por qué venir',
+  areas: 'Áreas del local',
+  team: 'Equipo',
 }
 
 const CTA_ACTION_LABEL: Record<(typeof LANDING_CTA_ACTIONS)[number], string> = {
@@ -303,6 +307,16 @@ export function BlockFields({
     case 'hero':
       return (
         <div className="space-y-3">
+          <SelectField
+            register={register}
+            name={`${base}.layout`}
+            label="Tipo de portada"
+            options={[
+              { value: 'classic', label: 'Clásica' },
+              { value: 'visit', label: 'Visita al local (retail)' },
+              { value: 'booking', label: 'Cita / reserva (servicios)' },
+            ]}
+          />
           <TextField register={register} name={`${base}.badge`} label="Etiqueta pequeña" />
           <TextField register={register} name={`${base}.headline`} label="Titular" />
           <AreaField register={register} name={`${base}.subheadline`} label="Bajada" />
@@ -310,8 +324,11 @@ export function BlockFields({
             register={register}
             name={`${base}.imageUrl`}
             label="Imagen"
-            hint="URL https o ruta interna que empiece con /"
+            hint="URL https o ruta interna que empiece con /. En visita al local es el fondo."
           />
+          <TextField register={register} name={`${base}.searchPlaceholder`} label="Placeholder de búsqueda" />
+          <TextField register={register} name={`${base}.searchHint`} label="Ayuda bajo la búsqueda" />
+          <TextField register={register} name={`${base}.searchSubmitLabel`} label="Texto del botón buscar" />
           <CtaFields register={register} base={`${base}.primaryCta`} label="Botón principal" />
           <CtaFields register={register} base={`${base}.secondaryCta`} label="Botón secundario" />
         </div>
@@ -337,12 +354,13 @@ export function BlockFields({
             blockIndex={blockIndex}
             property="items"
             addLabel="Agregar producto o servicio"
-            emptyItem={{ name: '', detail: '', priceLabel: '' }}
+            emptyItem={{ name: '', detail: '', category: '', priceLabel: '' }}
             renderFields={(itemBase) => (
               <div className="grid gap-3 sm:grid-cols-2">
                 <TextField register={register} name={`${itemBase}.name`} label="Nombre" />
                 <TextField register={register} name={`${itemBase}.priceLabel`} label="Precio" />
-                <TextField register={register} name={`${itemBase}.detail`} label="Detalle" />
+                <TextField register={register} name={`${itemBase}.category`} label="Categoría (Cabello, Uñas…)" />
+                <TextField register={register} name={`${itemBase}.detail`} label="Para qué sirve" />
                 <TextField register={register} name={`${itemBase}.imageUrl`} label="Imagen" />
               </div>
             )}
@@ -452,6 +470,15 @@ export function BlockFields({
           <TextField register={register} name={`${base}.title`} label="Título" />
           <AreaField register={register} name={`${base}.subtitle`} label="Subtítulo" rows={2} />
           <TextField register={register} name={`${base}.submitLabel`} label="Texto del botón" />
+          <SelectField
+            register={register}
+            name={`${base}.layout`}
+            label="Tipo de formulario"
+            options={[
+              { value: 'plain', label: 'Contacto simple' },
+              { value: 'booking', label: 'Reserva en 3 pasos' },
+            ]}
+          />
           <AreaField register={register} name={`${base}.consentText`} label="Texto de consentimiento" rows={2} />
           <div className="flex gap-4">
             <CheckField register={register} name={`${base}.fields.phone`} label="Pedir teléfono" />
@@ -483,6 +510,110 @@ export function BlockFields({
           <TextField register={register} name={`${base}.headline`} label="Titular" />
           <AreaField register={register} name={`${base}.subheadline`} label="Bajada" rows={2} />
           <CtaFields register={register} base={`${base}.primaryCta`} label="Botón" />
+        </div>
+      )
+
+    case 'visit':
+      return (
+        <div className="space-y-3">
+          <TextField register={register} name={`${base}.title`} label="Título" />
+          <AreaField register={register} name={`${base}.body`} label="Cómo llegar" rows={4} />
+          <TextField register={register} name={`${base}.geoLabel`} label="Coordenadas o nota corta" />
+          <TextField register={register} name={`${base}.mapsCtaLabel`} label="Botón de mapa" />
+          <TextField register={register} name={`${base}.hoursCtaLabel`} label="Botón de horario" />
+          <TextField register={register} name={`${base}.mapPlaceholder`} label="Texto del recuadro de mapa" />
+        </div>
+      )
+
+    case 'benefits':
+      return (
+        <div className="space-y-3">
+          <TextField register={register} name={`${base}.title`} label="Título" />
+          <ItemList
+            control={control}
+            register={register}
+            blockIndex={blockIndex}
+            property="items"
+            addLabel="Agregar beneficio"
+            emptyItem={{ mark: '', title: '', body: '' }}
+            renderFields={(itemBase) => (
+              <div className="space-y-3">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <TextField register={register} name={`${itemBase}.mark`} label="Marca (01)" />
+                  <TextField register={register} name={`${itemBase}.title`} label="Título" />
+                </div>
+                <AreaField register={register} name={`${itemBase}.body`} label="Texto" rows={2} />
+              </div>
+            )}
+          />
+        </div>
+      )
+
+    case 'areas':
+      return (
+        <div className="space-y-3">
+          <TextField register={register} name={`${base}.title`} label="Título" />
+          <AreaField register={register} name={`${base}.subtitle`} label="Bajada" rows={2} />
+          <TextField register={register} name={`${base}.emptyMessage`} label="Mensaje si la búsqueda no da" />
+          <ItemList
+            control={control}
+            register={register}
+            blockIndex={blockIndex}
+            property="items"
+            addLabel="Agregar área"
+            emptyItem={{
+              id: '',
+              title: '',
+              aisle: '',
+              description: '',
+              ctaLabel: 'Ver ubicación del área',
+              needles: [],
+            }}
+            renderFields={(itemBase) => (
+              <div className="space-y-3">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <TextField register={register} name={`${itemBase}.id`} label="Id (minúsculas)" />
+                  <TextField register={register} name={`${itemBase}.title`} label="Nombre" />
+                  <TextField register={register} name={`${itemBase}.aisle`} label="Pasillo o zona" />
+                  <TextField register={register} name={`${itemBase}.ctaLabel`} label="Enlace a la visita" />
+                  <TextField register={register} name={`${itemBase}.imageUrl`} label="Imagen" />
+                  <TextField register={register} name={`${itemBase}.imageAlt`} label="Descripción de la foto" />
+                </div>
+                <AreaField register={register} name={`${itemBase}.description`} label="Qué hay en el área" rows={3} />
+                <TextField
+                  register={register}
+                  name={`${itemBase}.hintLabel`}
+                  label="Texto de sugerencia en la búsqueda"
+                />
+              </div>
+            )}
+          />
+        </div>
+      )
+
+    case 'team':
+      return (
+        <div className="space-y-3">
+          <TextField register={register} name={`${base}.title`} label="Título" />
+          <AreaField register={register} name={`${base}.subtitle`} label="Subtítulo" rows={2} />
+          <ItemList
+            control={control}
+            register={register}
+            blockIndex={blockIndex}
+            property="items"
+            addLabel="Agregar persona"
+            emptyItem={{ name: '', role: '', bio: '', imageUrl: '' }}
+            renderFields={(itemBase) => (
+              <div className="space-y-3">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <TextField register={register} name={`${itemBase}.name`} label="Nombre" />
+                  <TextField register={register} name={`${itemBase}.role`} label="Rol" />
+                </div>
+                <AreaField register={register} name={`${itemBase}.bio`} label="Bio" rows={2} />
+                <TextField register={register} name={`${itemBase}.imageUrl`} label="Foto" />
+              </div>
+            )}
+          />
         </div>
       )
 

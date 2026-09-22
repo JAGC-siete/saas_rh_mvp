@@ -10,12 +10,33 @@ import {
 } from '../lib/marketing/webycitas-preview'
 
 describe('webycitas preview bridge', () => {
-  it('mapea rubro de form a plantilla existente', () => {
+  it('retail de form usa plantilla de visita, no catálogo de WhatsApp', () => {
     assert.equal(templateKeyForRubro('barberia'), 'barberia')
     assert.equal(templateKeyForRubro('salon'), 'salon_belleza')
-    assert.equal(templateKeyForRubro('spa'), 'salon_belleza')
+    assert.equal(templateKeyForRubro('spa'), 'spa')
     assert.equal(templateKeyForRubro('ferreteria'), 'ferreteria')
+    assert.equal(templateKeyForRubro('mercadito'), 'mercadito')
+    assert.equal(templateKeyForRubro('papeleria'), 'papeleria')
+    assert.equal(templateKeyForRubro('supermercado'), 'supermercado')
     assert.equal(templateKeyForRubro('cafeteria'), 'comercial')
+    const ferreteria = templateContentFor('ferreteria')
+    const hero = ferreteria.blocks.find((block) => block.kind === 'hero')
+    assert.equal(hero && hero.kind === 'hero' ? hero.layout : undefined, 'visit')
+    assert.equal(ferreteria.blocks.some((block) => block.kind === 'leadForm'), false)
+  })
+
+  it('spa publica plantilla propia de reserva, no salón', () => {
+    const content = buildWebycitasPreviewContent({
+      rubro: 'spa',
+      businessName: 'Spa Luna',
+      city: 'Tegucigalpa',
+      phone: '3222-6773',
+    })
+    const hero = content.blocks.find((block) => block.kind === 'hero')
+    assert.equal(templateKeyForRubro('spa'), 'spa')
+    assert.equal(hero && hero.kind === 'hero' ? hero.layout : undefined, 'booking')
+    assert.equal(content.blocks.some((block) => block.kind === 'team'), true)
+    assert.equal(content.meta.noindex, true)
   })
 
   it('retail no admite booking', () => {
@@ -34,6 +55,9 @@ describe('webycitas preview bridge', () => {
     assert.equal(content.business.whatsapp, '3222-6773')
     assert.equal(content.business.city, 'San Pedro Sula')
     assert.equal(content.meta.noindex, true)
+    const hero = content.blocks.find((block) => block.kind === 'hero')
+    assert.equal(hero && hero.kind === 'hero' ? hero.badge : undefined, 'San Pedro Sula')
+    assert.equal(hero && hero.kind === 'hero' ? hero.layout : undefined, 'visit')
   })
 
   it('arma slug único con sufijo', () => {

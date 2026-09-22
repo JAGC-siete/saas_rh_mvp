@@ -11,6 +11,7 @@ export const LANDING_TEMPLATE_KEYS = [
   'papeleria',
   'barberia',
   'salon_belleza',
+  'spa',
   'comercial',
   'ferreteria',
   'mercadito',
@@ -33,6 +34,10 @@ export const LANDING_BLOCK_KINDS = [
   'leadForm',
   'contact',
   'cta',
+  'visit',
+  'benefits',
+  'areas',
+  'team',
 ] as const
 export type LandingBlockKind = (typeof LANDING_BLOCK_KINDS)[number]
 
@@ -72,16 +77,17 @@ export const RESERVED_LANDING_SLUGS: readonly string[] = [
 
 const shortText = (max: number) => z.string().trim().min(1).max(max)
 
-/** Acepta URL https absoluta o ruta interna (/img/foo.webp). Bloquea javascript:, data:, http. */
+/** Acepta URL https absoluta, ruta interna (/img/foo.webp) o ancla de la misma página (#horarios). */
 export const landingUrlSchema = z
   .string()
   .trim()
   .max(500)
   .refine(
     (value) =>
+      /^#[a-z0-9]+(-[a-z0-9]+)*$/.test(value) ||
       (value.startsWith('/') && !value.startsWith('//')) ||
       (value.startsWith('https://') && z.string().url().safeParse(value).success),
-    { message: 'Usa una URL https o una ruta interna que empiece con /.' }
+    { message: 'Usa una URL https, una ruta interna que empiece con / o una ancla #seccion.' }
   )
 
 export const landingHexColorSchema = z
@@ -121,6 +127,8 @@ export const landingCtaSchema = z
     label: shortText(40),
     action: z.enum(LANDING_CTA_ACTIONS),
     href: landingUrlSchema.optional(),
+    /** Prefill de WhatsApp. Se ignora en el resto de acciones. */
+    message: z.string().trim().max(160).optional(),
   })
   .refine((cta) => cta.action !== 'link' || Boolean(cta.href), {
     message: 'Un CTA de tipo link necesita href.',
@@ -139,10 +147,15 @@ const blockBase = z.object({
 
 export const heroBlockSchema = blockBase.extend({
   kind: z.literal('hero'),
+  /** `visit` = recinto retail. `booking` = cita de servicios (salud/belleza). */
+  layout: z.enum(['classic', 'visit', 'booking']).optional(),
   badge: z.string().trim().max(60).optional(),
   headline: shortText(120),
   subheadline: z.string().trim().max(320).optional(),
   imageUrl: landingUrlSchema.optional(),
+  searchPlaceholder: z.string().trim().max(80).optional(),
+  searchHint: z.string().trim().max(160).optional(),
+  searchSubmitLabel: z.string().trim().max(40).optional(),
   primaryCta: landingCtaSchema,
   secondaryCta: landingCtaSchema.optional(),
 })
@@ -156,7 +169,10 @@ export const itemsBlockSchema = blockBase.extend({
     .array(
       z.object({
         name: shortText(80),
-        detail: z.string().trim().max(160).optional(),
+        /** Para qué sirve / cómo se siente. No solo "60 min". */
+        detail: z.string().trim().max(240).optional(),
+        /** Agrupa el menú ("Cabello", "Uñas"). El renderer junta por esta etiqueta. */
+        category: z.string().trim().max(40).optional(),
         /** Etiqueta libre ("L. 150", "Desde L. 1,250", "A convenir"): el dueño escribe su realidad. */
         priceLabel: z.string().trim().max(40).optional(),
         imageUrl: landingUrlSchema.optional(),
@@ -221,6 +237,9 @@ export const leadFormBlockSchema = blockBase.extend({
   subtitle: z.string().trim().max(240).optional(),
   submitLabel: shortText(40),
   consentText: shortText(320),
+  /** `booking` = 3 pasos (servicio → horario → datos). El motor de citas real vive fuera de este JSON. */
+  layout: z.enum(['plain', 'booking']).optional(),
+  slotHints: z.array(shortText(40)).max(8).optional(),
   fields: z
     .object({
       phone: z.boolean().default(true),
@@ -249,6 +268,76 @@ export const ctaBlockSchema = blockBase.extend({
   primaryCta: landingCtaSchema,
 })
 
+export const visitBlockSchema = blockBase.extend({
+  kind: z.literal('visit'),
+  title: shortText(90),
+  body: shortText(1200),
+  geoLabel: z.string().trim().max(80).optional(),
+  mapsCtaLabel: shortText(40),
+  hoursCtaLabel: shortText(40),
+  mapPlaceholder: z.string().trim().max(80).optional(),
+})
+
+export const benefitsBlockSchema = blockBase.extend({
+  kind: z.literal('benefits'),
+  title: shortText(90),
+  items: z
+    .array(
+      z.object({
+        mark: shortText(8),
+        title: shortText(80),
+        body: shortText(240),
+      })
+    )
+    .min(1)
+    .max(MAX_ITEMS_PER_BLOCK),
+})
+
+export const teamBlockSchema = blockBase.extend({
+  kind: z.literal('team'),
+  title: shortText(90),
+  subtitle: z.string().trim().max(240).optional(),
+  items: z
+    .array(
+      z.object({
+        name: shortText(80),
+        role: shortText(80),
+        bio: z.string().trim().max(240).optional(),
+        imageUrl: landingUrlSchema.optional(),
+      })
+    )
+    .min(1)
+    .max(MAX_ITEMS_PER_BLOCK),
+})
+
+export const areasBlockSchema = blockBase.extend({
+  kind: z.literal('areas'),
+  title: shortText(90),
+  subtitle: z.string().trim().max(240).optional(),
+  emptyMessage: z.string().trim().max(200).optional(),
+  items: z
+    .array(
+      z.object({
+        id: z
+          .string()
+          .trim()
+          .min(2)
+          .max(40)
+          .regex(/^[a-z0-9]+(-[a-z0-9]+)*$/, 'El id del área usa minúsculas y guiones.'),
+        title: shortText(80),
+        aisle: shortText(80),
+        description: shortText(320),
+        imageUrl: landingUrlSchema.optional(),
+        imageAlt: z.string().trim().max(120).optional(),
+        ctaLabel: shortText(40),
+        hintLabel: z.string().trim().max(120).optional(),
+        needles: z.array(z.string().trim().min(2).max(40)).max(16).default([]),
+      })
+    )
+    .min(1)
+    .max(MAX_ITEMS_PER_BLOCK),
+})
+
 export const landingBlockSchema = z.discriminatedUnion('kind', [
   heroBlockSchema,
   itemsBlockSchema,
@@ -260,6 +349,10 @@ export const landingBlockSchema = z.discriminatedUnion('kind', [
   leadFormBlockSchema,
   contactBlockSchema,
   ctaBlockSchema,
+  visitBlockSchema,
+  benefitsBlockSchema,
+  areasBlockSchema,
+  teamBlockSchema,
 ])
 
 export const landingMetaSchema = z.object({
