@@ -627,7 +627,6 @@ export default function EmployeePortal() {
   }, [])
 
   const checkExistingSession = async () => {
-    // No need for custom session checking - useAuth handles this
     setLoading(false)
   }
   const fetchEmployeeData = useCallback(async () => {
@@ -646,15 +645,12 @@ export default function EmployeePortal() {
         const dashboardData = await dashboardResponse.json()
         
         
-        // Set profile data with proper structure
         setProfile({
           employee: dashboardData.employee
         })
         
-        // Set attendance summary with proper structure
         setAttendanceSummary(dashboardData.attendance_summary)
         
-        // Set permissions summary with proper structure
         setPermissionsSummary(dashboardData.permissions_summary)
 
         setRecentAttendance(dashboardData.recent_attendance || [])

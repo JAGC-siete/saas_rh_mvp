@@ -1,7 +1,3 @@
-// Unified Payroll Manager Hook
-// Consolidates all payroll state management into a single, cohesive system
-// Replaces the dual state system with a single source of truth
-
 import { useReducer, useCallback, useMemo, useEffect, useState, useRef } from 'react'
 import { useCompanyContext } from '../useCompanyContext'
 import { useToast } from '../toast'
@@ -82,7 +78,6 @@ export interface PayrollManagerState {
   // Filters
   filters: PayrollFilters
   
-  // Legacy compatibility (will be removed)
   runId?: string
   hasLoadedInitialData: boolean
 
@@ -156,9 +151,9 @@ const payrollManagerReducer = (
         unifiedData: {
           rows: action.payload.rows,
           resumen: action.payload.resumen,
-          runId: (action.payload as any).runId ?? state.unifiedData?.runId,
-          status: (action.payload as any).status ?? state.unifiedData?.status,
-          incompleteRecordsAlert: (action.payload as any).incompleteRecordsAlert
+          runId: action.payload.runId ?? state.unifiedData?.runId,
+          status: action.payload.status ?? state.unifiedData?.status,
+          incompleteRecordsAlert: action.payload.incompleteRecordsAlert
         },
         loading: false,
         error: null
@@ -1070,7 +1065,6 @@ export const usePayrollManager = () => {
     unifiedDataRows: state.unifiedData?.rows?.length || 0
   })
 
-  // Legacy compatibility properties
   const hasPlanilla = (state.unifiedData?.rows?.length || 0) > 0
   const totalEmployees = state.unifiedData?.resumen.empleados || 0
   const totalBruto = state.unifiedData?.resumen.total_bruto || 0

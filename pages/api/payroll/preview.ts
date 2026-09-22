@@ -71,7 +71,6 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   }
 
   try {
-    // Use the new authentication method that handles company context properly
     const { supabase, companyId, user, companyCountryCode, companyTimezone } = await requireCompanyAccess(req, res)
     const salaryClient = createEmployeeSalaryClient()
     
@@ -255,13 +254,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       })
     }
 
-    console.log('🔍 DEBUG - Existing run check:', { existingRun, checkError })
-
     let runId: string
 
     if (existingRun) {
-      console.log('🔍 DEBUG - Existing run found:', { id: existingRun.id, status: existingRun.status })
-
       // Corrida cerrada: devolver datos persistidos sin mutar estado ni líneas.
       // (Antes: se pasaba a draft y se borraban líneas en cada GET → contabilidad veía draft.)
       if (isFrozenPayrollRunStatus(existingRun.status)) {
@@ -299,8 +294,6 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         .select('id')
         .single()
 
-      console.log('🔍 DEBUG - New run creation:', { newRun, createError })
-
       if (createError) {
         console.error('Error creando nueva corrida:', createError)
         return res.status(500).json({ error: 'Error creando nueva corrida de planilla' })
@@ -325,8 +318,6 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         message: 'No se pudo obtener o crear el ID de la corrida'
       })
     }
-
-    console.log('🔍 DEBUG - Final RunId:', runId, 'Type:', typeof runId)
 
     const yearCtx = await getTaxEngine(countryCode).loadYearContext(yearNum)
     const blocked = payrollStatutoryYearUnavailable(yearCtx, countryCode, yearNum)
@@ -368,11 +359,6 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       employeesCount: employees.length,
       companyId 
     })
-    console.log('🔍 DEBUG - Primeros 3 empleados:', employees.slice(0, 3))
-    console.log('🔍 DEBUG - Primeros 3 empleados:', employees.slice(0, 3).map((emp: any) => ({
-      name: emp.name,
-      status: emp.status
-    })))
 
     // Capa 3: Fechas festivas en el período (para días Extra/Especial)
     const holidayDates = await getHolidayDatesInRange(fechaInicio, fechaFin, companyId, supabase)
@@ -380,13 +366,6 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     // Obtener registros de asistencia del período (incluir flags para horario_no_detectado)
     // Filtrar solo por empleados de esta empresa usando los IDs ya obtenidos
     const employeeIds = employees.map((emp: any) => emp.id)
-    
-    console.log('🔍 DEBUG - Buscando registros de asistencia:', {
-      totalEmployees: employeeIds.length,
-      fechaInicio,
-      fechaFin,
-      primeros3EmployeeIds: employeeIds.slice(0, 3)
-    });
     
     let attendanceRecords: any[] = [];
     if (employeeIds.length > 0) {
@@ -409,23 +388,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       
       attendanceRecords = attData || []
 
-      // DEBUG: Verificar si hay registros pero no coinciden con employee_ids
       if (attendanceRecords.length === 0) {
         console.warn('⚠️ WARNING - No se encontraron registros de asistencia en el rango de fechas')
-        console.log('🔍 DEBUG - Verificando si hay registros fuera del rango...')
-        const { data: attDataAnyDate, error: attErrorAnyDate } = await supabase
-          .from('attendance_records')
-          .select('employee_id, date, check_in, check_out, status')
-          .in('employee_id', employeeIds.slice(0, 5))
-          .order('date', { ascending: false })
-          .limit(10)
-        if (!attErrorAnyDate && attDataAnyDate && attDataAnyDate.length > 0) {
-          console.log('🔍 DEBUG - Se encontraron registros de asistencia fuera del rango:', {
-            totalRegistrosFueraRango: attDataAnyDate.length,
-            fechasEncontradas: [...new Set(attDataAnyDate.map((r: any) => r.date))],
-            rangoBuscado: { fechaInicio, fechaFin }
-          })
-        }
       }
     }
 
@@ -533,21 +497,6 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       }
     }
 
-    // DEBUG: Log información de asistencia antes del filtro
-    console.log('🔍 DEBUG - Total registros de asistencia encontrados:', attendanceRecords.length)
-    console.log('🔍 DEBUG - Rango de fechas buscado:', { fechaInicio, fechaFin })
-    if (attendanceRecords.length > 0) {
-      console.log('🔍 DEBUG - Primeros 5 registros de asistencia:', attendanceRecords.slice(0, 5).map((r: any) => ({
-        employee_id: r.employee_id,
-        date: r.date,
-        check_in: r.check_in ? 'SI' : 'NO',
-        check_out: r.check_out ? 'SI' : 'NO',
-        status: r.status
-      })))
-    }
-    console.log('🔍 DEBUG - Total empleados activos antes del filtro:', employees.length)
-    console.log('🔍 DEBUG - IDs de empleados activos:', employees.map((e: any) => ({ id: e.id, name: e.name, pay_type: e.pay_type })))
-
     // Filtrar empleados según criterio de asistencia (pay_type + attendance_required)
     let empleadosParaNomina = employees
     let noAttendanceWarning = null
@@ -575,9 +524,6 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           })
         }
 
-        if (!include) {
-          console.log(`❌ DEBUG - Empleado ${emp.name} rechazado: sin registros válidos (requiere asistencia)`)
-        }
         return include
       })
     } else {
@@ -592,9 +538,6 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
     if (empleadosParaNomina.length === 0) {
       console.warn('⚠️ WARNING - No hay empleados disponibles después del filtro de asistencia')
-      console.log('🔍 DEBUG - Total empleados activos:', employees.length)
-      console.log('🔍 DEBUG - Total registros de asistencia:', attendanceRecords.length)
-      console.log('🔍 DEBUG - Rango de fechas:', { fechaInicio, fechaFin })
       
       // En lugar de retornar error 400, retornar datos vacíos (comportamiento estándar)
       // Esto permite que la UI muestre "0 empleados" en lugar de un error
@@ -655,13 +598,6 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       }
     }
     
-          // DEBUG: Verificar el filtro de asistencia
-      console.log('🔍 DEBUG - Tipo de nómina:', tipoParam)
-      console.log('🔍 DEBUG - Total registros de asistencia:', attendanceRecords.length)
-      console.log('🔍 DEBUG - Empleados después del filtro de asistencia:', empleadosParaNomina.length)
-      console.log('🔍 DEBUG - Lógica de deducciones: tipo=' + tipoParam + ' → deducciones=' + (tipoParam === 'CON' || tipoParam === '2PAGOS' ? 'SÍ' : 'NO'))
-
-    // Calcular planilla con CÁLCULOS CORRECTOS 2025
     // Separar en dos arrays: fixed y hourly
     const planilla_fixed: any[] = []
     const planilla_hourly: any[] = []
@@ -1370,8 +1306,6 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
     const totalEmpleados = planilla_fixed.length + planilla_hourly.length
     console.log(`Preview de nómina generado exitosamente: ${planilla_fixed.length} empleados fijos, ${planilla_hourly.length} empleados por hora`)
-    console.log('🔍 DEBUG - RunId generado:', runId)
-    console.log('🔍 DEBUG - Tipo procesado:', tipoParam)
 
     // Obtener el estado actual de la corrida
     const { data: currentRun, error: statusError } = await supabase
@@ -1385,7 +1319,6 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     }
 
     const currentStatus = currentRun?.status || 'draft'
-    console.log('🔍 DEBUG - Estado actual de la corrida:', { runId, status: currentStatus })
 
     // Determinar si es una regeneración
     const isRegeneration = existingRun && existingRun.status === 'authorized'

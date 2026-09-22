@@ -113,7 +113,6 @@ interface PayrollConfigEditorProps {
 }
 
 export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfigEditorProps) {
-  console.log('🚀 PayrollConfigEditor: Component mounted/rendered', { companyId })
   const { countryCode, currency: countryCurrency, labels: statutoryLabels } = useCompanyMoney()
   const hideRap = countryCode === 'GTM' || statutoryLabels.secondarySocial === '—'
   
@@ -224,13 +223,10 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
   const hasChanges = (): boolean => {
     if (!initialConfig) return false
     
-    // Comparar payment_frequency
     if (config.payment_frequency !== initialConfig.payment_frequency) return true
     
-    // Comparar currency
     if (config.currency !== initialConfig.currency) return true
     
-    // Comparar calculation_mode
     if ((config.calculation_mode ?? 'daily') !== (initialConfig.calculation_mode ?? 'daily')) return true
     if ((config.incomplete_record_default_hours ?? null) !== (initialConfig.incomplete_record_default_hours ?? null)) return true
     const tOrd = ordinaryHoursDraft.trim().replace(',', '.')
@@ -244,27 +240,22 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
     if ((config.semanal_proration ?? 'proportional') !== (initialConfig.semanal_proration ?? 'proportional')) return true
     if ((config.pay_overtime !== false) !== (initialConfig.pay_overtime !== false)) return true
     
-    // Comparar legal_deductions (deep comparison)
     const deductionsStr = JSON.stringify(config.legal_deductions)
     const initialDeductionsStr = JSON.stringify(initialConfig.legal_deductions)
     if (deductionsStr !== initialDeductionsStr) return true
 
     if ((config.payroll_deduction_mode ?? 'CON') !== (initialConfig.payroll_deduction_mode ?? 'CON')) return true
     
-    // Comparar payment_cut_dates (deep comparison)
     const cutDatesStr = JSON.stringify(config.payment_cut_dates)
     const initialCutDatesStr = JSON.stringify(initialConfig.payment_cut_dates)
     if (cutDatesStr !== initialCutDatesStr) return true
     
-    // Comparar calculation_script
     if (config.calculation_script !== initialConfig.calculation_script) return true
     
-    // Comparar calculation_config (deep comparison)
     const configStr = JSON.stringify(config.calculation_config)
     const initialStr = JSON.stringify(initialConfig.calculation_config)
     if (configStr !== initialStr) return true
     
-    // Comparar custom_fields (deep comparison)
     const fieldsStr = JSON.stringify(config.custom_fields)
     const initialFieldsStr = JSON.stringify(initialConfig.custom_fields)
     if (fieldsStr !== initialFieldsStr) return true
@@ -323,17 +314,13 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
     setLoading(true)
     setError(null)
     
-    console.log('🔄 PayrollConfigEditor: Loading config for companyId:', companyId)
-    
     try {
       // Send companyId in query for super_admin support
       const url = companyId ? `/api/payroll/config?company_id=${companyId}` : '/api/payroll/config'
       const response = await fetch(url)
-      console.log('📡 PayrollConfigEditor: API response status:', response.status)
       
       if (response.ok) {
         const data = await response.json()
-        console.log('✅ PayrollConfigEditor: API response data:', data)
         
         if (data.config) {
           const loadedConfig = buildPayrollConfigFromApiResponse(data.config)
@@ -344,10 +331,7 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
               ? ''
               : String(loadedConfig.ordinary_hours_override)
           )
-          console.log('✅ PayrollConfigEditor: Config loaded successfully')
         } else {
-          // No config exists yet, use defaults
-          console.log('ℹ️ PayrollConfigEditor: No config found, using defaults')
           const defaultConfig = emptyConfig()
           setConfig(defaultConfig)
           setInitialConfig(defaultConfig)
@@ -355,8 +339,6 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
         }
       } else {
         // No config exists yet, use defaults
-        const errorData = await response.json().catch(() => ({}))
-        console.log('⚠️ PayrollConfigEditor: API returned non-OK status, using defaults:', errorData)
         const defaultConfig = emptyConfig()
         setConfig(defaultConfig)
         setInitialConfig(defaultConfig)
@@ -367,7 +349,6 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
       setError('Error cargando configuración: ' + (err.message || 'Error desconocido'))
     } finally {
       setLoading(false)
-      console.log('🏁 PayrollConfigEditor: Loading complete')
     }
   }
 
@@ -451,10 +432,7 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
         setOrdinaryHoursDraft(
           savedConfig.ordinary_hours_override == null ? '' : String(savedConfig.ordinary_hours_override)
         )
-        console.log('✅ PayrollConfigEditor: Config saved and updated from POST response')
       } else {
-        // Fallback: si por alguna razón no viene config, hacer loadConfig
-        console.warn('⚠️ PayrollConfigEditor: POST response missing config, falling back to loadConfig')
         await loadConfig()
       }
 
@@ -718,7 +696,6 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
   }
 
   if (loading) {
-    console.log('⏳ PayrollConfigEditor: Rendering loading state')
     return (
       <Card variant="liquid" className="p-6">
         <CardContent className="text-center">
@@ -730,8 +707,6 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
     )
   }
   
-  console.log('🎨 PayrollConfigEditor: Rendering main content', { config, error, companyId })
-
   return (
     <div className="space-y-6">
       {/* Header */}

@@ -77,15 +77,6 @@ export async function calculatePayrollFromConfig(
       )
       break
     
-    case 'custom':
-      // Para casos complejos, ejecutar script almacenado
-      result = executeCalculationScript(
-        config.calculation_script,
-        baseSalary,
-        metadata
-      )
-      break
-    
     case 'standard':
     default:
       // En modo estándar, solo aplicar campos personalizados
@@ -331,95 +322,6 @@ function evaluateMathExpression(expression: string): number {
     return 0
   } catch (error) {
     return 0
-  }
-}
-
-/**
- * Ejecutar script de cálculo personalizado (para casos complejos)
- * 
- * WARNING: Ejecutar código dinámico es riesgoso.
- * En producción, usar un sandbox como vm2 o isolated-vm.
- * Por ahora, solo permitir para super_admins y con validación estricta.
- */
-function executeCalculationScript(
-  script: string | null,
-  baseSalary: number,
-  metadata: Record<string, any>
-): PayrollCalculationResult {
-  if (!script || typeof script !== 'string') {
-    return {
-      totalIngresosAdicionales: 0,
-      totalDeduccionesAdicionales: 0,
-      calculatedFields: {}
-    }
-  }
-  
-  // Validación básica de seguridad
-  // En producción, esto debe ser mucho más estricto
-  const dangerousPatterns = [
-    'require(',
-    'import(',
-    'eval(',
-    'Function(',
-    'process.',
-    'global.',
-    'window.',
-    '__dirname',
-    '__filename'
-  ]
-  
-  for (const pattern of dangerousPatterns) {
-    if (script.includes(pattern)) {
-      return {
-        totalIngresosAdicionales: 0,
-        totalDeduccionesAdicionales: 0,
-        calculatedFields: {}
-      }
-    }
-  }
-  
-  try {
-    // WARNING: En producción, usar sandbox
-    // Por ahora, solo permitir funciones matemáticas simples
-    const calculationFunction = new Function(
-      'baseSalary',
-      'metadata',
-      `
-      ${script}
-      // La función debe retornar un objeto con la estructura esperada
-      if (typeof calculatePayroll === 'function') {
-        return calculatePayroll(baseSalary, metadata)
-      }
-      return {
-        totalIngresosAdicionales: 0,
-        totalDeduccionesAdicionales: 0,
-        calculatedFields: {}
-      }
-      `
-    )
-    
-    const result = calculationFunction(baseSalary, metadata)
-    
-    // Validar estructura del resultado
-    if (result && typeof result === 'object') {
-      return {
-        totalIngresosAdicionales: result.totalIngresosAdicionales || 0,
-        totalDeduccionesAdicionales: result.totalDeduccionesAdicionales || 0,
-        calculatedFields: result.calculatedFields || {}
-      }
-    }
-    
-    return {
-      totalIngresosAdicionales: 0,
-      totalDeduccionesAdicionales: 0,
-      calculatedFields: {}
-    }
-  } catch (error) {
-    return {
-      totalIngresosAdicionales: 0,
-      totalDeduccionesAdicionales: 0,
-      calculatedFields: {}
-    }
   }
 }
 

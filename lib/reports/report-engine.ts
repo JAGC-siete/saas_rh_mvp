@@ -10,11 +10,6 @@ const DEFAULT_REPORT_FMT: ReportFormatContext = reportFormatForCountry('HND')
 
 export type { ReportFormatContext }
 
-/**
- * Report engine - Strategy-style helpers for metadata-driven report generation.
- * Provides header extraction and row rendering per report type.
- */
-
 export function getHeaders(columns: ResolvedColumn[]): string[] {
   return columns.map((c) => c.label)
 }

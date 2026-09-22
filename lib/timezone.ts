@@ -15,9 +15,6 @@ export const HONDURAS_TIMEZONE = 'America/Tegucigalpa';
 export const HN_TZ = HONDURAS_TIMEZONE;
 export const TEGUCIGALPA_TZ = HONDURAS_TIMEZONE;
 
-/**
- * Get current time in Honduras timezone
- */
 export function getHondurasTime(): Date {
   const now = new Date();
   // Honduras is UTC-6, so subtract 6 hours in milliseconds
@@ -25,9 +22,6 @@ export function getHondurasTime(): Date {
   return new Date(now.getTime() - hondurasOffsetMs);
 }
 
-/**
- * Convert a UTC timestamp to Honduras timezone
- */
 export function convertToHondurasTime(utcTimestamp: string | Date): Date {
   const date = typeof utcTimestamp === 'string' ? new Date(utcTimestamp) : utcTimestamp;
   
@@ -44,7 +38,6 @@ export function convertToHondurasTime(utcTimestamp: string | Date): Date {
 }
 
 /**
- * Get current time in Honduras timezone as ISO string
  * This ensures we store the actual local time, not UTC
  */
 export function getHondurasTimeISO(): string {
@@ -104,24 +97,15 @@ export function formatTimeDisplay(timestamp: string | Date | null): string {
   });
 }
 
-/**
- * Get today's date in YYYY-MM-DD format in Honduras timezone
- */
 export function getTodayInHonduras(): string {
   const hondurasTime = getHondurasTime();
   return hondurasTime.toISOString().split('T')[0];
 }
 
-/**
- * Calculate difference in minutes between two times in Honduras timezone
- */
 export function calculateMinutesDifference(time1: Date, time2: Date): number {
   return Math.floor((time1.getTime() - time2.getTime()) / 60000);
 }
 
-/**
- * Parse expected time (HH:MM) and create a Date object for comparison
- */
 export function parseExpectedTime(timeString: string, baseDate?: Date): Date {
   const [hours, minutes] = timeString.split(':').map(Number);
   const date = baseDate || getHondurasTime();
@@ -132,9 +116,6 @@ export function parseExpectedTime(timeString: string, baseDate?: Date): Date {
   return result;
 }
 
-/**
- * Determine attendance status based on time difference
- */
 export function getAttendanceStatus(actualTime: Date, expectedTime: Date): 'Temprano' | 'A tiempo' | 'Tarde' {
   const diffMinutes = calculateMinutesDifference(actualTime, expectedTime);
   
@@ -147,18 +128,11 @@ export function getAttendanceStatus(actualTime: Date, expectedTime: Date): 'Temp
   }
 }
 
-/**
- * Get current day of week in Spanish for schedule lookup
- */
 export function getCurrentDayOfWeek(): string {
   const hondurasTime = getHondurasTime();
   const dayName = hondurasTime.toLocaleString('en-US', { weekday: 'long' }).toLowerCase();
   return dayName;
 }
-
-// =====================================================
-// NUEVAS FUNCIONES PARA SISTEMA DE ASISTENCIA
-// =====================================================
 
 /**
  * Convert UTC time to Honduras time (UTC-6, sin DST)
@@ -317,9 +291,6 @@ export function mapRule(rule: string): string {
   return ruleMap[rule] || 'unknown';
 }
 
-/**
- * Calculate distance between two coordinates in meters
- */
 export function distanceMeters(coord1: [number, number], coord2: [number, number]): number {
   const [lat1, lon1] = coord1;
   const [lat2, lon2] = coord2;
@@ -336,22 +307,10 @@ export function distanceMeters(coord1: [number, number], coord2: [number, number
   return R * c;
 }
 
-// =====================================================
-// 🚨 MANDATORY FUNCTIONS - USE THESE INSTEAD OF new Date()
-// =====================================================
-
-/**
- * 🇭🇳 GET CURRENT DATE/TIME IN TEGUCIGALPA - USE THIS INSTEAD OF new Date()
- * Returns current time in Honduras timezone as Date object
- */
 export function nowInHonduras(): Date {
   return getHondurasTime();
 }
 
-/**
- * 🇭🇳 GET TODAY'S DATE STRING IN TEGUCIGALPA - USE FOR DATABASE STORAGE
- * Returns YYYY-MM-DD format in Honduras timezone
- */
 export function todayInHonduras(): string {
   return getTodayInHonduras();
 }
@@ -394,18 +353,10 @@ export function formatDateTimeForHonduras(date: Date | string): string {
   });
 }
 
-/**
- * 🇭🇳 GET CURRENT TIMESTAMP FOR DATABASE STORAGE
- * Returns ISO string representing current time in Honduras
- */
 export function getHondurasTimestamp(): string {
   return getHondurasTimeISO();
 }
 
-/**
- * 🚨 VALIDATION FUNCTION - THROWS ERROR IF TIMEZONE IS WRONG
- * Use this to validate that dates are using correct timezone
- */
 export function validateHondurasTimezone(date: Date): void {
   const hondurasTime = convertToHondurasTime(date);
   const utcTime = new Date(date.toISOString());
@@ -421,10 +372,6 @@ export function validateHondurasTimezone(date: Date): void {
     });
   }
 }
-
-// =====================================================
-// DATE-ONLY (YYYY-MM-DD) - AVOID UTC MIDNIGHT BUG
-// =====================================================
 
 /**
  * Parsea una fecha YYYY-MM-DD como fecha calendario en Honduras.
@@ -487,9 +434,6 @@ export function formatTimeDisplayInZone(
   })
 }
 
-/**
- * Obtiene el día de la semana en español para una fecha YYYY-MM-DD (Honduras).
- */
 export function getWeekdayForDateOnly(dateStr: string): string {
   const d = parseDateOnlyAsHonduras(dateStr);
   if (isNaN(d.getTime())) return '';

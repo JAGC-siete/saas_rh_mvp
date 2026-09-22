@@ -957,8 +957,6 @@ async function generateEmployeesExcel(
   }
 }
 
-// ===== GENERADORES DE PDF =====
-
 async function generateAttendancePDF(
   res: NextApiResponse,
   reportData: any,
