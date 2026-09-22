@@ -387,10 +387,6 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       }
       
       attendanceRecords = attData || []
-
-      if (attendanceRecords.length === 0) {
-        console.warn('⚠️ WARNING - No se encontraron registros de asistencia en el rango de fechas')
-      }
     }
 
     let paidLeaveCreditsByEmployee = new Map<string, number>()
@@ -433,10 +429,6 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     })
     if (ahcRefresh.error) {
       console.warn('Preview AHC refresh warning:', ahcRefresh.error)
-    } else if (ahcRefresh.refreshed > 0) {
-      console.log(
-        `Preview AHC refresh: missing=${ahcRefresh.missing} stale=${ahcRefresh.stale} refreshed=${ahcRefresh.refreshed}`
-      )
     }
 
     let ahcByEmployee: Record<string, { total_hours: number; normal_hours: number; by_record: Record<string, number> }> = {}
@@ -537,8 +529,6 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     }
 
     if (empleadosParaNomina.length === 0) {
-      console.warn('⚠️ WARNING - No hay empleados disponibles después del filtro de asistencia')
-      
       // En lugar de retornar error 400, retornar datos vacíos (comportamiento estándar)
       // Esto permite que la UI muestre "0 empleados" en lugar de un error
       return res.status(200).json({
@@ -575,8 +565,6 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         } : null
       })
     }
-
-    console.log(`Procesando preview de nómina para ${empleadosParaNomina.length} empleados`)
 
     // Auto-aplicar planes de deducción activos (employee_deduction_plans)
     const empIdsForPlans = empleadosParaNomina.map((e: any) => e.id)
@@ -1298,14 +1286,10 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         console.error('Error eliminando líneas huérfanas del preview:', orphanDeleteError)
       } else {
         orphanLinesRemoved = orphanLineIds.length
-        console.log(
-          `Preview: eliminadas ${orphanLinesRemoved} línea(s) huérfana(s) fuera del set de cálculo`
-        )
       }
     }
 
     const totalEmpleados = planilla_fixed.length + planilla_hourly.length
-    console.log(`Preview de nómina generado exitosamente: ${planilla_fixed.length} empleados fijos, ${planilla_hourly.length} empleados por hora`)
 
     // Obtener el estado actual de la corrida
     const { data: currentRun, error: statusError } = await supabase

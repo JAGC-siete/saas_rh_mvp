@@ -151,7 +151,6 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
   const [config, setConfig] = useState<PayrollConfig>(emptyConfig)
 
   const [initialConfig, setInitialConfig] = useState<PayrollConfig | null>(null)
-  const [hasChangesState, setHasChangesState] = useState(false)
 
   const [newFieldName, setNewFieldName] = useState('')
   const [newField, setNewField] = useState<CustomField>({
@@ -263,15 +262,7 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
     return false
   }
 
-  // Calcular si hay cambios usando useMemo para mejor rendimiento
-  const hasChangesResult = useMemo(() => {
-    return hasChanges()
-  }, [config, initialConfig, ordinaryHoursDraft])
-
-  // Actualizar estado cuando cambie el resultado
-  useEffect(() => {
-    setHasChangesState(hasChangesResult)
-  }, [hasChangesResult])
+  const dirty = useMemo(() => hasChanges(), [config, initialConfig, ordinaryHoursDraft])
 
   // Helper function para construir PayrollConfig desde la respuesta de la API
   const buildPayrollConfigFromApiResponse = (apiConfig: any): PayrollConfig => {
@@ -2412,9 +2403,9 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
 
 
       {/* Save Button - Siempre visible, deshabilitado si no hay cambios */}
-      <Card variant="liquid" className={`p-4 ${hasChangesState ? 'border-yellow-400/30' : 'border-white/10'}`}>
+      <Card variant="liquid" className={`p-4 ${dirty ? 'border-yellow-400/30' : 'border-white/10'}`}>
         <div className="flex items-center justify-between">
-          {hasChangesState ? (
+          {dirty ? (
             <div className="flex items-center gap-2 text-yellow-300 text-sm">
               <AlertCircle className="h-4 w-4" />
               <span>Tienes cambios sin guardar</span>
@@ -2426,7 +2417,7 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
             </div>
           )}
           <div className="flex justify-end gap-3">
-            {hasChangesState && (
+            {dirty && (
               <Button
                 onClick={handleCancel}
                 variant="outline"
@@ -2438,7 +2429,7 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
             )}
             <Button
               onClick={handleSaveClick}
-              disabled={saving || !hasChangesState}
+              disabled={saving || !dirty}
               className="bg-brand-600 hover:bg-brand-700 text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {saving ? (
