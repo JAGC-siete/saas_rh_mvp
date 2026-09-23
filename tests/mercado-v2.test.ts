@@ -14,6 +14,7 @@ import {
   MERCADO_V2_AREAS,
   MERCADO_V2_COPY,
   MERCADO_V2_SEO,
+  MERCADO_V2_STORY,
   mercadoV2AreasMatching,
   mercadoV2JsonLd,
   mercadoV2SearchHints,
@@ -23,7 +24,12 @@ import {
 const v2Files = [
   'pages/mercadosanpablosiguav2/index.tsx',
   'components/mercado/MercadoV2Shell.tsx',
+  'components/mercado/MercadoV2Chrome.tsx',
+  'components/mercado/MercadoV2Hero.tsx',
+  'components/mercado/MercadoV2SearchDialog.tsx',
   'components/mercado/MercadoV2Footer.tsx',
+  'public/mercado/v2.css',
+  'components/mercado/mv2.ts',
   'lib/mercado/v2.ts',
 ]
 
@@ -59,6 +65,7 @@ describe('mercado v2: visita física, no directorio', () => {
     assert.equal(MERCADO_V2_SEO.title.includes('WhatsApp'), false)
     assert.equal(MERCADO_V2_SEO.description.includes('WhatsApp'), false)
     assert.equal(MERCADO_V2_COPY.h1, 'Mercado Municipal San Pablo')
+    assert.equal(MERCADO_V2_COPY.heroDisplay, 'El corazón comercial de Siguatepeque')
   })
 
   it('muestra áreas del recinto, no puestos nombrados', () => {
@@ -94,14 +101,27 @@ describe('mercado v2: visita física, no directorio', () => {
     assert.match(source, /Portal para locatarios/)
     assert.equal(MERCADO_V2_COPY.visitTitle, 'Cómo llegar')
     assert.equal(MERCADO_V2_COPY.findTitle, 'Lo que encontrarás')
+    assert.match(MERCADO_V2_STORY.body, /economía de Siguatepeque/)
+    assert.equal(/Doña|Don Chepe|El Patio|Lety|Carmen/i.test(MERCADO_V2_STORY.body), false)
     const page = readFileSync(join(process.cwd(), 'pages/mercadosanpablosiguav2/index.tsx'), 'utf8')
+    const chrome = readFileSync(join(process.cwd(), 'components/mercado/MercadoV2Chrome.tsx'), 'utf8')
+    const css = readFileSync(join(process.cwd(), 'public/mercado/v2.css'), 'utf8')
+    const beneficios = page.indexOf('id="beneficios"')
     const encontraras = page.indexOf('id="encontraras"')
     const horarios = page.indexOf('id="horarios"')
-    const beneficios = page.indexOf('id="beneficios"')
     const visita = page.indexOf('id="visita"')
-    assert.ok(encontraras > 0 && encontraras < horarios)
-    assert.ok(horarios < beneficios)
-    assert.ok(beneficios < visita)
+    assert.ok(beneficios > 0 && beneficios < encontraras)
+    assert.ok(encontraras < horarios)
+    assert.ok(horarios < visita)
+    assert.equal(page.includes('<video'), false)
+    assert.equal(page.includes('searchForm'), false)
+    assert.match(page, /mercado\/v2\.css/)
+    assert.equal(page.includes('fonts.googleapis'), false)
+    assert.equal(css.includes('fonts.googleapis'), false)
+    assert.match(css, /Iowan Old Style/)
+    assert.match(css, /mv2KenBurns/)
+    assert.match(chrome, /MercadoV2SearchDialog/)
+    assert.match(source, /id="buscar"/)
   })
 
   it('JSON-LD es ShoppingCenter con departamentos, sin fichas de puesto', () => {

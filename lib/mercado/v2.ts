@@ -23,18 +23,40 @@ export const MERCADO_V2_SEO = {
 
 export const MERCADO_V2_COPY = {
   h1: 'Mercado Municipal San Pablo',
+  heroDisplay: 'El corazón comercial de Siguatepeque',
+  enterCta: 'Entrar al recinto',
   findTitle: 'Lo que encontrarás',
   findBody:
     'Recorré las áreas del recinto. Cada pasillo junta a muchos locatarios: lo que ves es la oferta del mercado, no un puesto en particular.',
   visitTitle: 'Cómo llegar',
   visitBody: MERCADO_GEO.howToArrive,
   hoursTitle: 'Horario de atención',
+  hoursCompact: 'Lun–Sáb 5–4 · Dom 6–12',
   benefitsTitle: 'Por qué venir al mercado',
-  searchPlaceholder: '¿Qué querés encontrar? Ej. sopa, tomate, carne',
+  searchTitle: '¿Qué querés encontrar?',
+  searchPlaceholder: 'Ej. sopa, tomate, carne',
   searchHint: 'Te indicamos el pasillo o el área. La compra se hace en el recinto.',
+  discover: 'Descubrir',
+  catalogClear: 'Ver todo el recinto',
   mapsCta: 'Ver cómo llegar',
   hoursCta: 'Conocé nuestros horarios',
   locatariosPortal: 'Portal para locatarios',
+} as const
+
+export const MERCADO_V2_STORY = {
+  kicker: 'La madrugada llega primero',
+  body:
+    'Antes de que abra la plaza, el recinto ya huele a caldo, a cilantro recién cortado y a carbón. Aquí se mueve la economía de Siguatepeque: productor, locatario y vecino, bajo el mismo techo municipal. Venir al mercado no es pasar a un anaquel: es recorrer el corazón de la ciudad.',
+  photos: [
+    {
+      src: '/mercado/verduras-dona-marta-mesa.png',
+      alt: 'Tomate, chile y culantro frescos en el Mercado San Pablo',
+    },
+    {
+      src: '/mercado/comedor-el-patio-plato.png',
+      alt: 'Caldo y tortillas en el área de comedores del mercado',
+    },
+  ],
 } as const
 
 export type MercadoV2AreaId =
