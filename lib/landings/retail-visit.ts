@@ -1,7 +1,7 @@
 /**
  * Plantilla de visita física para rubros Retail de WEBYCITAS.
- * Esqueleto copiado de /mercadosanpablosiguav2: hero con búsqueda, visita, horario,
- * beneficios y áreas del local. Sin WhatsApp, sin formulario, sin lista de precios.
+ * Esqueleto copiado de /mercadosanpablosiguav2: hero con búsqueda, áreas, horario,
+ * beneficios y cómo llegar. Sin WhatsApp, sin formulario, sin lista de precios.
  */
 
 import { LANDING_SCHEMA_VERSION, type LandingBlock, type LandingPageContent, type LandingPageContentInput } from './page-schema'
@@ -10,7 +10,7 @@ import { LANDING_STOCK } from './stock'
 export const RETAIL_VISIT_TEMPLATE_KEYS = ['papeleria', 'ferreteria', 'mercadito', 'supermercado'] as const
 export type RetailVisitTemplateKey = (typeof RETAIL_VISIT_TEMPLATE_KEYS)[number]
 
-export const RETAIL_VISIT_BLOCK_TREE = ['hero', 'visit', 'hours', 'benefits', 'areas'] as const
+export const RETAIL_VISIT_BLOCK_TREE = ['hero', 'areas', 'hours', 'benefits', 'visit'] as const
 
 export const RETAIL_VISIT_THEME = {
   tone: 'light' as const,
@@ -102,14 +102,12 @@ function retailVisitTemplate(seed: RetailVisitSeed): LandingPageContentInput {
         secondaryCta: { label: seed.hero.secondaryCtaLabel, action: 'link', href: '#horarios' },
       },
       {
-        id: 'visita',
-        kind: 'visit',
-        title: seed.visit.title,
-        body: seed.visit.body,
-        geoLabel: seed.visit.geoLabel,
-        mapsCtaLabel: seed.visit.mapsCtaLabel,
-        hoursCtaLabel: seed.visit.hoursCtaLabel,
-        mapPlaceholder: seed.visit.mapPlaceholder,
+        id: 'encontraras',
+        kind: 'areas',
+        title: seed.areas.title,
+        subtitle: seed.areas.subtitle,
+        emptyMessage: seed.areas.emptyMessage,
+        items: seed.areas.items,
       },
       {
         id: 'horarios',
@@ -125,12 +123,14 @@ function retailVisitTemplate(seed: RetailVisitSeed): LandingPageContentInput {
         items: seed.benefits.items,
       },
       {
-        id: 'encontraras',
-        kind: 'areas',
-        title: seed.areas.title,
-        subtitle: seed.areas.subtitle,
-        emptyMessage: seed.areas.emptyMessage,
-        items: seed.areas.items,
+        id: 'visita',
+        kind: 'visit',
+        title: seed.visit.title,
+        body: seed.visit.body,
+        geoLabel: seed.visit.geoLabel,
+        mapsCtaLabel: seed.visit.mapsCtaLabel,
+        hoursCtaLabel: seed.visit.hoursCtaLabel,
+        mapPlaceholder: seed.visit.mapPlaceholder,
       },
     ],
   }
@@ -165,7 +165,7 @@ export const RETAIL_VISIT_TEMPLATE_CONTENT: Record<RetailVisitTemplateKey, Landi
       secondaryCtaLabel: 'Conocé el horario',
     },
     visit: {
-      title: 'Planificá tu visita',
+      title: 'Cómo llegar',
       body: 'Estamos sobre la calle principal, frente al colegio, con parqueo al frente. Llegás, dejás el archivo o la lista y lo recogés en el mostrador.',
       mapsCtaLabel: 'Ver cómo llegar',
       hoursCtaLabel: 'Ver horario',
@@ -264,7 +264,7 @@ export const RETAIL_VISIT_TEMPLATE_CONTENT: Record<RetailVisitTemplateKey, Landi
       secondaryCtaLabel: 'Conocé el horario',
     },
     visit: {
-      title: 'Planificá tu visita',
+      title: 'Cómo llegar',
       body: 'Sobre la calle principal, con área de carga al costado. Llegás con la lista o la armamos en el mostrador. Pedidos grandes se confirman el mismo día.',
       mapsCtaLabel: 'Ver cómo llegar',
       hoursCtaLabel: 'Ver horario',
@@ -382,7 +382,7 @@ export const RETAIL_VISIT_TEMPLATE_CONTENT: Record<RetailVisitTemplateKey, Landi
       secondaryCtaLabel: 'Conocé el horario',
     },
     visit: {
-      title: 'Planificá tu visita',
+      title: 'Cómo llegar',
       body: 'A media cuadra de la iglesia, portón verde. El mandado de última hora se arma en el mostrador; lo que llega en la mañana se acaba en la tarde.',
       mapsCtaLabel: 'Ver cómo llegar',
       hoursCtaLabel: 'Ver horario',
@@ -483,7 +483,7 @@ export const RETAIL_VISIT_TEMPLATE_CONTENT: Record<RetailVisitTemplateKey, Landi
       secondaryCtaLabel: 'Conocé el horario',
     },
     visit: {
-      title: 'Planificá tu visita',
+      title: 'Cómo llegar',
       body: 'Sobre el boulevard principal, con parqueo al frente. Entrás, recorré los pasillos y recogeló en caja. El lote tiene personal de seguridad.',
       mapsCtaLabel: 'Ver cómo llegar',
       hoursCtaLabel: 'Ver horario',

@@ -105,85 +105,7 @@ export default function MercadoV2HomePage({ q }: Props) {
           </div>
         </section>
 
-        <section id="visita" className={`${styles.v2Section} mx-auto max-w-6xl px-4 pt-12`}>
-          <div className={`${styles.panelLocal} flex flex-col items-start gap-8 md:flex-row md:items-center`}>
-            <div className="flex-1">
-              <h2 className={styles.sectionTitle}>{MERCADO_V2_COPY.visitTitle}</h2>
-              <p className="mt-4" style={{ color: 'var(--mercado-ink)' }}>
-                {MERCADO_V2_COPY.visitBody}
-              </p>
-              <p
-                className="mt-4 inline-block rounded-lg px-4 py-2 font-mono text-sm"
-                style={{ background: '#fff', color: 'var(--mercado-muted)' }}
-              >
-                {MERCADO_GEO.label}
-              </p>
-              <p className="mt-3 text-sm" style={{ color: 'var(--mercado-muted)' }}>
-                {MERCADO_SEO.addressLine}
-              </p>
-              <div className="mt-5 flex flex-wrap gap-3">
-                <a
-                  href={MERCADO_GEO.mapsUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={styles.ctaSolid}
-                >
-                  {MERCADO_V2_COPY.mapsCta}
-                </a>
-                <a href={`${mercadoV2HomePath()}#horarios`} className={styles.ctaSolid}>
-                  {MERCADO_V2_COPY.visitCta}
-                </a>
-              </div>
-            </div>
-            <a
-              href={MERCADO_GEO.mapsUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex h-48 w-full items-center justify-center rounded-xl border text-center text-sm md:w-1/3"
-              style={{
-                borderColor: 'var(--mercado-line)',
-                background: '#fff',
-                color: 'var(--mercado-muted)',
-              }}
-            >
-              Mapa: {MERCADO_GEO.landmark}
-            </a>
-          </div>
-        </section>
-
-        <section id="horarios" className={`${styles.v2Section} mx-auto max-w-6xl px-4 pt-10`}>
-          <div className={styles.panelLocal}>
-            <h2 className={styles.sectionTitle}>{MERCADO_V2_COPY.hoursTitle}</h2>
-            <table className={`${styles.hoursTable} mt-4 max-w-md`}>
-              <caption className="sr-only">Horario oficial del Mercado Municipal San Pablo</caption>
-              <tbody>
-                {MERCADO_HOURS_ROWS.map((row) => (
-                  <tr key={row.days}>
-                    <th scope="row">{row.days}</th>
-                    <td>{row.hours}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-
-        <section id="beneficios" className={`${styles.v2Section} mx-auto max-w-6xl px-4 pt-12`}>
-          <h2 className={styles.sectionTitle}>{MERCADO_V2_COPY.benefitsTitle}</h2>
-          <div className={`${styles.benefitGrid} mt-6`}>
-            {MERCADO_V2_BENEFITS.map((benefit) => (
-              <article key={benefit.title} className={styles.benefitCard}>
-                <span className={styles.benefitIcon} aria-hidden>
-                  {benefit.mark}
-                </span>
-                <h3>{benefit.title}</h3>
-                <p>{benefit.body}</p>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section id="encontraras" className={`${styles.v2Section} mx-auto max-w-6xl px-4 py-12`}>
+        <section id="encontraras" className={`${styles.v2Section} mx-auto max-w-6xl px-4 pt-12`}>
           <h2 className={styles.sectionTitle}>{MERCADO_V2_COPY.findTitle}</h2>
           <p className="mt-3 max-w-3xl" style={{ color: 'var(--mercado-muted)' }}>
             {MERCADO_V2_COPY.findBody}
@@ -218,6 +140,84 @@ export default function MercadoV2HomePage({ q }: Props) {
               ))}
             </div>
           )}
+        </section>
+
+        <section id="horarios" className={`${styles.v2Section} mx-auto max-w-6xl px-4 pt-10`}>
+          <div className={styles.panelLocal}>
+            <h2 className={styles.sectionTitle}>{MERCADO_V2_COPY.hoursTitle}</h2>
+            <table className={`${styles.hoursTable} mt-4 max-w-md`}>
+              <caption className="sr-only">Horario oficial del Mercado Municipal San Pablo</caption>
+              <tbody>
+                {MERCADO_HOURS_ROWS.map((row) => (
+                  <tr key={row.days}>
+                    <th scope="row">{row.days}</th>
+                    <td>{row.hours}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="beneficios" className={`${styles.v2Section} mx-auto max-w-6xl px-4 pt-12`}>
+          <h2 className={styles.sectionTitle}>{MERCADO_V2_COPY.benefitsTitle}</h2>
+          <div className={`${styles.benefitGrid} mt-6`}>
+            {MERCADO_V2_BENEFITS.map((benefit) => (
+              <article key={benefit.title} className={styles.benefitCard}>
+                <span className={styles.benefitIcon} aria-hidden>
+                  {benefit.mark}
+                </span>
+                <h3>{benefit.title}</h3>
+                <p>{benefit.body}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section id="visita" className={`${styles.v2Section} mx-auto max-w-6xl px-4 py-12`}>
+          <div className={`${styles.panelLocal} flex flex-col items-start gap-8 md:flex-row md:items-center`}>
+            <div className="flex-1">
+              <h2 className={styles.sectionTitle}>{MERCADO_V2_COPY.visitTitle}</h2>
+              <p className="mt-4" style={{ color: 'var(--mercado-ink)' }}>
+                {MERCADO_V2_COPY.visitBody}
+              </p>
+              <p
+                className="mt-4 inline-block rounded-lg px-4 py-2 font-mono text-sm"
+                style={{ background: '#fff', color: 'var(--mercado-muted)' }}
+              >
+                {MERCADO_GEO.label}
+              </p>
+              <p className="mt-3 text-sm" style={{ color: 'var(--mercado-muted)' }}>
+                {MERCADO_SEO.addressLine}
+              </p>
+              <div className="mt-5 flex flex-wrap gap-3">
+                <a
+                  href={MERCADO_GEO.mapsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={styles.ctaSolid}
+                >
+                  {MERCADO_V2_COPY.mapsCta}
+                </a>
+                <a href={`${mercadoV2HomePath()}#horarios`} className={styles.ctaSolid}>
+                  {MERCADO_V2_COPY.hoursCta}
+                </a>
+              </div>
+            </div>
+            <a
+              href={MERCADO_GEO.mapsUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex h-48 w-full items-center justify-center rounded-xl border text-center text-sm md:w-1/3"
+              style={{
+                borderColor: 'var(--mercado-line)',
+                background: '#fff',
+                color: 'var(--mercado-muted)',
+              }}
+            >
+              Mapa: {MERCADO_GEO.landmark}
+            </a>
+          </div>
         </section>
       </MercadoV2Shell>
     </>

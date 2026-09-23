@@ -26,7 +26,7 @@ export const MERCADO_V2_COPY = {
   findTitle: 'Lo que encontrarás',
   findBody:
     'Recorré las áreas del recinto. Cada pasillo junta a muchos locatarios: lo que ves es la oferta del mercado, no un puesto en particular.',
-  visitTitle: 'Planificá tu visita',
+  visitTitle: 'Cómo llegar',
   visitBody: MERCADO_GEO.howToArrive,
   hoursTitle: 'Horario de atención',
   benefitsTitle: 'Por qué venir al mercado',
@@ -34,7 +34,6 @@ export const MERCADO_V2_COPY = {
   searchHint: 'Te indicamos el pasillo o el área. La compra se hace en el recinto.',
   mapsCta: 'Ver cómo llegar',
   hoursCta: 'Conocé nuestros horarios',
-  visitCta: 'Planificá tu visita',
   locatariosPortal: 'Portal para locatarios',
 } as const
 

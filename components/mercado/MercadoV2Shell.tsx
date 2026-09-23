@@ -10,8 +10,8 @@ function homeAnchor(hash: string) {
 
 const NAV = [
   { href: homeAnchor('encontraras'), label: 'Qué encontrarás' },
-  { href: homeAnchor('visita'), label: 'Cómo llegar' },
   { href: homeAnchor('horarios'), label: 'Horarios' },
+  { href: homeAnchor('visita'), label: 'Cómo llegar' },
 ] as const
 
 export default function MercadoV2Shell({ children }: { children: ReactNode }) {

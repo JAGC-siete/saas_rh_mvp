@@ -72,11 +72,11 @@ export default function RetailVisitRenderer({ page }: RetailVisitRendererProps) 
               <a href="#encontraras" className={styles.headerNavLink}>
                 Qué encontrarás
               </a>
-              <a href="#visita" className={styles.headerNavLink}>
-                Cómo llegar
-              </a>
               <a href="#horarios" className={styles.headerNavLink}>
                 Horarios
+              </a>
+              <a href="#visita" className={styles.headerNavLink}>
+                Cómo llegar
               </a>
             </nav>
           </div>
@@ -139,8 +139,53 @@ export default function RetailVisitRenderer({ page }: RetailVisitRendererProps) 
           </section>
         ) : null}
 
+        {areasBlock ? (
+          <AreasSection block={areasBlock} areas={matched} />
+        ) : null}
+
+        {hours ? (
+          <section id="horarios" className={`${styles.v2Section} mx-auto max-w-6xl px-4 pt-10`}>
+            <div className={styles.panelLocal}>
+              <h2 className={styles.sectionTitle}>{hours.title}</h2>
+              <table className={`${styles.hoursTable} mt-4 max-w-md`}>
+                <caption className="sr-only">Horario de atención</caption>
+                <tbody>
+                  {hours.rows.map((row) => (
+                    <tr key={row.label}>
+                      <th scope="row">{row.label}</th>
+                      <td>{row.value}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {hours.note ? (
+                <p className="mt-3 text-sm" style={{ color: 'var(--mercado-muted)' }}>
+                  {hours.note}
+                </p>
+              ) : null}
+            </div>
+          </section>
+        ) : null}
+
+        {benefits ? (
+          <section id="beneficios" className={`${styles.v2Section} mx-auto max-w-6xl px-4 pt-12`}>
+            <h2 className={styles.sectionTitle}>{benefits.title}</h2>
+            <div className={`${styles.benefitGrid} mt-6`}>
+              {benefits.items.map((item) => (
+                <article key={item.mark} className={styles.benefitCard}>
+                  <span className={styles.benefitIcon} aria-hidden>
+                    {item.mark}
+                  </span>
+                  <h3>{item.title}</h3>
+                  <p>{item.body}</p>
+                </article>
+              ))}
+            </div>
+          </section>
+        ) : null}
+
         {visit ? (
-          <section id="visita" className={`${styles.v2Section} mx-auto max-w-6xl px-4 pt-12`}>
+          <section id="visita" className={`${styles.v2Section} mx-auto max-w-6xl px-4 py-12`}>
             <div className={`${styles.panelLocal} flex flex-col items-start gap-8 md:flex-row md:items-center`}>
               <div className="flex-1">
                 <h2 className={styles.sectionTitle}>{visit.title}</h2>
@@ -190,51 +235,6 @@ export default function RetailVisitRenderer({ page }: RetailVisitRendererProps) 
             </div>
           </section>
         ) : null}
-
-        {hours ? (
-          <section id="horarios" className={`${styles.v2Section} mx-auto max-w-6xl px-4 pt-10`}>
-            <div className={styles.panelLocal}>
-              <h2 className={styles.sectionTitle}>{hours.title}</h2>
-              <table className={`${styles.hoursTable} mt-4 max-w-md`}>
-                <caption className="sr-only">Horario de atención</caption>
-                <tbody>
-                  {hours.rows.map((row) => (
-                    <tr key={row.label}>
-                      <th scope="row">{row.label}</th>
-                      <td>{row.value}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              {hours.note ? (
-                <p className="mt-3 text-sm" style={{ color: 'var(--mercado-muted)' }}>
-                  {hours.note}
-                </p>
-              ) : null}
-            </div>
-          </section>
-        ) : null}
-
-        {benefits ? (
-          <section id="beneficios" className={`${styles.v2Section} mx-auto max-w-6xl px-4 pt-12`}>
-            <h2 className={styles.sectionTitle}>{benefits.title}</h2>
-            <div className={`${styles.benefitGrid} mt-6`}>
-              {benefits.items.map((item) => (
-                <article key={item.mark} className={styles.benefitCard}>
-                  <span className={styles.benefitIcon} aria-hidden>
-                    {item.mark}
-                  </span>
-                  <h3>{item.title}</h3>
-                  <p>{item.body}</p>
-                </article>
-              ))}
-            </div>
-          </section>
-        ) : null}
-
-        {areasBlock ? (
-          <AreasSection block={areasBlock} areas={matched} />
-        ) : null}
       </main>
 
       <RetailVisitFooter business={business} hours={hours} areas={areas} />
@@ -250,7 +250,7 @@ function AreasSection({
   areas: RetailVisitArea[]
 }) {
   return (
-    <section id="encontraras" className={`${styles.v2Section} mx-auto max-w-6xl px-4 py-12`}>
+    <section id="encontraras" className={`${styles.v2Section} mx-auto max-w-6xl px-4 pt-12`}>
       <h2 className={styles.sectionTitle}>{block.title}</h2>
       {block.subtitle ? (
         <p className="mt-3 max-w-3xl" style={{ color: 'var(--mercado-muted)' }}>
@@ -352,13 +352,13 @@ function RetailVisitFooter({
           <h2 className={styles.footerHeading}>La visita</h2>
           <ul className={styles.footerList}>
             <li>
-              <a href="#visita">Cómo llegar</a>
+              <a href="#encontraras">Lo que encontrarás</a>
             </li>
             <li>
               <a href="#horarios">Horarios</a>
             </li>
             <li>
-              <a href="#encontraras">Lo que encontrarás</a>
+              <a href="#visita">Cómo llegar</a>
             </li>
           </ul>
         </section>

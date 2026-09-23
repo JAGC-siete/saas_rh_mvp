@@ -45,13 +45,16 @@ export default function MercadoV2Footer() {
           <h2 className={styles.footerHeading}>El recinto</h2>
           <ul className={styles.footerList}>
             <li>
-              <a href={`${mercadoV2HomePath()}#visita`}>Cómo llegar</a>
+              <a href={`${mercadoV2HomePath()}#encontraras`}>Lo que encontrarás</a>
             </li>
             <li>
               <a href={`${mercadoV2HomePath()}#horarios`}>Horarios</a>
             </li>
             <li>
-              <a href={`${mercadoV2HomePath()}#encontraras`}>Lo que encontrarás</a>
+              <a href={`${mercadoV2HomePath()}#beneficios`}>Por qué venir</a>
+            </li>
+            <li>
+              <a href={`${mercadoV2HomePath()}#visita`}>Cómo llegar</a>
             </li>
           </ul>
         </section>

@@ -92,7 +92,7 @@ describe('landings: semillas profesionales', () => {
     const mercadito = kindsOf('mercadito').join('>')
     const superKinds = kindsOf('supermercado').join('>')
     const clinica = kindsOf('clinica').join('>')
-    const visitTree = 'hero>visit>hours>benefits>areas'
+    const visitTree = 'hero>areas>hours>benefits>visit'
     assert.equal(papeleria, visitTree)
     assert.equal(ferreteria, visitTree)
     assert.equal(mercadito, visitTree)
