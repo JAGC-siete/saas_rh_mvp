@@ -90,11 +90,18 @@ export const landingUrlSchema = z
     { message: 'Usa una URL https, una ruta interna que empiece con / o una ancla #seccion.' }
   )
 
+/**
+ * El editor manda "" al quitar una foto. Eso equivale a no tener imagen.
+ * No usa preprocess: su tipo de entrada es `unknown` y vuelve obligatorio el campo.
+ */
+const blankOr = <T extends z.ZodType<string>>(schema: T) =>
+  z
+    .union([z.string().trim().max(0), schema])
+    .optional()
+    .transform((value) => (value ? value : undefined))
+
 /** El editor manda "" al quitar una foto. Eso equivale a no tener imagen. */
-export const optionalLandingUrlSchema = z.preprocess(
-  (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
-  landingUrlSchema.optional()
-)
+export const optionalLandingUrlSchema = blankOr(landingUrlSchema)
 
 export const landingHexColorSchema = z
   .string()
