@@ -90,6 +90,12 @@ export const landingUrlSchema = z
     { message: 'Usa una URL https, una ruta interna que empiece con / o una ancla #seccion.' }
   )
 
+/** El editor manda "" al quitar una foto. Eso equivale a no tener imagen. */
+export const optionalLandingUrlSchema = z.preprocess(
+  (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
+  landingUrlSchema.optional()
+)
+
 export const landingHexColorSchema = z
   .string()
   .trim()
@@ -152,7 +158,7 @@ export const heroBlockSchema = blockBase.extend({
   badge: z.string().trim().max(60).optional(),
   headline: shortText(120),
   subheadline: z.string().trim().max(320).optional(),
-  imageUrl: landingUrlSchema.optional(),
+  imageUrl: optionalLandingUrlSchema,
   searchPlaceholder: z.string().trim().max(80).optional(),
   searchHint: z.string().trim().max(160).optional(),
   searchSubmitLabel: z.string().trim().max(40).optional(),
@@ -175,7 +181,7 @@ export const itemsBlockSchema = blockBase.extend({
         category: z.string().trim().max(40).optional(),
         /** Etiqueta libre ("L. 150", "Desde L. 1,250", "A convenir"): el dueño escribe su realidad. */
         priceLabel: z.string().trim().max(40).optional(),
-        imageUrl: landingUrlSchema.optional(),
+        imageUrl: optionalLandingUrlSchema,
       })
     )
     .min(1)
@@ -303,7 +309,7 @@ export const teamBlockSchema = blockBase.extend({
         name: shortText(80),
         role: shortText(80),
         bio: z.string().trim().max(240).optional(),
-        imageUrl: landingUrlSchema.optional(),
+        imageUrl: optionalLandingUrlSchema,
       })
     )
     .min(1)
@@ -327,7 +333,7 @@ export const areasBlockSchema = blockBase.extend({
         title: shortText(80),
         aisle: shortText(80),
         description: shortText(320),
-        imageUrl: landingUrlSchema.optional(),
+        imageUrl: optionalLandingUrlSchema,
         imageAlt: z.string().trim().max(120).optional(),
         ctaLabel: shortText(40),
         hintLabel: z.string().trim().max(120).optional(),
@@ -359,7 +365,7 @@ export const landingMetaSchema = z.object({
   seoTitle: shortText(70),
   seoDescription: shortText(180),
   keywords: z.string().trim().max(240).optional(),
-  ogImageUrl: landingUrlSchema.optional(),
+  ogImageUrl: optionalLandingUrlSchema,
   noindex: z.boolean().default(false),
 })
 

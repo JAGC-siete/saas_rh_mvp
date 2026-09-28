@@ -15,6 +15,7 @@ import { Input } from '../../ui/input'
 import { Textarea } from '../../ui/textarea'
 import { LANDING_CTA_ACTIONS } from '../../../lib/landings/page-schema'
 import type { LandingBlockKind } from '../../../types/landing'
+import { LandingImageField } from './LandingImageField'
 
 type AnyControl = Control<any>
 type AnyRegister = UseFormRegister<any>
@@ -295,11 +296,13 @@ export function BlockFields({
   blockIndex,
   control,
   register,
+  landingId,
 }: {
   block: EditableBlockRef
   blockIndex: number
   control: AnyControl
   register: AnyRegister
+  landingId: string
 }) {
   const base = `blocks.${blockIndex}`
 
@@ -320,11 +323,12 @@ export function BlockFields({
           <TextField register={register} name={`${base}.badge`} label="Etiqueta pequeña" />
           <TextField register={register} name={`${base}.headline`} label="Titular" />
           <AreaField register={register} name={`${base}.subheadline`} label="Bajada" />
-          <TextField
-            register={register}
+          <LandingImageField
+            control={control}
             name={`${base}.imageUrl`}
-            label="Imagen"
-            hint="URL https o ruta interna que empiece con /. En visita al local es el fondo."
+            landingId={landingId}
+            label="Imagen de portada"
+            hint="Se muestra junto al titular. En visita al local es el fondo."
           />
           <TextField register={register} name={`${base}.searchPlaceholder`} label="Placeholder de búsqueda" />
           <TextField register={register} name={`${base}.searchHint`} label="Ayuda bajo la búsqueda" />
@@ -361,7 +365,14 @@ export function BlockFields({
                 <TextField register={register} name={`${itemBase}.priceLabel`} label="Precio" />
                 <TextField register={register} name={`${itemBase}.category`} label="Categoría (Cabello, Uñas…)" />
                 <TextField register={register} name={`${itemBase}.detail`} label="Para qué sirve" />
-                <TextField register={register} name={`${itemBase}.imageUrl`} label="Imagen" />
+                <div className="sm:col-span-2">
+                  <LandingImageField
+                    control={control}
+                    name={`${itemBase}.imageUrl`}
+                    landingId={landingId}
+                    label="Foto del producto"
+                  />
+                </div>
               </div>
             )}
           />
@@ -381,7 +392,13 @@ export function BlockFields({
             emptyItem={{ url: '', alt: '' }}
             renderFields={(itemBase) => (
               <div className="grid gap-3 sm:grid-cols-2">
-                <TextField register={register} name={`${itemBase}.url`} label="URL" />
+                <LandingImageField
+                  control={control}
+                  name={`${itemBase}.url`}
+                  landingId={landingId}
+                  label="Foto"
+                  allowClear={false}
+                />
                 <TextField register={register} name={`${itemBase}.alt`} label="Descripción" />
               </div>
             )}
@@ -576,7 +593,14 @@ export function BlockFields({
                   <TextField register={register} name={`${itemBase}.title`} label="Nombre" />
                   <TextField register={register} name={`${itemBase}.aisle`} label="Pasillo o zona" />
                   <TextField register={register} name={`${itemBase}.ctaLabel`} label="Enlace a la visita" />
-                  <TextField register={register} name={`${itemBase}.imageUrl`} label="Imagen" />
+                  <div className="sm:col-span-2">
+                    <LandingImageField
+                      control={control}
+                      name={`${itemBase}.imageUrl`}
+                      landingId={landingId}
+                      label="Foto del área"
+                    />
+                  </div>
                   <TextField register={register} name={`${itemBase}.imageAlt`} label="Descripción de la foto" />
                 </div>
                 <AreaField register={register} name={`${itemBase}.description`} label="Qué hay en el área" rows={3} />
@@ -610,7 +634,12 @@ export function BlockFields({
                   <TextField register={register} name={`${itemBase}.role`} label="Rol" />
                 </div>
                 <AreaField register={register} name={`${itemBase}.bio`} label="Bio" rows={2} />
-                <TextField register={register} name={`${itemBase}.imageUrl`} label="Foto" />
+                <LandingImageField
+                  control={control}
+                  name={`${itemBase}.imageUrl`}
+                  landingId={landingId}
+                  label="Foto"
+                />
               </div>
             )}
           />
@@ -626,10 +655,12 @@ export function BlockAccordion({
   blocks,
   control,
   register,
+  landingId,
 }: {
   blocks: EditableBlockRef[]
   control: AnyControl
   register: AnyRegister
+  landingId: string
 }) {
   return (
     <div className="space-y-2">
@@ -647,7 +678,13 @@ export function BlockAccordion({
               name={`blocks.${blockIndex}.visible`}
               label="Mostrar este bloque en la página"
             />
-            <BlockFields block={block} blockIndex={blockIndex} control={control} register={register} />
+            <BlockFields
+              block={block}
+              blockIndex={blockIndex}
+              control={control}
+              register={register}
+              landingId={landingId}
+            />
           </div>
         </details>
       ))}
@@ -655,7 +692,15 @@ export function BlockAccordion({
   )
 }
 
-export function GlobalFields({ register }: { register: AnyRegister }) {
+export function GlobalFields({
+  register,
+  control,
+  landingId,
+}: {
+  register: AnyRegister
+  control: AnyControl
+  landingId: string
+}) {
   return (
     <div className="space-y-2">
       <details className="rounded-lg border border-white/10 bg-white/5" open>
@@ -737,7 +782,13 @@ export function GlobalFields({ register }: { register: AnyRegister }) {
           />
           <AreaField register={register} name="meta.seoDescription" label="Descripción en Google" rows={3} />
           <TextField register={register} name="meta.keywords" label="Palabras clave" />
-          <TextField register={register} name="meta.ogImageUrl" label="Imagen al compartir" />
+          <LandingImageField
+            control={control}
+            name="meta.ogImageUrl"
+            landingId={landingId}
+            label="Imagen al compartir"
+            hint="La ven WhatsApp y las redes al pegar el enlace. No sale en la página."
+          />
           <CheckField register={register} name="meta.noindex" label="Pedir a Google que NO indexe" />
         </div>
       </details>

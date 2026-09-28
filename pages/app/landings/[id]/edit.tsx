@@ -324,11 +324,12 @@ function EditorContent({ landingId }: { landingId: string }) {
             </CardContent>
           </Card>
 
-          <GlobalFields register={controls.register} />
+          <GlobalFields register={controls.register} control={controls.control} landingId={landingId} />
           <BlockAccordion
             blocks={(values.blocks ?? []) as EditableBlockRef[]}
             control={controls.control}
             register={controls.register}
+            landingId={landingId}
           />
         </div>
 

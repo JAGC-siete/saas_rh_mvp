@@ -76,6 +76,16 @@ export function archiveLanding(id: string): Promise<{ success: true }> {
   return request(`/api/landings/${id}`, { method: 'DELETE' })
 }
 
+export function requestLandingMediaUpload(
+  id: string,
+  file: { size: number; type: string }
+): Promise<{ uploadUrl: string; publicUrl: string }> {
+  return request(`/api/landings/${id}/media`, {
+    method: 'POST',
+    body: JSON.stringify({ file_size: file.size, mime_type: file.type }),
+  })
+}
+
 export function fetchLandingLeads(id: string): Promise<LandingLeadsResponse> {
   return request(`/api/landings/${id}/leads`)
 }

@@ -12,6 +12,7 @@ import { logger } from '../../../../lib/logger'
 import { parseLandingIdParam, requireLandingAdmin } from '../../../../lib/landings/admin-auth'
 import { parsePublishLanding } from '../../../../lib/landings/admin-schema'
 import { LANDING_PAGES_TABLE } from '../../../../lib/landings/db'
+import { pruneUnreferencedLandingMedia } from '../../../../lib/landings/media-storage'
 import { landingContentFieldErrors, parseLandingPageContent } from '../../../../lib/landings/page-schema'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -23,7 +24,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const auth = await requireLandingAdmin(req, res)
   if (!auth) return
 
-  const { supabase, user, auditLog } = auth
+  const { supabase, adminClient, user, auditLog } = auth
 
   const id = parseLandingIdParam(req)
   if (!id) {
@@ -96,6 +97,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(500).json({ error: 'No se pudo publicar' })
   }
 
+  await pruneUnreferencedLandingMedia(adminClient, id, [content.data])
   await auditLog('landing_published', { landingId: id, slug: row.slug, blocks: content.data.blocks.length })
   logger.info('Landing publicada', { landingId: id, slug: row.slug, blocks: content.data.blocks.length })
 

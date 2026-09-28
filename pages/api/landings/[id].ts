@@ -11,6 +11,7 @@ import { logger } from '../../../lib/logger'
 import { parseLandingIdParam, requireLandingAdmin } from '../../../lib/landings/admin-auth'
 import { parseUpdateLanding } from '../../../lib/landings/admin-schema'
 import { LANDING_PAGES_TABLE, LANDING_PAGE_EDIT_COLUMNS } from '../../../lib/landings/db'
+import { pruneUnreferencedLandingMedia } from '../../../lib/landings/media-storage'
 import type { LandingPageRow } from '../../../types/landing'
 
 const UNIQUE_VIOLATION = '23505'
@@ -34,7 +35,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const auth = await requireLandingAdmin(req, res)
   if (!auth) return
 
-  const { supabase, user, auditLog } = auth
+  const { supabase, adminClient, user, auditLog } = auth
 
   const id = parseLandingIdParam(req)
   if (!id) {
@@ -72,6 +73,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { title, slug, leadNotifyEmail, content } = parsed.data
     const patch: Record<string, unknown> = { updated_by: user.id }
 
+    let publishedSnapshot: unknown = null
+    if (content !== undefined) {
+      const { data: previous, error: previousError } = await supabase
+        .from(LANDING_PAGES_TABLE)
+        .select('published_content_json')
+        .eq('id', id)
+        .maybeSingle()
+      if (previousError) {
+        logger.error('Error leyendo snapshot antes de guardar fotos', { landingId: id, error: previousError.message })
+        return res.status(500).json({ error: 'No se pudo guardar' })
+      }
+      publishedSnapshot = (previous as { published_content_json?: unknown } | null)?.published_content_json ?? null
+    }
+
     if (title !== undefined) patch.title = title
     if (slug !== undefined) patch.slug = slug
     if (leadNotifyEmail !== undefined) patch.lead_notify_email = leadNotifyEmail
@@ -100,6 +115,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
     if (!data) {
       return res.status(404).json({ error: 'Landing no encontrada' })
+    }
+
+    if (content !== undefined) {
+      await pruneUnreferencedLandingMedia(adminClient, id, [content, publishedSnapshot])
     }
 
     return res.status(200).json({ landing: data })
