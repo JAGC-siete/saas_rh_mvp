@@ -52,6 +52,7 @@ export interface LandingPageRow {
   updated_at: string
   is_lead_preview: boolean
   webycitas_lead_id: string | null
+  inventory_enabled: boolean
 }
 
 export type LandingPageInsert = Pick<

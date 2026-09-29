@@ -15,7 +15,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/router'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { ArrowLeft, ExternalLink, Eye, Globe, Inbox, Loader2, Save } from 'lucide-react'
+import { ArrowLeft, Boxes, ExternalLink, Eye, Globe, Inbox, Loader2, Save } from 'lucide-react'
 import SuperAdminGuard from '../../../../components/SuperAdminGuard'
 import AppMeshShell from '../../../../components/landing/AppMeshShell'
 import LandingRenderer from '../../../../components/landings/LandingRenderer'
@@ -31,15 +31,22 @@ import { Card, CardContent } from '../../../../components/ui/card'
 import { Input } from '../../../../components/ui/input'
 import {
   fetchLanding,
+  fetchLandingInventory,
   publishLanding,
   saveLanding,
   type LandingEditRecord,
 } from '../../../../lib/landings/admin-api'
+import type { InventoryProductView } from '../../../../lib/landings/inventory'
 import {
   landingPageContentSchema,
   readLandingPageContent,
 } from '../../../../lib/landings/page-schema'
-import { LANDINGS_ADMIN_PATH, landingAdminLeadsPath, landingPublicPath } from '../../../../lib/landings/paths'
+import {
+  LANDINGS_ADMIN_PATH,
+  landingAdminInventoryPath,
+  landingAdminLeadsPath,
+  landingPublicPath,
+} from '../../../../lib/landings/paths'
 import { formatDateTimeForHonduras } from '../../../../lib/timezone'
 import type {
   LandingPageContent,
@@ -60,6 +67,8 @@ function EditorContent({ landingId }: { landingId: string }) {
   const [publishing, setPublishing] = useState(false)
   const [message, setMessage] = useState<{ tone: 'ok' | 'error'; text: string } | null>(null)
   const [showPreview, setShowPreview] = useState(true)
+  const [inventoryEnabled, setInventoryEnabled] = useState(false)
+  const [inventoryProducts, setInventoryProducts] = useState<InventoryProductView[]>([])
 
   // Tres genéricos: valores del formulario (entrada), contexto y valores ya validados
   // por Zod (salida). Sin esto, los campos con default del esquema no calzan.
@@ -106,6 +115,24 @@ function EditorContent({ landingId }: { landingId: string }) {
       active = false
     }
   }, [landingId, reset])
+
+  useEffect(() => {
+    let active = true
+    void fetchLandingInventory(landingId)
+      .then((inventory) => {
+        if (!active) return
+        setInventoryEnabled(inventory.enabled)
+        setInventoryProducts(inventory.products)
+      })
+      .catch(() => {
+        if (!active) return
+        setInventoryEnabled(false)
+        setInventoryProducts([])
+      })
+    return () => {
+      active = false
+    }
+  }, [landingId])
 
   const values = watch()
   const lastValidPreview = useRef<LandingPageContent | null>(null)
@@ -238,6 +265,12 @@ function EditorContent({ landingId }: { landingId: string }) {
               Leads
             </Button>
           </Link>
+          <Link href={landingAdminInventoryPath(landingId)}>
+            <Button variant="ghost">
+              <Boxes className="mr-2 h-4 w-4" />
+              Inventario
+            </Button>
+          </Link>
           <Button variant="ghost" onClick={() => setShowPreview((prev) => !prev)}>
             <Eye className="mr-2 h-4 w-4" />
             {showPreview ? 'Ocultar vista previa' : 'Ver vista previa'}
@@ -330,6 +363,8 @@ function EditorContent({ landingId }: { landingId: string }) {
             control={controls.control}
             register={controls.register}
             landingId={landingId}
+            inventoryEnabled={inventoryEnabled}
+            inventoryProducts={inventoryProducts}
           />
         </div>
 
@@ -343,7 +378,19 @@ function EditorContent({ landingId }: { landingId: string }) {
             <div className="overflow-hidden rounded-xl border border-white/10">
               {preview.page ? (
                 <div className="max-h-[80vh] overflow-y-auto">
-                  <LandingRenderer page={preview.page} />
+                  <LandingRenderer
+                    page={preview.page}
+                    stockByProductId={
+                      inventoryEnabled
+                        ? Object.fromEntries(
+                            inventoryProducts.map((product) => [
+                              product.id,
+                              { precio: product.precio, stockActual: product.stockActual },
+                            ])
+                          )
+                        : undefined
+                    }
+                  />
                 </div>
               ) : (
                 <p className="p-6 text-sm text-gray-400">

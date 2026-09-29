@@ -8,11 +8,13 @@
  */
 
 import React from 'react'
+import Link from 'next/link'
 import { useFieldArray, type Control, type UseFormRegister } from 'react-hook-form'
 import { Plus, Trash2 } from 'lucide-react'
 import { Button } from '../../ui/button'
 import { Input } from '../../ui/input'
 import { Textarea } from '../../ui/textarea'
+import { landingAdminInventoryPath } from '../../../lib/landings/paths'
 import { LANDING_CTA_ACTIONS } from '../../../lib/landings/page-schema'
 import type { LandingBlockKind } from '../../../types/landing'
 import { LandingImageField } from './LandingImageField'
@@ -291,18 +293,28 @@ function ItemList({
 
 /* ----------------------------- bloque por tipo ---------------------------- */
 
+export interface InventoryEditorProduct {
+  id: string
+  nombre: string
+  sku: string
+}
+
 export function BlockFields({
   block,
   blockIndex,
   control,
   register,
   landingId,
+  inventoryEnabled = false,
+  inventoryProducts = [],
 }: {
   block: EditableBlockRef
   blockIndex: number
   control: AnyControl
   register: AnyRegister
   landingId: string
+  inventoryEnabled?: boolean
+  inventoryProducts?: InventoryEditorProduct[]
 }) {
   const base = `blocks.${blockIndex}`
 
@@ -358,11 +370,36 @@ export function BlockFields({
             blockIndex={blockIndex}
             property="items"
             addLabel="Agregar producto o servicio"
-            emptyItem={{ name: '', detail: '', category: '', priceLabel: '' }}
+            emptyItem={{ name: '', detail: '', category: '', priceLabel: '', inventoryProductId: '' }}
             renderFields={(itemBase) => (
               <div className="grid gap-3 sm:grid-cols-2">
                 <TextField register={register} name={`${itemBase}.name`} label="Nombre" />
                 <TextField register={register} name={`${itemBase}.priceLabel`} label="Precio" />
+                {inventoryEnabled ? (
+                  inventoryProducts.length > 0 ? (
+                    <div className="sm:col-span-2">
+                      <SelectField
+                        register={register}
+                        name={`${itemBase}.inventoryProductId`}
+                        label="Producto del inventario"
+                        options={[
+                          { value: '', label: 'Sin inventario' },
+                          ...inventoryProducts.map((product) => ({
+                            value: product.id,
+                            label: `${product.sku} · ${product.nombre}`,
+                          })),
+                        ]}
+                      />
+                    </div>
+                  ) : (
+                    <p className="text-xs text-amber-300 sm:col-span-2">
+                      El inventario está activo y todavía no tiene productos.{' '}
+                      <Link href={landingAdminInventoryPath(landingId)} className="underline">
+                        Crear productos
+                      </Link>
+                    </p>
+                  )
+                ) : null}
                 <TextField register={register} name={`${itemBase}.category`} label="Categoría (Cabello, Uñas…)" />
                 <TextField register={register} name={`${itemBase}.detail`} label="Para qué sirve" />
                 <div className="sm:col-span-2">
@@ -656,11 +693,15 @@ export function BlockAccordion({
   control,
   register,
   landingId,
+  inventoryEnabled = false,
+  inventoryProducts = [],
 }: {
   blocks: EditableBlockRef[]
   control: AnyControl
   register: AnyRegister
   landingId: string
+  inventoryEnabled?: boolean
+  inventoryProducts?: InventoryEditorProduct[]
 }) {
   return (
     <div className="space-y-2">
@@ -684,6 +725,8 @@ export function BlockAccordion({
               control={control}
               register={register}
               landingId={landingId}
+              inventoryEnabled={inventoryEnabled}
+              inventoryProducts={inventoryProducts}
             />
           </div>
         </details>

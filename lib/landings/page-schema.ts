@@ -91,7 +91,7 @@ export const landingUrlSchema = z
   )
 
 /**
- * El editor manda "" al quitar una foto. Eso equivale a no tener imagen.
+ * El editor manda "" al quitar una foto o un producto. Eso equivale a no tener valor.
  * No usa preprocess: su tipo de entrada es `unknown` y vuelve obligatorio el campo.
  */
 const blankOr = <T extends z.ZodType<string>>(schema: T) =>
@@ -102,6 +102,9 @@ const blankOr = <T extends z.ZodType<string>>(schema: T) =>
 
 /** El editor manda "" al quitar una foto. Eso equivale a no tener imagen. */
 export const optionalLandingUrlSchema = blankOr(landingUrlSchema)
+
+/** Ítem de lista enlazado a inventory_products. Vacío = sin inventario. */
+export const optionalInventoryProductIdSchema = blankOr(z.string().uuid())
 
 export const landingHexColorSchema = z
   .string()
@@ -189,6 +192,7 @@ export const itemsBlockSchema = blockBase.extend({
         /** Etiqueta libre ("L. 150", "Desde L. 1,250", "A convenir"): el dueño escribe su realidad. */
         priceLabel: z.string().trim().max(40).optional(),
         imageUrl: optionalLandingUrlSchema,
+        inventoryProductId: optionalInventoryProductIdSchema,
       })
     )
     .min(1)

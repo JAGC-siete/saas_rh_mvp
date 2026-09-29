@@ -5,6 +5,7 @@
 
 import { getBrowserAuthHeaders } from '../auth/browser-auth-headers'
 import type { CreateLandingInput, UpdateLandingInput } from './admin-schema'
+import type { InventoryProductView } from './inventory'
 import type { LandingLeadsResponse, LandingPageListItem, LandingPageStatus, LandingTemplateKey } from '../../types/landing'
 
 export interface LandingEditRecord {
@@ -88,4 +89,50 @@ export function requestLandingMediaUpload(
 
 export function fetchLandingLeads(id: string): Promise<LandingLeadsResponse> {
   return request(`/api/landings/${id}/leads`)
+}
+
+export function fetchLandingInventory(
+  id: string
+): Promise<{ enabled: boolean; products: InventoryProductView[] }> {
+  return request(`/api/landings/${id}/inventory`)
+}
+
+export function setLandingInventoryEnabled(id: string, enabled: boolean): Promise<{ enabled: boolean }> {
+  return request(`/api/landings/${id}/inventory`, {
+    method: 'PATCH',
+    body: JSON.stringify({ enabled }),
+  })
+}
+
+export function createInventoryProduct(
+  id: string,
+  input: { nombre: string; sku: string; precio: number; stockMinimo: number; stockInicial?: number }
+): Promise<{ product: InventoryProductView | null }> {
+  return request(`/api/landings/${id}/inventory`, { method: 'POST', body: JSON.stringify(input) })
+}
+
+export function updateInventoryProduct(
+  id: string,
+  productId: string,
+  input: { nombre?: string; sku?: string; precio?: number; stockMinimo?: number }
+): Promise<{ product: InventoryProductView }> {
+  return request(`/api/landings/${id}/inventory/${productId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(input),
+  })
+}
+
+export function deleteInventoryProduct(id: string, productId: string): Promise<{ success: true }> {
+  return request(`/api/landings/${id}/inventory/${productId}`, { method: 'DELETE' })
+}
+
+export function moveInventoryStock(
+  id: string,
+  productId: string,
+  delta: 1 | -1
+): Promise<{ product: InventoryProductView }> {
+  return request(`/api/landings/${id}/inventory/${productId}/movements`, {
+    method: 'POST',
+    body: JSON.stringify({ delta }),
+  })
 }

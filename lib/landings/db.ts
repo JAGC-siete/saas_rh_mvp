@@ -62,6 +62,7 @@ export const LANDING_PAGE_COLUMN_NAMES = [
   'updated_at',
   'is_lead_preview',
   'webycitas_lead_id',
+  'inventory_enabled',
 ] as const
 
 export const LANDING_LEAD_COLUMN_NAMES = [
@@ -101,6 +102,7 @@ export const LANDING_PAGE_PRIVATE_COLUMN_NAMES = [
   'updated_at',
   'is_lead_preview',
   'webycitas_lead_id',
+  'inventory_enabled',
 ] as const
 
 type Exact<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false

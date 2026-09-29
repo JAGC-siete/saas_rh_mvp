@@ -15,12 +15,14 @@ import { cn } from '../../lib/utils'
 import LandingLeadForm from './LandingLeadForm'
 import RetailVisitRenderer from './RetailVisitRenderer'
 import ServiceBookingRenderer from './ServiceBookingRenderer'
+import { formatInventoryPrice, type PublicInventoryOffer } from '../../lib/landings/inventory'
 import { isRetailVisitContent } from '../../lib/landings/retail-visit'
 import { isServiceBookingContent } from '../../lib/landings/service-booking'
 import type { LandingBlock, LandingCta, LandingPageBusiness, PublicLandingPage } from '../../types/landing'
 
 interface LandingRendererProps {
   page: PublicLandingPage
+  stockByProductId?: Record<string, PublicInventoryOffer>
 }
 
 type BlockOf<K extends LandingBlock['kind']> = Extract<LandingBlock, { kind: K }>
@@ -31,7 +33,7 @@ interface BlockContext {
   slug: string
 }
 
-export default function LandingRenderer({ page }: LandingRendererProps) {
+export default function LandingRenderer({ page, stockByProductId }: LandingRendererProps) {
   if (isRetailVisitContent(page.content)) {
     return <RetailVisitRenderer page={page} />
   }
@@ -56,7 +58,7 @@ export default function LandingRenderer({ page }: LandingRendererProps) {
       style={landingThemeCssVars(theme) as CSSProperties}
     >
       {visible.map((block) => (
-        <BlockSwitch key={block.id} block={block} context={context} dark={dark} />
+        <BlockSwitch key={block.id} block={block} context={context} dark={dark} stockByProductId={stockByProductId} />
       ))}
       <LandingFooter business={business} dark={dark} />
     </div>
@@ -67,16 +69,18 @@ function BlockSwitch({
   block,
   context,
   dark,
+  stockByProductId,
 }: {
   block: LandingBlock
   context: BlockContext
   dark: boolean
+  stockByProductId?: Record<string, PublicInventoryOffer>
 }) {
   switch (block.kind) {
     case 'hero':
       return <HeroBlock block={block} context={context} />
     case 'items':
-      return <ItemsBlock block={block} dark={dark} />
+      return <ItemsBlock block={block} dark={dark} stockByProductId={stockByProductId} />
     case 'gallery':
       return <GalleryBlock block={block} />
     case 'text':
@@ -200,14 +204,27 @@ function HeroBlock({ block, context }: { block: BlockOf<'hero'>; context: BlockC
   )
 }
 
-function ItemsBlock({ block, dark }: { block: BlockOf<'items'>; dark: boolean }) {
+function ItemsBlock({
+  block,
+  dark,
+  stockByProductId,
+}: {
+  block: BlockOf<'items'>
+  dark: boolean
+  stockByProductId?: Record<string, PublicInventoryOffer>
+}) {
   const grid = block.layout === 'grid' ? 'grid gap-4 sm:grid-cols-2 lg:grid-cols-3' : 'space-y-3'
 
   return (
     <Section id={block.id}>
       <SectionTitle title={block.title} subtitle={block.subtitle} />
       <div className={grid}>
-        {block.items.map((item, index) => (
+        {block.items.map((item, index) => {
+          const offer = item.inventoryProductId ? stockByProductId?.[item.inventoryProductId] : undefined
+          const priceText = offer ? formatInventoryPrice(offer.precio) : item.priceLabel
+          const soldOut = Boolean(offer && offer.stockActual === 0)
+
+          return (
           <Card
             key={`${block.id}-${index}`}
             variant="solid"
@@ -218,11 +235,16 @@ function ItemsBlock({ block, dark }: { block: BlockOf<'items'>; dark: boolean })
                 <p className="font-semibold">{item.name}</p>
                 {item.detail && <p className="mt-1 text-sm opacity-75">{item.detail}</p>}
               </div>
-              {item.priceLabel && (
-                <span className="whitespace-nowrap text-sm font-bold text-lp-primary">
-                  {item.priceLabel}
-                </span>
-              )}
+              {priceText || soldOut ? (
+                <div className="flex flex-col items-end gap-1">
+                  {priceText ? (
+                    <span className="whitespace-nowrap text-sm font-bold text-lp-primary">{priceText}</span>
+                  ) : null}
+                  {soldOut ? (
+                    <span className="rounded bg-red-600 px-2 py-0.5 text-xs font-semibold text-white">Agotado</span>
+                  ) : null}
+                </div>
+              ) : null}
             </div>
             {item.imageUrl && (
               <img
@@ -233,7 +255,8 @@ function ItemsBlock({ block, dark }: { block: BlockOf<'items'>; dark: boolean })
               />
             )}
           </Card>
-        ))}
+          )
+        })}
       </div>
     </Section>
   )

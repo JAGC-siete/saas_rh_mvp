@@ -11,6 +11,8 @@ import type { GetServerSideProps } from 'next'
 import LandingRenderer from '../../components/landings/LandingRenderer'
 import SchemaMarkup from '../../components/SEO/SchemaMarkup'
 import { LANDING_PAGE_PUBLIC_COLUMNS, LANDING_PAGES_TABLE, toPublicLandingPage } from '../../lib/landings/db'
+import { collectInventoryProductIds, type PublicInventoryOffer } from '../../lib/landings/inventory'
+import { readPublishedInventory } from '../../lib/landings/inventory-public'
 import { landingLocalBusinessJsonLd } from '../../lib/landings/jsonld'
 import { landingPublicUrl } from '../../lib/landings/paths'
 import { createPublicLandingClient } from '../../lib/landings/public-client'
@@ -20,11 +22,12 @@ import type { LandingPagePublicRow, PublicLandingPage } from '../../types/landin
 
 interface PublicLandingPageProps {
   page: PublicLandingPage
+  stockByProductId: Record<string, PublicInventoryOffer>
 }
 
 const SLUG_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/
 
-export default function PublicLandingPageView({ page }: PublicLandingPageProps) {
+export default function PublicLandingPageView({ page, stockByProductId }: PublicLandingPageProps) {
   const { meta } = page.content
   const canonical = landingPublicUrl(page.slug)
   const jsonLd = landingLocalBusinessJsonLd(page)
@@ -49,7 +52,7 @@ export default function PublicLandingPageView({ page }: PublicLandingPageProps) 
         {meta.ogImageUrl && <meta property="og:image" content={seoAbsoluteUrl(meta.ogImageUrl)} />}
       </Head>
       {jsonLd ? <SchemaMarkup schema={jsonLd} /> : null}
-      <LandingRenderer page={page} />
+      <LandingRenderer page={page} stockByProductId={stockByProductId} />
     </>
   )
 }
@@ -97,8 +100,30 @@ export const getServerSideProps: GetServerSideProps<PublicLandingPageProps> = as
     return { notFound: true }
   }
 
-  // Cache de CDN: la página cambia solo al publicar, y revalida en background.
-  ctx.res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=600')
+  const productIds = collectInventoryProductIds(page.content)
+  let stockByProductId: Record<string, PublicInventoryOffer> = {}
+  let inventoryLive = false
 
-  return { props: { page } }
+  if (productIds.length > 0) {
+    try {
+      const inventory = await readPublishedInventory(page.id, productIds)
+      inventoryLive = inventory.live
+      stockByProductId = inventory.offers
+    } catch (err: unknown) {
+      logger.error('No se pudo leer el saldo público', {
+        slug,
+        error: err instanceof Error ? err.message : 'Unknown',
+      })
+    }
+  }
+
+  // Con inventario vivo el saldo cambia sin republicar. Sin él, la página solo cambia al publicar.
+  ctx.res.setHeader(
+    'Cache-Control',
+    inventoryLive
+      ? 'public, s-maxage=15, stale-while-revalidate=0'
+      : 'public, s-maxage=60, stale-while-revalidate=600'
+  )
+
+  return { props: { page, stockByProductId } }
 }

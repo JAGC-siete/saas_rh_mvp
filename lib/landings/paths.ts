@@ -14,6 +14,10 @@ export function landingAdminLeadsPath(id: string): string {
   return `${LANDINGS_ADMIN_PATH}/${id}/leads`
 }
 
+export function landingAdminInventoryPath(id: string): string {
+  return `${LANDINGS_ADMIN_PATH}/${id}/inventory`
+}
+
 export function landingPublicPath(slug: string): string {
   return `${LANDING_PUBLIC_PREFIX}/${slug}`
 }
