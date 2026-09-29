@@ -234,20 +234,12 @@ async function upsertPayrollConfig(
       pay_overtime: pay_overtime_body
     } = body
 
-    // Validar calculation_type
+    // formula_based / custom are accepted as aliases; engine only uses custom_fields.
     const validTypes = ['standard', 'formula_based', 'custom']
     if (!validTypes.includes(calculation_type)) {
       return res.status(400).json({
-        error: 'Tipo de c?lculo inv?lido',
+        error: 'Tipo de cálculo inválido',
         message: `calculation_type debe ser uno de: ${validTypes.join(', ')}`
-      })
-    }
-
-    // Validar que si es 'custom', debe tener calculation_script
-    if (calculation_type === 'custom' && !calculation_script) {
-      return res.status(400).json({
-        error: 'Script de c?lculo requerido',
-        message: 'calculation_script es requerido cuando calculation_type es "custom"'
       })
     }
 
@@ -395,7 +387,7 @@ async function upsertPayrollConfig(
       .from('company_payroll_configs')
       .upsert({
         company_id: companyId,
-        calculation_type,
+        calculation_type: 'standard',
         custom_fields: custom_fields || {},
         calculation_config: calculation_config || {},
         calculation_script: calculation_script || null,

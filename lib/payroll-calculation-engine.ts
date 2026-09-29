@@ -1,17 +1,5 @@
-/**
- * Payroll Calculation Engine
- * 
- * Motor genérico de cálculo de payroll basado en configuración de base de datos.
- * Permite escalar a 100+ empresas sin necesidad de código específico por cliente.
- */
-
 import { isStatutoryReservedCustomKey } from './payroll/statutory-reserved-custom-keys'
-
-interface CalculationConfig {
-  earnings_formula?: string
-  deductions_formula?: string
-  custom_calculations?: Record<string, string>
-}
+import { evaluateFormulaSafe } from './utils/formula-evaluator'
 
 interface CustomField {
   label: string
@@ -30,14 +18,21 @@ export interface PayrollCalculationResult {
   calculatedFields: Record<string, any>
 }
 
-interface CalculationContext {
-  baseSalary: number
+function formulaMetadata(
   metadata: Record<string, any>
-  calculatedFields: Record<string, any>
+): Record<string, number | string | boolean> {
+  const out: Record<string, number | string | boolean> = {}
+  for (const [key, value] of Object.entries(metadata || {})) {
+    if (typeof value === 'number' || typeof value === 'string' || typeof value === 'boolean') {
+      out[key] = value
+    }
+  }
+  return out
 }
 
 /**
- * Motor de cálculo genérico basado en configuración de BD
+ * Custom fields from company_payroll_configs: sum earnings, subtract deductions.
+ * If a field defines `formula`, evaluate it with formula-evaluator (no Function/eval).
  */
 export async function calculatePayrollFromConfig(
   companyId: string,
@@ -45,291 +40,28 @@ export async function calculatePayrollFromConfig(
   metadata: Record<string, any>,
   supabase: any
 ): Promise<PayrollCalculationResult> {
-  
-  // 1. Obtener configuración desde BD
   const { data: config, error } = await supabase
     .from('company_payroll_configs')
-    .select('calculation_type, custom_fields, calculation_config, calculation_script')
+    .select('custom_fields')
     .eq('company_id', companyId)
     .eq('is_active', true)
     .single()
 
   if (error || !config) {
-    // Fallback a cálculo estándar (sin campos personalizados)
     return {
       totalIngresosAdicionales: 0,
       totalDeduccionesAdicionales: 0,
-      calculatedFields: {}
+      calculatedFields: {},
     }
   }
 
-  // 2. Calcular según tipo (pero SIEMPRE aplicar campos personalizados)
-  const customFields = config.custom_fields as Record<string, CustomField> | undefined
-  
-  let result: PayrollCalculationResult
-  
-  switch (config.calculation_type) {
-    case 'formula_based':
-      result = calculateWithFormulas(
-        config.calculation_config as CalculationConfig,
-        baseSalary,
-        metadata
-      )
-      break
-    
-    case 'standard':
-    default:
-      // En modo estándar, solo aplicar campos personalizados
-      result = {
-        totalIngresosAdicionales: 0,
-        totalDeduccionesAdicionales: 0,
-        calculatedFields: {}
-      }
-      break
-  }
-  
-  // 3. SIEMPRE aplicar campos personalizados automáticamente (sumar/restar según categoría)
-  const customFieldsResult = applyCustomFields(customFields, metadata, baseSalary)
-  
-  return {
-    totalIngresosAdicionales: result.totalIngresosAdicionales + customFieldsResult.totalIngresosAdicionales,
-    totalDeduccionesAdicionales: result.totalDeduccionesAdicionales + customFieldsResult.totalDeduccionesAdicionales,
-    calculatedFields: {
-      ...result.calculatedFields,
-      ...customFieldsResult.calculatedFields
-    }
-  }
-}
-
-/**
- * Calcular usando fórmulas desde configuración
- */
-function calculateWithFormulas(
-  config: CalculationConfig,
-  baseSalary: number,
-  metadata: Record<string, any>
-): PayrollCalculationResult {
-  
-  const calculatedFields: Record<string, any> = {}
-  
-  // 1. Ejecutar cálculos personalizados primero
-  if (config.custom_calculations) {
-    for (const [fieldName, formula] of Object.entries(config.custom_calculations)) {
-      try {
-        // Evaluar fórmula de forma segura
-        calculatedFields[fieldName] = evaluateFormula(
-          formula,
-          { baseSalary, metadata, calculatedFields }
-        )
-      } catch (error) {
-        calculatedFields[fieldName] = 0
-      }
-    }
-  }
-  
-  // 2. Calcular ingresos adicionales
-  let totalIngresosAdicionales = 0
-  if (config.earnings_formula) {
-    try {
-      totalIngresosAdicionales = evaluateFormula(
-        config.earnings_formula,
-        { baseSalary, metadata, calculatedFields }
-      )
-    } catch (error) {
-      // Error calculating earnings, use 0
-    }
-  }
-  
-  // 3. Calcular deducciones adicionales
-  let totalDeduccionesAdicionales = 0
-  if (config.deductions_formula) {
-    try {
-      totalDeduccionesAdicionales = evaluateFormula(
-        config.deductions_formula,
-        { baseSalary, metadata, calculatedFields }
-      )
-    } catch (error) {
-      // Error calculating deductions, use 0
-    }
-  }
-  
-  return {
-    totalIngresosAdicionales,
-    totalDeduccionesAdicionales,
-    calculatedFields
-  }
-}
-
-/**
- * Evaluar fórmula de forma segura
- * Soporta: +, -, *, /, || (default), &&, comparaciones
- * 
- * NOTA: En producción, considerar usar una librería como mathjs para mayor seguridad
- */
-function evaluateFormula(
-  formula: string,
-  context: CalculationContext
-): number {
-  if (!formula || typeof formula !== 'string') {
-    return 0
-  }
-  
-  // Reemplazar referencias a campos
-  let safeFormula = formula.trim()
-  
-  // Manejar coalesce() primero (función SQL-like para valores por defecto)
-  // Soporta: coalesce(metadata.field, default) o coalesce(expression, default)
-  if (safeFormula.includes('coalesce')) {
-    // Regex mejorado para manejar expresiones más complejas
-    safeFormula = safeFormula.replace(
-      /coalesce\(([^,()]+(?:\([^)]*\))?[^,()]*),\s*([^)]+)\)/gi,
-      (match, firstValue, defaultValue) => {
-        const first = firstValue.trim()
-        const def = defaultValue.trim()
-        
-        // Evaluar el primer valor
-        let firstResult: number | null = null
-        
-        // Si contiene metadata., extraer el campo
-        if (first.includes('metadata.')) {
-          const fieldMatch = first.match(/metadata\.([a-z_]+)/i)
-          if (fieldMatch) {
-            const fieldName = fieldMatch[1]
-            const value = context.metadata[fieldName]
-            if (value !== undefined && value !== null) {
-              firstResult = typeof value === 'number' ? value : parseFloat(String(value)) || 0
-              // Si es 0, considerarlo como válido (puede ser un valor real)
-              if (!isNaN(firstResult)) {
-                return String(firstResult)
-              }
-            }
-          }
-        } else {
-          // Es una expresión matemática, evaluarla
-          // Reemplazar referencias temporales antes de evaluar
-          let tempExpr = first
-          tempExpr = tempExpr.replace(/\bbaseSalary\b/gi, String(context.baseSalary))
-          tempExpr = tempExpr.replace(/\bbase_salary\b/gi, String(context.baseSalary))
-          
-          // Reemplazar campos de metadata
-          tempExpr = tempExpr.replace(/\b([a-z_]+)\b/gi, (_match: string, fieldName: string) => {
-            if (context.metadata[fieldName] !== undefined) {
-              const value = context.metadata[fieldName]
-              return typeof value === 'number' ? String(value) : String(parseFloat(String(value)) || 0)
-            }
-            return '0'
-          })
-          
-          firstResult = evaluateMathExpression(tempExpr)
-          if (firstResult !== 0 && !isNaN(firstResult)) {
-            return String(firstResult)
-          }
-        }
-        
-        // Si el primer valor no es válido, usar el valor por defecto
-        // El valor por defecto puede ser una expresión también
-        let defaultResult = def
-        defaultResult = defaultResult.replace(/\bbaseSalary\b/gi, String(context.baseSalary))
-        defaultResult = defaultResult.replace(/\bbase_salary\b/gi, String(context.baseSalary))
-        
-        // Evaluar el valor por defecto
-        const evaluatedDefault = evaluateMathExpression(defaultResult)
-        return String(evaluatedDefault)
-      }
-    )
-  }
-  
-  // Reemplazar referencias a metadata.field_name
-  safeFormula = safeFormula.replace(
-    /metadata\.([a-z_]+)/gi,
-    (match, fieldName) => {
-      const value = context.metadata[fieldName]
-      if (value === undefined || value === null) {
-        return '0'
-      }
-      return typeof value === 'number' ? String(value) : String(parseFloat(value) || 0)
-    }
+  return applyCustomFields(
+    config.custom_fields as Record<string, CustomField> | undefined,
+    metadata,
+    baseSalary
   )
-  
-  // Reemplazar referencias directas a campos (sin metadata.)
-  safeFormula = safeFormula.replace(
-    /\b([a-z_]+)\b/g,
-    (match, fieldName) => {
-      // Buscar en calculatedFields primero
-      if (context.calculatedFields[fieldName] !== undefined) {
-        const value = context.calculatedFields[fieldName]
-        return typeof value === 'number' ? String(value) : String(parseFloat(value) || 0)
-      }
-      // Luego en metadata
-      if (context.metadata[fieldName] !== undefined) {
-        const value = context.metadata[fieldName]
-        if (typeof value === 'boolean') {
-          return value ? '1' : '0'
-        }
-        return typeof value === 'number' ? String(value) : String(parseFloat(value) || 0)
-      }
-      // Valores especiales
-      if (fieldName === 'baseSalary' || fieldName === 'base_salary') {
-        return String(context.baseSalary)
-      }
-      return '0'
-    }
-  )
-  
-  // Manejar operador || (default value)
-  if (safeFormula.includes('||')) {
-    const parts = safeFormula.split('||').map(p => p.trim())
-    let result = 0
-    for (const part of parts) {
-      const value = evaluateMathExpression(part)
-      if (value !== 0 && !isNaN(value)) {
-        result = value
-        break
-      }
-    }
-    return result || 0
-  }
-  
-  // Evaluar expresión matemática
-  return evaluateMathExpression(safeFormula)
 }
 
-/**
- * Evaluar expresión matemática simple de forma segura
- */
-function evaluateMathExpression(expression: string): number {
-  if (!expression || typeof expression !== 'string') {
-    return 0
-  }
-  
-  try {
-    // Remover espacios
-    const clean = expression.replace(/\s+/g, '')
-    
-    // Validar que solo contenga números, operadores y paréntesis
-    if (!/^[0-9+\-*/().\s]+$/.test(clean)) {
-      return 0
-    }
-    
-    // Evaluar usando Function constructor (más seguro que eval directo)
-    // Solo permite operaciones matemáticas básicas
-    const result = Function(`"use strict"; return (${clean})`)()
-    
-    if (typeof result === 'number' && !isNaN(result) && isFinite(result)) {
-      return result
-    }
-    
-    return 0
-  } catch (error) {
-    return 0
-  }
-}
-
-/**
- * Aplicar campos personalizados automáticamente: sumar earnings, restar deductions
- * Esta función se aplica SIEMPRE, independientemente del tipo de cálculo.
- * Si el campo tiene formula, evalúa la fórmula con metadata como contexto.
- */
 function applyCustomFields(
   customFieldsDefinitions: Record<string, CustomField> | undefined,
   metadata: Record<string, any>,
@@ -343,43 +75,38 @@ function applyCustomFields(
     return {
       totalIngresosAdicionales: 0,
       totalDeduccionesAdicionales: 0,
-      calculatedFields: {}
+      calculatedFields: {},
     }
   }
 
-  const context: CalculationContext = { baseSalary, metadata, calculatedFields }
-
-  // Iterar sobre todos los campos personalizados definidos
   const enginePaysOvertime =
     metadata?.overtime_pay != null && Number.isFinite(Number(metadata.overtime_pay))
 
   for (const [fieldName, fieldDef] of Object.entries(customFieldsDefinitions)) {
-    // Solo procesar campos con categoría earnings o deductions
     if (fieldDef.category !== 'earnings' && fieldDef.category !== 'deductions') {
       continue
     }
 
-    // Motor fixed ya suma HE en bruto: no doble-contar custom horas_extras
     if (enginePaysOvertime && fieldName === 'horas_extras' && fieldDef.category === 'earnings') {
       continue
     }
 
-    // ihss/rap/isr viven en eff_*; no sumar como deducción adicional (espejo Enlace)
     const reservedStatutory =
       fieldDef.category === 'deductions' && isStatutoryReservedCustomKey(fieldName)
 
     let numericValue = 0
 
     if (fieldDef.formula) {
-      // Campo con fórmula: evaluar usando metadata como parámetros
       try {
-        numericValue = evaluateFormula(fieldDef.formula, context)
+        numericValue = evaluateFormulaSafe(fieldDef.formula, {
+          baseSalary,
+          metadata: formulaMetadata(metadata),
+        })
         if (!isFinite(numericValue) || isNaN(numericValue)) numericValue = 0
       } catch {
         numericValue = 0
       }
     } else {
-      // Campo simple: valor directo desde metadata
       const value = metadata[fieldName]
       if (value !== undefined && value !== null) {
         if (typeof value === 'number') {
@@ -408,13 +135,10 @@ function applyCustomFields(
   return {
     totalIngresosAdicionales,
     totalDeduccionesAdicionales,
-    calculatedFields
+    calculatedFields,
   }
 }
 
-/**
- * Obtener campos personalizados de una empresa desde BD
- */
 export async function getCustomFieldsFromDB(
   companyId: string,
   supabase: any
@@ -433,44 +157,25 @@ export async function getCustomFieldsFromDB(
   return data.custom_fields as Record<string, CustomField>
 }
 
-/**
- * Validar que los campos personalizados sean correctos
- */
 export function validateCustomFields(
   customFields: Record<string, any>,
   fieldDefinitions: Record<string, CustomField>
 ): { valid: boolean; errors: string[] } {
   const errors: string[] = []
 
-  // Si no hay definiciones de campos, permitir cualquier campo (modo permisivo)
   if (!fieldDefinitions || Object.keys(fieldDefinitions).length === 0) {
-    // Solo validar tipos básicos si no hay configuración
-    for (const [fieldName, value] of Object.entries(customFields)) {
-      if (value !== null && value !== undefined && value !== '') {
-        // Validación básica: si parece número, debe ser parseable
-        if (typeof value === 'string' && !isNaN(parseFloat(value)) && value.trim() !== '') {
-          // Es un string numérico válido, está bien
-          continue
-        }
-        // Otros tipos están bien
-      }
-    }
     return { valid: true, errors: [] }
   }
 
   for (const [fieldName, value] of Object.entries(customFields)) {
     const definition = fieldDefinitions[fieldName]
-    
+
     if (!definition) {
-      // Campo no definido en configuración - solo warning, no error
-      // Permitir campos adicionales que no estén en la configuración
       continue
     }
 
-    // Validar tipo (permitir conversión de strings a números)
     if (definition.type === 'number') {
       if (typeof value === 'string' && value.trim() === '') {
-        // String vacío - solo error si es requerido
         if (definition.required) {
           errors.push(`${fieldName} es requerido`)
         }
@@ -479,11 +184,17 @@ export function validateCustomFields(
         if (isNaN(numValue)) {
           errors.push(`${fieldName} debe ser un número válido`)
         }
-        // Si es un string numérico válido, está bien (se convertirá después)
       }
     }
 
-    if (definition.type === 'boolean' && typeof value !== 'boolean' && value !== 'true' && value !== 'false' && value !== 1 && value !== 0) {
+    if (
+      definition.type === 'boolean' &&
+      typeof value !== 'boolean' &&
+      value !== 'true' &&
+      value !== 'false' &&
+      value !== 1 &&
+      value !== 0
+    ) {
       errors.push(`${fieldName} debe ser un booleano`)
     }
 
@@ -491,7 +202,6 @@ export function validateCustomFields(
       errors.push(`${fieldName} debe ser un string`)
     }
 
-    // Validar requerido
     if (definition.required && (value === undefined || value === null || value === '')) {
       errors.push(`${fieldName} es requerido`)
     }
@@ -499,7 +209,6 @@ export function validateCustomFields(
 
   return {
     valid: errors.length === 0,
-    errors
+    errors,
   }
 }
-
