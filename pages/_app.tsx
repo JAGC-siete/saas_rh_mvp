@@ -9,7 +9,6 @@ import {
   isPublicMarketingRoute,
   isPublicKioskDisabledRoute,
   isPublicTenantLandingRoute,
-  isPublicToolRoute,
 } from '../lib/seo/public-ssr-routes'
 import MarketingAnalytics from '../components/marketing/MarketingAnalytics'
 import CookieBanner from '../components/marketing/CookieBanner'
@@ -81,7 +80,6 @@ export default function App({ Component, pageProps }: AppProps) {
   const asPathBare = router.asPath.split('#')[0].split('?')[0]
   const isMarketingRoute = isPublicMarketingRoute(router.pathname)
   const isKioskDisabledRoute = isPublicKioskDisabledRoute(router.pathname)
-  const isToolRoute = isPublicToolRoute(router.pathname)
   const isTenantLandingRoute =
     isPublicTenantLandingRoute(router.pathname) ||
     isPublicTenantLandingRoute(asPathBare) ||
@@ -89,7 +87,7 @@ export default function App({ Component, pageProps }: AppProps) {
 
   // SSR completo solo en landings SEO; shell /app y rutas legacy esperan hidratación.
   const shouldRenderImmediately =
-    isMarketingRoute || isAuthEntryRoute || isKioskDisabledRoute || isToolRoute || isTenantLandingRoute
+    isMarketingRoute || isAuthEntryRoute || isKioskDisabledRoute || isTenantLandingRoute
 
   const needsClientHydrationGate = !shouldRenderImmediately
 
@@ -104,9 +102,8 @@ export default function App({ Component, pageProps }: AppProps) {
   const fontShellClass = cn(
     montserrat.variable,
     'min-h-screen font-sans',
-    isToolRoute && 'bg-mesh',
     // La landing del tenant pinta su propio fondo desde el tema del JSON.
-    !isMeshAppRoute && !isMarketingRoute && !isToolRoute && !isTenantLandingRoute && 'bg-app'
+    !isMeshAppRoute && !isMarketingRoute && !isTenantLandingRoute && 'bg-app'
   )
 
   const page = (
@@ -115,7 +112,7 @@ export default function App({ Component, pageProps }: AppProps) {
     </div>
   )
 
-  if (isKioskDisabledRoute || isToolRoute || isTenantLandingRoute) {
+  if (isKioskDisabledRoute || isTenantLandingRoute) {
     return (
       <SupabaseContext.Provider value={null}>
         {page}

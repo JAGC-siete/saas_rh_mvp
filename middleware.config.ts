@@ -98,7 +98,6 @@ export const MIDDLEWARE_CONFIG = {
       '/domingos-sin-planilla',
       '/suscripcion',
       '/recursos',
-      '/tools/sandbox',
       '/demo-local',
       '/webycitas',
       '/mercado',

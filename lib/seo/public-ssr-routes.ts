@@ -63,12 +63,6 @@ export function isPublicKioskDisabledRoute(pathname: string): boolean {
   return PUBLIC_KIOSK_DISABLED.has(barePublicPath(pathname))
 }
 
-/** Herramientas públicas de mostrador (sin auth, sin marketing chrome). */
-export function isPublicToolRoute(pathname: string): boolean {
-  const bare = barePublicPath(pathname)
-  return bare === '/tools' || bare.startsWith('/tools/')
-}
-
 /**
  * Landings publicadas por empresas cliente (/p/[slug]) y directorio público
  * Mercado Municipal (/mercadosanpablosigua, /mercadosanpablosiguav2; /mercado → 301).

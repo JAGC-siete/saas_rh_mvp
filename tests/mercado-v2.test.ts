@@ -7,7 +7,6 @@ import { isReservedVendorSlug } from '../lib/mercado/slug'
 import {
   isPublicMarketingRoute,
   isPublicTenantLandingRoute,
-  isPublicToolRoute,
 } from '../lib/seo/public-ssr-routes'
 import { MIDDLEWARE_CONFIG, getAllPublicRoutes } from '../middleware.config'
 import {
@@ -44,7 +43,6 @@ describe('mercado v2: ruta institucional', () => {
     assert.equal(isPublicTenantLandingRoute('/mercadosanpablosiguav2'), true)
     assert.equal(isPublicTenantLandingRoute('/en/mercadosanpablosiguav2'), true)
     assert.equal(isPublicMarketingRoute('/mercadosanpablosiguav2'), false)
-    assert.equal(isPublicToolRoute('/mercadosanpablosiguav2'), false)
     assert.ok(MIDDLEWARE_CONFIG.protection.public.includes('/mercadosanpablosiguav2'))
     assert.ok(getAllPublicRoutes().includes('/mercadosanpablosiguav2'))
     assert.ok(getAllPublicRoutes().includes('/mercadosanpablosiguav2/*'))

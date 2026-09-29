@@ -10,12 +10,11 @@ import { mercadoStaticSrc } from '../lib/mercado/assets'
 import {
   isPublicMarketingRoute,
   isPublicTenantLandingRoute,
-  isPublicToolRoute,
 } from '../lib/seo/public-ssr-routes'
 import { MIDDLEWARE_CONFIG, getAllPublicRoutes } from '../middleware.config'
 
 describe('mercado: shell público', () => {
-  it('usa el shell de tenant landing, no marketing ni /tools', () => {
+  it('usa el shell de tenant landing, no el de marketing', () => {
     assert.equal(mercadoHomePath(), '/mercadosanpablosigua')
     assert.equal(mercadoVendorPath('comedor-el-patio'), '/mercadosanpablosigua/comedor-el-patio')
     assert.equal(isPublicMercadoRoute('/mercadosanpablosigua'), true)
@@ -28,7 +27,6 @@ describe('mercado: shell público', () => {
     assert.equal(isPublicTenantLandingRoute('/en/mercadosanpablosigua'), true)
     assert.equal(isPublicTenantLandingRoute('/mercadosanpablosigua/comedor-el-patio'), true)
     assert.equal(isPublicMarketingRoute('/mercadosanpablosigua'), false)
-    assert.equal(isPublicToolRoute('/mercadosanpablosigua'), false)
   })
 
   it('queda en el inventario de middleware.config (sin enforcement de auth)', () => {

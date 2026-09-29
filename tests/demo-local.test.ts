@@ -21,7 +21,7 @@ import {
   parseDemoLocalLead,
 } from '../lib/marketing/demo-local'
 import { getMarketingLanding } from '../lib/marketing/marketing-landings-registry'
-import { isPublicMarketingRoute, isPublicToolRoute } from '../lib/seo/public-ssr-routes'
+import { isPublicMarketingRoute } from '../lib/seo/public-ssr-routes'
 import { MIDDLEWARE_CONFIG, getAllPublicRoutes } from '../middleware.config'
 import { GUIDE_LINKS, FOOTER_GUIDE_KEYS } from '../lib/seo/internal-links'
 import { readFileSync } from 'node:fs'
@@ -46,7 +46,6 @@ describe('demo-local landing', () => {
     assert.equal(isPublicMarketingRoute('/webycitas'), true)
     assert.equal(isPublicMarketingRoute('/en/webycitas'), true)
     assert.equal(isPublicMarketingRoute('/demo-local'), true)
-    assert.equal(isPublicToolRoute('/webycitas'), false)
     assert.ok(MIDDLEWARE_CONFIG.protection.public.includes('/webycitas'))
     assert.ok(MIDDLEWARE_CONFIG.protection.public.includes('/demo-local'))
     assert.ok(getAllPublicRoutes().includes('/api/public/send-demo-local-lead'))
