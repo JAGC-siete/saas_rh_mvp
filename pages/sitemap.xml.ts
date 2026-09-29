@@ -6,10 +6,6 @@ import { PRIVACY_PUBLIC_PATH, TERMS_PUBLIC_PATH } from '../lib/marketing/legal-p
 import { deductionCalculatorPublicPath } from '../lib/marketing/calculator-public-paths'
 import { localizedHref } from '../lib/i18n/locale'
 import { BILINGUAL_LANDING_PATHS } from '../lib/i18n/bilingual-paths'
-import { mercadoSitemapUrls } from '../lib/mercado/jsonld'
-import { mercadoV2SitemapEntry } from '../lib/mercado/v2'
-import { listActiveVendorSlugsFromDb } from '../lib/mercado/vendors-db'
-
 interface SitemapUrl {
   loc: string
   lastmod?: string
@@ -48,12 +44,6 @@ const publicPages: SitemapUrl[] = [
     loc: '/membresia-anual',
     changefreq: 'weekly',
     priority: 0.85,
-    lastmod: new Date().toISOString().split('T')[0],
-  },
-  {
-    loc: '/webycitas',
-    changefreq: 'weekly',
-    priority: 0.8,
     lastmod: new Date().toISOString().split('T')[0],
   },
   {
@@ -236,10 +226,7 @@ export const getServerSideProps: GetServerSideProps = async ({ res }) => {
     lastmod: recurso.dateModified ?? recurso.datePublished,
   }))
 
-  const mercadoSlugs = await listActiveVendorSlugsFromDb()
-  const mercadoPages = [...mercadoSitemapUrls(mercadoSlugs), mercadoV2SitemapEntry()]
-
-  const sitemap = generateSitemap([...publicPages, ...mercadoPages, ...recursoPages])
+  const sitemap = generateSitemap([...publicPages, ...recursoPages])
 
   res.setHeader('Content-Type', 'text/xml')
   res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400')

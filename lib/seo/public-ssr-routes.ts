@@ -4,7 +4,6 @@
  */
 
 import { isPublicLandingRoute } from '../landings/paths'
-import { isPublicMercadoRoute } from '../mercado/paths'
 import { INFO_FUNNEL_PUBLIC_PATH } from '../marketing/info-funnel-path'
 import { VIERNES_PUBLIC_PATH, VIERNES_INTERNAL_PATH } from '../marketing/viernes-copy'
 import { PRIVACY_PUBLIC_PATH, PRIVACY_LEGACY_PATH, TERMS_PUBLIC_PATH } from '../marketing/legal-paths'
@@ -45,8 +44,6 @@ const PUBLIC_SSR_EXACT = new Set([
   '/calculadora-prestaciones',
   '/calculadora-aguinaldo-honduras',
   '/calculadora-catorceavo-honduras',
-  '/demo-local',
-  '/webycitas',
 ])
 
 const PUBLIC_KIOSK_DISABLED = new Set([
@@ -64,13 +61,11 @@ export function isPublicKioskDisabledRoute(pathname: string): boolean {
 }
 
 /**
- * Landings publicadas por empresas cliente (/p/[slug]) y directorio público
- * Mercado Municipal (/mercadosanpablosigua, /mercadosanpablosiguav2; /mercado → 301).
+ * Landings publicadas por empresas cliente (/p/[slug]).
  * Shell propio: SSR, sin Auth, sin CookieBanner ni analytics de Humano SISU.
  */
 export function isPublicTenantLandingRoute(pathname: string): boolean {
-  const bare = barePublicPath(pathname)
-  return isPublicLandingRoute(bare) || isPublicMercadoRoute(bare)
+  return isPublicLandingRoute(barePublicPath(pathname))
 }
 
 export function isPublicMarketingRoute(pathname: string): boolean {

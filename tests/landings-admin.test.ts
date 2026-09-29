@@ -3,9 +3,7 @@ import assert from 'node:assert/strict'
 import { parseCreateLanding } from '../lib/landings/admin-schema'
 import { parseLandingIdParam } from '../lib/landings/admin-auth'
 import { LANDING_STUDIO_COMPANY_ID } from '../lib/landings/studio-company'
-import { applyBusinessToTemplate, assertTemplatesValid, templateContentFor } from '../lib/landings/templates'
-import { allocatePreviewSlug } from '../lib/marketing/webycitas-publish'
-import { buildWebycitasPreviewPage, templateKeyForRubro } from '../lib/marketing/webycitas-preview'
+import { applyBusinessToTemplate, templateContentFor } from '../lib/landings/templates'
 
 describe('landings: alta de ejemplo sin empresa de sesión', () => {
   it('acepta solo nombre, slug y rubro', () => {
@@ -93,39 +91,5 @@ describe('landings: id de ruta', () => {
 describe('landings: contenedor de superadmin', () => {
   it('usa un UUID estable para la empresa estudio', () => {
     assert.match(LANDING_STUDIO_COMPANY_ID, /^[0-9a-f-]{36}$/i)
-  })
-})
-
-describe('webycitas: preview sobre plantillas existentes', () => {
-  it('valida las plantillas del constructor', () => {
-    assertTemplatesValid()
-  })
-
-  it('mapea retail y servicios a template_type', () => {
-    assert.equal(templateKeyForRubro('ferreteria'), 'ferreteria')
-    assert.equal(templateKeyForRubro('papeleria'), 'papeleria')
-    assert.equal(templateKeyForRubro('mercadito'), 'mercadito')
-    assert.equal(templateKeyForRubro('supermercado'), 'supermercado')
-    assert.equal(templateKeyForRubro('salon'), 'salon_belleza')
-    assert.equal(templateKeyForRubro('spa'), 'spa')
-    assert.equal(templateKeyForRubro('clinica'), 'clinica')
-  })
-
-  it('inyecta nombre y WhatsApp en el JSON del preview', () => {
-    const page = buildWebycitasPreviewPage({
-      rubro: 'ferreteria',
-      businessName: 'El Clavo SPS',
-      city: 'San Pedro Sula',
-      phone: '9999-1111',
-    })
-    assert.equal(page.content.business.name, 'El Clavo SPS')
-    assert.equal(page.content.business.whatsapp, '9999-1111')
-    assert.equal(page.content.meta.noindex, true)
-    assert.equal(page.templateType, 'ferreteria')
-  })
-
-  it('arma un slug único con sufijo corto', () => {
-    assert.equal(allocatePreviewSlug('Ferretería El Clavo', '4f8a'), 'ferreteria-el-clavo-4f8a')
-    assert.equal(allocatePreviewSlug('??', 'ab12'), 'negocio-ab12')
   })
 })

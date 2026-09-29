@@ -1,5 +1,5 @@
 /**
- * Motor de visita física: mismo cromado y secciones que /mercadosanpablosiguav2.
+ * Motor de visita física para landings de ejemplo.
  * Lo dispara un hero.layout === 'visit'. La búsqueda filtra áreas en el cliente.
  */
 
@@ -12,7 +12,7 @@ import {
 } from '../../lib/landings/retail-visit'
 import { PRIVACY_PUBLIC_PATH, TERMS_PUBLIC_PATH } from '../../lib/marketing/legal-paths'
 import type { LandingBlock, LandingPageBusiness, PublicLandingPage } from '../../types/landing'
-import styles from '../mercado/mercado.module.css'
+import styles from './retail-visit.module.css'
 
 interface RetailVisitRendererProps {
   page: PublicLandingPage
@@ -42,10 +42,10 @@ export default function RetailVisitRenderer({ page }: RetailVisitRendererProps) 
     : business.tagline || business.city || ''
 
   const themeVars = {
-    ['--mercado-cacao']: theme.primary,
-    ['--mercado-chile']: theme.accent,
-    ['--mercado-papel']: theme.surface,
-    ['--mercado-cream']: '#fffaf3',
+    ['--visit-cacao']: theme.primary,
+    ['--visit-chile']: theme.accent,
+    ['--visit-papel']: theme.surface,
+    ['--visit-cream']: '#fffaf3',
   } as CSSProperties
 
   const onSearch = (event: FormEvent<HTMLFormElement>) => {
@@ -159,7 +159,7 @@ export default function RetailVisitRenderer({ page }: RetailVisitRendererProps) 
                 </tbody>
               </table>
               {hours.note ? (
-                <p className="mt-3 text-sm" style={{ color: 'var(--mercado-muted)' }}>
+                <p className="mt-3 text-sm" style={{ color: 'var(--visit-muted)' }}>
                   {hours.note}
                 </p>
               ) : null}
@@ -189,19 +189,19 @@ export default function RetailVisitRenderer({ page }: RetailVisitRendererProps) 
             <div className={`${styles.panelLocal} flex flex-col items-start gap-8 md:flex-row md:items-center`}>
               <div className="flex-1">
                 <h2 className={styles.sectionTitle}>{visit.title}</h2>
-                <p className="mt-4" style={{ color: 'var(--mercado-ink)' }}>
+                <p className="mt-4" style={{ color: 'var(--visit-ink)' }}>
                   {visit.body}
                 </p>
                 {visit.geoLabel ? (
                   <p
                     className="mt-4 inline-block rounded-lg px-4 py-2 font-mono text-sm"
-                    style={{ background: '#fff', color: 'var(--mercado-muted)' }}
+                    style={{ background: '#fff', color: 'var(--visit-muted)' }}
                   >
                     {visit.geoLabel}
                   </p>
                 ) : null}
                 {business.address ? (
-                  <p className="mt-3 text-sm" style={{ color: 'var(--mercado-muted)' }}>
+                  <p className="mt-3 text-sm" style={{ color: 'var(--visit-muted)' }}>
                     {business.address}
                     {business.city ? `, ${business.city}` : ''}
                   </p>
@@ -224,9 +224,9 @@ export default function RetailVisitRenderer({ page }: RetailVisitRendererProps) 
                   rel="noopener noreferrer"
                   className="flex h-48 w-full items-center justify-center rounded-xl border text-center text-sm md:w-1/3"
                   style={{
-                    borderColor: 'var(--mercado-line)',
+                    borderColor: 'var(--visit-line)',
                     background: '#fff',
-                    color: 'var(--mercado-muted)',
+                    color: 'var(--visit-muted)',
                   }}
                 >
                   {visit.mapPlaceholder || `Mapa: ${business.city || business.name}`}
@@ -253,14 +253,14 @@ function AreasSection({
     <section id="encontraras" className={`${styles.v2Section} mx-auto max-w-6xl px-4 pt-12`}>
       <h2 className={styles.sectionTitle}>{block.title}</h2>
       {block.subtitle ? (
-        <p className="mt-3 max-w-3xl" style={{ color: 'var(--mercado-muted)' }}>
+        <p className="mt-3 max-w-3xl" style={{ color: 'var(--visit-muted)' }}>
           {block.subtitle}
         </p>
       ) : null}
       {areas.length === 0 ? (
         <p
           className="mt-8 rounded-xl border px-4 py-10 text-center"
-          style={{ borderColor: 'var(--mercado-line)', color: 'var(--mercado-muted)' }}
+          style={{ borderColor: 'var(--visit-line)', color: 'var(--visit-muted)' }}
         >
           {block.emptyMessage || 'No hay un área que coincida con esa búsqueda.'}
         </p>

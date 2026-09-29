@@ -117,20 +117,6 @@ export const MARKETING_LANDINGS: MarketingLandingEntry[] = [
       'Canónico /membresia-anual. /plan-basico → 301. Copy de conversión: reclamos laborales + empleados ilimitados. Deslinde en FAQ y microcopy bajo el submit.',
   },
   {
-    path: '/webycitas',
-    pageFile: 'pages/webycitas/index.tsx',
-    aliases: ['/demo-local'],
-    name: 'Demo local (página de barrio)',
-    kind: 'lead-magnet',
-    status: 'experimental',
-    purpose:
-      'Servicio de presencia digital para negocios de barrio: modelo de página + cotización; Maps y dominio propio tras contratar.',
-    primaryCta: 'Formulario → /api/public/send-demo-local-lead',
-    launched: '2026-09-14',
-    notes:
-      'Canónico /webycitas. /demo-local → 301. SSR. Nav chrome local (sin planilla). Source DB: demo-local.',
-  },
-  {
     path: '/calculadora',
     aliases: [
       '/calculadora-deducciones',

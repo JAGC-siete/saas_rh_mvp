@@ -86,7 +86,7 @@ describe('landings: semillas profesionales', () => {
     }
   })
 
-  it('retail comparte el árbol de visita de mercadosanpablosiguav2; servicios no', () => {
+  it('retail comparte el árbol de visita; servicios no', () => {
     const papeleria = kindsOf('papeleria').join('>')
     const ferreteria = kindsOf('ferreteria').join('>')
     const mercadito = kindsOf('mercadito').join('>')

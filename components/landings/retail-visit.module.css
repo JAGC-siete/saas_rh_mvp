@@ -1,37 +1,37 @@
 /**
  * Identidad visual Mercado San Pablo — cálida, local, no-SaaS.
  * CTA del hero: cacao oscuro (contrasta con overlay cálido).
- * Trust: hoja de mercado, no verde corporativo.
+ * Trust: hoja de papel, no verde corporativo.
  */
 
-@keyframes mercadoWaPulse {
+@keyframes visitWaPulse {
   0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.45); }
   70% { box-shadow: 0 0 0 12px rgba(34, 197, 94, 0); }
   100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
 }
 
 .shell {
-  --mercado-cacao: #2a1810;
-  --mercado-chile: #9f1239;
-  --mercado-hoja: #3f5d3a;
-  --mercado-hoja-deep: #2f452c;
-  --mercado-papel: #f6f1e8;
-  --mercado-ink: #292524;
-  --mercado-muted: #78716c;
-  --mercado-cream: #fffaf3;
-  --mercado-line: #e7e0d4;
-  --mercado-font: "Nunito", ui-sans-serif, system-ui, sans-serif;
+  --visit-cacao: #2a1810;
+  --visit-chile: #9f1239;
+  --visit-hoja: #3f5d3a;
+  --visit-hoja-deep: #2f452c;
+  --visit-papel: #f6f1e8;
+  --visit-ink: #292524;
+  --visit-muted: #78716c;
+  --visit-cream: #fffaf3;
+  --visit-line: #e7e0d4;
+  --visit-font: "Nunito", ui-sans-serif, system-ui, sans-serif;
 
-  --mercado-chrome-h: 4.85rem;
-  --mercado-hero-h: 26rem;
+  --visit-chrome-h: 4.85rem;
+  --visit-hero-h: 26rem;
 
   min-height: 100vh;
-  background-color: var(--mercado-papel);
-  color: var(--mercado-ink);
-  font-family: var(--mercado-font);
+  background-color: var(--visit-papel);
+  color: var(--visit-ink);
+  font-family: var(--visit-font);
   background-image:
     radial-gradient(ellipse 120% 80% at 50% -20%, rgba(159, 18, 57, 0.06), transparent 55%),
-    linear-gradient(180deg, #f8f4ec 0%, var(--mercado-papel) 40%, #f0ebe1 100%);
+    linear-gradient(180deg, #f8f4ec 0%, var(--visit-papel) 40%, #f0ebe1 100%);
 }
 
 .stickyChrome {
@@ -41,8 +41,8 @@
 }
 
 .header {
-  border-bottom: 1px solid var(--mercado-line);
-  background: color-mix(in srgb, var(--mercado-cream) 94%, white);
+  border-bottom: 1px solid var(--visit-line);
+  background: color-mix(in srgb, var(--visit-cream) 94%, white);
   backdrop-filter: blur(10px);
   padding: 0.65rem 1rem;
 }
@@ -61,7 +61,7 @@
   font-size: 1.05rem;
   font-weight: 800;
   letter-spacing: -0.02em;
-  color: var(--mercado-cacao);
+  color: var(--visit-cacao);
 }
 
 .headerNav {
@@ -73,12 +73,12 @@
 .headerNavLink {
   font-size: 0.875rem;
   font-weight: 700;
-  color: var(--mercado-ink);
+  color: var(--visit-ink);
   text-decoration: none;
 }
 
 .headerNavLink:hover {
-  color: var(--mercado-chile);
+  color: var(--visit-chile);
   text-decoration: underline;
   text-underline-offset: 3px;
 }
@@ -104,7 +104,7 @@
 }
 
 .trustOpen {
-  background: linear-gradient(90deg, var(--mercado-hoja-deep), var(--mercado-hoja));
+  background: linear-gradient(90deg, var(--visit-hoja-deep), var(--visit-hoja));
 }
 
 .trustClosed {
@@ -135,7 +135,7 @@
   gap: 0.35rem;
   border: 0;
   background: transparent;
-  color: var(--mercado-cacao);
+  color: var(--visit-cacao);
   font-size: 0.8rem;
   font-weight: 700;
   cursor: pointer;
@@ -143,7 +143,7 @@
 }
 
 .howTrigger:hover {
-  color: var(--mercado-chile);
+  color: var(--visit-chile);
   text-decoration: underline;
   text-underline-offset: 3px;
 }
@@ -161,8 +161,8 @@
 .howDialog {
   width: min(28rem, 100%);
   border-radius: 1rem;
-  border: 1px solid var(--mercado-line);
-  background: var(--mercado-cream);
+  border: 1px solid var(--visit-line);
+  background: var(--visit-cream);
   padding: 1.25rem 1.35rem 1.4rem;
   box-shadow: 0 18px 40px rgba(0, 0, 0, 0.28);
 }
@@ -170,7 +170,7 @@
 .howClose {
   border: 0;
   background: transparent;
-  color: var(--mercado-muted);
+  color: var(--visit-muted);
   cursor: pointer;
   padding: 0.15rem;
 }
@@ -198,27 +198,27 @@
   justify-content: center;
   border-radius: 999px;
   background: #efe6d8;
-  color: var(--mercado-cacao);
+  color: var(--visit-cacao);
   font-size: 0.8rem;
   font-weight: 800;
 }
 
 .howStepTitle {
   font-weight: 800;
-  color: var(--mercado-cacao);
+  color: var(--visit-cacao);
 }
 
 .howStepBody {
   margin-top: 0.15rem;
   font-size: 0.9rem;
-  color: var(--mercado-muted);
+  color: var(--visit-muted);
   line-height: 1.4;
 }
 
 .footer {
   margin-top: 4rem;
-  border-top: 1px solid var(--mercado-line);
-  background: var(--mercado-cream);
+  border-top: 1px solid var(--visit-line);
+  background: var(--visit-cream);
 }
 
 .footerGrid {
@@ -232,7 +232,7 @@
 .footerHeading {
   font-size: 0.95rem;
   font-weight: 800;
-  color: var(--mercado-cacao);
+  color: var(--visit-cacao);
   margin-bottom: 0.75rem;
 }
 
@@ -245,13 +245,13 @@
 .hoursTable th {
   text-align: left;
   font-weight: 600;
-  color: var(--mercado-ink);
+  color: var(--visit-ink);
   padding: 0.3rem 0.75rem 0.3rem 0;
 }
 
 .hoursTable td {
   text-align: right;
-  color: var(--mercado-muted);
+  color: var(--visit-muted);
   padding: 0.3rem 0;
   white-space: nowrap;
 }
@@ -268,14 +268,14 @@
 
 .footerCats a,
 .footerList a {
-  color: var(--mercado-ink);
+  color: var(--visit-ink);
   text-decoration: none;
   font-weight: 600;
 }
 
 .footerCats a:hover,
 .footerList a:hover {
-  color: var(--mercado-chile);
+  color: var(--visit-chile);
   text-decoration: underline;
   text-underline-offset: 2px;
 }
@@ -292,12 +292,12 @@
 .footerMuted {
   margin-top: 0.75rem;
   font-size: 0.8rem;
-  color: var(--mercado-muted);
+  color: var(--visit-muted);
   line-height: 1.45;
 }
 
 .footerMuted a {
-  color: var(--mercado-chile);
+  color: var(--visit-chile);
   font-weight: 700;
 }
 
@@ -305,10 +305,10 @@
   max-width: 72rem;
   margin: 0 auto;
   padding: 0 1rem 2rem;
-  border-top: 1px solid var(--mercado-line);
+  border-top: 1px solid var(--visit-line);
   padding-top: 1.25rem;
   font-size: 0.8rem;
-  color: var(--mercado-muted);
+  color: var(--visit-muted);
   line-height: 1.5;
 }
 
@@ -317,7 +317,7 @@
 }
 
 .footerLegal a {
-  color: var(--mercado-cacao);
+  color: var(--visit-cacao);
   font-weight: 700;
 }
 
@@ -347,14 +347,14 @@
   }
 
   .shell {
-    --mercado-chrome-h: 5.5rem;
-    --mercado-hero-h: 22rem;
+    --visit-chrome-h: 5.5rem;
+    --visit-hero-h: 22rem;
   }
 }
 
 .hero {
   position: sticky;
-  top: var(--mercado-chrome-h);
+  top: var(--visit-chrome-h);
   z-index: 40;
   overflow: visible;
   isolation: isolate;
@@ -366,7 +366,7 @@
 }
 
 .homeSection {
-  scroll-margin-top: calc(var(--mercado-chrome-h) + var(--mercado-hero-h) + 0.75rem);
+  scroll-margin-top: calc(var(--visit-chrome-h) + var(--visit-hero-h) + 0.75rem);
 }
 
 .hero::before {
@@ -375,7 +375,7 @@
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  /* Overlay más corto: deja color del mercado arriba; oscurece abajo para leer. */
+  /* Overlay más corto: deja color arriba; oscurece abajo para leer. */
   background:
     linear-gradient(
       180deg,
@@ -444,11 +444,11 @@
   left: 0;
   right: 0;
   margin-top: 0.5rem;
-  max-height: min(14rem, calc(100dvh - var(--mercado-chrome-h) - 11rem));
+  max-height: min(14rem, calc(100dvh - var(--visit-chrome-h) - 11rem));
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
-  border: 1px solid var(--mercado-line);
+  border: 1px solid var(--visit-line);
   border-radius: 1rem;
   background: #fff;
   text-align: left;
@@ -458,7 +458,7 @@
   display: block;
   padding: 0.75rem 1.25rem;
   font-size: 0.875rem;
-  color: var(--mercado-ink);
+  color: var(--visit-ink);
 }
 
 .searchHintLink:hover {
@@ -472,7 +472,7 @@
   font-weight: 700;
   font-size: 0.95rem;
   color: #fffaf3;
-  background: var(--mercado-cacao);
+  background: var(--visit-cacao);
   border: none;
   cursor: pointer;
   transition: background 0.15s ease, transform 0.15s ease;
@@ -480,7 +480,7 @@
 
 .searchSubmit:hover,
 .searchSubmit:focus-visible {
-  background: var(--mercado-chile);
+  background: var(--visit-chile);
   outline: none;
 }
 
@@ -492,14 +492,14 @@
   font-size: 1.55rem;
   font-weight: 800;
   letter-spacing: -0.02em;
-  color: var(--mercado-cacao);
+  color: var(--visit-cacao);
 }
 
 .groupTitle {
   font-size: 1.15rem;
   font-weight: 800;
   letter-spacing: -0.02em;
-  color: var(--mercado-cacao);
+  color: var(--visit-cacao);
 }
 
 .categoryStrip {
@@ -535,7 +535,7 @@
   font-size: 0.75rem;
   font-weight: 600;
   line-height: 1.2;
-  color: var(--mercado-ink);
+  color: var(--visit-ink);
 }
 
 .categoryCard:hover .categoryIcon {
@@ -543,9 +543,9 @@
 }
 
 .categoryCardActive .categoryIcon {
-  border-color: var(--mercado-chile);
+  border-color: var(--visit-chile);
   background: #fff1f2;
-  color: var(--mercado-chile);
+  color: var(--visit-chile);
 }
 
 .categoryIcon {
@@ -555,9 +555,9 @@
   align-items: center;
   justify-content: center;
   border-radius: 999px;
-  border: 1px solid var(--mercado-line);
+  border: 1px solid var(--visit-line);
   background: #fff;
-  color: var(--mercado-cacao);
+  color: var(--visit-cacao);
 }
 
 .ctaSolid {
@@ -568,16 +568,16 @@
   font-size: 0.875rem;
   font-weight: 700;
   color: #fffaf3;
-  background: var(--mercado-cacao);
+  background: var(--visit-cacao);
   transition: background 0.15s ease;
 }
 
 .ctaSolid:hover {
-  background: var(--mercado-chile);
+  background: var(--visit-chile);
 }
 
 .panelLocal {
-  border: 1px solid var(--mercado-line);
+  border: 1px solid var(--visit-line);
   background: linear-gradient(135deg, #fffaf3 0%, #f3e9d8 100%);
   border-radius: 1.15rem;
   padding: 2rem;
@@ -585,8 +585,8 @@
 
 .vendorCard {
   transition: transform 0.2s ease, box-shadow 0.2s ease;
-  border-color: var(--mercado-line) !important;
-  background: var(--mercado-cream) !important;
+  border-color: var(--visit-line) !important;
+  background: var(--visit-cream) !important;
 }
 
 .vendorCard:hover,
@@ -599,11 +599,11 @@
 .waPulse:active,
 .vendorCard:hover .waPulse,
 .vendorCard:active .waPulse {
-  animation: mercadoWaPulse 1.4s ease-out infinite;
+  animation: visitWaPulse 1.4s ease-out infinite;
 }
 
 .heroWa {
-  animation: mercadoWaPulse 2.4s ease-out infinite;
+  animation: visitWaPulse 2.4s ease-out infinite;
 }
 
 .vendorLanding {
@@ -626,20 +626,20 @@
     bottom: 0;
     left: 0;
     z-index: 40;
-    border-top: 1px solid var(--mercado-line);
-    background: var(--mercado-cream);
+    border-top: 1px solid var(--visit-line);
+    background: var(--visit-cream);
     padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
   }
 }
 
 .inscriptionLead {
-  color: var(--mercado-muted);
+  color: var(--visit-muted);
   line-height: 1.55;
 }
 
 .inscriptionForm {
-  border: 1px solid var(--mercado-line);
-  background: var(--mercado-cream);
+  border: 1px solid var(--visit-line);
+  background: var(--visit-cream);
   border-radius: 1.15rem;
   padding: 1.5rem;
   display: grid;
@@ -659,20 +659,20 @@
 .inscriptionSection legend {
   font-size: 1.05rem;
   font-weight: 800;
-  color: var(--mercado-cacao);
+  color: var(--visit-cacao);
 }
 
 .inscriptionLabel {
   display: block;
   font-size: 0.875rem;
   font-weight: 600;
-  color: var(--mercado-ink);
+  color: var(--visit-ink);
 }
 
 .inscriptionHint {
   margin: 0;
   font-size: 0.875rem;
-  color: var(--mercado-muted);
+  color: var(--visit-muted);
   line-height: 1.45;
 }
 
@@ -688,7 +688,7 @@
   align-items: flex-start;
   font-size: 0.95rem;
   line-height: 1.45;
-  color: var(--mercado-ink);
+  color: var(--visit-ink);
 }
 
 .inscriptionCheck input {
@@ -696,7 +696,7 @@
   flex-shrink: 0;
   width: 1.1rem;
   height: 1.1rem;
-  accent-color: var(--mercado-chile);
+  accent-color: var(--visit-chile);
 }
 
 .planGrid {
@@ -709,23 +709,23 @@
   grid-template-columns: auto 1fr;
   gap: 0.7rem;
   align-items: center;
-  border: 1px solid var(--mercado-line);
+  border: 1px solid var(--visit-line);
   background: #fff;
   border-radius: 0.9rem;
   padding: 1rem;
   cursor: pointer;
-  color: var(--mercado-ink);
+  color: var(--visit-ink);
 }
 
 .planCard:focus-within,
 .planCardSelected {
-  border-color: var(--mercado-chile);
+  border-color: var(--visit-chile);
   box-shadow: 0 0 0 3px rgba(159, 18, 57, 0.18);
 }
 
 .planCard input {
   margin-top: 0.2rem;
-  accent-color: var(--mercado-chile);
+  accent-color: var(--visit-chile);
 }
 
 .planCardBody {
@@ -736,13 +736,13 @@
 
 .planCardTitle {
   font-weight: 800;
-  color: var(--mercado-cacao);
+  color: var(--visit-cacao);
 }
 
 .planCardPrice {
   font-size: 0.8rem;
   font-weight: 700;
-  color: var(--mercado-chile);
+  color: var(--visit-chile);
 }
 
 .inscriptionSubmit {
@@ -753,12 +753,12 @@
   font-size: 0.9rem;
   font-weight: 700;
   color: #fffaf3;
-  background: var(--mercado-cacao);
+  background: var(--visit-cacao);
   cursor: pointer;
 }
 
 .inscriptionSubmit:hover:not(:disabled) {
-  background: var(--mercado-chile);
+  background: var(--visit-chile);
 }
 
 .inscriptionSubmit:disabled {
@@ -773,7 +773,7 @@
 }
 
 .v2Section {
-  scroll-margin-top: calc(var(--mercado-chrome-h) + 0.85rem);
+  scroll-margin-top: calc(var(--visit-chrome-h) + 0.85rem);
 }
 
 .heroCtas {
@@ -808,8 +808,8 @@
 }
 
 .benefitCard {
-  border: 1px solid var(--mercado-line);
-  background: var(--mercado-cream);
+  border: 1px solid var(--visit-line);
+  background: var(--visit-cream);
   border-radius: 1rem;
   padding: 1.15rem 1.2rem;
 }
@@ -823,7 +823,7 @@
   justify-content: center;
   border-radius: 999px;
   background: #efe6d8;
-  color: var(--mercado-cacao);
+  color: var(--visit-cacao);
   font-size: 0.75rem;
   font-weight: 800;
   letter-spacing: 0.04em;
@@ -833,14 +833,14 @@
   margin: 0.7rem 0 0;
   font-size: 1rem;
   font-weight: 800;
-  color: var(--mercado-cacao);
+  color: var(--visit-cacao);
 }
 
 .benefitCard p {
   margin: 0.35rem 0 0;
   font-size: 0.875rem;
   line-height: 1.45;
-  color: var(--mercado-muted);
+  color: var(--visit-muted);
 }
 
 .areaGrid {
@@ -850,8 +850,8 @@
 
 .areaCard {
   overflow: hidden;
-  border: 1px solid var(--mercado-line);
-  background: var(--mercado-cream);
+  border: 1px solid var(--visit-line);
+  background: var(--visit-cream);
   border-radius: 1.15rem;
 }
 
@@ -872,21 +872,21 @@
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--mercado-chile);
+  color: var(--visit-chile);
 }
 
 .areaCard h3 {
   margin: 0.35rem 0 0;
   font-size: 1.25rem;
   font-weight: 800;
-  color: var(--mercado-cacao);
+  color: var(--visit-cacao);
 }
 
 .areaCard p {
   margin: 0.55rem 0 0;
   font-size: 0.95rem;
   line-height: 1.5;
-  color: var(--mercado-muted);
+  color: var(--visit-muted);
 }
 
 .areaCta {
@@ -894,24 +894,24 @@
   margin-top: 0.95rem;
   font-size: 0.875rem;
   font-weight: 700;
-  color: var(--mercado-cacao);
+  color: var(--visit-cacao);
   text-decoration: underline;
   text-underline-offset: 3px;
 }
 
 .areaCta:hover {
-  color: var(--mercado-chile);
+  color: var(--visit-chile);
 }
 
 .locatariosLink {
   font-size: 0.8rem;
   font-weight: 600;
-  color: var(--mercado-muted);
+  color: var(--visit-muted);
   text-decoration: none;
 }
 
 .locatariosLink:hover {
-  color: var(--mercado-cacao);
+  color: var(--visit-cacao);
   text-decoration: underline;
   text-underline-offset: 2px;
 }
@@ -951,12 +951,12 @@
   margin: 0;
   font-size: 1.25rem;
   font-weight: 700;
-  color: var(--mercado-cacao);
+  color: var(--visit-cacao);
 }
 
 .inscriptionSuccess p {
   margin: 0.75rem 0 0;
-  color: var(--mercado-muted);
+  color: var(--visit-muted);
   line-height: 1.5;
 }
 

@@ -1,7 +1,7 @@
 /**
- * Plantilla de visita física para rubros Retail de WEBYCITAS.
- * Esqueleto copiado de /mercadosanpablosiguav2: hero con búsqueda, áreas, horario,
- * beneficios y cómo llegar. Sin WhatsApp, sin formulario, sin lista de precios.
+ * Plantilla de visita física para rubros retail de las landings de ejemplo.
+ * Hero con búsqueda, áreas, horario, beneficios y cómo llegar.
+ * Sin WhatsApp, sin formulario, sin lista de precios.
  */
 
 import { LANDING_SCHEMA_VERSION, type LandingBlock, type LandingPageContent, type LandingPageContentInput } from './page-schema'
@@ -22,11 +22,11 @@ export const RETAIL_VISIT_THEME = {
 }
 
 const RETAIL_STOCK = {
-  pasillo: '/mercado/pasillo-san-pablo.png',
-  verduras: '/mercado/verduras-dona-marta-mesa.png',
-  carnes: '/mercado/carniceria-la-esquina-cortes.png',
-  abarrotes: '/mercado/abarrotes-el-ahorro-anaquel.png',
-  comedor: '/mercado/comedor-el-patio-plato.png',
+  pasillo: LANDING_STOCK.supermercadoHero,
+  verduras: LANDING_STOCK.supermercadoVerduras,
+  carnes: LANDING_STOCK.supermercadoCarniceria,
+  abarrotes: LANDING_STOCK.supermercadoHero,
+  comedor: LANDING_STOCK.supermercadoCarniceria,
 } as const
 
 type AreaSeed = {

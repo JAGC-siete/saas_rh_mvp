@@ -60,8 +60,6 @@ export const LANDING_PAGE_COLUMN_NAMES = [
   'updated_by',
   'created_at',
   'updated_at',
-  'is_lead_preview',
-  'webycitas_lead_id',
   'inventory_enabled',
 ] as const
 
@@ -100,8 +98,6 @@ export const LANDING_PAGE_PRIVATE_COLUMN_NAMES = [
   'updated_by',
   'created_at',
   'updated_at',
-  'is_lead_preview',
-  'webycitas_lead_id',
   'inventory_enabled',
 ] as const
 

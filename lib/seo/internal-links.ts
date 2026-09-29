@@ -39,11 +39,6 @@ export const GUIDE_LINKS: Record<string, GuideLink> = {
     label: 'Membresía anual (sin reloj)',
     description: 'L. 6,500/año: recibos, asistencia sin reloj y empleados ilimitados'
   },
-  demoLocal: {
-    href: '/webycitas',
-    label: 'Página, Google Maps y reservas para tu negocio local',
-    description: 'Servicio: página, citas y WhatsApp; al contratar, Maps y dominio propio'
-  },
   domingosSinPlanilla: {
     href: '/domingos-sin-planilla',
     label: 'Domingos sin planilla',
@@ -59,8 +54,7 @@ export const FOOTER_GUIDE_KEYS: Array<keyof typeof GUIDE_LINKS> = [
   'implementacion48h',
   'alternativaOdoo',
   'domingosSinPlanilla',
-  'planBasico',
-  'demoLocal'
+  'planBasico'
 ]
 
 /** Cross-links "También te puede interesar" por landing (clave = ruta actual). */

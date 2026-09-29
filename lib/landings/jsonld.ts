@@ -1,6 +1,6 @@
 /**
  * JSON-LD LocalBusiness para /p/[slug].
- * Se omite en páginas noindex (maquetas webycitas): no inflar el grafo con leads.
+ * Se omite en páginas noindex: no inflar el grafo con borradores.
  */
 
 import type { LandingTemplateKey, PublicLandingPage } from '../../types/landing'

@@ -98,11 +98,6 @@ export const MIDDLEWARE_CONFIG = {
       '/domingos-sin-planilla',
       '/suscripcion',
       '/recursos',
-      '/demo-local',
-      '/webycitas',
-      '/mercado',
-      '/mercadosanpablosigua',
-      '/mercadosanpablosiguav2',
       '/sitemap.xml'
     ],
     
@@ -184,18 +179,10 @@ export function getAllPublicRoutes(): string[] {
     '/api/cron/*',
     '/api/public/calculate-deductions',
     '/api/public/send-deduction-report',
-    '/api/public/send-demo-local-lead',
     // Landings publicadas por empresas cliente. Inventario de rutas públicas:
     // la auth sigue resolviéndose en cada endpoint/SSP, no aquí.
     '/api/landings/lead',
-    '/api/mercado/inscriptions',
     '/p/*',
-    '/mercado',
-    '/mercado/*',
-    '/mercadosanpablosigua',
-    '/mercadosanpablosigua/*',
-    '/mercadosanpablosiguav2',
-    '/mercadosanpablosiguav2/*',
     // SEO pages
     '/plan-basico',
     '/membresia-anual',

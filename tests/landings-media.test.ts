@@ -25,7 +25,7 @@ describe('fotos de landing', () => {
     )
     assert.equal(
       landingMediaPathFromPublicUrl(
-        `https://example.supabase.co/storage/v1/object/public/mercado-san-pablo/${LANDING}/${FILE}.jpg`,
+        `https://example.supabase.co/storage/v1/object/public/other-bucket/${LANDING}/${FILE}.jpg`,
         LANDING
       ),
       null

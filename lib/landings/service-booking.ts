@@ -1,5 +1,5 @@
 /**
- * Plantillas de reserva para rubros Service de WEBYCITAS (salud y belleza).
+ * Plantillas de reserva para rubros de salud y belleza en landings de ejemplo.
  * Árbol: hero de un propósito → menú con precios → motor de reserva (3 pasos) →
  * equipo → prueba social → FAQ. El cromado (nav + barra móvil) vive en el renderer.
  */
