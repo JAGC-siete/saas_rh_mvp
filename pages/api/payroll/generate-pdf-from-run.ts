@@ -18,6 +18,12 @@ import {
   PayrollNeedsRegenerateError,
 } from '../../../lib/payroll/resolve-effective-pay-type'
 
+function parseIncludeBankSectionQuery(value: unknown): boolean {
+  const raw = Array.isArray(value) ? value[0] : value
+  if (raw === '0' || raw === 'false') return false
+  return true
+}
+
 function toErrorMessage(error: unknown, fallback: string): string {
   if (error instanceof Error && error.message.trim()) return error.message
   if (typeof error === 'string' && error.trim()) return error
@@ -29,7 +35,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
-  const { run_id, group_by } = req.query
+  const { run_id, group_by, include_bank } = req.query
 
   if (!run_id || typeof run_id !== 'string') {
     return res.status(400).json({ error: 'run_id es requerido', message: 'run_id es requerido' })
@@ -96,6 +102,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         columnLabels,
         columnOrder,
         includeCustomPayrollFields,
+        includeBankSection: parseIncludeBankSectionQuery(include_bank),
       }
     )
 

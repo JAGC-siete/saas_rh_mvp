@@ -195,6 +195,44 @@ describe('payroll PDF overtime columns', () => {
     assert.equal(media![1], 612, 'page height must be 8.5 in (612 pt)')
   })
 
+  it('omits the bank page when includeBankSection is false', async () => {
+    const rows = [baseFixed()]
+    const period = { period_start: '2026-07-01', period_end: '2026-07-15' } as const
+    const payrollConfig = {
+      currency: 'HNL',
+      payment_frequency: 'quincenal',
+      legal_deductions: { ihss: true, rap: true, isr: false },
+      country_code: 'HND',
+    }
+    const withBank = await generateConsolidatedPayrollPDF(
+      rows,
+      [],
+      '2026-07',
+      1,
+      undefined,
+      'Enlace',
+      undefined,
+      payrollConfig,
+      period
+    )
+    const withoutBank = await generateConsolidatedPayrollPDF(
+      rows,
+      [],
+      '2026-07',
+      1,
+      undefined,
+      'Enlace',
+      undefined,
+      payrollConfig,
+      period,
+      undefined,
+      { groupBy: 'none', includeBankSection: false }
+    )
+
+    assert.equal(pageCount(withBank), pageCount(withoutBank) + 1)
+    assert.ok(pageCount(withoutBank) >= 2)
+  })
+
   it('renders custom_isr from row.ISR when legal isr column is off', async () => {
     const cols = buildPayrollPdfColumnMeta({
       isHourly: false,

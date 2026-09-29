@@ -948,7 +948,7 @@ export const usePayrollManager = () => {
   }, [])
 
   const downloadPlanillaFromPreview = useCallback(
-    async (groupBy: PayrollPdfGroupBy = 'none') => {
+    async (groupBy: PayrollPdfGroupBy = 'none', includeBankSection = true) => {
       const runId = planillaPreview.data?.runId || state.runId
       if (!runId) {
         toast.error('Error', 'No hay una corrida de nómina activa', 4000)
@@ -958,6 +958,7 @@ export const usePayrollManager = () => {
       try {
         await payrollApi.downloadPlanillaPdf(runId, {
           groupBy,
+          includeBankSection,
           defaultFilename: planillaPreview.data?.defaultFilename,
         })
         toast.success('PDF Generado', 'El PDF se ha descargado correctamente', 4000)

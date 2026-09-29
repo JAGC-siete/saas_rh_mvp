@@ -160,12 +160,15 @@ export const payrollApi = {
 
   downloadPlanillaPdf: async (
     runId: string,
-    options?: { groupBy?: PayrollPdfGroupBy; defaultFilename?: string }
+    options?: { groupBy?: PayrollPdfGroupBy; includeBankSection?: boolean; defaultFilename?: string }
   ): Promise<void> => {
     const params = new URLSearchParams({ run_id: runId, _ts: String(Date.now()) })
     const gb = options?.groupBy
     if (gb && gb !== 'none') {
       params.set('group_by', gb)
+    }
+    if (options?.includeBankSection === false) {
+      params.set('include_bank', '0')
     }
 
     const response = await fetch(`/api/payroll/generate-pdf-from-run?${params.toString()}`, {

@@ -12,7 +12,7 @@ type PlanillaPreviewModalProps = {
   data: PlanillaPreviewData | null
   downloading?: boolean
   onClose: () => void
-  onDownload: (groupBy: PayrollPdfGroupBy) => void | Promise<void>
+  onDownload: (groupBy: PayrollPdfGroupBy, includeBankSection: boolean) => void | Promise<void>
 }
 
 function SummaryCard({
@@ -121,12 +121,17 @@ export default function PlanillaPreviewModal({
 }: PlanillaPreviewModalProps) {
   const { format } = useCompanyMoney()
   const [pdfGroupBy, setPdfGroupBy] = useState<PayrollPdfGroupBy>('none')
+  const [includeBankSection, setIncludeBankSection] = useState(true)
 
   useEffect(() => {
     if (data?.defaultPdfGroupBy) {
       setPdfGroupBy(data.defaultPdfGroupBy as PayrollPdfGroupBy)
     }
   }, [data?.defaultPdfGroupBy, data?.runId])
+
+  useEffect(() => {
+    if (open) setIncludeBankSection(true)
+  }, [open])
 
   useEffect(() => {
     if (!open) return
@@ -247,22 +252,41 @@ export default function PlanillaPreviewModal({
         </div>
 
         <div className="shrink-0 flex flex-wrap items-center justify-between gap-3 border-t border-white/10 bg-slate-900/80 px-6 py-4">
-          <div className="flex items-center gap-2 min-w-[200px]">
-            <label htmlFor="planilla-pdf-group-by" className="text-xs text-gray-300 whitespace-nowrap">
-              Agrupar PDF:
-            </label>
-            <select
-              id="planilla-pdf-group-by"
-              value={pdfGroupBy}
-              onChange={(e) => setPdfGroupBy(e.target.value as PayrollPdfGroupBy)}
-              disabled={loading || !!error || !data || downloading}
-              className="rounded-md border border-white/20 bg-white/10 px-2 py-1.5 text-xs text-white"
+          <div className="flex flex-col gap-2 min-w-[200px]">
+            <div className="flex items-center gap-2">
+              <label htmlFor="planilla-pdf-group-by" className="text-xs text-gray-300 whitespace-nowrap">
+                Agrupar PDF:
+              </label>
+              <select
+                id="planilla-pdf-group-by"
+                value={pdfGroupBy}
+                onChange={(e) => setPdfGroupBy(e.target.value as PayrollPdfGroupBy)}
+                disabled={loading || !!error || !data || downloading}
+                className="rounded-md border border-white/20 bg-white/10 px-2 py-1.5 text-xs text-white"
+              >
+                <option value="none">Una sola tabla</option>
+                <option value="department">Departamento</option>
+                <option value="team">Equipo</option>
+                <option value="position">Posición</option>
+              </select>
+            </div>
+            <label
+              htmlFor="planilla-pdf-include-bank"
+              className="flex items-center gap-2 text-xs text-gray-300"
             >
-              <option value="none">Una sola tabla</option>
-              <option value="department">Departamento</option>
-              <option value="team">Equipo</option>
-              <option value="position">Posición</option>
-            </select>
+              <input
+                id="planilla-pdf-include-bank"
+                type="checkbox"
+                checked={includeBankSection}
+                onChange={(e) => setIncludeBankSection(e.target.checked)}
+                disabled={loading || !!error || !data || downloading}
+                className="h-3.5 w-3.5 rounded border-white/30 bg-white/10 text-brand-500"
+              />
+              Incluir datos bancarios
+            </label>
+            {!includeBankSection && (
+              <p className="text-xs text-amber-200/80">El PDF no incluirá banco ni cuenta.</p>
+            )}
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Button type="button" variant="outline" onClick={onClose} className="border-white/20 text-white">
@@ -270,7 +294,7 @@ export default function PlanillaPreviewModal({
             </Button>
             <Button
               type="button"
-              onClick={() => void onDownload(pdfGroupBy)}
+              onClick={() => void onDownload(pdfGroupBy, includeBankSection)}
               disabled={loading || !!error || !data || downloading}
               className="bg-brand-600 hover:bg-brand-700"
             >

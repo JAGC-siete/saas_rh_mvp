@@ -139,6 +139,11 @@ export async function generateConsolidatedPayrollPDF(
      * When false/undefined, custom fields from payroll config still print (legacy).
      */
     includeCustomPayrollFields?: boolean
+    /**
+     * When false, the PDF omits the bank-transfer page and its notes.
+     * Omitted or true keeps the page (legacy callers).
+     */
+    includeBankSection?: boolean
   }
 ): Promise<Buffer> {
   const headerPrimary = defaultPdfPrimaryColor(
@@ -824,66 +829,69 @@ export async function generateConsolidatedPayrollPDF(
         drawPayrollTable(planillaHourly, 'NÓMINA — EMPLEADOS POR HORA', true)
       }
 
-      // ===== PAGE 3: BANK DETAILS & NOTES =====
-      addPlanillaPage()
-      drawLiquidSectionTitle(doc, 'Información bancaria y notas', 30, 24)
+      // ===== BANK DETAILS & NOTES (optional last page) =====
+      const includeBankSection = layout?.includeBankSection !== false
+      if (includeBankSection) {
+        addPlanillaPage()
+        drawLiquidSectionTitle(doc, 'Información bancaria y notas', 30, 24)
 
-      drawLiquidSectionTitle(doc, 'Detalle bancario para transferencias', 30, 52)
-      const bankHeaders = ['Código', 'Nombre', 'Banco', 'Cuenta', 'Monto Neto']
-      const bankColWidths = [70, 210, 120, 180, 120]
-      const bankStartX = 40
-      let bankY = 68
-      const bankRowHeight = 17
+        drawLiquidSectionTitle(doc, 'Detalle bancario para transferencias', 30, 52)
+        const bankHeaders = ['Código', 'Nombre', 'Banco', 'Cuenta', 'Monto Neto']
+        const bankColWidths = [70, 210, 120, 180, 120]
+        const bankStartX = 40
+        let bankY = 68
+        const bankRowHeight = 17
 
-      drawLiquidTableHeader(doc, bankStartX, bankY, bankColWidths, bankHeaders, bankRowHeight)
-      bankY += bankRowHeight
-
-      let bankRowIndex = 0
-      planillaAll.forEach((row) => {
-        if (bankY > doc.page.height - 60 - PDF_FOOTER_RESERVE) {
-          addPlanillaPage()
-          bankY = 40
-          bankRowIndex = 0
-        }
-        const bankValues = [
-          row.id || '',
-          row.name,
-          row.bank || 'No especificado',
-          row.bank_account || 'No especificado',
-          formatCurrency(row.total)
-        ]
-        const bankTableW = bankColWidths.reduce((a, b) => a + b, 0)
-        drawLiquidTableRowBackground(doc, bankStartX, bankY, bankTableW, bankRowHeight, bankRowIndex)
-        strokeLiquidTableCells(doc, bankStartX, bankY, bankColWidths, bankRowHeight)
-        bankValues.forEach((val, i) => {
-          const x = bankStartX + bankColWidths.slice(0, i).reduce((a, b) => a + b, 0)
-          doc.font('Helvetica').fontSize(8).fillColor(PDF.bodyText).text(pdfText(val), x + 2, bankY + 4, {
-            width: bankColWidths[i] - 4,
-            align: 'center',
-            lineBreak: false,
-            ellipsis: true
-          })
-        })
+        drawLiquidTableHeader(doc, bankStartX, bankY, bankColWidths, bankHeaders, bankRowHeight)
         bankY += bankRowHeight
-        bankRowIndex += 1
-      })
 
-      drawLiquidSectionTitle(doc, 'Notas importantes', 40, bankY + 22)
-      doc.font('Helvetica').fontSize(8).fillColor(PDF.bodyMuted).text('• Esta planilla ha sido generada automáticamente por Humano SISU.', 40, bankY + 38)
-      doc.fontSize(8).text('• Los montos están calculados según la legislación laboral de Honduras.', 40, bankY + 53)
-      const dedLegend =
-        dedLabels.secondarySocial === '—'
-          ? `${dedLabels.primarySocial}, ${dedLabels.incomeTax}`
-          : `${dedLabels.primarySocial}, ${dedLabels.secondarySocial}, ${dedLabels.incomeTax}`
-      doc
-        .fontSize(8)
-        .text(
-          `• Las deducciones incluyen las aplicables según configuración (${dedLegend} u otras).`,
-          40,
-          bankY + 68
-        )
-      doc.fontSize(8).text('• Verificar que la información bancaria sea correcta antes de procesar pagos.', 40, bankY + 83)
-      doc.fontSize(8).text('• Para consultas, contactar al departamento de recursos humanos.', 40, bankY + 98)
+        let bankRowIndex = 0
+        planillaAll.forEach((row) => {
+          if (bankY > doc.page.height - 60 - PDF_FOOTER_RESERVE) {
+            addPlanillaPage()
+            bankY = 40
+            bankRowIndex = 0
+          }
+          const bankValues = [
+            row.id || '',
+            row.name,
+            row.bank || 'No especificado',
+            row.bank_account || 'No especificado',
+            formatCurrency(row.total)
+          ]
+          const bankTableW = bankColWidths.reduce((a, b) => a + b, 0)
+          drawLiquidTableRowBackground(doc, bankStartX, bankY, bankTableW, bankRowHeight, bankRowIndex)
+          strokeLiquidTableCells(doc, bankStartX, bankY, bankColWidths, bankRowHeight)
+          bankValues.forEach((val, i) => {
+            const x = bankStartX + bankColWidths.slice(0, i).reduce((a, b) => a + b, 0)
+            doc.font('Helvetica').fontSize(8).fillColor(PDF.bodyText).text(pdfText(val), x + 2, bankY + 4, {
+              width: bankColWidths[i] - 4,
+              align: 'center',
+              lineBreak: false,
+              ellipsis: true
+            })
+          })
+          bankY += bankRowHeight
+          bankRowIndex += 1
+        })
+
+        drawLiquidSectionTitle(doc, 'Notas importantes', 40, bankY + 22)
+        doc.font('Helvetica').fontSize(8).fillColor(PDF.bodyMuted).text('• Esta planilla ha sido generada automáticamente por Humano SISU.', 40, bankY + 38)
+        doc.fontSize(8).text('• Los montos están calculados según la legislación laboral de Honduras.', 40, bankY + 53)
+        const dedLegend =
+          dedLabels.secondarySocial === '—'
+            ? `${dedLabels.primarySocial}, ${dedLabels.incomeTax}`
+            : `${dedLabels.primarySocial}, ${dedLabels.secondarySocial}, ${dedLabels.incomeTax}`
+        doc
+          .fontSize(8)
+          .text(
+            `• Las deducciones incluyen las aplicables según configuración (${dedLegend} u otras).`,
+            40,
+            bankY + 68
+          )
+        doc.fontSize(8).text('• Verificar que la información bancaria sea correcta antes de procesar pagos.', 40, bankY + 83)
+        doc.fontSize(8).text('• Para consultas, contactar al departamento de recursos humanos.', 40, bankY + 98)
+      }
 
       doc.end()
     } catch (error) {
