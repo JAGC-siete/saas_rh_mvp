@@ -12,6 +12,12 @@ import { computeFixedGrossFromDays, normalizePayrollDaysWorked } from '../lib/pa
 import {
   isFrozenPayrollRunStatus,
   isMutablePayrollRunStatus,
+  PAYROLL_AUTHORIZE_CONFIRM_LABEL,
+  PAYROLL_AUTHORIZE_CONFIRM_MESSAGE,
+  PAYROLL_AUTHORIZE_CONFIRM_TITLE,
+  PAYROLL_FROZEN_RUN_MESSAGE,
+  PAYROLL_FROZEN_RUN_TITLE,
+  PAYROLL_FROZEN_SALARY_STALE_MESSAGE,
 } from '../lib/payroll/resolve-effective-pay-type'
 import {
   lineBaseSalaryDriftedFromEmployee,
@@ -145,6 +151,24 @@ describe('draft regenerates; authorized does not', () => {
     assert.equal(isMutablePayrollRunStatus('edited'), true)
     assert.equal(isMutablePayrollRunStatus('pending'), true)
     assert.equal(isMutablePayrollRunStatus('authorized'), false)
+  })
+
+  it('frozen banner copy says authorized and ready to download, not open a new run', () => {
+    assert.equal(PAYROLL_FROZEN_RUN_TITLE, 'Planilla autorizada')
+    assert.match(PAYROLL_FROZEN_RUN_MESSAGE, /autorizada/i)
+    assert.match(PAYROLL_FROZEN_RUN_MESSAGE, /descargar/i)
+    assert.doesNotMatch(PAYROLL_FROZEN_RUN_MESSAGE, /corrida nueva/i)
+    assert.match(PAYROLL_FROZEN_SALARY_STALE_MESSAGE, /autorizada/i)
+    assert.match(PAYROLL_FROZEN_SALARY_STALE_MESSAGE, /descargar/i)
+    assert.doesNotMatch(PAYROLL_FROZEN_SALARY_STALE_MESSAGE, /corrida nueva/i)
+  })
+
+  it('authorize confirm copy is option A: freeze amounts, not irreversible', () => {
+    assert.equal(PAYROLL_AUTHORIZE_CONFIRM_TITLE, 'Confirmar autorización')
+    assert.equal(PAYROLL_AUTHORIZE_CONFIRM_LABEL, 'Autorizar nómina')
+    assert.match(PAYROLL_AUTHORIZE_CONFIRM_MESSAGE, /autorizar esta nómina/i)
+    assert.match(PAYROLL_AUTHORIZE_CONFIRM_MESSAGE, /montos quedan fijos/i)
+    assert.doesNotMatch(PAYROLL_AUTHORIZE_CONFIRM_MESSAGE, /reversible/i)
   })
 
   it('frozen display uses stamped salary when live drifted', () => {

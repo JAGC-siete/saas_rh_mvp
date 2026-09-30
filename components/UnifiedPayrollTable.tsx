@@ -9,15 +9,19 @@ import { useCompanyMoney } from '../lib/hooks/useCompanyMoney'
 import { UnifiedRow, UnifiedResumen } from '../lib/payroll-unified'
 import {
   isFrozenPayrollRunStatus,
+  PAYROLL_AUTHORIZE_CONFIRM_LABEL,
+  PAYROLL_AUTHORIZE_CONFIRM_MESSAGE,
+  PAYROLL_AUTHORIZE_CONFIRM_TITLE,
   PAYROLL_FROZEN_RUN_MESSAGE,
+  PAYROLL_FROZEN_RUN_TITLE,
 } from '../lib/payroll/resolve-effective-pay-type'
 import {
   resolveStatutoryDeductionColumns,
   type CustomFieldConfigEntry
 } from '../lib/payroll/statutory-deduction-columns'
-// // import { extractCustomFields, calculatePayroll } from '../lib/payroll-client-specific'
 import { createClient } from '../lib/supabase/client'
 import { Pagination } from './ui/pagination'
+import { ConfirmationDialog } from './ui/confirmation-dialog'
 import PayrollFixedTable from './PayrollFixedTable'
 import PayrollHourlyTable from './PayrollHourlyTable'
 
@@ -132,6 +136,7 @@ export default function UnifiedPayrollTable({
   const [sortBy, setSortBy] = useState<'name' | 'department'>('name')
   const [departmentFilter, setDepartmentFilter] = useState<string>('all')
   const [hasCustom, setHasCustom] = useState(false)
+  const [showAuthorizeConfirm, setShowAuthorizeConfirm] = useState(false)
   // eslint-disable-next-line no-unused-vars
   const [_payrollConfig, setPayrollConfig] = useState<any>(null)
   
@@ -388,6 +393,16 @@ export default function UnifiedPayrollTable({
 
   const buttonState = getAuthorizationButtonState()
 
+  const openAuthorizeConfirm = () => {
+    if (buttonState.disabled) return
+    setShowAuthorizeConfirm(true)
+  }
+
+  const confirmAuthorize = () => {
+    setShowAuthorizeConfirm(false)
+    onAuthorize()
+  }
+
   const monthName = new Date(period.year, period.month - 1).toLocaleDateString('es-HN', { month: 'long' })
   const periodLabel =
     paymentFrequency === 'monthly'
@@ -411,12 +426,12 @@ export default function UnifiedPayrollTable({
       </CardHeader>
       <CardContent>
         {isFrozenPayrollRunStatus(status) && (
-          <div className="mb-4 p-4 bg-sky-500/20 border border-sky-500/50 rounded-lg">
+          <div className="mb-4 p-4 bg-emerald-500/20 border border-emerald-500/50 rounded-lg">
             <div className="flex items-start gap-2">
-              <Icon name="alert" className="h-5 w-5 text-sky-300 flex-shrink-0 mt-0.5" />
+              <Icon name="check" className="h-5 w-5 text-emerald-300 flex-shrink-0 mt-0.5" />
               <div>
-                <h4 className="font-semibold text-sky-200">Corrida congelada</h4>
-                <p className="text-sm text-sky-100/90 mt-1">{PAYROLL_FROZEN_RUN_MESSAGE}</p>
+                <h4 className="font-semibold text-emerald-200">{PAYROLL_FROZEN_RUN_TITLE}</h4>
+                <p className="text-sm text-emerald-100/90 mt-1">{PAYROLL_FROZEN_RUN_MESSAGE}</p>
               </div>
             </div>
           </div>
@@ -617,7 +632,7 @@ export default function UnifiedPayrollTable({
 
           {/* Authorize Button - Enabled when status is 'edited' or 'draft' */}
           <Button
-            onClick={onAuthorize}
+            onClick={openAuthorizeConfirm}
             disabled={buttonState.disabled}
             className={`flex items-center gap-2 ${buttonState.className} relative overflow-hidden`}
           >
@@ -662,6 +677,18 @@ export default function UnifiedPayrollTable({
             {isBulkEmailBlocked && canSend ? 'Enviar por Email (plan de pago)' : 'Enviar por Email'}
           </Button>
         </div>
+
+        <ConfirmationDialog
+          isOpen={showAuthorizeConfirm}
+          onClose={() => setShowAuthorizeConfirm(false)}
+          onConfirm={confirmAuthorize}
+          title={PAYROLL_AUTHORIZE_CONFIRM_TITLE}
+          description={PAYROLL_AUTHORIZE_CONFIRM_MESSAGE}
+          confirmLabel={PAYROLL_AUTHORIZE_CONFIRM_LABEL}
+          type="warning"
+          requireTypedConfirm={false}
+          loading={loading && status === 'authorizing'}
+        />
       </CardContent>
     </Card>
   )

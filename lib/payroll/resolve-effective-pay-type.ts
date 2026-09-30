@@ -23,11 +23,20 @@ export const PAYROLL_NEEDS_REGENERATE_CODE = 'PAYROLL_NEEDS_REGENERATE'
 export const PAYROLL_NEEDS_REGENERATE_MESSAGE =
   'Hay cambios en empleados (tipo de pago o salario) que aún no están reflejados en esta nómina. Regenerá la vista previa para ver los últimos cambios.'
 
+export const PAYROLL_FROZEN_RUN_TITLE = 'Planilla autorizada'
+
 export const PAYROLL_FROZEN_RUN_MESSAGE =
-  'Esta nómina ya está autorizada y no cambia con actualizaciones de salario. Abrí una corrida nueva para el período vigente.'
+  'Esta planilla quedó autorizada y lista para descargar. Los montos ya no cambian.'
 
 export const PAYROLL_FROZEN_SALARY_STALE_MESSAGE =
-  'El salario vigente en Empleados no se aplica a esta corrida autorizada. Abrí una corrida nueva para calcular con el salario nuevo.'
+  'Esta planilla quedó autorizada y lista para descargar. El salario vigente en Empleados no se aplica a estos montos.'
+
+export const PAYROLL_AUTHORIZE_CONFIRM_TITLE = 'Confirmar autorización'
+
+export const PAYROLL_AUTHORIZE_CONFIRM_MESSAGE =
+  '¿Desea autorizar esta nómina? Los montos quedan fijos y listos para descargar.'
+
+export const PAYROLL_AUTHORIZE_CONFIRM_LABEL = 'Autorizar nómina'
 
 export function isFrozenPayrollRunStatus(status: string | null | undefined): boolean {
   return status === 'authorized' || status === 'distributed' || status === 'paid'
