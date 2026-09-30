@@ -90,8 +90,9 @@ export function couponDiscountAmountFromQuote(quote: QuotationQuote): number {
 export function isMonthlyAllowedForProduct(
   product: VentasProductSelection,
   employeesCount: number,
-  rules?: Partial<VentasBusinessRules> | null
+  rules?: Partial<VentasBusinessRules> | null,
+  range?: { min_employees: number; max_employees: number } | null
 ): boolean {
   if (product.forceAnnual) return false
-  return isMonthlyModalityAvailable(employeesCount, rules)
+  return isMonthlyModalityAvailable(employeesCount, rules, range)
 }

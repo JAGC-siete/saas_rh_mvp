@@ -33,6 +33,20 @@ describe('ventas business rules', () => {
     assert.equal(VENTAS_MONTHLY_MIN_EMPLOYEES, 21)
   })
 
+  it('monthly gate uses published range max (form stores range min)', () => {
+    const rules = { monthly_min_employees: 50 }
+    const band1150 = { min_employees: 11, max_employees: 50 }
+    const band210 = { min_employees: 2, max_employees: 10 }
+    assert.equal(isMonthlyModalityAvailable(11, rules), false)
+    assert.equal(isMonthlyModalityAvailable(11, rules, band1150), true)
+    assert.equal(isMonthlyModalityAvailable(11, { monthly_min_employees: 51 }, band1150), false)
+    assert.equal(isMonthlyModalityAvailable(2, rules, band210), false)
+    assert.equal(
+      isMonthlyModalityAvailable(51, rules, { min_employees: 51, max_employees: 100 }),
+      true
+    )
+  })
+
   it('annual terminals included: 50 no, 51 sí', () => {
     assert.equal(annualIncludesBiometricTerminals(50), false)
     assert.equal(annualIncludesBiometricTerminals(51), true)

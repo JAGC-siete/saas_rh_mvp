@@ -520,6 +520,9 @@ export default function VentasConfigPage() {
                             updateRules({ monthly_min_employees: Number(e.target.value) })
                           }
                         />
+                        <p className="text-xs text-white/50 mt-1">
+                          Se habilita en /ventas si el máximo del rango elegido es ≥ este valor.
+                        </p>
                       </div>
                       <div>
                         <label className="block text-xs text-white/70 mb-1">

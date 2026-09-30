@@ -60,6 +60,19 @@ function maxTerminals(limits?: VentasFormLimits | null): number {
   return mergeVentasBusinessRules(limitsToRules(limits)).max_auto_quote_terminals
 }
 
+/** Usa el máximo del rango publicado; el formulario guarda el mínimo del tramo. */
+export function isMonthlyAvailableOnForm(
+  employeesCount: number,
+  limits?: VentasFormLimits | null,
+  tiers?: VentasPublicTier[] | null
+): boolean {
+  return isMonthlyModalityAvailable(
+    employeesCount,
+    limitsToRules(limits),
+    findPublicTierForEmployees(employeesCount, tiers)
+  )
+}
+
 export function formatEmployeeRangeLabel(min: number, max: number): string {
   if (min === max) return `${min} empleado${min === 1 ? '' : 's'}`
   return `${min} a ${max} empleados`
@@ -147,7 +160,11 @@ export function computeVentasErrors(
   const modality = fd.billing_modality === 'monthly' ? 'monthly' : 'annual'
   if (modality === 'monthly' && product.forceAnnual) {
     e.billing_modality = ventasBasicAnnualOnlyMessage(rules)
-  } else if (modality === 'monthly' && Number.isFinite(emp) && !isMonthlyModalityAvailable(emp, rules)) {
+  } else if (
+    modality === 'monthly' &&
+    Number.isFinite(emp) &&
+    !isMonthlyAvailableOnForm(emp, limits, tiers)
+  ) {
     e.billing_modality = ventasMonthlyUnavailableMessage(rules)
   }
 
@@ -193,7 +210,11 @@ export function ventasScopeErrors(
   const modality = fd.billing_modality === 'monthly' ? 'monthly' : 'annual'
   if (modality === 'monthly' && product.forceAnnual) {
     e.billing_modality = ventasBasicAnnualOnlyMessage(rules)
-  } else if (modality === 'monthly' && Number.isFinite(emp) && !isMonthlyModalityAvailable(emp, rules)) {
+  } else if (
+    modality === 'monthly' &&
+    Number.isFinite(emp) &&
+    !isMonthlyAvailableOnForm(emp, limits, tiers)
+  ) {
     e.billing_modality = ventasMonthlyUnavailableMessage(rules)
   }
 

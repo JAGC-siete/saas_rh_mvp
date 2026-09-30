@@ -162,12 +162,25 @@ export function normalizeAnnualTerminalMode(raw: unknown): VentasAnnualTerminalM
   return 'auto'
 }
 
+export type VentasEmployeeRange = {
+  min_employees: number
+  max_employees: number
+}
+
+/**
+ * Modalidad mensual: el lead elige un rango publicado, no un N exacto.
+ * Si hay rango, se evalúa el máximo del tramo (quien cabe en 11–50 con umbral 50 califica).
+ * Sin rango, se usa el conteo puntual (API / tests).
+ */
 export function isMonthlyModalityAvailable(
   employeesCount: number,
-  rules?: Partial<VentasBusinessRules> | null
+  rules?: Partial<VentasBusinessRules> | null,
+  range?: VentasEmployeeRange | null
 ): boolean {
   const r = mergeVentasBusinessRules(rules)
-  return Number.isFinite(employeesCount) && employeesCount >= r.monthly_min_employees
+  const size =
+    range && Number.isFinite(range.max_employees) ? range.max_employees : employeesCount
+  return Number.isFinite(size) && size >= r.monthly_min_employees
 }
 
 export function isMicroEmployeeSegment(

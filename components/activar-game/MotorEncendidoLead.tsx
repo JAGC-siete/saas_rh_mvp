@@ -102,7 +102,7 @@ export default function MotorEncendidoLead({ utmContext = {}, initialCountryCode
     let cancelled = false
     ;(async () => {
       try {
-        const res = await fetch('/api/ventas/public-config')
+        const res = await fetch('/api/ventas/public-config', { cache: 'no-store' })
         const data = await res.json()
         if (!res.ok || cancelled || !Array.isArray(data.tiers) || data.tiers.length === 0) return
         const mapped = clampActivarEmployeeRanges(

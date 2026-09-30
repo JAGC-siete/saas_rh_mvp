@@ -17,7 +17,7 @@ import {
 import { getVentasModalityDefinition, annualTerminalsSaleFieldHint } from '../../lib/ventas/modality-includes'
 import {
   annualIncludesExtrasMessage,
-  isMonthlyModalityAvailable,
+  mergeVentasBusinessRules,
   resolveHardwareMode,
   resolveIncludedTerminalsCap,
   VENTAS_ANNUAL_TERMINALS_INCLUDED_MIN_EMPLOYEES,
@@ -30,6 +30,7 @@ import {
   VENTAS_MICRO_MAX_EMPLOYEES,
   VENTAS_MONTHLY_MIN_EMPLOYEES,
   type VentasAnnualTerminalMode,
+  type VentasBusinessRules,
 } from '../../lib/ventas/business-rules'
 import {
   resolveVentasProductSelection,
@@ -48,6 +49,7 @@ import {
   findPublicTierForEmployees,
   formatEmployeeRangeLabel,
   formatTerminalSelectLabel,
+  isMonthlyAvailableOnForm,
   sortPublicTiers,
   ventasCompanyErrors,
   ventasDeliveryErrors,
@@ -153,54 +155,86 @@ export default function CotizacionGuiadaLead({
 
   useEffect(() => {
     let cancelled = false
-    ;(async () => {
+
+    const applyPublicConfig = (data: Record<string, unknown>) => {
+      const rules = mergeVentasBusinessRules(
+        (data.business_rules as Partial<VentasBusinessRules> | undefined) ||
+          (data as Partial<VentasBusinessRules>)
+      )
+      setFormLimits({
+        monthly_min_employees: rules.monthly_min_employees,
+        max_auto_quote_terminals: rules.max_auto_quote_terminals,
+        annual_terminals_included_min_employees: rules.annual_terminals_included_min_employees,
+        hardware_sale_unit_price: rules.hardware_sale_unit_price,
+        micro_max_employees: rules.micro_max_employees,
+        basic_annual_price: rules.basic_annual_price,
+        membership_discount_pct: rules.membership_discount_pct,
+        enterprise_annual_price: rules.enterprise_annual_price,
+      })
+      if (!Array.isArray(data.tiers)) return
+      const mapped = sortPublicTiers(
+        data.tiers.map((t: any) => ({
+          min_employees: Number(t.min_employees),
+          max_employees: Number(t.max_employees),
+          annual_terminal_mode: (['auto', 'included', 'sale'].includes(t.annual_terminal_mode)
+            ? t.annual_terminal_mode
+            : 'auto') as VentasAnnualTerminalMode,
+          included_terminals_max:
+            t.included_terminals_max == null ? null : Number(t.included_terminals_max),
+        }))
+      )
+      setPublicTiers(mapped)
+      if (mapped.length === 0) return
+      setFormData((prev) => {
+        const current = Number(prev.employees_count)
+        const nextEmp = findPublicTierForEmployees(current, mapped)
+          ? current
+          : mapped[0].min_employees
+        const nextProduct = resolveVentasProductSelection({
+          employeesCount: nextEmp,
+          includeTerminals: prev.include_terminals ?? prev.complement_biometric,
+          complementBiometric: prev.complement_biometric,
+          affiliateMembership: prev.affiliate_membership,
+          includeEnterprise: prev.include_enterprise,
+          rules,
+        })
+        let modality = prev.billing_modality
+        if (nextProduct.forceAnnual) modality = 'annual'
+        else if (
+          modality === 'monthly' &&
+          !isMonthlyAvailableOnForm(nextEmp, rules, mapped)
+        ) {
+          modality = 'annual'
+        }
+        return {
+          ...prev,
+          employees_count: nextEmp,
+          billing_modality: modality,
+          include_terminals: nextProduct.includeTerminals,
+          complement_biometric: nextProduct.includeTerminals,
+        }
+      })
+    }
+
+    const load = async () => {
       try {
-        const res = await fetch('/api/ventas/public-config')
+        const res = await fetch('/api/ventas/public-config', { cache: 'no-store' })
         const data = await res.json()
         if (!res.ok || cancelled) return
-        setFormLimits({
-          monthly_min_employees: Number(data.monthly_min_employees) || VENTAS_MONTHLY_MIN_EMPLOYEES,
-          max_auto_quote_terminals:
-            Number(data.max_auto_quote_terminals) || VENTAS_MAX_AUTO_QUOTE_TERMINALS,
-          annual_terminals_included_min_employees:
-            Number(data.annual_terminals_included_min_employees) ||
-            VENTAS_ANNUAL_TERMINALS_INCLUDED_MIN_EMPLOYEES,
-          hardware_sale_unit_price:
-            Number(data.hardware_sale_unit_price) || VENTAS_HARDWARE_SALE_UNIT_PRICE,
-          micro_max_employees: Number(data.micro_max_employees) || VENTAS_MICRO_MAX_EMPLOYEES,
-          basic_annual_price: Number(data.basic_annual_price) || VENTAS_BASIC_ANNUAL_PRICE,
-          membership_discount_pct:
-            Number(data.membership_discount_pct) || VENTAS_MEMBERSHIP_DISCOUNT_PCT,
-          enterprise_annual_price:
-            Number(data.enterprise_annual_price) || VENTAS_ENTERPRISE_ANNUAL_PRICE,
-        })
-        if (Array.isArray(data.tiers)) {
-          const mapped = sortPublicTiers(
-            data.tiers.map((t: any) => ({
-              min_employees: Number(t.min_employees),
-              max_employees: Number(t.max_employees),
-              annual_terminal_mode: (['auto', 'included', 'sale'].includes(t.annual_terminal_mode)
-                ? t.annual_terminal_mode
-                : 'auto') as VentasAnnualTerminalMode,
-              included_terminals_max:
-                t.included_terminals_max == null ? null : Number(t.included_terminals_max),
-            }))
-          )
-          setPublicTiers(mapped)
-          if (mapped.length > 0) {
-            setFormData((prev) => {
-              const current = Number(prev.employees_count)
-              if (findPublicTierForEmployees(current, mapped)) return prev
-              return { ...prev, employees_count: mapped[0].min_employees }
-            })
-          }
-        }
+        applyPublicConfig(data)
       } catch {
         /* keep defaults */
       }
-    })()
+    }
+
+    load()
+    const onVis = () => {
+      if (document.visibilityState === 'visible') load()
+    }
+    document.addEventListener('visibilitychange', onVis)
     return () => {
       cancelled = true
+      document.removeEventListener('visibilitychange', onVis)
     }
   }, [])
 
@@ -224,7 +258,7 @@ export default function CotizacionGuiadaLead({
   const monthlyMin = formLimits.monthly_min_employees ?? VENTAS_MONTHLY_MIN_EMPLOYEES
   const maxTerminals = formLimits.max_auto_quote_terminals ?? VENTAS_MAX_AUTO_QUOTE_TERMINALS
   const monthlyAvailable =
-    !product.forceAnnual && isMonthlyModalityAvailable(employeesCount, formLimits)
+    !product.forceAnnual && isMonthlyAvailableOnForm(employeesCount, formLimits, publicTiers)
   const matchedTier = findPublicTierForEmployees(employeesCount, publicTiers)
   const tierHints = {
     annual_terminal_mode: matchedTier?.annual_terminal_mode ?? ('auto' as VentasAnnualTerminalMode),
@@ -266,7 +300,7 @@ export default function CotizacionGuiadaLead({
       if (
         next.billing_modality === 'monthly' &&
         Number.isFinite(emp) &&
-        !isMonthlyModalityAvailable(emp, formLimits)
+        !isMonthlyAvailableOnForm(emp, formLimits, publicTiers)
       ) {
         next.billing_modality = 'annual'
       }

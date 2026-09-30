@@ -56,9 +56,47 @@ describe('ventas form step validators', () => {
       ...validQuote,
       employees_count: 15,
       billing_modality: 'monthly',
+      include_terminals: true,
+      complement_biometric: true,
     })
     assert.equal(hasValidationErrors(e), true)
     assert.match(e.billing_modality || '', /21/)
+  })
+
+  it('ventasScopeErrors allows monthly when range max meets live threshold', () => {
+    const tiers = [
+      { min_employees: 11, max_employees: 50 },
+      { min_employees: 51, max_employees: 100 },
+    ]
+    const e = ventasScopeErrors(
+      {
+        ...validQuote,
+        employees_count: 11,
+        billing_modality: 'monthly',
+        include_terminals: true,
+        complement_biometric: true,
+      },
+      { monthly_min_employees: 50 },
+      tiers
+    )
+    assert.equal(hasValidationErrors(e), false)
+  })
+
+  it('ventasScopeErrors keeps monthly locked when range max is below threshold', () => {
+    const tiers = [{ min_employees: 2, max_employees: 10 }]
+    const e = ventasScopeErrors(
+      {
+        ...validQuote,
+        employees_count: 2,
+        billing_modality: 'monthly',
+        include_terminals: true,
+        complement_biometric: true,
+      },
+      { monthly_min_employees: 50 },
+      tiers
+    )
+    assert.equal(hasValidationErrors(e), true)
+    assert.match(e.billing_modality || '', /50/)
   })
 
   it('ventasScopeErrors requires employees inside published tiers', () => {

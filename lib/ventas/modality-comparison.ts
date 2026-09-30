@@ -47,7 +47,10 @@ export function buildModalityComparison(params: {
 
   if (quote.product_kind === 'basic') return null
 
-  if (alternateModality === 'monthly' && !isMonthlyModalityAvailable(employees, quote.business_rules)) {
+  if (
+    alternateModality === 'monthly' &&
+    !isMonthlyModalityAvailable(employees, quote.business_rules, quote.tier)
+  ) {
     return null
   }
 
@@ -96,9 +99,10 @@ export function buildModalityComparison(params: {
 
 export function modalityComparisonUnavailableNote(
   employeesCount: number,
-  rules?: Parameters<typeof isMonthlyModalityAvailable>[1]
+  rules?: Parameters<typeof isMonthlyModalityAvailable>[1],
+  range?: Parameters<typeof isMonthlyModalityAvailable>[2]
 ): string | null {
-  if (isMonthlyModalityAvailable(employeesCount, rules)) return null
+  if (isMonthlyModalityAvailable(employeesCount, rules, range)) return null
   return ventasMonthlyUnavailableMessage(rules)
 }
 

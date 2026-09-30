@@ -323,7 +323,10 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
       return res.status(400).json({ error: ventasBasicAnnualOnlyMessage(businessRules) })
     }
 
-    if (billingModality === 'monthly' && !isMonthlyModalityAvailable(employeesCount, businessRules)) {
+    if (
+      billingModality === 'monthly' &&
+      !isMonthlyModalityAvailable(employeesCount, businessRules, tier)
+    ) {
       return res.status(400).json({ error: ventasMonthlyUnavailableMessage(businessRules) })
     }
 

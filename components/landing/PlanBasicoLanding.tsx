@@ -70,7 +70,7 @@ export default function PlanBasicoLanding() {
     let cancelled = false
     ;(async () => {
       try {
-        const res = await fetch('/api/ventas/public-config')
+        const res = await fetch('/api/ventas/public-config', { cache: 'no-store' })
         const data = await res.json()
         if (!res.ok || cancelled) return
         const price = Number(data.basic_annual_price)
