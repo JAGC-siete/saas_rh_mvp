@@ -64,5 +64,15 @@ export const RELATED_GUIDES: Record<string, Array<keyof typeof GUIDE_LINKS>> = {
   '/implementacion-48-horas': ['alternativaOdoo', 'biometricoNomina', 'recursos'],
   '/deducciones-honduras-ihss-rap-isr': ['biometricoNomina', 'recursos', 'alternativaOdoo'],
   '/membresia-anual': ['biometricoNomina', 'deduccionesHonduras', 'implementacion48h'],
-  '/plan-basico': ['biometricoNomina', 'deduccionesHonduras', 'implementacion48h']
+  '/plan-basico': ['biometricoNomina', 'deduccionesHonduras', 'implementacion48h'],
+  '/': ['biometricoNomina', 'deduccionesHonduras', 'implementacion48h'],
+  '/activar': ['biometricoNomina', 'implementacion48h', 'deduccionesHonduras'],
+  '/cerrar-planilla-en-paz': ['deduccionesHonduras', 'biometricoNomina', 'domingosSinPlanilla'],
+  '/info': ['deduccionesHonduras', 'biometricoNomina', 'domingosSinPlanilla'],
+  '/calculadora': ['deduccionesHonduras', 'biometricoNomina', 'recursos'],
+  '/calculadora-deducciones': ['deduccionesHonduras', 'biometricoNomina', 'implementacion48h'],
+  '/calculadora-deducciones-el-salvador': ['deduccionesHonduras', 'biometricoNomina', 'implementacion48h'],
+  '/calculadora-deducciones-guatemala': ['deduccionesHonduras', 'biometricoNomina', 'implementacion48h'],
+  '/recursos': ['deduccionesHonduras', 'biometricoNomina', 'alternativaOdoo'],
+  '/paz': ['domingosSinPlanilla', 'deduccionesHonduras', 'biometricoNomina'],
 }

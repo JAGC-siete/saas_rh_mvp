@@ -144,6 +144,9 @@ export default function BentoServicesGrid() {
               <h3 className="text-sm font-bold text-white mb-1">Leyes CA</h3>
               <p className="text-xs text-slate-400">IHSS · RAP · ISR</p>
               <FlagsCarousel />
+              <Link href={GUIDE_LINKS.implementacion48h.href} className="inline-flex items-center gap-1 mt-3 text-xs text-brand-300 hover:text-white transition-colors">
+                Implementación en 72 h <ArrowRightIcon className="h-3 w-3" />
+              </Link>
             </article>
           </BorderBeam>
         </ScrollReveal>
@@ -158,6 +161,9 @@ export default function BentoServicesGrid() {
                 <li className="flex gap-1.5"><CheckCircleIcon className="h-3.5 w-3.5 text-brand-400 shrink-0" />Auditoría completa</li>
                 <li className="flex gap-1.5"><CheckCircleIcon className="h-3.5 w-3.5 text-brand-400 shrink-0" />Docs listos para revisión</li>
               </ul>
+              <Link href={GUIDE_LINKS.alternativaOdoo.href} className="inline-flex items-center gap-1 mt-3 text-xs text-brand-300 hover:text-white transition-colors">
+                Complemento a Odoo <ArrowRightIcon className="h-3 w-3" />
+              </Link>
             </article>
           </BorderBeam>
         </ScrollReveal>

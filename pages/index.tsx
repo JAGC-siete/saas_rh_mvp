@@ -16,13 +16,15 @@ import { useLandingPreferences } from '../components/landing/LandingPreferencesP
 import { getHomeCopy } from '../lib/i18n/landings/home'
 import { getPageTitle } from '../lib/seo/title'
 import { getPageDescription } from '../lib/seo/description'
-import { SEO_DEFAULT_OG_IMAGE_PATH, seoAbsoluteUrl } from '../lib/seo/assets'
+import { SEO_BASE_URL, SEO_DEFAULT_OG_IMAGE_PATH, seoAbsoluteUrl } from '../lib/seo/assets'
 import {
   generateOrganizationSchema,
   generateWebSiteSchema,
   generateWebPageSchema,
   generateReviewSchema,
+  generateSoftwareApplicationSchema,
 } from '../lib/seo/schema'
+import RelatedGuides from '../components/SEO/RelatedGuides'
 import { initGoogleAdsTracking } from '../lib/analytics/googleAds'
 import { LOCALE_SCHEMA_LANG } from '../lib/i18n/locale'
 
@@ -63,11 +65,11 @@ export default function LandingPage() {
 
   const pageTitle =
     locale === 'en'
-      ? 'Human resources software (HR) | Biometric attendance + payroll | Humano SISU'
+      ? 'HR software Honduras 2026 | Payroll + biometrics | Free trial'
       : getPageTitle('home')
   const pageDescription =
     locale === 'en'
-      ? 'HR system with attendance control (fingerprint/facial) and local payroll in Honduras, El Salvador, and Guatemala. Try free.'
+      ? 'Payroll with local deductions and biometric attendance for HN, SV, and GT. No Excel. Free 30-day trial — no credit card.'
       : getPageDescription('home')
   const ogImage = SEO_DEFAULT_OG_IMAGE_PATH
   const ogImageUrl = seoAbsoluteUrl(ogImage)
@@ -75,6 +77,10 @@ export default function LandingPage() {
 
   const organizationSchema = generateOrganizationSchema()
   const webSiteSchema = generateWebSiteSchema()
+  const softwareSchema = generateSoftwareApplicationSchema({
+    description: pageDescription,
+    url: `${SEO_BASE_URL}/`,
+  })
   const webPageSchema = generateWebPageSchema({
     url: canonicalPath,
     title: pageTitle,
@@ -109,7 +115,7 @@ export default function LandingPage() {
         <meta name="twitter:image" content={ogImageUrl} />
       </Head>
 
-      <SchemaMarkup schema={[organizationSchema, webSiteSchema, webPageSchema]} />
+      <SchemaMarkup schema={[organizationSchema, webSiteSchema, softwareSchema, webPageSchema]} />
 
       {!isLight && <MeshBackground />}
       {!isLight && <CursorSpotlight />}
@@ -195,6 +201,10 @@ export default function LandingPage() {
       <FreeToolsSection />
       <AWSCertificationsSection />
       <TrustBar />
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+        <RelatedGuides currentPath="/" />
+      </div>
 
       <div className="landing-footer-bridge pt-8">
         <DemoFooter variant="minimal" />

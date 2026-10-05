@@ -68,7 +68,7 @@ export const PUBLIC_PRESTACIONES_CONFIG: PublicPrestacionesConfig = {
   canonicalUrl: `${BASE}/calculadora-prestaciones`,
   contactStorageKey: 'public_prestaciones_contact_hnd_v1',
   seo: {
-    title: 'Calculadora de prestaciones (Honduras) | Cesantía, preaviso, vacaciones, 13vo, 14vo | Humano SISU',
+    title: 'Calculadora finiquito Honduras 2026 | Cesantía + 13vo/14vo | GRATIS',
     description:
       'Calcula tu liquidación laboral en Honduras: cesantía, preaviso, vacaciones y proporcionales de 13vo y 14vo. Motor legal Humano SISU — gratis con PDF.',
     keywords:

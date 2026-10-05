@@ -20,7 +20,7 @@ export const CALCULATOR_HUB_LINKS = {
     label: 'Domingos sin planilla',
     subtitle: 'Método para digitalizar y automatizar RR.HH. en MiPyMes',
   },
-  landing: { href: '/#como-funciona', label: 'Automatizar nómina con Humano SISU' },
+  landing: { href: '/sistema-biometrico-nomina', label: 'Automatizar nómina con Humano SISU' },
   deductions: [
     {
       href: deductionCalculatorPublicPath('HND'),

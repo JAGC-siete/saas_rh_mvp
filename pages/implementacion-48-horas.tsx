@@ -7,7 +7,13 @@ import { LOCALE_SCHEMA_LANG } from '../lib/i18n/locale'
 import PublicPageHead from '../components/SEO/PublicPageHead'
 import SchemaMarkup from '../components/SEO/SchemaMarkup'
 import RelatedGuides from '../components/SEO/RelatedGuides'
-import { generateWebPageSchema, generateFAQPageSchema, generateBreadcrumbListSchema } from '../lib/seo/schema'
+import {
+  generateWebPageSchema,
+  generateFAQPageSchema,
+  generateBreadcrumbListSchema,
+  generateSoftwareApplicationSchema,
+} from '../lib/seo/schema'
+import { SEO_BASE_URL } from '../lib/seo/assets'
 import { ClockIcon, CheckCircleIcon } from '@heroicons/react/24/outline'
 import { SERVICE_GUARANTEES } from '../lib/marketing/service-guarantees'
 
@@ -26,6 +32,10 @@ export default function Implementacion48HorasPage() {
 
   const faqs = copy.faqs
   const faqSchema = generateFAQPageSchema(faqs)
+  const softwareSchema = generateSoftwareApplicationSchema({
+    description: pageDescription,
+    url: `${SEO_BASE_URL}/implementacion-48-horas`,
+  })
   const breadcrumbSchema = generateBreadcrumbListSchema(
     copy.breadcrumbs.map((item) => ({ name: item.name, url: href(item.url) }))
   )
@@ -41,7 +51,7 @@ export default function Implementacion48HorasPage() {
         canonicalPath="/implementacion-48-horas"
         keywords={copy.metaKeywords}
       />
-      <SchemaMarkup schema={[webPageSchema, breadcrumbSchema, faqSchema]} />
+      <SchemaMarkup schema={[webPageSchema, breadcrumbSchema, faqSchema, softwareSchema]} />
 
       {/* Hero Section */}
       <section className="py-4 sm:py-6 md:py-8 relative overflow-hidden">

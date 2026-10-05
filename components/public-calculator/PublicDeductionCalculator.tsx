@@ -5,6 +5,7 @@ import PublicPageShell from '../landing/PublicPageShell'
 import TrackedWhatsAppLink from '../TrackedWhatsAppLink'
 import { appendUtmParams, buildDemoWhatsAppUrl } from '../../lib/public-calculator/utm'
 import SchemaMarkup from '../SEO/SchemaMarkup'
+import RelatedGuides from '../SEO/RelatedGuides'
 import { validateFormInputs } from '../../lib/deduction-validator/client-validation'
 import type { PublicCalculatorConfig, PublicCalculatorDeductionKey } from '../../lib/public-calculator/config'
 import { generateFAQPageSchema, generateWebPageSchema, generateBreadcrumbListSchema } from '../../lib/seo/schema'
@@ -943,6 +944,10 @@ export default function PublicDeductionCalculator({ config }: { config: PublicCa
           />
         </LeadCaptureSoftGate>
       )}
+
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+        <RelatedGuides currentPath={config.path} />
+      </div>
     </PublicPageShell>
   )
 }

@@ -46,13 +46,14 @@ export function generateTitle(options: TitleOptions = {}): string {
  * Predefined titles for common pages
  */
 export const pageTitles = {
-  home: 'Software de recursos humanos (RRHH) | Asistencia biométrica + nómina | Humano SISU',
-  activate: 'Activa SISU | Toca el cielo | Humano SISU',
+  // Keyword-first ≤~60 chars for SERP CTR (brand at end).
+  home: 'Software RRHH Honduras 2026 | Nómina + biométrico | Prueba gratis',
+  activate: 'Probar nómina gratis 30 días | Sin tarjeta | Humano SISU',
   activarGracias: 'Trial activado | Llaves enviadas | Humano SISU',
   affiliates: 'Programa de Afiliados | Humano SISU',
-  calculator: 'Calculadora ISR Honduras y Calculadora RAP | IHSS · Humano SISU',
-  calculatorSlv: 'Calculadora ISR El Salvador | ISSS, AFP y sueldo neto | Humano SISU',
-  calculatorGtm: 'Calculadora sueldo neto Guatemala | IGSS e ISR | Humano SISU',
+  calculator: 'Calculadoras laborales gratis HN SV GT | IHSS ISSS IGSS 2026',
+  calculatorSlv: 'Calculadora ISR El Salvador 2026 | ISSS AFP | GRATIS',
+  calculatorGtm: 'Calculadora sueldo neto Guatemala 2026 | IGSS ISR | GRATIS',
   privacy: 'Política de Privacidad | Humano SISU',
   subscription: 'Alertas legales sobre tu sueldo | Humano SISU',
   login: 'Iniciar Sesión | Humano SISU',
@@ -61,18 +62,17 @@ export const pageTitles = {
   payroll: 'Nómina | Gestión de Planilla | Humano SISU',
   attendance: 'Asistencia | Control de Asistencia | Humano SISU',
   reports: 'Reportes y Análisis | Humano SISU',
-  // New strategic pages (aligned with Google Ads hero messaging)
-  alternativaOdoo: 'Complemento a Odoo | Nómina local, biométrico e integración | Humano SISU',
-  biometricoNomina: 'Sistema biométrico + nómina | HN, SV y GT | Humano SISU',
+  alternativaOdoo: 'Alternativa Odoo Honduras | Nómina local + biométrico | Humano SISU',
+  biometricoNomina: 'Sistema biométrico + nómina 2026 | HN SV GT | Prueba gratis',
   ventas: 'Cotización nómina y asistencia | PDF al instante | Humano SISU',
   ventasGracias: 'Propuesta enviada | PDF y acceso | Humano SISU',
   gracias: 'Confirmación de activación | Humano SISU',
-  info: 'Recuperá la paz al cerrar planilla | Software nómina y asistencia HN SV GT | Humano SISU',
-  implementacion48h: 'Automatiza asistencia y payroll | Ahorra horas | Humano SISU',
-  deduccionesHonduras: 'IHSS, RAP, ISR automático | Sin cálculos manuales | Humano SISU',
-  recursos: 'Recursos | Automatización RH y nómina local | Humano SISU',
-  paz: 'La forma pacífica de cerrar planilla | Humano SISU',
-  viernes: 'Recuperá la paz con RR.HH. | Método Humano SISU',
+  info: 'Cerrar planilla sin estrés | Nómina HN SV GT | Humano SISU',
+  implementacion48h: 'Implementación nómina en 72 h | Activación inmediata | Humano SISU',
+  deduccionesHonduras: 'IHSS RAP ISR Honduras 2026 | Automático sin Excel | Humano SISU',
+  recursos: 'Guías RRHH y nómina Honduras | IHSS RAP ISR | Humano SISU',
+  paz: 'Cerrar planilla en paz | Nómina sin Excel | Humano SISU',
+  viernes: 'Domingos sin planilla | Método RRHH MiPyMe | Humano SISU',
 }
 
 /**

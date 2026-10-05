@@ -127,12 +127,16 @@ export interface SoftwareApplicationSchema {
   '@context': string
   '@type': string
   name: string
+  description?: string
+  url?: string
   applicationCategory: string
   operatingSystem: string
+  featureList?: string[]
   offers: {
     '@type': string
     price: string
     priceCurrency: string
+    description?: string
   }
   aggregateRating?: {
     '@type': string
@@ -141,21 +145,39 @@ export interface SoftwareApplicationSchema {
   }
 }
 
+const DEFAULT_SOFTWARE_FEATURES = [
+  'Nómina con deducciones de ley (IHSS, RAP, ISR, ISSS, AFP, IGSS)',
+  'Control de asistencia biométrico',
+  'Comprobantes de pago PDF',
+  'Implementación express en Centroamérica',
+]
+
 /**
- * Generates SoftwareApplication schema for the SaaS product
+ * Generates SoftwareApplication schema for the SaaS product.
+ * No aggregateRating unless backed by real review counts — do not invent.
  */
-export function generateSoftwareApplicationSchema(): SoftwareApplicationSchema {
+export function generateSoftwareApplicationSchema(options?: {
+  description?: string
+  url?: string
+  featureList?: string[]
+}): SoftwareApplicationSchema {
   return {
     '@context': 'https://schema.org',
     '@type': 'SoftwareApplication',
     name: 'Humano SISU',
+    description:
+      options?.description ??
+      'Software de recursos humanos y nómina para Honduras, El Salvador y Guatemala: asistencia biométrica y deducciones de ley locales.',
+    url: options?.url ?? BASE_URL,
     applicationCategory: 'BusinessApplication',
     operatingSystem: 'Web',
+    featureList: options?.featureList ?? DEFAULT_SOFTWARE_FEATURES,
     offers: {
       '@type': 'Offer',
       price: '0',
-      priceCurrency: 'HNL'
-    }
+      priceCurrency: 'HNL',
+      description: 'Prueba gratis 30 días sin tarjeta',
+    },
   }
 }
 

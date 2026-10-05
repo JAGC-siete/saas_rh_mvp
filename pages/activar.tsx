@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/router'
 import PublicPageShell from '../components/landing/PublicPageShell'
 import PublicPageHead from '../components/SEO/PublicPageHead'
+import RelatedGuides from '../components/SEO/RelatedGuides'
 import SchemaMarkup from '../components/SEO/SchemaMarkup'
 import CampaignStyles from '../components/marketing/CampaignStyles'
 import MotorEncendidoLead from '../components/activar-game/MotorEncendidoLead'
@@ -58,6 +59,9 @@ export default function ActivarPage() {
       />
       <SchemaMarkup schema={[webPageSchema, breadcrumbSchema]} />
       <MotorEncendidoLead utmContext={utmContext} initialCountryCode={countryCode} />
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+        <RelatedGuides currentPath="/activar" />
+      </div>
     </PublicPageShell>
   )
 }

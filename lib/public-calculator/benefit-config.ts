@@ -98,9 +98,9 @@ export const PUBLIC_BENEFIT_CONFIGS: Record<BenefitTipo, PublicBenefitCalculator
     periodDescription: '1 de enero al 31 de diciembre del año en curso',
     paymentDeadline: '15 de diciembre',
     seo: {
-      title: 'Calculadora de Aguinaldo Honduras | 13vo | Humano SISU',
+      title: 'Calculadora aguinaldo Honduras 2026 | 13vo | GRATIS',
       description:
-        'Calculadora de aguinaldo Honduras gratis. Calcula tu 13vo proporcional o anual con calendario 360. Sin deducciones de ley. Motor Humano SISU.',
+        'Calculadora de aguinaldo Honduras 2026 gratis. Calcula tu 13vo proporcional o anual con calendario 360. Motor Humano SISU.',
       keywords:
         'calculadora aguinaldo Honduras, 13vo salario, décimo tercer mes, sueldo Honduras, Humano SISU',
       inLanguage: 'es-HN',
@@ -173,9 +173,9 @@ export const PUBLIC_BENEFIT_CONFIGS: Record<BenefitTipo, PublicBenefitCalculator
     periodDescription: '1 de julio al 30 de junio (ciclo jul–jun)',
     paymentDeadline: '30 de junio',
     seo: {
-      title: 'Calculadora de Catorceavo Honduras | 14vo | Humano SISU',
+      title: 'Calculadora catorceavo Honduras 2026 | 14vo | GRATIS',
       description:
-        'Calculadora de catorceavo Honduras gratis. Calcula tu 14vo con calendario 360 y regla de 200 días. Sin deducciones. Motor Humano SISU.',
+        'Calculadora de catorceavo Honduras 2026 gratis. Calcula tu 14vo con calendario 360 y regla de 200 días. Motor Humano SISU.',
       keywords:
         'calculadora catorceavo Honduras, 14vo salario, décimo cuarto mes, sueldo Honduras, Humano SISU',
       inLanguage: 'es-HN',

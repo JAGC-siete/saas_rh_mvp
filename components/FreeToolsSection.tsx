@@ -6,7 +6,12 @@ import BorderBeam from './landing/BorderBeam'
 import { getHomeCopy } from '../lib/i18n/landings/home'
 import { useLandingPreferences } from './landing/LandingPreferencesProvider'
 
-const RELATED_GUIDE_CARDS = [GUIDE_LINKS.deduccionesHonduras, GUIDE_LINKS.recursos]
+const RELATED_GUIDE_CARDS = [
+  GUIDE_LINKS.deduccionesHonduras,
+  GUIDE_LINKS.biometricoNomina,
+  GUIDE_LINKS.implementacion48h,
+  GUIDE_LINKS.alternativaOdoo,
+]
 
 export default function FreeToolsSection() {
   const { locale, href } = useLandingPreferences()
@@ -80,7 +85,7 @@ export default function FreeToolsSection() {
           <h3 className="text-center text-xs uppercase tracking-widest landing-muted mb-4">
             {locale === 'en' ? 'Related guides' : 'Guías relacionadas'}
           </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             {RELATED_GUIDE_CARDS.map((guide, i) => (
               <ScrollReveal key={guide.href} delay={i * 0.08}>
                 <BorderBeam>

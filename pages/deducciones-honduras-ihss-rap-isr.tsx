@@ -1,13 +1,19 @@
-import Head from 'next/head'
 import Link from 'next/link'
 import TrackedInternalCta from '../components/TrackedInternalCta'
 import PublicPageShell from '../components/landing/PublicPageShell'
 import { useLandingPreferences } from '../components/landing/LandingPreferencesProvider'
 import { getSeoLandingCopy } from '../lib/i18n/landings/seo'
 import { LOCALE_SCHEMA_LANG } from '../lib/i18n/locale'
+import PublicPageHead from '../components/SEO/PublicPageHead'
 import SchemaMarkup from '../components/SEO/SchemaMarkup'
 import RelatedGuides from '../components/SEO/RelatedGuides'
-import { generateWebPageSchema, generateFAQPageSchema, generateBreadcrumbListSchema } from '../lib/seo/schema'
+import {
+  generateWebPageSchema,
+  generateFAQPageSchema,
+  generateBreadcrumbListSchema,
+  generateSoftwareApplicationSchema,
+} from '../lib/seo/schema'
+import { SEO_BASE_URL } from '../lib/seo/assets'
 import { CheckCircleIcon } from '@heroicons/react/24/outline'
 import { deductionCalculatorPublicPath } from '../lib/marketing/calculator-public-paths'
 
@@ -26,6 +32,10 @@ export default function DeduccionesHondurasPage() {
 
   const faqs = copy.faqs
   const faqSchema = generateFAQPageSchema(faqs)
+  const softwareSchema = generateSoftwareApplicationSchema({
+    description: pageDescription,
+    url: `${SEO_BASE_URL}/deducciones-honduras-ihss-rap-isr`,
+  })
   const breadcrumbSchema = generateBreadcrumbListSchema(
     copy.breadcrumbs.map((item) => ({ name: item.name, url: href(item.url) }))
   )
@@ -34,15 +44,13 @@ export default function DeduccionesHondurasPage() {
 
   return (
     <PublicPageShell showSpotlight>
-      <Head>
-        <title>{pageTitle}</title>
-        <meta name="description" content={pageDescription} />
-        <meta name="robots" content="index, follow" />
-        <meta property="og:title" content={pageTitle} />
-        <meta property="og:description" content={pageDescription} />
-        <meta name="keywords" content={copy.metaKeywords} />
-      </Head>
-      <SchemaMarkup schema={[webPageSchema, breadcrumbSchema, faqSchema]} />
+      <PublicPageHead
+        title={pageTitle}
+        description={pageDescription}
+        canonicalPath="/deducciones-honduras-ihss-rap-isr"
+        keywords={copy.metaKeywords}
+      />
+      <SchemaMarkup schema={[webPageSchema, breadcrumbSchema, faqSchema, softwareSchema]} />
 
       {/* Hero Section */}
       <section className="py-4 sm:py-6 md:py-8 relative overflow-hidden">

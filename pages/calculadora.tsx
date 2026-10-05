@@ -2,6 +2,7 @@ import Link from 'next/link'
 import TrackedInternalCta from '../components/TrackedInternalCta'
 import PublicPageShell from '../components/landing/PublicPageShell'
 import PublicPageHead from '../components/SEO/PublicPageHead'
+import RelatedGuides from '../components/SEO/RelatedGuides'
 import SchemaMarkup from '../components/SEO/SchemaMarkup'
 import { useLandingPreferences } from '../components/landing/LandingPreferencesProvider'
 import { getCalculatorsCopy } from '../lib/i18n/landings/calculators'
@@ -156,6 +157,8 @@ export default function CalculadoraHubPage() {
             </TrackedInternalCta>
           </div>
         </div>
+
+        <RelatedGuides currentPath="/calculadora" className="mt-12" />
       </div>
     </PublicPageShell>
   )

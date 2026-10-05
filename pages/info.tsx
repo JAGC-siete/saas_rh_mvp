@@ -3,6 +3,7 @@ import TrackedInternalCta from '../components/TrackedInternalCta'
 import { useEffect } from 'react'
 import PublicPageShell from '../components/landing/PublicPageShell'
 import PublicPageHead from '../components/SEO/PublicPageHead'
+import RelatedGuides from '../components/SEO/RelatedGuides'
 import SchemaMarkup from '../components/SEO/SchemaMarkup'
 import CampaignStyles from '../components/marketing/CampaignStyles'
 import SealedEnvelopeLead from '../components/info-game/SealedEnvelopeLead'
@@ -112,6 +113,8 @@ export default function InfoPage() {
             ))}
           </div>
         </section>
+
+        <RelatedGuides currentPath="/cerrar-planilla-en-paz" />
       </div>
     </PublicPageShell>
   )

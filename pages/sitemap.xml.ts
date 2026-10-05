@@ -114,6 +114,12 @@ const publicPages: SitemapUrl[] = [
     lastmod: new Date().toISOString().split('T')[0],
   },
   {
+    loc: '/paz',
+    changefreq: 'weekly',
+    priority: 0.7,
+    lastmod: new Date().toISOString().split('T')[0],
+  },
+  {
     loc: VIERNES_PUBLIC_PATH,
     changefreq: 'weekly',
     priority: 0.9,

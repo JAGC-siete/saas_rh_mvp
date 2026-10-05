@@ -120,9 +120,9 @@ export type SeoLandingCopyMap = {
 
 const alternativaOdooByLocale: Record<LandingLocale, AlternativaOdooCopy> = {
   es: {
-    pageTitle: 'Complemento a Odoo | Nómina local, biométrico e integración | Humano SISU',
+    pageTitle: 'Alternativa Odoo Honduras | Nómina local + biométrico | Humano SISU',
     pageDescription:
-      'Humano SISU complementa Odoo: asistencia biométrica y nómina local (HN, SV, GT) con integración disponible para clientes Odoo. Prueba gratis.',
+      'Alternativa o complemento a Odoo en Honduras: biométrico + nómina local (HN, SV, GT) con integración disponible. Prueba gratis.',
     metaKeywords:
       'complemento a Odoo Honduras, integración Odoo nómina, Odoo biométrico Centroamérica, SISU Odoo El Salvador Guatemala, planilla local Odoo',
     hero: {
@@ -241,9 +241,9 @@ const alternativaOdooByLocale: Record<LandingLocale, AlternativaOdooCopy> = {
     },
   },
   en: {
-    pageTitle: 'Odoo complement | Local payroll, biometrics & integration | Humano SISU',
+    pageTitle: 'Odoo alternative Honduras | Local payroll + biometrics | Humano SISU',
     pageDescription:
-      'Humano SISU complements Odoo: biometric attendance and local payroll (HN, SV, GT) with integration available for Odoo customers. Try free.',
+      'Odoo alternative or complement in Honduras: biometrics + local payroll (HN, SV, GT) with integration available. Try free.',
     metaKeywords:
       'Odoo complement Honduras, Odoo payroll integration, Odoo biometrics Central America, SISU Odoo El Salvador Guatemala, local payroll Odoo',
     hero: {
@@ -365,9 +365,9 @@ const alternativaOdooByLocale: Record<LandingLocale, AlternativaOdooCopy> = {
 
 const biometricoNominaByLocale: Record<LandingLocale, BiometricoNominaCopy> = {
   es: {
-    pageTitle: 'Sistema biométrico + nómina | HN, SV y GT | Humano SISU',
+    pageTitle: 'Sistema biométrico + nómina 2026 | HN SV GT | Prueba gratis',
     pageDescription:
-      'Integra tus biométricos con software regional. Automatiza deducciones y nómina local. Sin cálculos manuales, sin errores. Activar gratis hoy.',
+      'Integra biométricos con nómina regional. Deducciones automáticas, sin Excel ni errores. Activar gratis hoy — sin tarjeta.',
     metaKeywords:
       'sistema biométrico con nómina, control asistencia biométrico, biométrico integrado nómina, asistencia nómina El Salvador Guatemala Honduras',
     hero: {
@@ -502,9 +502,9 @@ const biometricoNominaByLocale: Record<LandingLocale, BiometricoNominaCopy> = {
     },
   },
   en: {
-    pageTitle: 'Biometric + payroll system | HN, SV & GT | Humano SISU',
+    pageTitle: 'Biometric + payroll system 2026 | HN SV GT | Free trial',
     pageDescription:
-      'Connect your biometrics to regional software. Automate local deductions and payroll. No manual math, no errors. Activate free today.',
+      'Connect biometrics to regional payroll. Automatic deductions, no Excel or errors. Activate free today — no credit card.',
     metaKeywords:
       'biometric payroll system, biometric attendance control, biometrics integrated payroll, attendance payroll El Salvador Guatemala Honduras',
     hero: {
@@ -642,9 +642,9 @@ const biometricoNominaByLocale: Record<LandingLocale, BiometricoNominaCopy> = {
 
 const implementacion48hByLocale: Record<LandingLocale, Implementacion48hCopy> = {
   es: {
-    pageTitle: 'Automatiza asistencia y payroll | Ahorra horas | Humano SISU',
+    pageTitle: 'Implementación nómina en 72 h | Activación inmediata | Humano SISU',
     pageDescription:
-      'Activación inmediata y biométrico en 72 h. Migración, capacitación y garantía de 30 días incluidas. Humano SISU.',
+      'Puesta en marcha express: cuenta hoy, biométrico en ≤72 h, migración y capacitación incluidas. Garantía 30 días. Cotizá ya.',
     metaKeywords:
       'implementación nómina express, sistema nómina rápido regional, implementación rápida nómina, setup nómina El Salvador Guatemala Honduras',
     hero: {
@@ -767,9 +767,9 @@ const implementacion48hByLocale: Record<LandingLocale, Implementacion48hCopy> = 
     },
   },
   en: {
-    pageTitle: 'Automate attendance & payroll | Save hours | Humano SISU',
+    pageTitle: 'Payroll go-live in 72 h | Instant activation | Humano SISU',
     pageDescription:
-      'Instant activation and biometrics in 72 h. Migration, training, and 30-day guarantee included. Humano SISU.',
+      'Express setup: account today, biometrics in ≤72 h, migration and training included. 30-day guarantee. Get a quote.',
     metaKeywords:
       'express payroll implementation, fast regional payroll system, quick payroll setup, payroll setup El Salvador Guatemala Honduras',
     hero: {
@@ -895,9 +895,9 @@ const implementacion48hByLocale: Record<LandingLocale, Implementacion48hCopy> = 
 
 const deduccionesHondurasByLocale: Record<LandingLocale, DeduccionesHondurasCopy> = {
   es: {
-    pageTitle: 'IHSS, RAP, ISR automático | Sin cálculos manuales | Humano SISU',
+    pageTitle: 'IHSS RAP ISR Honduras 2026 | Automático sin Excel | Humano SISU',
     pageDescription:
-      'Integra biométricos con Humano SISU. Automatiza IHSS, RAP, ISR en Honduras. Sin cálculos manuales. Activar gratis hoy, sin tarjeta.',
+      'Automatiza IHSS, RAP e ISR en Honduras sin Excel. Biométrico + planilla en un flujo. Activar gratis hoy, sin tarjeta.',
     metaKeywords:
       'cálculo IHSS RAP ISR automático, deducciones Honduras, planilla con IHSS, cálculo nómina Honduras, IHSS RAP ISR 2026',
     hero: {
@@ -1006,9 +1006,9 @@ const deduccionesHondurasByLocale: Record<LandingLocale, DeduccionesHondurasCopy
     },
   },
   en: {
-    pageTitle: 'Automatic IHSS, RAP, income tax | No manual math | Humano SISU',
+    pageTitle: 'IHSS RAP income tax Honduras 2026 | Automatic, no Excel | Humano SISU',
     pageDescription:
-      'Connect biometrics with Humano SISU. Automate IHSS, RAP, and income tax in Honduras. No manual calculations. Activate free today, no card.',
+      'Automate IHSS, RAP, and income tax in Honduras without Excel. Biometrics + payroll in one flow. Activate free today, no card.',
     metaKeywords:
       'automatic IHSS RAP income tax, Honduras deductions, payroll with IHSS, Honduras payroll calculation, IHSS RAP ISR 2026',
     hero: {

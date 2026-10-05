@@ -40,10 +40,10 @@ export type CalculatorsCopy = {
 
 const byLocale: Record<LandingLocale, CalculatorsCopy> = {
   es: {
-    metaPrimary: 'Calculadoras laborales gratis (norma local)',
-    metaSecondary: 'Deducciones e indemnización SV GT HN',
+    metaPrimary: 'Calculadoras laborales gratis HN SV GT',
+    metaSecondary: 'IHSS ISSS IGSS ISR 2026',
     metaDescription:
-      'Calculadoras de deducciones (Seguro Social, ISR) y prestaciones para Honduras, El Salvador y Guatemala',
+      'Calculadoras gratis de deducciones e indemnización para Honduras, El Salvador y Guatemala',
     metaCta: 'Usa la calculadora gratis',
     metaBenefit: 'mismo motor legal que Humano SISU',
     metaKeywords:
@@ -98,10 +98,10 @@ const byLocale: Record<LandingLocale, CalculatorsCopy> = {
     ctaPricing: 'Ver planes y cotización',
   },
   en: {
-    metaPrimary: 'Free labor calculators (local rules)',
-    metaSecondary: 'Deductions & severance SV GT HN',
+    metaPrimary: 'Free labor calculators HN SV GT',
+    metaSecondary: 'IHSS ISSS IGSS tax 2026',
     metaDescription:
-      'Payroll deduction calculators (social security, income tax) and benefits for Honduras, El Salvador, and Guatemala',
+      'Free deduction and severance calculators for Honduras, El Salvador, and Guatemala',
     metaCta: 'Use the free calculator',
     metaBenefit: 'same legal engine as Humano SISU',
     metaKeywords:

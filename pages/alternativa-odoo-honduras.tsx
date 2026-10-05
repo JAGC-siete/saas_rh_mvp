@@ -9,7 +9,13 @@ import { LOCALE_SCHEMA_LANG } from '../lib/i18n/locale'
 import PublicPageHead from '../components/SEO/PublicPageHead'
 import SchemaMarkup from '../components/SEO/SchemaMarkup'
 import RelatedGuides from '../components/SEO/RelatedGuides'
-import { generateWebPageSchema, generateFAQPageSchema, generateBreadcrumbListSchema } from '../lib/seo/schema'
+import {
+  generateWebPageSchema,
+  generateFAQPageSchema,
+  generateBreadcrumbListSchema,
+  generateSoftwareApplicationSchema,
+} from '../lib/seo/schema'
+import { SEO_BASE_URL } from '../lib/seo/assets'
 import { CheckCircleIcon, XMarkIcon } from '@heroicons/react/24/outline'
 
 export default function AlternativaOdooPage() {
@@ -31,6 +37,10 @@ export default function AlternativaOdooPage() {
 
   const faqs = copy.faqs
   const faqSchema = generateFAQPageSchema(faqs)
+  const softwareSchema = generateSoftwareApplicationSchema({
+    description: pageDescription,
+    url: `${SEO_BASE_URL}/alternativa-odoo-honduras`,
+  })
   const breadcrumbSchema = generateBreadcrumbListSchema(
     copy.breadcrumbs.map((item) => ({ name: item.name, url: href(item.url) }))
   )
@@ -44,7 +54,7 @@ export default function AlternativaOdooPage() {
         canonicalPath="/alternativa-odoo-honduras"
         keywords={copy.metaKeywords}
       />
-      <SchemaMarkup schema={[webPageSchema, breadcrumbSchema, faqSchema]} />
+      <SchemaMarkup schema={[webPageSchema, breadcrumbSchema, faqSchema, softwareSchema]} />
 
       {/* Hero Section */}
       <section className="py-4 sm:py-6 md:py-8 relative overflow-hidden">

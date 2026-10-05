@@ -178,9 +178,9 @@ export const PUBLIC_CALCULATOR_CONFIGS: Record<CountryCode, PublicCalculatorConf
     currencyPrefix: 'Lps.',
     phonePlaceholder: 'Ej: +504 9999-9999',
     seo: {
-      title: 'Calculadora de Deducciones Honduras | ISR, RAP, IHSS | GRATIS',
+      title: 'Calculadora deducciones Honduras 2026 | ISR RAP IHSS | GRATIS',
       description:
-        'Calculadora de deducciones en Honduras gratis. Calcula tu salario neto en lempiras, ISR, IHSS y RAP con SISU.',
+        'Calculadora de deducciones Honduras 2026 gratis. Salario neto en lempiras con ISR, IHSS y RAP. Mismo motor que Humano SISU.',
       keywords:
         'calculadora de deducciones, calculadora impuesto honduras, calculadora isr honduras, calculadora rap, deducciones de ley, deducciones legales, calculadora ihss honduras, salario neto honduras, gratis, deducciones planilla Honduras',
       inLanguage: 'es-HN'
@@ -333,9 +333,9 @@ export const PUBLIC_CALCULATOR_CONFIGS: Record<CountryCode, PublicCalculatorConf
     currencyPrefix: '$',
     phonePlaceholder: 'Ej: +503 7777-7777',
     seo: {
-      title: 'Calculadora de Deducciones El Salvador | ISR, ISSS, AFP | GRATIS',
+      title: 'Calculadora deducciones El Salvador 2026 | ISR ISSS AFP | GRATIS',
       description:
-        'Calculadora de deducciones en El Salvador gratis. Calcula tu sueldo neto en USD, retención de renta, ISSS y AFP con SISU.',
+        'Calculadora de deducciones El Salvador 2026 gratis. Sueldo neto en USD con renta, ISSS y AFP. Mismo motor que Humano SISU.',
       keywords:
         'calculadora de deducciones, deducciones de ley, deducciones legales, Calculadora impuesto El Salvador, Calculadora ISR El Salvador, sueldo neto El Salvador, ISSS, AFP El Salvador, deducciones planilla SV, gratis',
       inLanguage: 'es-SV'
@@ -464,9 +464,9 @@ export const PUBLIC_CALCULATOR_CONFIGS: Record<CountryCode, PublicCalculatorConf
     currencyPrefix: 'Q',
     phonePlaceholder: 'Ej: +502 5555-5555',
     seo: {
-      title: 'Calculadora de Deducciones Guatemala | IGSS e ISR | GRATIS',
+      title: 'Calculadora deducciones Guatemala 2026 | IGSS e ISR | GRATIS',
       description:
-        'Calculadora de deducciones en Guatemala gratis. Calcula tu sueldo neto en quetzales, retenciones de IGSS e ISR con SISU.',
+        'Calculadora de deducciones Guatemala 2026 gratis. Sueldo neto en quetzales con IGSS e ISR. Mismo motor que Humano SISU.',
       keywords:
         'calculadora de deducciones, GRATIS, deducciones de ley, deducciones legales, impuestos, Sueldo Neto Guatemala, calculadora IGSS Guatemala, ISR Guatemala, deducciones planilla GT',
       inLanguage: 'es-GT'

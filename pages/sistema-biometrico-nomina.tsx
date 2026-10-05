@@ -7,6 +7,7 @@ import PublicPageHead from '../components/SEO/PublicPageHead'
 import SchemaMarkup from '../components/SEO/SchemaMarkup'
 import RelatedGuides from '../components/SEO/RelatedGuides'
 import { generateWebPageSchema, generateSoftwareApplicationSchema, generateFAQPageSchema, generateBreadcrumbListSchema } from '../lib/seo/schema'
+import { SEO_BASE_URL } from '../lib/seo/assets'
 
 export default function SistemaBiometricoNominaPage() {
   const { locale, href } = useLandingPreferences()
@@ -20,7 +21,10 @@ export default function SistemaBiometricoNominaPage() {
     description: pageDescription,
     inLanguage: LOCALE_SCHEMA_LANG[locale],
   })
-  const softwareSchema = generateSoftwareApplicationSchema()
+  const softwareSchema = generateSoftwareApplicationSchema({
+    description: pageDescription,
+    url: `${SEO_BASE_URL}/sistema-biometrico-nomina`,
+  })
 
   const faqs = copy.faqs
   const faqSchema = generateFAQPageSchema(faqs)
