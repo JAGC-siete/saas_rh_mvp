@@ -98,6 +98,13 @@ type DeduccionesHondurasCopy = {
   metaKeywords: string
   hero: SeoHero
   heroCta: SeoCta
+  /** Bloque answer-first para queries GSC (RAP/IHSS/calculadora 2026). */
+  answerFirst: {
+    title: string
+    lead: string
+    points: string[]
+    calcCta: string
+  }
   whatTitle: string
   deductions: { icon: string; title: string; fullName: string; body: string }[]
   comparisonTitle: string
@@ -895,18 +902,28 @@ const implementacion48hByLocale: Record<LandingLocale, Implementacion48hCopy> = 
 
 const deduccionesHondurasByLocale: Record<LandingLocale, DeduccionesHondurasCopy> = {
   es: {
-    pageTitle: 'IHSS RAP ISR Honduras 2026 | Automático sin Excel | Humano SISU',
+    pageTitle: 'Cómo calcular IHSS RAP ISR Honduras 2026 | Calculadora gratis',
     pageDescription:
-      'Automatiza IHSS, RAP e ISR en Honduras sin Excel. Biométrico + planilla en un flujo. Activar gratis hoy, sin tarjeta.',
+      'Cómo se calcula el RAP e IHSS en Honduras 2026: techos, % y tabla ISR. Usa la calculadora gratis o automatiza la planilla sin Excel.',
     metaKeywords:
-      'cálculo IHSS RAP ISR automático, deducciones Honduras, planilla con IHSS, cálculo nómina Honduras, IHSS RAP ISR 2026',
+      'como se calcula el rap en honduras 2026, cuanto es la deduccion del ihss en honduras 2026, calculadora isr honduras, techo del rap 2026, deducciones de ley honduras',
     hero: {
-      badges: ['✅ 100% Preciso', '🔄 Actualizado Automáticamente', '📋 Cumplimiento Legal', '🎁 30 días gratis'],
-      h1Lead: 'IHSS, RAP e ISR en Honduras:',
-      h1Accent: 'deducciones de ley sin Excel ni errores.',
-      lead: 'Esta guía profundiza en IHSS, RAP e ISR en Honduras. Humano SISU es regional: misma plataforma con reglas nacionales para El Salvador, Guatemala y Honduras.',
+      badges: ['Actualizado 2026', 'IHSS · RAP · ISR', 'Calculadora gratis', 'Sin Excel'],
+      h1Lead: 'Cómo calcular IHSS, RAP e ISR en Honduras 2026',
+      h1Accent: 'techos, porcentajes y calculadora gratis.',
+      lead: 'Respuesta directa a “cómo se calcula el RAP” y “cuánto es la deducción del IHSS” con parámetros 2026. Luego podés validar el sueldo neto en la calculadora o automatizar toda la planilla.',
     },
-    heroCta: { primary: 'Activar gratis hoy - Sin tarjeta de crédito', secondary: 'Probar Calculadora Gratis' },
+    heroCta: { primary: 'Abrir calculadora ISR / RAP / IHSS', secondary: 'Automatizar planilla (trial gratis)' },
+    answerFirst: {
+      title: 'Cómo se calcula el RAP e IHSS en Honduras (2026)',
+      lead: 'Para planilla 2026 usá estos parámetros oficiales (techos y tasas). La calculadora gratis aplica el mismo motor.',
+      points: [
+        'IHSS 2026: retención al trabajador 5% (2.5% EM + 2.5% IVM) sobre salario ordinario hasta el techo L 11,903.13.',
+        'RAP / FOVIIF 2026: 1.5% obrero + 1.5% patronal sobre el excedente de L 11,903.13; reserva laboral 4% patronal (techo L 57,896.16).',
+        'ISR 2026: tabla progresiva SAR (exento hasta ~L 22,360.36/mes) con deducción médica anual; validá el neto en la calculadora.',
+      ],
+      calcCta: 'Calcular mi sueldo neto ahora (gratis)',
+    },
     whatTitle: '¿Qué son las Deducciones en Honduras?',
     deductions: [
       {
@@ -969,29 +986,34 @@ const deduccionesHondurasByLocale: Record<LandingLocale, DeduccionesHondurasCopy
     faqTitle: 'Preguntas Frecuentes',
     faqs: [
       {
+        question: '¿Cómo se calcula el RAP en Honduras 2026?',
+        answer:
+          'En 2026 el RAP (Decreto 47-2024) no es un solo %. Reserva laboral: 4% patronal con techo L 57,896.16. FOVIIF: 1.5% trabajador + 1.5% patrono solo sobre el excedente del salario ordinario respecto a L 11,903.13 (“techo del RAP” / piso FOVIIF). Validá el desglose en la calculadora gratis de deducciones Honduras.',
+      },
+      {
+        question: '¿Cuánto es la deducción del IHSS en Honduras 2026?',
+        answer:
+          'Al trabajador se le retiene 5% (2.5% EM + 2.5% IVM) sobre el salario ordinario hasta el techo L 11,903.13 en 2026 (Decreto 48-2024). El patrono aporta por separado EM, IVM y riesgos. Podés simular el monto exacto con la calculadora ISR / RAP / IHSS.',
+      },
+      {
         question: '¿Cómo se calcula el IHSS en Honduras?',
         answer:
-          'El IHSS cotiza sobre el salario ordinario hasta el techo vigente (L 11,903.13 en 2026 para IVM y EM, según Decreto 48-2024). Al trabajador se le retiene 2.5% por Enfermedad y Maternidad y 2.5% por Invalidez, Vejez y Muerte (5% en total sobre la base cotizable). El patrono aporta por separado 5% (EM), 3.5% (IVM) y riesgos profesionales. Humano SISU aplica tasas y techos según la norma publicada cada año.',
+          'El IHSS cotiza sobre el salario ordinario hasta el techo vigente (L 11,903.13 en 2026 para IVM y EM). Retención al trabajador: 2.5% EM + 2.5% IVM (5% total sobre la base cotizable). El patrono aporta adicionalmente según la norma publicada cada año.',
       },
       {
-        question: '¿Qué es el RAP y cómo se calcula?',
+        question: '¿Qué es el techo del RAP 2026?',
         answer:
-          'El RAP es el Régimen de Aportaciones Privadas (Decreto 47-2024), no un solo porcentaje. El Fondo de Reserva Laboral es un aporte patronal del 4% con techo de L 57,896.16 en 2026. El FOVIIF retiene 1.5% al trabajador y 1.5% al patrono, solo sobre el salario ordinario que excede L 11,903.13. Humano SISU calcula la retención del trabajador según los parámetros publicados por el RAP.',
+          'Hay dos referencias: el piso FOVIIF L 11,903.13 (solo se cotiza el excedente al 1.5%+1.5%) y el techo de reserva laboral L 57,896.16 (4% patronal). “Techo del RAP 2026” en búsquedas suele apuntar a estos montos; la calculadora los aplica al instante.',
       },
       {
-        question: '¿Cómo se calcula el ISR en Honduras?',
+        question: '¿Dónde está la calculadora ISR Honduras?',
         answer:
-          'El ISR de quinta categoría usa la tabla progresiva del SAR (Comunicado 02-2026 para 2026): exento hasta L 22,360.36 mensuales, luego 15%, 20% y 25% por tramos. Antes de la tabla se deducen hasta L 40,000 anuales por gastos médicos (Ley del ISR, art. 13). Humano SISU mantiene la tabla y deducciones alineadas a las publicaciones del SAR.',
+          'En /calculadora-deducciones (también conocida históricamente como calcusisuhn). Ingresás el salario y obtenés ISR, RAP e IHSS con el mismo motor legal que Humano SISU — gratis, sin crear cuenta.',
       },
       {
         question: '¿Por qué usar software en lugar de Excel para calcular deducciones?',
         answer:
-          'Excel depende de fórmulas manuales, copiar tablas cada año y revisar cambios de IHSS, RAP e ISR; un error en el techo o la tasa afecta toda la planilla. Humano SISU centraliza el cálculo, aplica parámetros actualizados y deja registro para revisión y comprobantes.',
-      },
-      {
-        question: '¿Humano SISU se actualiza cuando cambian las leyes fiscales?',
-        answer:
-          'Sí. Cuando el SAR, IHSS o RAP publican nuevos techos o tablas, actualizamos el motor de cálculo de Humano SISU para que tu planilla use la norma vigente sin reconfigurar fórmulas en Excel.',
+          'Excel depende de fórmulas manuales y tablas que hay que actualizar cada año. Un techo o tasa vieja afecta toda la planilla. Humano SISU centraliza el cálculo 2026 y deja comprobantes auditables.',
       },
     ],
     breadcrumbs: [
@@ -999,25 +1021,35 @@ const deduccionesHondurasByLocale: Record<LandingLocale, DeduccionesHondurasCopy
       { name: 'Deducciones IHSS RAP ISR', url: '/deducciones-honduras-ihss-rap-isr' },
     ],
     ctaSection: {
-      title: '¿Listo para automatizar tus deducciones?',
-      lead: 'Prueba Humano SISU gratis por 30 días. Cálculo automático de IHSS, RAP e ISR incluido.',
-      primary: 'Comenzar Prueba Gratis',
-      secondary: 'Probar Calculadora',
+      title: 'Calculá tu neto 2026 o automatizá toda la planilla',
+      lead: 'Primero la calculadora gratis (IHSS, RAP, ISR). Si cerrás planilla cada mes, activá el trial sin tarjeta.',
+      primary: 'Abrir calculadora gratis',
+      secondary: 'Probar Humano SISU 30 días',
     },
   },
   en: {
-    pageTitle: 'IHSS RAP income tax Honduras 2026 | Automatic, no Excel | Humano SISU',
+    pageTitle: 'How to calculate IHSS RAP ISR Honduras 2026 | Free calculator',
     pageDescription:
-      'Automate IHSS, RAP, and income tax in Honduras without Excel. Biometrics + payroll in one flow. Activate free today, no card.',
+      'How RAP and IHSS are calculated in Honduras 2026: ceilings, rates, and ISR table. Use the free calculator or automate payroll without Excel.',
     metaKeywords:
-      'automatic IHSS RAP income tax, Honduras deductions, payroll with IHSS, Honduras payroll calculation, IHSS RAP ISR 2026',
+      'how to calculate RAP Honduras 2026, IHSS deduction Honduras 2026, ISR calculator Honduras, RAP ceiling 2026',
     hero: {
-      badges: ['✅ 100% accurate', '🔄 Auto-updated', '📋 Legal compliance', '🎁 30 days free'],
-      h1Lead: 'IHSS, RAP, and income tax in Honduras:',
-      h1Accent: 'statutory deductions without Excel or errors.',
-      lead: 'This guide goes deep on IHSS, RAP, and income tax in Honduras. Humano SISU is regional: one platform with national rules for El Salvador, Guatemala, and Honduras.',
+      badges: ['Updated 2026', 'IHSS · RAP · ISR', 'Free calculator', 'No Excel'],
+      h1Lead: 'How to calculate IHSS, RAP & ISR in Honduras 2026',
+      h1Accent: 'ceilings, rates, and a free calculator.',
+      lead: 'Direct answer for RAP and IHSS 2026 parameters. Then validate net pay in the free calculator or automate full payroll.',
     },
-    heroCta: { primary: 'Activate free today — no credit card', secondary: 'Try the free calculator' },
+    heroCta: { primary: 'Open ISR / RAP / IHSS calculator', secondary: 'Automate payroll (free trial)' },
+    answerFirst: {
+      title: 'How RAP and IHSS are calculated in Honduras (2026)',
+      lead: 'Use these official 2026 ceilings and rates. The free calculator uses the same engine.',
+      points: [
+        'IHSS 2026: 5% employee withholding (2.5% EM + 2.5% IVM) on ordinary wages up to L 11,903.13.',
+        'RAP / FOVIIF 2026: 1.5% employee + 1.5% employer on the excess over L 11,903.13; 4% employer labor reserve (ceiling L 57,896.16).',
+        'ISR 2026: SAR progressive table (exempt up to ~L 22,360.36/month); validate net pay in the calculator.',
+      ],
+      calcCta: 'Calculate my net pay now (free)',
+    },
     whatTitle: 'What are deductions in Honduras?',
     deductions: [
       {
@@ -1080,29 +1112,34 @@ const deduccionesHondurasByLocale: Record<LandingLocale, DeduccionesHondurasCopy
     faqTitle: 'Frequently asked questions',
     faqs: [
       {
+        question: 'How is RAP calculated in Honduras in 2026?',
+        answer:
+          'In 2026 RAP (Decree 47-2024) is not a single %. Labor reserve: 4% employer with ceiling L 57,896.16. FOVIIF: 1.5% employee + 1.5% employer only on ordinary wages above L 11,903.13. Validate the breakdown in the free Honduras deductions calculator.',
+      },
+      {
+        question: 'How much is the IHSS deduction in Honduras in 2026?',
+        answer:
+          'Employees are withheld 5% (2.5% EM + 2.5% IVM) on ordinary wages up to ceiling L 11,903.13 in 2026 (Decree 48-2024). Employers contribute separately. Simulate the exact amount with the free ISR / RAP / IHSS calculator.',
+      },
+      {
         question: 'How is IHSS calculated in Honduras?',
         answer:
-          'IHSS contributes on ordinary wages up to the current ceiling (L 11,903.13 in 2026 for IVM and EM, per Decree 48-2024). The employee is withheld 2.5% for Illness and Maternity and 2.5% for Disability, Old Age and Death (5% total on the contributory base). The employer contributes separately 5% (EM), 3.5% (IVM), and occupational risk. Humano SISU applies rates and ceilings per the published rule each year.',
+          'IHSS contributes on ordinary wages up to the current ceiling (L 11,903.13 in 2026). Employee withholding: 2.5% EM + 2.5% IVM (5% total). Employers contribute additionally per the published rule each year.',
       },
       {
-        question: 'What is RAP and how is it calculated?',
+        question: 'What is the RAP ceiling in 2026?',
         answer:
-          'RAP is the Private Contributions Regime (Decree 47-2024), not a single percentage. The Labor Reserve Fund is a 4% employer contribution with a L 57,896.16 ceiling in 2026. FOVIIF withholds 1.5% from the employee and 1.5% from the employer only on ordinary wages exceeding L 11,903.13. Humano SISU calculates the employee withholding per RAP-published parameters.',
+          'Two references: FOVIIF floor L 11,903.13 (only the excess is taxed at 1.5%+1.5%) and labor-reserve ceiling L 57,896.16 (4% employer). The calculator applies both instantly.',
       },
       {
-        question: 'How is income tax calculated in Honduras?',
+        question: 'Where is the Honduras ISR calculator?',
         answer:
-          'Fifth-category income tax uses the SAR progressive table (Notice 02-2026 for 2026): exempt up to L 22,360.36 monthly, then 15%, 20%, and 25% by brackets. Before the table, up to L 40,000 annually for medical expenses is deducted (Income Tax Law, art. 13). Humano SISU keeps the table and deductions aligned with SAR publications.',
+          'At /calculadora-deducciones. Enter salary and get ISR, RAP, and IHSS with the same legal engine as Humano SISU — free, no account.',
       },
       {
         question: 'Why use software instead of Excel for deductions?',
         answer:
-          'Excel depends on manual formulas, copying tables each year, and tracking IHSS, RAP, and income-tax changes; one wrong ceiling or rate affects the whole payroll. Humano SISU centralizes calculation, applies updated parameters, and leaves a record for review and vouchers.',
-      },
-      {
-        question: 'Does Humano SISU update when tax laws change?',
-        answer:
-          'Yes. When SAR, IHSS, or RAP publish new ceilings or tables, we update Humano SISU’s calculation engine so your payroll uses the current rule without reconfiguring Excel formulas.',
+          'Excel depends on manual formulas and tables you must update each year. One stale ceiling affects the whole payroll. Humano SISU centralizes 2026 calculation with auditable vouchers.',
       },
     ],
     breadcrumbs: [
@@ -1110,10 +1147,10 @@ const deduccionesHondurasByLocale: Record<LandingLocale, DeduccionesHondurasCopy
       { name: 'IHSS RAP income-tax deductions', url: '/deducciones-honduras-ihss-rap-isr' },
     ],
     ctaSection: {
-      title: 'Ready to automate your deductions?',
-      lead: 'Try Humano SISU free for 30 days. Automatic IHSS, RAP, and income-tax calculation included.',
-      primary: 'Start free trial',
-      secondary: 'Try calculator',
+      title: 'Calculate your 2026 net pay or automate payroll',
+      lead: 'Start with the free calculator (IHSS, RAP, ISR). If you close payroll monthly, start the trial — no card.',
+      primary: 'Open free calculator',
+      secondary: 'Try Humano SISU 30 days',
     },
   },
 }

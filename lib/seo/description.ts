@@ -57,7 +57,8 @@ export const pageDescriptions = {
   alternativaOdoo: 'Alternativa o complemento a Odoo en Honduras: biométrico + nómina local (HN, SV, GT) con integración disponible. Prueba gratis.',
   biometricoNomina: 'Integra biométricos con nómina regional. Deducciones automáticas, sin Excel ni errores. Activar gratis hoy — sin tarjeta.',
   implementacion48h: 'Puesta en marcha express: cuenta hoy, biométrico en ≤72 h, migración y capacitación incluidas. Garantía 30 días. Cotizá ya.',
-  deduccionesHonduras: 'Automatiza IHSS, RAP e ISR en Honduras sin Excel. Biométrico + planilla en un flujo. Activar gratis hoy, sin tarjeta.',
+  deduccionesHonduras:
+    'Cómo se calcula el RAP e IHSS en Honduras 2026: techos, % y tabla ISR. Usa la calculadora gratis o automatiza la planilla sin Excel.',
   recursos: 'Guías prácticas de RRHH y nómina local: IHSS, RAP, ISR, biométrico y automatización para MiPyMes en Centroamérica.',
   ventas: 'Cotización sin costo para nómina y asistencia biométrica en Honduras, El Salvador y Guatemala. Recibe propuesta en PDF al instante.',
   ventasGracias:

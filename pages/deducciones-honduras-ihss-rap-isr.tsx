@@ -86,27 +86,52 @@ export default function DeduccionesHondurasPage() {
             </p>
           </div>
 
-          {/* CTA Buttons */}
+          {/* CTA Buttons — calculator first (GSC intent) */}
           <div className="flex flex-wrap justify-center gap-3 sm:gap-4 mb-6">
+            <Link
+              href={calculatorPath}
+              className="px-5 sm:px-6 py-2.5 sm:py-3 bg-green-600 text-white rounded-xl font-semibold text-sm sm:text-base hover:bg-green-700 transition-colors shadow-sm"
+            >
+              {copy.heroCta.primary}
+            </Link>
             <TrackedInternalCta
               href={href('/activar')}
               ctaType="activar_trial"
               location="deducciones_honduras_hero"
               className="px-5 sm:px-6 py-2.5 sm:py-3 bg-sky-600 text-white rounded-xl font-semibold text-sm sm:text-base hover:bg-sky-700 transition-colors shadow-sm"
             >
-              {copy.heroCta.primary}
-            </TrackedInternalCta>
-            <Link
-              href={calculatorPath}
-              className="px-5 sm:px-6 py-2.5 sm:py-3 bg-green-600 text-white rounded-xl font-semibold text-sm sm:text-base hover:bg-green-700 transition-colors shadow-sm"
-            >
               {copy.heroCta.secondary}
-            </Link>
+            </TrackedInternalCta>
           </div>
         </div>
       </section>
 
       <div className="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 relative z-10">
+
+        {/* Answer-first block for RAP/IHSS 2026 queries */}
+        <section className="mb-12 sm:mb-16 md:mb-20">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-4 sm:mb-6 text-center text-white">
+            {copy.answerFirst.title}
+          </h2>
+          <p className="text-brand-200/90 text-center max-w-3xl mx-auto mb-6 text-sm sm:text-base">
+            {copy.answerFirst.lead}
+          </p>
+          <ol className="glass-modern rounded-xl sm:rounded-2xl p-4 sm:p-6 md:p-8 border border-white/10 space-y-4 list-decimal list-inside text-brand-100">
+            {copy.answerFirst.points.map((point) => (
+              <li key={point} className="text-sm sm:text-base leading-relaxed">
+                {point}
+              </li>
+            ))}
+          </ol>
+          <div className="text-center mt-6">
+            <Link
+              href={calculatorPath}
+              className="inline-flex px-5 sm:px-6 py-2.5 sm:py-3 bg-green-600 text-white rounded-xl font-semibold text-sm sm:text-base hover:bg-green-700 transition-colors"
+            >
+              {copy.answerFirst.calcCta}
+            </Link>
+          </div>
+        </section>
 
         {/* What Are Deductions */}
         <section className="mb-12 sm:mb-16 md:mb-20">
@@ -210,20 +235,20 @@ export default function DeduccionesHondurasPage() {
             {copy.ctaSection.lead}
           </p>
           <div className="flex flex-wrap justify-center gap-3 sm:gap-4">
+            <Link
+              href={calculatorPath}
+              className="px-6 sm:px-8 py-3 sm:py-4 bg-green-600 text-white rounded-xl font-semibold text-base sm:text-lg hover:bg-green-700 transition-colors shadow-sm"
+            >
+              {copy.ctaSection.primary}
+            </Link>
             <TrackedInternalCta
               href={href('/activar')}
               ctaType="activar_trial"
               location="deducciones_honduras_footer"
               className="px-6 sm:px-8 py-3 sm:py-4 bg-sky-600 text-white rounded-xl font-semibold text-base sm:text-lg hover:bg-sky-700 transition-colors shadow-sm"
             >
-              {copy.ctaSection.primary}
-            </TrackedInternalCta>
-            <Link
-              href={calculatorPath}
-              className="px-6 sm:px-8 py-3 sm:py-4 bg-green-600 text-white rounded-xl font-semibold text-base sm:text-lg hover:bg-green-700 transition-colors shadow-sm"
-            >
               {copy.ctaSection.secondary}
-            </Link>
+            </TrackedInternalCta>
           </div>
         </section>
 

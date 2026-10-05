@@ -69,7 +69,7 @@ export const pageTitles = {
   gracias: 'Confirmación de activación | Humano SISU',
   info: 'Cerrar planilla sin estrés | Nómina HN SV GT | Humano SISU',
   implementacion48h: 'Implementación nómina en 72 h | Activación inmediata | Humano SISU',
-  deduccionesHonduras: 'IHSS RAP ISR Honduras 2026 | Automático sin Excel | Humano SISU',
+  deduccionesHonduras: 'Cómo calcular IHSS RAP ISR Honduras 2026 | Calculadora gratis',
   recursos: 'Guías RRHH y nómina Honduras | IHSS RAP ISR | Humano SISU',
   paz: 'Cerrar planilla en paz | Nómina sin Excel | Humano SISU',
   viernes: 'Domingos sin planilla | Método RRHH MiPyMe | Humano SISU',

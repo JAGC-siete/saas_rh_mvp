@@ -1,16 +1,18 @@
 ---
-title: "Guía Completa: Cómo calcular el ISR y RAP en Honduras (Actualizado 2026)"
-description: "Parámetros actualizados 2026 para calcular ISR y RAP en Honduras: tabla progresiva del SAR, deducción médica, techos de cotización y aportes patronales y del trabajador."
+title: "Cómo calcular ISR y RAP en Honduras 2026 (techos + calculadora)"
+description: "Cómo se calcula el RAP e ISR en Honduras 2026: techo RAP, tabla SAR y deducción médica. Calculá tu neto gratis en la calculadora de deducciones."
 datePublished: "2026-06-22"
 author: "Licenciado Jorge Arturo Gómez Coello"
 category: "Cumplimiento Legal"
 ---
 
-# Guía Completa: Cómo calcular el ISR y RAP en Honduras (Actualizado 2026)
+# Cómo calcular ISR y RAP en Honduras 2026
 
-Para cualquier empresario o gerente de RRHH en Honduras, el cálculo de la nómina no es solo una tarea administrativa, sino un ejercicio de cumplimiento legal. Un error en la retención del Impuesto Sobre la Renta (ISR) o en las aportaciones al Régimen de Aportaciones Privadas (RAP) puede derivar en multas severas del SAR o contingencias laborales.
+Si buscás **cómo se calcula el RAP en Honduras 2026**, el **techo del RAP 2026** o una **calculadora ISR Honduras**, esta guía resume los parámetros oficiales y te lleva a la herramienta gratis.
 
-En esta guía, desglosamos los parámetros actualizados para el periodo fiscal 2026, integrando los ajustes por inflación y los nuevos techos de cotización.
+**[Abrir calculadora de deducciones Honduras (ISR, RAP, IHSS) →](/calculadora-deducciones)**
+
+Para RRHH y dueños de MiPyMe, un error en ISR o RAP puede derivar en multas del SAR o contingencias laborales. Abajo: tabla ISR 2026, techos RAP y cómo validar el sueldo neto.
 
 ## 1. Impuesto Sobre la Renta (ISR): La Tabla Progresiva 2026
 
@@ -31,9 +33,11 @@ Esto significa que el salario neto gravable es menor que el salario bruto, eleva
 | De L 348,154.11 a L 809,660.75 | De L 32,346.19 a L 70,805.06 | 20% |
 | De L 809,660.76 en adelante | Desde L 70,805.07 en adelante | 25% |
 
-## 2. Régimen de Aportaciones Privadas (RAP): Techos y Aportes 2026
+## 2. Cómo se calcula el RAP en Honduras 2026 (techos y aportes)
 
 El RAP no es un impuesto, sino un fondo de capitalización. Para 2026, el cumplimiento se basa en el Decreto Legislativo 47-2024 y las alertas del COHEP.
+
+**Respuesta corta:** FOVIIF = 1.5% trabajador + 1.5% patrono sobre el **excedente** de L 11,903.13; reserva laboral = **4% patronal** con techo L 57,896.16.
 
 ### A. Fondo de Reserva Laboral (Capitalización Individual)
 
@@ -57,8 +61,10 @@ Calcular esto en Excel cada mes es una invitación al error. Una tabla mal index
 
 ---
 
-### 🚀 ¿Desea automatizar sus retenciones con precisión legal?
+### ¿Querés validar tu neto o automatizar la planilla?
 
-Deje de depender de tablas desactualizadas en hojas de cálculo. Humano SISU aplica ISR, RAP e IHSS según la ley vigente en Honduras.
+1. **Gratis:** [Calculadora de deducciones Honduras](/calculadora-deducciones) — ISR, RAP e IHSS con parámetros 2026.
+2. **Guía de IHSS / RAP / ISR:** [Deducciones de ley Honduras](/deducciones-honduras-ihss-rap-isr).
+3. **Planilla completa:** [Probar Humano SISU gratis](/activar) — sin tarjeta.
 
-**[Calcula tus deducciones legales ahora mismo con nuestra herramienta gratuita → /calculadoras]**
+Humano SISU aplica ISR, RAP e IHSS según la ley vigente; dejá de depender de tablas en Excel.
