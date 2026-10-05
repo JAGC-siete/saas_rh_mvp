@@ -40,7 +40,8 @@ function absoluteAssetUrl(pathOrUrl?: string): string | undefined {
   return undefined
 }
 
-function firstImage(page: PublicLandingPage): string | undefined {
+/** ogImage → hero → galería → áreas. Misma cadena para JSON-LD y meta sociales. */
+export function landingSocialImageUrl(page: PublicLandingPage): string | undefined {
   if (page.content.meta.ogImageUrl) return absoluteAssetUrl(page.content.meta.ogImageUrl)
   for (const block of page.content.blocks) {
     if (block.kind === 'hero' && block.imageUrl) return absoluteAssetUrl(block.imageUrl)
@@ -58,7 +59,7 @@ export function landingLocalBusinessJsonLd(page: PublicLandingPage): Record<stri
 
   const { business, meta } = page.content
   const telephone = landingSchemaTelephone(business.phone || business.whatsapp)
-  const image = firstImage(page)
+  const image = landingSocialImageUrl(page)
   const jsonLd: Record<string, unknown> = {
     '@context': 'https://schema.org',
     '@type': landingSchemaType(page.templateType),

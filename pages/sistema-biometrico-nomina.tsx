@@ -1,9 +1,9 @@
-import Head from 'next/head'
 import TrackedInternalCta from '../components/TrackedInternalCta'
 import PublicPageShell from '../components/landing/PublicPageShell'
 import { useLandingPreferences } from '../components/landing/LandingPreferencesProvider'
 import { getSeoLandingCopy } from '../lib/i18n/landings/seo'
 import { LOCALE_SCHEMA_LANG } from '../lib/i18n/locale'
+import PublicPageHead from '../components/SEO/PublicPageHead'
 import SchemaMarkup from '../components/SEO/SchemaMarkup'
 import RelatedGuides from '../components/SEO/RelatedGuides'
 import { generateWebPageSchema, generateSoftwareApplicationSchema, generateFAQPageSchema, generateBreadcrumbListSchema } from '../lib/seo/schema'
@@ -32,14 +32,12 @@ export default function SistemaBiometricoNominaPage() {
 
   return (
     <PublicPageShell showSpotlight>
-      <Head>
-        <title>{pageTitle}</title>
-        <meta name="description" content={pageDescription} />
-        <meta name="robots" content="index, follow" />
-        <meta property="og:title" content={pageTitle} />
-        <meta property="og:description" content={pageDescription} />
-        <meta name="keywords" content={copy.metaKeywords} />
-      </Head>
+      <PublicPageHead
+        title={pageTitle}
+        description={pageDescription}
+        canonicalPath="/sistema-biometrico-nomina"
+        keywords={copy.metaKeywords}
+      />
       <SchemaMarkup schema={[webPageSchema, softwareSchema, breadcrumbSchema, faqSchema]} />
 
       {/* Hero Section */}

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { LANDING_TEMPLATE_KEYS } from '../lib/landings/page-schema'
 import {
   landingLocalBusinessJsonLd,
+  landingSocialImageUrl,
   landingSchemaTelephone,
   landingSchemaType,
 } from '../lib/landings/jsonld'
@@ -161,6 +162,7 @@ describe('landings: JSON-LD LocalBusiness', () => {
     assert.equal(jsonLd['@type'], 'MedicalClinic')
     assert.equal(jsonLd.name, 'Clínica Norte')
     assert.equal(jsonLd.telephone, '+50432226773')
+    assert.ok(landingSocialImageUrl(page)?.includes(LANDING_STOCK.clinicaHero))
     assert.equal(landingSchemaType('ferreteria'), 'HardwareStore')
     assert.equal(landingSchemaType('mercadito'), 'GroceryStore')
     assert.equal(landingSchemaType('barberia'), 'HairSalon')

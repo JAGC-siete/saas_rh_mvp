@@ -13,10 +13,10 @@ import SchemaMarkup from '../../components/SEO/SchemaMarkup'
 import { LANDING_PAGE_PUBLIC_COLUMNS, LANDING_PAGES_TABLE, toPublicLandingPage } from '../../lib/landings/db'
 import { collectInventoryProductIds, type PublicInventoryOffer } from '../../lib/landings/inventory'
 import { readPublishedInventory } from '../../lib/landings/inventory-public'
-import { landingLocalBusinessJsonLd } from '../../lib/landings/jsonld'
+import { landingLocalBusinessJsonLd, landingSocialImageUrl } from '../../lib/landings/jsonld'
 import { landingPublicUrl } from '../../lib/landings/paths'
 import { createPublicLandingClient } from '../../lib/landings/public-client'
-import { seoAbsoluteUrl } from '../../lib/seo/assets'
+import { SEO_DEFAULT_OG_IMAGE_URL } from '../../lib/seo/assets'
 import { logger } from '../../lib/logger'
 import type { LandingPagePublicRow, PublicLandingPage } from '../../types/landing'
 
@@ -31,6 +31,7 @@ export default function PublicLandingPageView({ page, stockByProductId }: Public
   const { meta } = page.content
   const canonical = landingPublicUrl(page.slug)
   const jsonLd = landingLocalBusinessJsonLd(page)
+  const ogImage = landingSocialImageUrl(page) ?? SEO_DEFAULT_OG_IMAGE_URL
 
   return (
     <>
@@ -49,7 +50,11 @@ export default function PublicLandingPageView({ page, stockByProductId }: Public
         <meta property="og:title" content={meta.seoTitle} />
         <meta property="og:description" content={meta.seoDescription} />
         <meta property="og:url" content={canonical} />
-        {meta.ogImageUrl && <meta property="og:image" content={seoAbsoluteUrl(meta.ogImageUrl)} />}
+        <meta property="og:image" content={ogImage} />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={meta.seoTitle} />
+        <meta name="twitter:description" content={meta.seoDescription} />
+        <meta name="twitter:image" content={ogImage} />
       </Head>
       {jsonLd ? <SchemaMarkup schema={jsonLd} /> : null}
       <LandingRenderer page={page} stockByProductId={stockByProductId} />

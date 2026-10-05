@@ -1,5 +1,6 @@
 import { GetServerSideProps } from 'next'
 import { recursosAdapter } from '../lib/recursos'
+import { listPublishedLandingSitemapEntries } from '../lib/landings/sitemap'
 import { INFO_FUNNEL_PUBLIC_PATH } from '../lib/marketing/info-funnel-path'
 import { VIERNES_PUBLIC_PATH } from '../lib/marketing/viernes-copy'
 import { PRIVACY_PUBLIC_PATH, TERMS_PUBLIC_PATH } from '../lib/marketing/legal-paths'
@@ -218,7 +219,11 @@ export default function Sitemap() {
 }
 
 export const getServerSideProps: GetServerSideProps = async ({ res }) => {
-  const recursos = await recursosAdapter.getRecursosList()
+  const [recursos, publishedLandings] = await Promise.all([
+    recursosAdapter.getRecursosList(),
+    listPublishedLandingSitemapEntries(),
+  ])
+
   const recursoPages: SitemapUrl[] = recursos.map((recurso) => ({
     loc: `/recursos/${recurso.slug}`,
     changefreq: 'monthly',
@@ -226,7 +231,14 @@ export const getServerSideProps: GetServerSideProps = async ({ res }) => {
     lastmod: recurso.dateModified ?? recurso.datePublished,
   }))
 
-  const sitemap = generateSitemap([...publicPages, ...recursoPages])
+  const landingPages: SitemapUrl[] = publishedLandings.map((landing) => ({
+    loc: landing.loc,
+    changefreq: 'weekly',
+    priority: 0.65,
+    lastmod: landing.lastmod,
+  }))
+
+  const sitemap = generateSitemap([...publicPages, ...recursoPages, ...landingPages])
 
   res.setHeader('Content-Type', 'text/xml')
   res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400')
