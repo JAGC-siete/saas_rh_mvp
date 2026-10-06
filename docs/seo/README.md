@@ -4,9 +4,11 @@ Ciclo semanal:
 
 1. **Lunes 05:00 (Tegucigalpa)** — GitHub Actions (`.github/workflows/seo-data-weekly.yml`) corre
    `scripts/seo/gsc-export.mjs` y guarda los datos en la rama `seo-data` (`seo-data/<fecha>/`).
-2. **Lunes 08:00** — la tarea programada de Claude "Agente SEO semanal" usa la skill `seo-strategist`:
+2. **Lunes 08:00** — la tarea programada de Claude "Agente SEO semanal" usa la skill `seo-strategist`
+   (`.agents/skills/seo-strategist/SKILL.md`, enlazada en `.claude/skills/`):
    lee los datos, los compara con `docs/seo/estrategia.md` y `docs/seo/bitacora.md`, decide ajustes
-   y abre **un PR** (nunca hace merge ni deploy) con el informe y los cambios propuestos.
+   y abre **un PR** (nunca hace merge ni deploy) con el informe en `docs/seo/informes/<fecha>.md`
+   y los cambios propuestos.
 3. Tú revisas y haces merge. El deploy sigue el CI/CD normal.
 
 ## Configuración (una sola vez)
