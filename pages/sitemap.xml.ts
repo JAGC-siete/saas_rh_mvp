@@ -21,13 +21,14 @@ const BASE_URL = 'https://humanosisu.net'
 /** Only paths with real EN dictionaries (shared with LandingHreflang). */
 const BILINGUAL_CORE = new Set<string>(BILINGUAL_LANDING_PATHS)
 
-// Public pages that should be included in sitemap
+// Public pages that should be included in sitemap.
+// No lastmod here: a per-request "today" teaches Google to ignore it. Recursos and
+// published landings below carry real dates.
 const publicPages: SitemapUrl[] = [
   {
     loc: '/',
     changefreq: 'weekly',
     priority: 1.0,
-    lastmod: new Date().toISOString().split('T')[0],
     bilingual: true,
   },
   {
@@ -39,13 +40,11 @@ const publicPages: SitemapUrl[] = [
     loc: '/ventas',
     changefreq: 'weekly',
     priority: 0.85,
-    lastmod: new Date().toISOString().split('T')[0],
   },
   {
     loc: '/membresia-anual',
     changefreq: 'weekly',
     priority: 0.85,
-    lastmod: new Date().toISOString().split('T')[0],
   },
   {
     loc: '/alternativa-odoo-honduras',
@@ -111,19 +110,16 @@ const publicPages: SitemapUrl[] = [
     loc: INFO_FUNNEL_PUBLIC_PATH,
     changefreq: 'weekly',
     priority: 0.9,
-    lastmod: new Date().toISOString().split('T')[0],
   },
   {
     loc: '/paz',
     changefreq: 'weekly',
     priority: 0.7,
-    lastmod: new Date().toISOString().split('T')[0],
   },
   {
     loc: VIERNES_PUBLIC_PATH,
     changefreq: 'weekly',
     priority: 0.9,
-    lastmod: new Date().toISOString().split('T')[0],
   },
   {
     loc: deductionCalculatorPublicPath('SLV'),
@@ -161,7 +157,6 @@ const publicPages: SitemapUrl[] = [
     loc: '/suscripcion',
     changefreq: 'weekly',
     priority: 0.85,
-    lastmod: new Date().toISOString().split('T')[0],
   },
 ]
 

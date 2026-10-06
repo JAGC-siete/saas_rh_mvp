@@ -141,3 +141,6 @@ copy-*.sql
 
 # Datos SEO locales (dry-run); los reales viven en la rama seo-data
 seo-data/
+
+# Lighthouse CI (reportes locales)
+.lighthouseci/

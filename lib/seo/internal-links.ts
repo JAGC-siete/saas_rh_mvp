@@ -1,5 +1,7 @@
 /** Enlaces internos hacia landings SEO/Ads y contenido, para evitar páginas huérfanas. */
 
+import { DEDUCTION_CALCULATOR_PUBLIC_PATHS } from '../marketing/calculator-public-paths'
+
 export interface GuideLink {
   href: string
   label: string
@@ -43,6 +45,21 @@ export const GUIDE_LINKS: Record<string, GuideLink> = {
     href: '/domingos-sin-planilla',
     label: 'Domingos sin planilla',
     description: 'Método para digitalizar y automatizar RR.HH. sin apagar la operación'
+  },
+  calculadoraHonduras: {
+    href: DEDUCTION_CALCULATOR_PUBLIC_PATHS.HND,
+    label: 'Calculadora de deducciones Honduras',
+    description: 'IHSS, RAP e ISR sobre tu salario'
+  },
+  calculadoraElSalvador: {
+    href: DEDUCTION_CALCULATOR_PUBLIC_PATHS.SLV,
+    label: 'Calculadora de deducciones El Salvador',
+    description: 'ISSS, AFP y renta sobre tu salario'
+  },
+  calculadoraGuatemala: {
+    href: DEDUCTION_CALCULATOR_PUBLIC_PATHS.GTM,
+    label: 'Calculadora de deducciones Guatemala',
+    description: 'IGSS e ISR sobre tu salario'
   }
 } as const
 
@@ -64,15 +81,14 @@ export const RELATED_GUIDES: Record<string, Array<keyof typeof GUIDE_LINKS>> = {
   '/implementacion-48-horas': ['alternativaOdoo', 'biometricoNomina', 'recursos'],
   '/deducciones-honduras-ihss-rap-isr': ['biometricoNomina', 'recursos', 'alternativaOdoo'],
   '/membresia-anual': ['biometricoNomina', 'deduccionesHonduras', 'implementacion48h'],
-  '/plan-basico': ['biometricoNomina', 'deduccionesHonduras', 'implementacion48h'],
   '/': ['biometricoNomina', 'deduccionesHonduras', 'implementacion48h'],
   '/activar': ['biometricoNomina', 'implementacion48h', 'deduccionesHonduras'],
   '/cerrar-planilla-en-paz': ['deduccionesHonduras', 'biometricoNomina', 'domingosSinPlanilla'],
   '/info': ['deduccionesHonduras', 'biometricoNomina', 'domingosSinPlanilla'],
   '/calculadora': ['deduccionesHonduras', 'biometricoNomina', 'recursos'],
-  '/calculadora-deducciones': ['deduccionesHonduras', 'biometricoNomina', 'implementacion48h'],
-  '/calculadora-deducciones-el-salvador': ['deduccionesHonduras', 'biometricoNomina', 'implementacion48h'],
-  '/calculadora-deducciones-guatemala': ['deduccionesHonduras', 'biometricoNomina', 'implementacion48h'],
+  '/calculadora-deducciones': ['deduccionesHonduras', 'calculadoraElSalvador', 'calculadoraGuatemala'],
+  '/calculadora-deducciones-el-salvador': ['calculadoraGuatemala', 'calculadoraHonduras', 'biometricoNomina'],
+  '/calculadora-deducciones-guatemala': ['calculadoraElSalvador', 'calculadoraHonduras', 'biometricoNomina'],
   '/recursos': ['deduccionesHonduras', 'biometricoNomina', 'alternativaOdoo'],
   '/paz': ['domingosSinPlanilla', 'deduccionesHonduras', 'biometricoNomina'],
 }
