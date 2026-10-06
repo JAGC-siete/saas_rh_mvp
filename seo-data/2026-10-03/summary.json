@@ -1,0 +1,860 @@
+{
+ "meta": {
+  "site": "sc-domain:humanosisu.net",
+  "windowDays": 28,
+  "generatedAt": "2026-10-06T20:50:13.777Z",
+  "dryRun": false,
+  "current": {
+   "startDate": "2026-09-06",
+   "endDate": "2026-10-03"
+  },
+  "previous": {
+   "startDate": "2026-08-09",
+   "endDate": "2026-09-05"
+  }
+ },
+ "analysis": {
+  "totals": {
+   "current": {
+    "clicks": 22,
+    "impressions": 1663,
+    "ctr": 0.0132291040288635,
+    "position": 6.986770895971136
+   },
+   "previous": {
+    "clicks": 21,
+    "impressions": 1634,
+    "ctr": 0.012851897184822521,
+    "position": 6.510403916768666
+   },
+   "change": {
+    "clicks": 0.047619047619047616,
+    "impressions": 0.017747858017135864,
+    "ctr": 0.0003772068440409792,
+    "position": 0.47636697920247073
+   }
+  },
+  "nonBrand": {
+   "clicks": 2,
+   "clicksPrev": 1,
+   "impressions": 136,
+   "impressionsPrev": 91
+  },
+  "countries": [
+   {
+    "country": "hnd",
+    "clicks": 18,
+    "impressions": 1255,
+    "ctr": 0.014342629482071713,
+    "position": 7.250199203187251,
+    "dClicks": 0,
+    "dImpressions": 81,
+    "dPosition": 1.1633167500356327,
+    "isNew": false
+   },
+   {
+    "country": "usa",
+    "clicks": 1,
+    "impressions": 182,
+    "ctr": 0.005494505494505495,
+    "position": 6.329670329670329,
+    "dClicks": 1,
+    "dImpressions": -75,
+    "dPosition": -0.03608842519348343,
+    "isNew": false
+   },
+   {
+    "country": "gtm",
+    "clicks": 1,
+    "impressions": 55,
+    "ctr": 0.01818181818181818,
+    "position": 7,
+    "dClicks": 1,
+    "dImpressions": 11,
+    "dPosition": -3.9772727272727266,
+    "isNew": false
+   },
+   {
+    "country": "mex",
+    "clicks": 0,
+    "impressions": 43,
+    "ctr": 0,
+    "position": 6.186046511627907,
+    "dClicks": 0,
+    "dImpressions": 27,
+    "dPosition": 0.5610465116279073,
+    "isNew": false
+   },
+   {
+    "country": "slv",
+    "clicks": 1,
+    "impressions": 15,
+    "ctr": 0.06666666666666667,
+    "position": 5.666666666666667,
+    "dClicks": -1,
+    "dImpressions": -1,
+    "dPosition": -5.208333333333333,
+    "isNew": false
+   },
+   {
+    "country": "col",
+    "clicks": 0,
+    "impressions": 13,
+    "ctr": 0,
+    "position": 6,
+    "dClicks": 0,
+    "dImpressions": 5,
+    "dPosition": -14.25,
+    "isNew": false
+   },
+   {
+    "country": "cri",
+    "clicks": 0,
+    "impressions": 13,
+    "ctr": 0,
+    "position": 6.153846153846154,
+    "dClicks": 0,
+    "dImpressions": 5,
+    "dPosition": 0.2788461538461542,
+    "isNew": false
+   },
+   {
+    "country": "esp",
+    "clicks": 1,
+    "impressions": 11,
+    "ctr": 0.09090909090909091,
+    "position": 5.363636363636363,
+    "dClicks": 1,
+    "dImpressions": 6,
+    "dPosition": -0.03636363636363704,
+    "isNew": false
+   },
+   {
+    "country": "ven",
+    "clicks": 0,
+    "impressions": 10,
+    "ctr": 0,
+    "position": 5.7,
+    "dClicks": 0,
+    "dImpressions": 3,
+    "dPosition": -0.014285714285714235,
+    "isNew": false
+   },
+   {
+    "country": "ind",
+    "clicks": 0,
+    "impressions": 9,
+    "ctr": 0,
+    "position": 2.888888888888889,
+    "dClicks": 0,
+    "dImpressions": 2,
+    "dPosition": -9.825396825396824,
+    "isNew": false
+   },
+   {
+    "country": "bra",
+    "clicks": 0,
+    "impressions": 6,
+    "ctr": 0,
+    "position": 4.333333333333334,
+    "dClicks": 0,
+    "dImpressions": -1,
+    "dPosition": -0.23809523809523725,
+    "isNew": false
+   },
+   {
+    "country": "are",
+    "clicks": 0,
+    "impressions": 5,
+    "ctr": 0,
+    "position": 4.4,
+    "dClicks": 0,
+    "dImpressions": -1,
+    "dPosition": -0.43333333333333357,
+    "isNew": false
+   },
+   {
+    "country": "can",
+    "clicks": 0,
+    "impressions": 4,
+    "ctr": 0,
+    "position": 4.75,
+    "dClicks": 0,
+    "dImpressions": -1,
+    "dPosition": -1.6500000000000004,
+    "isNew": false
+   },
+   {
+    "country": "pan",
+    "clicks": 0,
+    "impressions": 4,
+    "ctr": 0,
+    "position": 3.75,
+    "dClicks": 0,
+    "dImpressions": -5,
+    "dPosition": -3.0277777777777777,
+    "isNew": false
+   },
+   {
+    "country": "per",
+    "clicks": 0,
+    "impressions": 4,
+    "ctr": 0,
+    "position": 5.75,
+    "dClicks": 0,
+    "dImpressions": 1,
+    "dPosition": -0.916666666666667,
+    "isNew": false
+   },
+   {
+    "country": "chl",
+    "clicks": 0,
+    "impressions": 3,
+    "ctr": 0,
+    "position": 5.666666666666667,
+    "dClicks": 0,
+    "dImpressions": -3,
+    "dPosition": 2.166666666666667,
+    "isNew": false
+   },
+   {
+    "country": "phl",
+    "clicks": 0,
+    "impressions": 3,
+    "ctr": 0,
+    "position": 3,
+    "dClicks": 0,
+    "dImpressions": -2,
+    "dPosition": -2.5999999999999996,
+    "isNew": false
+   },
+   {
+    "country": "ukr",
+    "clicks": 0,
+    "impressions": 3,
+    "ctr": 0,
+    "position": 7,
+    "dClicks": 0,
+    "dImpressions": 3,
+    "dPosition": null,
+    "isNew": true
+   },
+   {
+    "country": "bgd",
+    "clicks": 0,
+    "impressions": 2,
+    "ctr": 0,
+    "position": 9,
+    "dClicks": 0,
+    "dImpressions": 2,
+    "dPosition": null,
+    "isNew": true
+   },
+   {
+    "country": "gbr",
+    "clicks": 0,
+    "impressions": 2,
+    "ctr": 0,
+    "position": 5.5,
+    "dClicks": 0,
+    "dImpressions": 1,
+    "dPosition": 1.5,
+    "isNew": false
+   },
+   {
+    "country": "nld",
+    "clicks": 0,
+    "impressions": 2,
+    "ctr": 0,
+    "position": 7.5,
+    "dClicks": 0,
+    "dImpressions": -1,
+    "dPosition": 2.166666666666667,
+    "isNew": false
+   },
+   {
+    "country": "rus",
+    "clicks": 0,
+    "impressions": 2,
+    "ctr": 0,
+    "position": 8.5,
+    "dClicks": 0,
+    "dImpressions": 2,
+    "dPosition": null,
+    "isNew": true
+   },
+   {
+    "country": "alb",
+    "clicks": 0,
+    "impressions": 1,
+    "ctr": 0,
+    "position": 5,
+    "dClicks": 0,
+    "dImpressions": 1,
+    "dPosition": null,
+    "isNew": true
+   },
+   {
+    "country": "arg",
+    "clicks": 0,
+    "impressions": 1,
+    "ctr": 0,
+    "position": 6,
+    "dClicks": 0,
+    "dImpressions": -1,
+    "dPosition": 5,
+    "isNew": false
+   },
+   {
+    "country": "aus",
+    "clicks": 0,
+    "impressions": 1,
+    "ctr": 0,
+    "position": 7,
+    "dClicks": 0,
+    "dImpressions": 1,
+    "dPosition": null,
+    "isNew": true
+   },
+   {
+    "country": "bel",
+    "clicks": 0,
+    "impressions": 1,
+    "ctr": 0,
+    "position": 9,
+    "dClicks": 0,
+    "dImpressions": 0,
+    "dPosition": 7,
+    "isNew": false
+   },
+   {
+    "country": "bgr",
+    "clicks": 0,
+    "impressions": 1,
+    "ctr": 0,
+    "position": 4,
+    "dClicks": 0,
+    "dImpressions": 1,
+    "dPosition": null,
+    "isNew": true
+   },
+   {
+    "country": "cze",
+    "clicks": 0,
+    "impressions": 1,
+    "ctr": 0,
+    "position": 5,
+    "dClicks": 0,
+    "dImpressions": 1,
+    "dPosition": null,
+    "isNew": true
+   },
+   {
+    "country": "deu",
+    "clicks": 0,
+    "impressions": 1,
+    "ctr": 0,
+    "position": 5,
+    "dClicks": 0,
+    "dImpressions": -1,
+    "dPosition": 1.5,
+    "isNew": false
+   },
+   {
+    "country": "ecu",
+    "clicks": 0,
+    "impressions": 1,
+    "ctr": 0,
+    "position": 7,
+    "dClicks": 0,
+    "dImpressions": -3,
+    "dPosition": -0.5,
+    "isNew": false
+   },
+   {
+    "country": "egy",
+    "clicks": 0,
+    "impressions": 1,
+    "ctr": 0,
+    "position": 7,
+    "dClicks": 0,
+    "dImpressions": 1,
+    "dPosition": null,
+    "isNew": true
+   },
+   {
+    "country": "hkg",
+    "clicks": 0,
+    "impressions": 1,
+    "ctr": 0,
+    "position": 5,
+    "dClicks": 0,
+    "dImpressions": -2,
+    "dPosition": -0.33333333333333304,
+    "isNew": false
+   },
+   {
+    "country": "kwt",
+    "clicks": 0,
+    "impressions": 1,
+    "ctr": 0,
+    "position": 2,
+    "dClicks": 0,
+    "dImpressions": 1,
+    "dPosition": null,
+    "isNew": true
+   },
+   {
+    "country": "ltu",
+    "clicks": 0,
+    "impressions": 1,
+    "ctr": 0,
+    "position": 2,
+    "dClicks": 0,
+    "dImpressions": 1,
+    "dPosition": null,
+    "isNew": true
+   },
+   {
+    "country": "nic",
+    "clicks": 0,
+    "impressions": 1,
+    "ctr": 0,
+    "position": 30,
+    "dClicks": 0,
+    "dImpressions": -2,
+    "dPosition": 26.333333333333332,
+    "isNew": false
+   },
+   {
+    "country": "qat",
+    "clicks": 0,
+    "impressions": 1,
+    "ctr": 0,
+    "position": 5,
+    "dClicks": 0,
+    "dImpressions": 1,
+    "dPosition": null,
+    "isNew": true
+   },
+   {
+    "country": "srb",
+    "clicks": 0,
+    "impressions": 1,
+    "ctr": 0,
+    "position": 8,
+    "dClicks": 0,
+    "dImpressions": 1,
+    "dPosition": null,
+    "isNew": true
+   },
+   {
+    "country": "tha",
+    "clicks": 0,
+    "impressions": 1,
+    "ctr": 0,
+    "position": 6,
+    "dClicks": 0,
+    "dImpressions": -3,
+    "dPosition": -20.5,
+    "isNew": false
+   },
+   {
+    "country": "uga",
+    "clicks": 0,
+    "impressions": 1,
+    "ctr": 0,
+    "position": 6,
+    "dClicks": 0,
+    "dImpressions": 1,
+    "dPosition": null,
+    "isNew": true
+   }
+  ],
+  "strikingDistance": [
+   {
+    "query": "cuanto es la deduccion del ihss en honduras 2026",
+    "clicks": 0,
+    "impressions": 28,
+    "ctr": 0,
+    "position": 10.321428571428571
+   },
+   {
+    "query": "techo del rap 2026",
+    "clicks": 1,
+    "impressions": 21,
+    "ctr": 0.047619047619047616,
+    "position": 9.619047619047619
+   },
+   {
+    "query": "techo rap 2026",
+    "clicks": 0,
+    "impressions": 11,
+    "ctr": 0,
+    "position": 9.454545454545455
+   },
+   {
+    "query": "como detectar fugas de dinero en una empresa",
+    "clicks": 0,
+    "impressions": 7,
+    "ctr": 0,
+    "position": 10.428571428571429
+   }
+  ],
+  "ctrLaggards": [
+   {
+    "page": "https://humanosisu.net/deducciones-honduras-ihss-rap-isr",
+    "clicks": 6,
+    "impressions": 755,
+    "ctr": 0.007947019867549669,
+    "position": 7.279470198675496
+   },
+   {
+    "page": "https://humanosisu.net/recursos/guia-calcular-isr-rap-honduras-2026",
+    "clicks": 9,
+    "impressions": 646,
+    "ctr": 0.01393188854489164,
+    "position": 6.701238390092879
+   },
+   {
+    "page": "https://humanosisu.net/recursos/cumplimiento-legal-errores-13vo-14vo-salario",
+    "clicks": 0,
+    "impressions": 67,
+    "ctr": 0,
+    "position": 5.91044776119403
+   }
+  ],
+  "zeroClickQueries": [
+   {
+    "query": "como se calcula el rap en honduras 2026",
+    "clicks": 0,
+    "impressions": 33,
+    "ctr": 0,
+    "position": 4.515151515151516
+   },
+   {
+    "query": "cuanto es la deduccion del ihss en honduras 2026",
+    "clicks": 0,
+    "impressions": 28,
+    "ctr": 0,
+    "position": 10.321428571428571
+   },
+   {
+    "query": "como calcular el rap en honduras",
+    "clicks": 0,
+    "impressions": 12,
+    "ctr": 0,
+    "position": 7.75
+   },
+   {
+    "query": "techo rap 2026",
+    "clicks": 0,
+    "impressions": 11,
+    "ctr": 0,
+    "position": 9.454545454545455
+   }
+  ],
+  "risingQueries": [
+   {
+    "query": "cuanto es la deduccion del ihss en honduras 2026",
+    "clicks": 0,
+    "impressions": 28,
+    "ctr": 0,
+    "position": 10.321428571428571,
+    "dClicks": 0,
+    "dImpressions": 28,
+    "dPosition": null,
+    "isNew": true
+   },
+   {
+    "query": "como se calcula el rap en honduras 2026",
+    "clicks": 0,
+    "impressions": 33,
+    "ctr": 0,
+    "position": 4.515151515151516,
+    "dClicks": 0,
+    "dImpressions": 20,
+    "dPosition": -2.2540792540792536,
+    "isNew": false
+   },
+   {
+    "query": "techo del rap 2026",
+    "clicks": 1,
+    "impressions": 21,
+    "ctr": 0.047619047619047616,
+    "position": 9.619047619047619,
+    "dClicks": 1,
+    "dImpressions": 19,
+    "dPosition": 0.11904761904761862,
+    "isNew": false
+   },
+   {
+    "query": "techo rap 2026",
+    "clicks": 0,
+    "impressions": 11,
+    "ctr": 0,
+    "position": 9.454545454545455,
+    "dClicks": 0,
+    "dImpressions": 10,
+    "dPosition": 0.45454545454545503,
+    "isNew": false
+   },
+   {
+    "query": "como detectar fugas de dinero en una empresa",
+    "clicks": 0,
+    "impressions": 7,
+    "ctr": 0,
+    "position": 10.428571428571429,
+    "dClicks": 0,
+    "dImpressions": 7,
+    "dPosition": null,
+    "isNew": true
+   },
+   {
+    "query": "calculadora isr honduras",
+    "clicks": 0,
+    "impressions": 2,
+    "ctr": 0,
+    "position": 10,
+    "dClicks": 0,
+    "dImpressions": 2,
+    "dPosition": null,
+    "isNew": true
+   },
+   {
+    "query": "gestión de nómina en honduras",
+    "clicks": 0,
+    "impressions": 2,
+    "ctr": 0,
+    "position": 50.5,
+    "dClicks": 0,
+    "dImpressions": 2,
+    "dPosition": null,
+    "isNew": true
+   },
+   {
+    "query": "que es el rap honduras",
+    "clicks": 0,
+    "impressions": 2,
+    "ctr": 0,
+    "position": 2.5,
+    "dClicks": 0,
+    "dImpressions": 2,
+    "dPosition": null,
+    "isNew": true
+   },
+   {
+    "query": "calculo del rap honduras 2026",
+    "clicks": 1,
+    "impressions": 1,
+    "ctr": 1,
+    "position": 4,
+    "dClicks": 1,
+    "dImpressions": 1,
+    "dPosition": null,
+    "isNew": true
+   },
+   {
+    "query": "sisu software",
+    "clicks": 1,
+    "impressions": 1,
+    "ctr": 1,
+    "position": 1,
+    "dClicks": 1,
+    "dImpressions": 1,
+    "dPosition": null,
+    "isNew": true
+   },
+   {
+    "query": "14200",
+    "clicks": 0,
+    "impressions": 1,
+    "ctr": 0,
+    "position": 8,
+    "dClicks": 0,
+    "dImpressions": 1,
+    "dPosition": null,
+    "isNew": true
+   },
+   {
+    "query": "2000",
+    "clicks": 0,
+    "impressions": 1,
+    "ctr": 0,
+    "position": 2,
+    "dClicks": 0,
+    "dImpressions": 1,
+    "dPosition": null,
+    "isNew": true
+   },
+   {
+    "query": "20790",
+    "clicks": 0,
+    "impressions": 1,
+    "ctr": 0,
+    "position": 8,
+    "dClicks": 0,
+    "dImpressions": 1,
+    "dPosition": null,
+    "isNew": true
+   },
+   {
+    "query": "26000",
+    "clicks": 0,
+    "impressions": 1,
+    "ctr": 0,
+    "position": 1,
+    "dClicks": 0,
+    "dImpressions": 1,
+    "dPosition": null,
+    "isNew": true
+   },
+   {
+    "query": "45000",
+    "clicks": 0,
+    "impressions": 1,
+    "ctr": 0,
+    "position": 6,
+    "dClicks": 0,
+    "dImpressions": 1,
+    "dPosition": null,
+    "isNew": true
+   },
+   {
+    "query": "como calcular el rap en honduras",
+    "clicks": 0,
+    "impressions": 12,
+    "ctr": 0,
+    "position": 7.75,
+    "dClicks": -1,
+    "dImpressions": 1,
+    "dPosition": 0.5681818181818183,
+    "isNew": false
+   },
+   {
+    "query": "como funciona el rap en honduras",
+    "clicks": 0,
+    "impressions": 1,
+    "ctr": 0,
+    "position": 3,
+    "dClicks": 0,
+    "dImpressions": 1,
+    "dPosition": null,
+    "isNew": true
+   },
+   {
+    "query": "como se calcula el rap",
+    "clicks": 0,
+    "impressions": 1,
+    "ctr": 0,
+    "position": 6,
+    "dClicks": 0,
+    "dImpressions": 1,
+    "dPosition": null,
+    "isNew": true
+   },
+   {
+    "query": "cuanto te quita el seguro de tu sueldo",
+    "clicks": 0,
+    "impressions": 1,
+    "ctr": 0,
+    "position": 1,
+    "dClicks": 0,
+    "dImpressions": 1,
+    "dPosition": null,
+    "isNew": true
+   },
+   {
+    "query": "gestion de nomina guatemala",
+    "clicks": 0,
+    "impressions": 1,
+    "ctr": 0,
+    "position": 73,
+    "dClicks": 0,
+    "dImpressions": 1,
+    "dPosition": null,
+    "isNew": true
+   }
+  ],
+  "fallingPages": [
+   {
+    "page": "https://humanosisu.net/en/deducciones-honduras-ihss-rap-isr",
+    "clicks": 0,
+    "impressions": 25,
+    "ctr": 0,
+    "position": 3.4,
+    "dClicks": -6,
+    "dImpressions": -403,
+    "dPosition": -2.0135514018691594,
+    "isNew": false
+   },
+   {
+    "page": "https://humanosisu.net/deducciones-honduras-ihss-rap-isr",
+    "clicks": 6,
+    "impressions": 755,
+    "ctr": 0.007947019867549669,
+    "position": 7.279470198675496,
+    "dClicks": -3,
+    "dImpressions": -121,
+    "dPosition": 0.8148583265293778,
+    "isNew": false
+   },
+   {
+    "page": "https://humanosisu.net/",
+    "clicks": 5,
+    "impressions": 62,
+    "ctr": 0.08064516129032258,
+    "position": 9.758064516129032,
+    "dClicks": 0,
+    "dImpressions": -18,
+    "dPosition": 2.745564516129032,
+    "isNew": false
+   },
+   {
+    "page": "https://humanosisu.net/en/terminos-de-servicio",
+    "clicks": 0,
+    "impressions": 2,
+    "ctr": 0,
+    "position": 7.5,
+    "dClicks": 0,
+    "dImpressions": -1,
+    "dPosition": 3.166666666666666,
+    "isNew": false
+   }
+  ],
+  "newQueries": [
+   {
+    "query": "cuanto es la deduccion del ihss en honduras 2026",
+    "clicks": 0,
+    "impressions": 28,
+    "ctr": 0,
+    "position": 10.321428571428571,
+    "dClicks": 0,
+    "dImpressions": 28,
+    "dPosition": null,
+    "isNew": true
+   },
+   {
+    "query": "como detectar fugas de dinero en una empresa",
+    "clicks": 0,
+    "impressions": 7,
+    "ctr": 0,
+    "position": 10.428571428571429,
+    "dClicks": 0,
+    "dImpressions": 7,
+    "dPosition": null,
+    "isNew": true
+   }
+  ],
+  "termSplit": {
+   "gtm": {
+    "planilla": 0,
+    "nomina": 1
+   },
+   "hnd": {
+    "planilla": 0,
+    "nomina": 4
+   }
+  }
+ }
+}
