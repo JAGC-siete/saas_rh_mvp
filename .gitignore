@@ -138,3 +138,6 @@ copy-*.sql
 
 # Local git worktrees (never commit)
 .worktrees/
+
+# Datos SEO locales (dry-run); los reales viven en la rama seo-data
+seo-data/

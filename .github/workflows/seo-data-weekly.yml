@@ -1,0 +1,64 @@
+name: SEO · datos semanales de Search Console
+
+# Baja Search Console cada lunes y lo guarda en la rama `seo-data`
+# (no en main, para no disparar el CI/CD ni un deploy).
+# El agente SEO lee esa rama, evalúa y abre PRs con ajustes.
+
+"on":
+  schedule:
+    - cron: '0 11 * * 1' # lunes 05:00 Tegucigalpa
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: seo-data
+  cancel-in-progress: false
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout scripts (main)
+        uses: actions/checkout@v6
+        with:
+          path: main
+
+      - name: Checkout rama seo-data
+        uses: actions/checkout@v6
+        with:
+          path: data
+          fetch-depth: 0
+
+      - name: Preparar rama seo-data
+        working-directory: data
+        run: |
+          if git ls-remote --exit-code --heads origin seo-data >/dev/null; then
+            git fetch origin seo-data && git checkout seo-data
+          else
+            git checkout --orphan seo-data && git rm -rf . >/dev/null
+            echo "# Datos SEO (generados por GitHub Actions)" > README.md
+          fi
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24.x'
+
+      - name: Exportar Search Console
+        env:
+          GSC_SERVICE_ACCOUNT_JSON: ${{ secrets.GSC_SERVICE_ACCOUNT_JSON }}
+          GSC_SITE_URL: sc-domain:humanosisu.net
+          GSC_OUT_DIR: ${{ github.workspace }}/data/seo-data
+        run: node main/scripts/seo/gsc-export.mjs
+
+      - name: Commit
+        working-directory: data
+        run: |
+          git config user.name "seo-bot"
+          git config user.email "seo-bot@users.noreply.github.com"
+          git add -A
+          git diff --cached --quiet && echo "Sin cambios" && exit 0
+          git commit -m "data(seo): export GSC $(date -u +%F)"
+          git push origin seo-data
