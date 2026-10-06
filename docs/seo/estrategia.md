@@ -41,6 +41,19 @@ Observaciones de la línea base:
 - 452 impresiones desde EE. UU. con CTR 0.2%: probablemente la versión `/en` o diáspora; no es mercado objetivo.
 - `/calcusisuhn` aún aparece en GSC (alias viejo con 301): vigilar que las impresiones migren a `/calculadora-deducciones`.
 
+## Línea base Core Web Vitals (Lighthouse móvil, build local, 2026-10-06)
+
+Mediana de 3 corridas; `lighthouserc.json` lo repite en cada PR (solo warning).
+
+| Página | Performance | LCP | CLS | TBT |
+| --- | --- | --- | --- | --- |
+| `/` | 68 | 3.7 s | 0.254 | 337 ms |
+| `/deducciones-honduras-ihss-rap-isr` | 86 | 3.3 s | 0 | 254 ms |
+| `/calculadora-deducciones` | 92 | 3.0 s | 0 | 186 ms |
+| `/sistema-biometrico-nomina` | 89 | 3.2 s | 0 | 175 ms |
+
+LCP > 2.5 s en las cuatro y CLS de la home > 0.1: candidatos para un PR de rendimiento.
+
 ## KPIs y metas (abril 2027)
 
 | KPI | Fuente | Meta |
