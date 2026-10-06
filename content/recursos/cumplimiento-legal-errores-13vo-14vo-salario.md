@@ -1,6 +1,6 @@
 ---
-title: "Cumplimiento Legal en Honduras: Los errores más comunes al emitir el 13vo y 14vo salario"
-description: "Evite multas y demandas laborales: deducciones ilegales en aguinaldo y 14vo, promedio de variables, proporcionalidad en finiquitos y fechas límite de pago en Honduras."
+title: "13vo y 14vo salario Honduras: errores comunes"
+description: "Sobre el 13vo y 14vo no se descuenta ISR, IHSS ni RAP. Vea cómo promediar variables, pagar lo proporcional en finiquitos y las fechas límite en Honduras."
 datePublished: "2026-06-22"
 author: "Licenciado Jorge Arturo Gómez Coello"
 category: "Cumplimiento Legal"
