@@ -51,6 +51,10 @@ export interface LandingPageRow {
   created_at: string
   updated_at: string
   inventory_enabled: boolean
+  /** Maqueta generada desde /webycitas sin reclamar. Columna del repo webycitas; Planilla no la escribe. */
+  is_lead_preview: boolean
+  /** webycitas_leads.id de origen; NULL en landings armadas a mano. Columna del repo webycitas. */
+  webycitas_lead_id: string | null
 }
 
 export type LandingPageInsert = Pick<
