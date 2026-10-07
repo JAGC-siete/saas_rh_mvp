@@ -161,6 +161,17 @@ const DemoFooter: React.FC<DemoFooterProps> = ({ variant = 'default' }) => {
             </p>
             <div className="text-sm text-gray-500">
               <p>{copy.aboutCopyright}</p>
+              <p className="mt-2">
+                {copy.createdBy}{' '}
+                <a
+                  href="https://portafolio.humanosisu.net"
+                  target="_blank"
+                  rel="noopener"
+                  className="hover:text-blue-600 underline decoration-gray-400/30"
+                >
+                  Jorge Arturo Gómez Coello
+                </a>
+              </p>
             </div>
           </div>
         </div>

@@ -7,6 +7,7 @@ export type CommonCopy = {
   guides: string
   aboutBlurb: string
   aboutCopyright: string
+  createdBy: string
   privacyNotice: string
   privacyNoticeStrong: string
   privacy: string
@@ -39,6 +40,7 @@ const byLocale: Record<LandingLocale, CommonCopy> = {
     guides: 'Guías y recursos',
     aboutBlurb: 'Tecnología de Recursos Humanos integrada para MiPyMes en Centroamérica',
     aboutCopyright: '© 2026 SISU RRHH exclusivo El Salvador | Guatemala | Honduras.',
+    createdBy: 'Creado por',
     privacyNotice: 'Protegemos tu información.',
     privacyNoticeStrong: 'Solo será utilizada para contactarte',
     privacy: 'Política de Privacidad',
@@ -70,6 +72,7 @@ const byLocale: Record<LandingLocale, CommonCopy> = {
     guides: 'Guides & resources',
     aboutBlurb: 'Integrated HR technology for SMBs in Central America',
     aboutCopyright: '© 2026 SISU HR — exclusive to El Salvador | Guatemala | Honduras.',
+    createdBy: 'Built by',
     privacyNotice: 'We protect your information.',
     privacyNoticeStrong: 'It will only be used to contact you',
     privacy: 'Privacy Policy',
