@@ -60,6 +60,21 @@ export const GUIDE_LINKS: Record<string, GuideLink> = {
     href: DEDUCTION_CALCULATOR_PUBLIC_PATHS.GTM,
     label: 'Calculadora de deducciones Guatemala',
     description: 'IGSS e ISR sobre tu salario'
+  },
+  calculadoraPrestaciones: {
+    href: '/calculadora-prestaciones',
+    label: 'Calculadora de prestaciones',
+    description: 'Cesantía, preaviso, vacaciones, 13vo y 14vo en tu finiquito'
+  },
+  calculadoraVacaciones: {
+    href: '/calculadora-vacaciones-honduras',
+    label: 'Calculadora de vacaciones Honduras',
+    description: 'Días según antigüedad y cuánto te pagan'
+  },
+  calculadoraHorasExtra: {
+    href: '/calculadora-horas-extra-honduras',
+    label: 'Calculadora de horas extra Honduras',
+    description: 'Recargos de 25% a 100% según la hora'
   }
 } as const
 
@@ -89,6 +104,14 @@ export const RELATED_GUIDES: Record<string, Array<keyof typeof GUIDE_LINKS>> = {
   '/calculadora-deducciones': ['deduccionesHonduras', 'calculadoraElSalvador', 'calculadoraGuatemala'],
   '/calculadora-deducciones-el-salvador': ['calculadoraGuatemala', 'calculadoraHonduras', 'biometricoNomina'],
   '/calculadora-deducciones-guatemala': ['calculadoraElSalvador', 'calculadoraHonduras', 'biometricoNomina'],
+  '/calculadora-vacaciones-honduras': ['calculadoraPrestaciones', 'calculadoraHorasExtra', 'calculadoraHonduras'],
+  '/calculadora-horas-extra-honduras': ['calculadoraVacaciones', 'calculadoraHonduras', 'biometricoNomina'],
+  '/calculadora-aguinaldo-el-salvador': ['calculadoraElSalvador', 'calculadoraGuatemala', 'biometricoNomina'],
+  '/calculadora-indemnizacion-el-salvador': ['calculadoraElSalvador', 'calculadoraGuatemala', 'biometricoNomina'],
+  '/calculadora-vacaciones-el-salvador': ['calculadoraElSalvador', 'calculadoraGuatemala', 'biometricoNomina'],
+  '/calculadora-bono-14-guatemala': ['calculadoraGuatemala', 'calculadoraElSalvador', 'biometricoNomina'],
+  '/calculadora-aguinaldo-guatemala': ['calculadoraGuatemala', 'calculadoraElSalvador', 'biometricoNomina'],
+  '/calculadora-indemnizacion-guatemala': ['calculadoraGuatemala', 'calculadoraElSalvador', 'biometricoNomina'],
   '/recursos': ['deduccionesHonduras', 'biometricoNomina', 'alternativaOdoo'],
   '/paz': ['domingosSinPlanilla', 'deduccionesHonduras', 'biometricoNomina'],
 }

@@ -7,6 +7,7 @@ import { PRIVACY_PUBLIC_PATH, TERMS_PUBLIC_PATH } from '../lib/marketing/legal-p
 import { deductionCalculatorPublicPath } from '../lib/marketing/calculator-public-paths'
 import { localizedHref } from '../lib/i18n/locale'
 import { BILINGUAL_LANDING_PATHS } from '../lib/i18n/bilingual-paths'
+import { indexableMatrixCalculators } from '../lib/public-calculator/registry'
 interface SitemapUrl {
   loc: string
   lastmod?: string
@@ -239,7 +240,15 @@ export const getServerSideProps: GetServerSideProps = async ({ res }) => {
     lastmod: landing.lastmod,
   }))
 
-  const sitemap = generateSitemap([...publicPages, ...recursoPages, ...landingPages])
+  // Calculadoras del registro: solo las validadas legalmente (las demás son noindex).
+  const calculatorPages: SitemapUrl[] = indexableMatrixCalculators().map((c) => ({
+    loc: c.path,
+    changefreq: 'monthly',
+    priority: 0.75,
+    lastmod: c.vigenteA,
+  }))
+
+  const sitemap = generateSitemap([...publicPages, ...calculatorPages, ...recursoPages, ...landingPages])
 
   res.setHeader('Content-Type', 'text/xml')
   res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400')

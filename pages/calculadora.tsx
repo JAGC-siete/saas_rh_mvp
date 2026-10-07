@@ -10,6 +10,7 @@ import { generateWebPageSchema, generateBreadcrumbListSchema } from '../lib/seo/
 import { generateTitle } from '../lib/seo/title'
 import { generateDescription } from '../lib/seo/description'
 import { CALCULATOR_HUB_LINKS } from '../lib/public-calculator/hub-links'
+import { COUNTRY_LABEL, indexableMatrixCalculators } from '../lib/public-calculator/registry'
 
 export default function CalculadoraHubPage() {
   const { locale, href } = useLandingPreferences()
@@ -97,6 +98,25 @@ export default function CalculadoraHubPage() {
             )
           })}
         </div>
+
+        {indexableMatrixCalculators().length > 0 ? (
+          <>
+            <h2 className="text-xl font-semibold text-white mb-4">{copy.sectionLabor}</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-10">
+              {indexableMatrixCalculators().map((item) => (
+                <Link
+                  key={item.path}
+                  href={href(item.path)}
+                  className="glass-modern rounded-2xl p-5 border border-white/15 hover:border-green-400/40 transition-all hover:-translate-y-0.5"
+                >
+                  <div className="text-xs text-brand-300 mb-1">{COUNTRY_LABEL[item.country]}</div>
+                  <div className="text-lg font-bold text-white">{item.hubLabel}</div>
+                  <div className="text-sm text-brand-200/80 mt-2">{item.hubSubtitle}</div>
+                </Link>
+              ))}
+            </div>
+          </>
+        ) : null}
 
         <h2 className="text-xl font-semibold text-white mb-4">{copy.sectionOther}</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
