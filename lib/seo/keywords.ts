@@ -119,6 +119,26 @@ export const ROUTE_KEYWORDS: RouteKeywords[] = [
     targets: [{ query: 'como detectar fugas de dinero en una empresa', impressions: 7, position: 10.4 }],
   },
   {
+    path: '/calculadora-vacaciones-honduras',
+    country: 'HND',
+    primary: 'calculadora vacaciones honduras',
+    // Página nueva (fase 1): objetivos del plan, sin datos de GSC todavía.
+    targets: [
+      { query: 'calculadora vacaciones honduras', impressions: 0, position: null },
+      { query: 'cuantos dias de vacaciones me tocan en honduras', impressions: 0, position: null },
+      { query: 'como se calculan las vacaciones en honduras', impressions: 0, position: null },
+    ],
+  },
+  {
+    path: '/calculadora-horas-extra-honduras',
+    country: 'HND',
+    primary: 'calculadora horas extra honduras',
+    targets: [
+      { query: 'calculadora horas extra honduras', impressions: 0, position: null },
+      { query: 'como se calculan las horas extras en honduras', impressions: 0, position: null },
+    ],
+  },
+  {
     path: '/calculadora-deducciones-el-salvador',
     country: 'SLV',
     primary: 'calculadora de impuestos el salvador',

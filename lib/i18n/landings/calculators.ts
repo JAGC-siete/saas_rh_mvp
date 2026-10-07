@@ -16,6 +16,7 @@ export type CalculatorsCopy = {
   sectionDeductions: string
   sectionBenefits: string
   sectionOther: string
+  sectionLabor: string
   deductions: {
     country: string
     title: string
@@ -57,6 +58,7 @@ const byLocale: Record<LandingLocale, CalculatorsCopy> = {
     sectionDeductions: 'Deducciones de salario por país',
     sectionBenefits: 'Aguinaldo y catorceavo (Honduras)',
     sectionOther: 'Otras herramientas',
+    sectionLabor: 'Vacaciones y horas extra (Honduras)',
     deductions: [
       {
         country: 'Honduras',
@@ -115,6 +117,7 @@ const byLocale: Record<LandingLocale, CalculatorsCopy> = {
     sectionDeductions: 'Salary deductions by country',
     sectionBenefits: '13th & 14th month (Honduras)',
     sectionOther: 'Other tools',
+    sectionLabor: 'Vacation and overtime (Honduras)',
     deductions: [
       {
         country: 'Honduras',
