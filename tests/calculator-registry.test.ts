@@ -5,6 +5,7 @@ import {
   indexableMatrixCalculators,
   matrixCalculator,
 } from '../lib/public-calculator/registry'
+import { MATRIX_CALCULATOR_PATHS } from '../lib/public-calculator/matrix-paths'
 
 describe('calculator registry', () => {
   it('has unique paths and keeps the historical calculator URLs', () => {
@@ -35,6 +36,11 @@ describe('calculator registry', () => {
       assert.equal(e.legalValidated, false, e.path)
       assert.equal(e.engine, null, e.path)
     }
+  })
+
+  it('keeps the lightweight SSR path list in sync with the registry', () => {
+    const fromRegistry = CALCULATOR_REGISTRY.filter((e) => e.kind === 'matrix').map((e) => e.path)
+    assert.deepEqual([...MATRIX_CALCULATOR_PATHS].sort(), fromRegistry.sort())
   })
 
   it('looks up matrix entries and rejects legacy ones', () => {

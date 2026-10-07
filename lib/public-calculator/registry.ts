@@ -267,7 +267,3 @@ export function indexableCalculators(): CalculatorEntry[] {
 export function indexableMatrixCalculators(): MatrixCalculatorEntry[] {
   return CALCULATOR_REGISTRY.filter((e): e is MatrixCalculatorEntry => e.kind === 'matrix' && e.legalValidated)
 }
-
-export const MATRIX_CALCULATOR_PATHS: string[] = CALCULATOR_REGISTRY.filter((e) => e.kind === 'matrix').map(
-  (e) => e.path
-)

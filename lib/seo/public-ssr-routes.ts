@@ -12,6 +12,7 @@ import {
   ALL_DEDUCTION_CALCULATOR_LEGACY_PATHS,
   ALL_DEDUCTION_CALCULATOR_PUBLIC_PATHS,
 } from '../marketing/calculator-public-paths'
+import { MATRIX_CALCULATOR_PATHS } from '../public-calculator/matrix-paths'
 
 const PUBLIC_SSR_EXACT = new Set([
   '/',
@@ -44,6 +45,7 @@ const PUBLIC_SSR_EXACT = new Set([
   '/calculadora-prestaciones',
   '/calculadora-aguinaldo-honduras',
   '/calculadora-catorceavo-honduras',
+  ...MATRIX_CALCULATOR_PATHS,
 ])
 
 const PUBLIC_KIOSK_DISABLED = new Set([
