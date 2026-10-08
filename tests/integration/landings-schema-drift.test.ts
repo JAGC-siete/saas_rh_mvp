@@ -18,7 +18,7 @@ import {
   LANDING_PAGE_ANON_COLUMN_NAMES,
   LANDING_PAGE_COLUMN_NAMES,
   LANDING_PAGE_PRIVATE_COLUMN_NAMES,
-} from '../lib/landings/db'
+} from '../../lib/landings/db'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim()
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()
