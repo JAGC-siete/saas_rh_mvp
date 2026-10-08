@@ -46,9 +46,11 @@ jobs:
       - name: 🏗️ Type check
         run: npm run typecheck
 
+      # Todos los tests/*.test.ts. Los que necesitan servidor o base viven en tests/e2e y tests/integration.
       - name: 🧪 Run tests
         run: npm test
-        continue-on-error: true
+        env:
+          TZ: UTC
 
       # Sin continue-on-error: una fuga de permisos o una columna sin tipar debe romper el build.
       # Si los secrets no existen, los casos se saltan solos y el paso queda verde.
@@ -59,9 +61,9 @@ jobs:
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
 
+      # Falla con high/critical en dependencias de producción. Excepciones en scripts/ci/audit-gate.mjs.
       - name: 🔒 Security audit
-        run: npm audit --audit-level moderate
-        continue-on-error: true
+        run: node scripts/ci/audit-gate.mjs
 
       - name: 📊 Upload coverage
         uses: codecov/codecov-action@v6

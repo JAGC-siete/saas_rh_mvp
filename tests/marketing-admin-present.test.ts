@@ -16,6 +16,7 @@ describe('marketing admin-present (P3)', () => {
     assert.equal(marketingStepLabel(0), 'Welcome pendiente')
     assert.equal(marketingStepLabel(1), 'Siguiente: paso 1')
     assert.equal(marketingStepLabel(4), 'Siguiente: paso 4')
-    assert.equal(marketingStepLabel(5), 'Secuencia completa')
+    assert.equal(marketingStepLabel(5), 'Siguiente: paso 5')
+    assert.equal(marketingStepLabel(6), 'Secuencia completa')
   })
 })
