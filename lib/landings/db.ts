@@ -40,7 +40,7 @@ export const LANDING_LEAD_LIST_COLUMNS =
  *
  * Estas listas son la versión en tiempo de ejecución de las interfaces de
  * types/landing.ts. La aserción de tipos de abajo rompe la compilación si una
- * lista y su interfaz se separan; tests/landings-schema-drift.test.ts rompe el
+ * lista y su interfaz se separan; tests/integration/landings-schema-drift.test.ts rompe el
  * CI si se separan de la tabla real.
  * ------------------------------------------------------------------ */
 

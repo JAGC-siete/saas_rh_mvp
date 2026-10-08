@@ -2,7 +2,8 @@
  * Idle Timeout Integration Tests
  * Tests for 90-minute idle timeout implementation
  * 
- * Run: npm test -- tests/idle-timeout.test.ts
+ * NO corre en CI: usa fetch con rutas relativas, que en Node necesitan un servidor y una
+ * URL base. Fuera del glob de `npm test` hasta reescribirlo contra un servidor real.
  */
 
 import { describe, it } from 'node:test'
