@@ -137,6 +137,7 @@ export default function PayrollHourlyTable({
                           disabled={loading || !row.line_id}
                           className="bg-white/10 border-white/30 text-white hover:bg-white/20"
                           title="Ver comprobante"
+                          aria-label={`Ver comprobante de ${row.name || 'empleado'}`}
                         >
                           <Icon name="eye" className="h-4 w-4" />
                         </Button>
@@ -147,6 +148,7 @@ export default function PayrollHourlyTable({
                           disabled={loading || !row.line_id}
                           className="bg-white/10 border-white/30 text-white hover:bg-white/20"
                           title="Descargar comprobante PDF"
+                          aria-label={`Descargar comprobante PDF de ${row.name || 'empleado'}`}
                         >
                           <Icon name="download" className="h-4 w-4" />
                         </Button>
@@ -158,6 +160,7 @@ export default function PayrollHourlyTable({
                             disabled={loading}
                             className="bg-white/10 border-white/30 text-white hover:bg-white/20"
                             title="Editar campos personalizados"
+                            aria-label={`Editar campos personalizados de ${row.name || 'empleado'}`}
                           >
                             <Icon name="edit" className="h-4 w-4" />
                           </Button>
@@ -169,6 +172,7 @@ export default function PayrollHourlyTable({
                             disabled={loading}
                             className="bg-white/10 border-white/30 text-white hover:bg-white/20"
                             title="Recalcular desde asistencia (quita ediciones manuales de esta línea)"
+                            aria-label={`Recalcular desde asistencia la línea de ${row.name || 'empleado'}`}
                             onClick={async () => {
                               if (
                                 !confirm(

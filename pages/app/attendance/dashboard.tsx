@@ -47,7 +47,16 @@ import type {
 } from '../../../lib/attendance/dashboard-types'
 import type { KpiFilter } from '../../../lib/attendance/kpi-filter'
 
-function getPresetLabel(preset: string) {
+const DATE_ONLY_RE = /^\d{4}-\d{2}-\d{2}/
+
+function formatShortDate(value?: string): string {
+  const match = value ? DATE_ONLY_RE.exec(value) : null
+  if (!match) return ''
+  const [y, m, d] = match[0].split('-')
+  return `${d}/${m}/${y}`
+}
+
+function getPresetLabel(preset: string, from?: string, to?: string) {
   switch (preset) {
     case 'today':
       return 'de Hoy'
@@ -59,6 +68,11 @@ function getPresetLabel(preset: string) {
       return 'de este Mes'
     case 'year':
       return 'del Año'
+    case 'custom': {
+      const f = formatShortDate(from)
+      const t = formatShortDate(to)
+      return f && t ? `del ${f} al ${t}` : 'del rango seleccionado'
+    }
     default:
       return 'de Hoy'
   }
@@ -88,8 +102,6 @@ function readQueryParam(q: Record<string, string | string[] | undefined>, key: s
   if (Array.isArray(v)) return v[0] ?? ''
   return typeof v === 'string' ? v : ''
 }
-
-const DATE_ONLY_RE = /^\d{4}-\d{2}-\d{2}/
 
 function toFromIso(value?: string): string | undefined {
   if (!value) return undefined
@@ -425,7 +437,11 @@ export default function AttendanceDashboardApp() {
 
   const handleEmployeeClick = async (id: string, name: string) => {
     try {
-      const employeeUrl = `/api/attendance/employee/${id}?preset=${preset}`
+      const range =
+        preset === 'custom' && from && to
+          ? `&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`
+          : ''
+      const employeeUrl = `/api/attendance/employee/${id}?preset=${preset}${range}`
       const res = await fetch(employeeUrl, { credentials: 'include' })
       const data = (await res.json()) as AttendanceEmployeeApiResponse
 
@@ -443,7 +459,7 @@ export default function AttendanceDashboardApp() {
         name: data.employee?.name || name,
         events: Array.isArray(data.timeline) ? data.timeline : [],
         rawPunches: Array.isArray(data.raw_punches) ? data.raw_punches : [],
-        periodLabel: getPresetLabel(preset),
+        periodLabel: getPresetLabel(preset, from, to),
         employeeData: data.employee,
         stats: data.stats,
         schedule: data.schedule,
@@ -555,7 +571,7 @@ export default function AttendanceDashboardApp() {
               permisosPagados={kpis?.permisos_pagados ?? 0}
               temprano={kpis?.tempranos ?? 0}
               tarde={kpis?.tardes ?? 0}
-              presetLabel={` ${getPresetLabel(preset)}`}
+              presetLabel={` ${getPresetLabel(preset, from, to)}`}
               loading={loading}
               activeFilter={kpiFilter}
               onFilterChange={setKpiFilter}
@@ -625,7 +641,7 @@ export default function AttendanceDashboardApp() {
             early={early}
             late={late}
             outsideSchedule={outsideSchedule}
-            presetLabel={getPresetLabel(preset)}
+            presetLabel={getPresetLabel(preset, from, to)}
             preset={preset}
             onSelectEmployee={handleEmployeeClick}
             kpiFilter={kpiFilter}
@@ -636,7 +652,7 @@ export default function AttendanceDashboardApp() {
             <div className="p-6">
               <h3 className="text-lg font-semibold text-white mb-6 flex flex-wrap items-center gap-2">
                 <ArrowTrendingUpIcon className="h-6 w-6 text-gray-300 shrink-0" aria-hidden />
-                <span>Tendencias de asistencia {getPresetLabel(preset)}</span>
+                <span>Tendencias de asistencia {getPresetLabel(preset, from, to)}</span>
                 {selectedEmployeeId && (
                   <span className="text-sm text-gray-400 font-normal">· Empleado seleccionado</span>
                 )}

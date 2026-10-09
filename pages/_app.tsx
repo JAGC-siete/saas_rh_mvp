@@ -108,6 +108,12 @@ export default function App({ Component, pageProps }: AppProps) {
 
   const page = (
     <div className={fontShellClass}>
+      {/* Variable de fuente en :root para que portales (toasts, modales) hereden Montserrat */}
+      <style jsx global>{`
+        :root {
+          --font-montserrat: ${montserrat.style.fontFamily};
+        }
+      `}</style>
       <Component {...pageProps} />
     </div>
   )

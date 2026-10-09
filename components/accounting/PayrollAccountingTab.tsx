@@ -14,13 +14,16 @@ interface PayrollAccountingTabProps {
   status: string | undefined
   companyId: string | undefined
   onGenerate: () => Promise<void>
+  /** Lleva al usuario a la barra de acciones de la planilla para autorizar */
+  onGoToAuthorize?: () => void
 }
 
 export function PayrollAccountingTab({
   runId,
   status,
   companyId,
-  onGenerate
+  onGenerate,
+  onGoToAuthorize
 }: PayrollAccountingTabProps) {
   const toast = useToast()
   const [entries, setEntries] = useState<any[]>([])
@@ -127,6 +130,14 @@ export function PayrollAccountingTab({
             planilla haya sido autorizada. Autorice la nómina para habilitar esta
             función.
           </p>
+          {onGoToAuthorize && (
+            <Button
+              onClick={onGoToAuthorize}
+              className="mt-6 bg-green-600 hover:bg-green-700 text-white"
+            >
+              Ir a autorizar
+            </Button>
+          )}
         </CardContent>
       </Card>
     )
