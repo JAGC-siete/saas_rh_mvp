@@ -237,7 +237,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
 
   const employeesCount = clampInt(Number(body.employees_count), 1, 10000)
   if (employeesCount < 1) {
-    return res.status(400).json({ error: 'Seleccione un rango de empleados válido.' })
+    return res.status(400).json({ error: 'Elige un rango de empleados válido.' })
   }
 
   const billingModality = normalizeBillingModality((body as any).billing_modality)
@@ -262,7 +262,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
     typeof (body as any).country_code === 'string' ? String((body as any).country_code).trim().toUpperCase() : ''
   if (!isCountryCode(countryCodeRaw)) {
     return res.status(400).json({
-      error: 'Seleccione el país donde opera la empresa (Honduras, El Salvador o Guatemala).',
+      error: 'Elige el país donde opera la empresa (Honduras, El Salvador o Guatemala).',
     })
   }
   const countryCode: CountryCode = countryCodeRaw
@@ -655,7 +655,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
 
     return res.status(200).json({
       success: true,
-      message: 'Cotización enviada a su correo',
+      message: 'Cotización enviada a tu correo',
       quote_id: quoteId,
       quote,
     })

@@ -14,6 +14,13 @@ function clampStep(step: number, total: number): number {
   return Math.max(0, Math.min(total, step))
 }
 
+/** Counts completed steps, so the last step never reads 100% before the user submits. */
+export function wizardProgressPct(step: number, totalSteps: number): number {
+  const current = clampStep(step, totalSteps)
+  if (current === 0 || totalSteps <= 0) return 0
+  return Math.round(((current - 1) / totalSteps) * 100)
+}
+
 export default function WizardStepProgress({
   step,
   totalSteps = 3,
@@ -23,7 +30,7 @@ export default function WizardStepProgress({
   dotClass = 'bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.5)] ring-cyan-400/40',
 }: Props) {
   const current = clampStep(step, totalSteps)
-  const pct = current === 0 ? 0 : Math.round((current / totalSteps) * 100)
+  const pct = wizardProgressPct(step, totalSteps)
 
   return (
     <div className="mb-6">

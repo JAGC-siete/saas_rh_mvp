@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { useRouter } from 'next/router'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
@@ -55,6 +55,7 @@ import {
   ventasDeliveryErrors,
   ventasScopeErrors,
   VENTAS_COUNTRY_LABEL,
+  VENTAS_PHONE_PLACEHOLDER,
   VENTAS_SECTOR_OPTIONS,
   type VentasFormLimits,
   type VentasPublicTier,
@@ -88,6 +89,64 @@ const defaultForm = (country: CountryCode): QuotationRequest => ({
 })
 
 const VENTAS_WIZARD_STEPS: [string, string, string] = ['Alcance', 'Empresa', 'Entrega']
+
+type ErrorField = Exclude<keyof VentasValidationErrors, 'submit'>
+
+/** Order matters: focusFirstError picks the first field with an error in this order. */
+const FIELD_IDS: Record<ErrorField, string> = {
+  country_code: 'ventas-country',
+  employees_count: 'ventas-employees',
+  billing_modality: 'ventas-modality',
+  terminals_count: 'ventas-terminals',
+  company_name: 'ventas-company',
+  contact_email: 'ventas-email',
+}
+
+const FIELD_STEP: Record<ErrorField, WizardStep> = {
+  country_code: 'scope',
+  employees_count: 'scope',
+  billing_modality: 'scope',
+  terminals_count: 'scope',
+  company_name: 'company',
+  contact_email: 'delivery',
+}
+
+function firstErrorField(errors: VentasValidationErrors): ErrorField | null {
+  const fields = Object.keys(FIELD_IDS) as ErrorField[]
+  return fields.find((f) => Boolean(errors[f])) ?? null
+}
+
+function focusFirstError(errors: VentasValidationErrors) {
+  const field = firstErrorField(errors)
+  if (!field) return
+  // AnimatePresence mode="wait" mounts a new step only after the exit animation,
+  // so retry for a few frames until the field exists.
+  let attempts = 30
+  const tryFocus = () => {
+    const el = document.getElementById(FIELD_IDS[field])
+    if (el) el.focus()
+    else if (--attempts > 0) requestAnimationFrame(tryFocus)
+  }
+  requestAnimationFrame(tryFocus)
+}
+
+function fieldA11y(field: ErrorField, errors: VentasValidationErrors) {
+  const id = FIELD_IDS[field]
+  return {
+    id,
+    'aria-invalid': Boolean(errors[field]),
+    'aria-describedby': errors[field] ? `${id}-error` : undefined,
+  }
+}
+
+function FieldError({ field, errors }: { field: ErrorField; errors: VentasValidationErrors }) {
+  if (!errors[field]) return null
+  return (
+    <p id={`${FIELD_IDS[field]}-error`} className="text-red-400 text-xs mt-2">
+      {errors[field]}
+    </p>
+  )
+}
 
 function BooleanSwitch({
   checked,
@@ -322,6 +381,7 @@ export default function CotizacionGuiadaLead({
     const e = ventasScopeErrors(formData, formLimits, publicTiers)
     if (hasValidationErrors(e)) {
       setErrors(e)
+      focusFirstError(e)
       return
     }
     setErrors({})
@@ -332,16 +392,33 @@ export default function CotizacionGuiadaLead({
     const e = ventasCompanyErrors(formData)
     if (hasValidationErrors(e)) {
       setErrors(e)
+      focusFirstError(e)
       return
     }
     setErrors({})
     setStep('delivery')
   }
 
+  const validateEmailOnBlur = () => {
+    if (!formData.contact_email.trim()) return
+    const e = ventasDeliveryErrors(formData)
+    setErrors((prev) =>
+      e.contact_email ? { ...prev, contact_email: e.contact_email } : omitValidationField(prev, 'contact_email')
+    )
+  }
+
+  const submitStep = (next: () => void) => (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    next()
+  }
+
   const handleSubmit = async () => {
     const all = computeVentasErrors(formData, formLimits, publicTiers)
     if (hasValidationErrors(all)) {
       setErrors(all)
+      const field = firstErrorField(all)
+      if (field) setStep(FIELD_STEP[field])
+      focusFirstError(all)
       return
     }
 
@@ -415,7 +492,7 @@ export default function CotizacionGuiadaLead({
       await router.push('/ventas/gracias')
       return
     } catch {
-      setErrors({ submit: 'No se pudo enviar. Revise su conexión e intente de nuevo.' })
+      setErrors({ submit: 'No se pudo enviar. Revisa tu conexión e intenta de nuevo.' })
     } finally {
       setIsLoading(false)
     }
@@ -465,17 +542,17 @@ export default function CotizacionGuiadaLead({
               )}
 
               {step === 'scope' && (
-                <motion.div key="scope" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -16 }}>
+                <motion.form key="scope" noValidate onSubmit={submitStep(goCompany)} initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -16 }}>
                   <h2 className="text-xl font-bold text-white mb-1">{copy.scope.title}</h2>
                   <p className="text-brand-400 text-sm mb-6">{copy.scope.subtitle}</p>
 
                   <div className="space-y-5">
                     <div>
-                      <label htmlFor="ventas-country" className="block text-white font-medium mb-2 text-sm">
+                      <label htmlFor={FIELD_IDS.country_code} className="block text-white font-medium mb-2 text-sm">
                         País de operación *
                       </label>
                       <select
-                        id="ventas-country"
+                        {...fieldA11y('country_code', errors)}
                         value={formData.country_code || 'HND'}
                         onChange={(e) => {
                           const v = e.target.value
@@ -487,14 +564,15 @@ export default function CotizacionGuiadaLead({
                         <option value="SLV" className="bg-slate-800">El Salvador</option>
                         <option value="GTM" className="bg-slate-800">Guatemala</option>
                       </select>
-                      {errors.country_code && <p className="text-red-400 text-xs mt-2">{errors.country_code}</p>}
+                      <FieldError field="country_code" errors={errors} />
                     </div>
 
                     <div>
-                      <label className="block text-white font-medium mb-2 text-sm">
+                      <label htmlFor={FIELD_IDS.employees_count} className="block text-white font-medium mb-2 text-sm">
                         Rango de empleados *
                       </label>
                       <select
+                        {...fieldA11y('employees_count', errors)}
                         value={selectEmployeesValue}
                         onChange={(e) =>
                           patchForm({ employees_count: parseInt(e.target.value, 10) || 1 })
@@ -518,9 +596,7 @@ export default function CotizacionGuiadaLead({
                           ))
                         )}
                       </select>
-                      {errors.employees_count && (
-                        <p className="text-red-400 text-xs mt-2">{errors.employees_count}</p>
-                      )}
+                      <FieldError field="employees_count" errors={errors} />
                       {countryLabel && selectedRangeLabel && (
                         <p className="text-xs text-brand-400 mt-2">
                           {copy.scope.tierHint(selectedRangeLabel, countryLabel)}
@@ -553,8 +629,11 @@ export default function CotizacionGuiadaLead({
 
                     <div className={`grid grid-cols-1 ${product.chargeHardware ? 'sm:grid-cols-2' : ''} gap-4`}>
                       <div>
-                        <label className="block text-white font-medium mb-2 text-sm">Modalidad</label>
+                        <label htmlFor={FIELD_IDS.billing_modality} className="block text-white font-medium mb-2 text-sm">
+                          Modalidad
+                        </label>
                         <select
+                          {...fieldA11y('billing_modality', errors)}
                           value={formData.billing_modality || 'annual'}
                           onChange={(e) =>
                             patchForm({ billing_modality: e.target.value as 'annual' | 'monthly' })
@@ -583,14 +662,15 @@ export default function CotizacionGuiadaLead({
                               : `Modalidad mensual disponible a partir de ${monthlyMin} empleados.`}
                           </p>
                         )}
-                        {errors.billing_modality && (
-                          <p className="text-red-400 text-xs mt-2">{errors.billing_modality}</p>
-                        )}
+                        <FieldError field="billing_modality" errors={errors} />
                       </div>
                       {product.chargeHardware && (
                       <div>
-                        <label className="block text-white font-medium mb-2 text-sm">Terminales</label>
+                        <label htmlFor={FIELD_IDS.terminals_count} className="block text-white font-medium mb-2 text-sm">
+                          Terminales
+                        </label>
                         <select
+                          {...fieldA11y('terminals_count', errors)}
                           value={Number(formData.terminals_count) || 1}
                           onChange={(e) => patchForm({ terminals_count: parseInt(e.target.value, 10) || 1 })}
                           className={`${inputClass} ${errors.terminals_count ? 'border-red-500/50' : ''}`}
@@ -622,7 +702,7 @@ export default function CotizacionGuiadaLead({
                         )}
                         {showAnnualExtrasHint && (
                           <p className="text-xs text-amber-300/90 mt-2">
-                            Seleccionó {selectedTerminals}: {includedCap} incluidas sin costo y{' '}
+                            Elegiste {selectedTerminals}: {includedCap} incluidas sin costo y{' '}
                             {extrasCount} adicional{extrasCount === 1 ? '' : 'es'} a precio unitario
                             con −{extrasPct}% de descuento, sumadas al total anual.
                           </p>
@@ -633,9 +713,7 @@ export default function CotizacionGuiadaLead({
                             mensual decreciente).
                           </p>
                         )}
-                        {errors.terminals_count && (
-                          <p className="text-red-400 text-xs mt-2">{errors.terminals_count}</p>
-                        )}
+                        <FieldError field="terminals_count" errors={errors} />
                       </div>
                       )}
                     </div>
@@ -663,37 +741,44 @@ export default function CotizacionGuiadaLead({
                       Atrás
                     </button>
                     <button
-                      type="button"
-                      onClick={goCompany}
+                      type="submit"
                       className="flex-1 btn-shiny bg-brand-500 hover:bg-brand-600 text-white py-3 rounded-xl font-semibold"
                     >
                       Siguiente
                     </button>
                   </div>
-                </motion.div>
+                </motion.form>
               )}
 
               {step === 'company' && (
-                <motion.div key="company" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -16 }}>
+                <motion.form key="company" noValidate onSubmit={submitStep(goDelivery)} initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -16 }}>
                   <h2 className="text-xl font-bold text-white mb-1">{copy.company.title}</h2>
                   <p className="text-brand-400 text-sm mb-6">{copy.company.subtitle}</p>
 
                   <div className="space-y-5">
                     <div>
-                      <label className="block text-white font-medium mb-2 text-sm">Nombre de la empresa *</label>
+                      <label htmlFor={FIELD_IDS.company_name} className="block text-white font-medium mb-2 text-sm">
+                        Nombre de la empresa *
+                      </label>
                       <input
+                        {...fieldA11y('company_name', errors)}
                         type="text"
+                        name="organization"
+                        autoComplete="organization"
                         value={formData.company_name || ''}
                         onChange={(e) => patchForm({ company_name: e.target.value })}
                         className={`${inputClass} ${errors.company_name ? 'border-red-500/50' : ''}`}
                         placeholder="Ej. Comercializadora del Norte S.A."
                       />
-                      {errors.company_name && <p className="text-red-400 text-xs mt-2">{errors.company_name}</p>}
+                      <FieldError field="company_name" errors={errors} />
                     </div>
 
                     <div>
-                      <label className="block text-white font-medium mb-2 text-sm">Rubro (opcional)</label>
+                      <label htmlFor="ventas-sector" className="block text-white font-medium mb-2 text-sm">
+                        Rubro (opcional)
+                      </label>
                       <select
+                        id="ventas-sector"
                         value={formData.sector_rubro || ''}
                         onChange={(e) => patchForm({ sector_rubro: e.target.value })}
                         className={inputClass}
@@ -716,9 +801,13 @@ export default function CotizacionGuiadaLead({
                       </button>
                     ) : (
                       <div>
-                        <label className="block text-white font-medium mb-2 text-sm">Cupón</label>
+                        <label htmlFor="ventas-coupon" className="block text-white font-medium mb-2 text-sm">
+                          Cupón
+                        </label>
                         <input
+                          id="ventas-coupon"
                           type="text"
+                          autoComplete="off"
                           value={formData.coupon_code || ''}
                           onChange={(e) => patchForm({ coupon_code: e.target.value })}
                           className={inputClass}
@@ -733,39 +822,49 @@ export default function CotizacionGuiadaLead({
                       Atrás
                     </button>
                     <button
-                      type="button"
-                      onClick={goDelivery}
+                      type="submit"
                       className="flex-1 btn-shiny bg-brand-500 hover:bg-brand-600 text-white py-3 rounded-xl font-semibold"
                     >
                       Siguiente
                     </button>
                   </div>
-                </motion.div>
+                </motion.form>
               )}
 
               {step === 'delivery' && (
-                <motion.div key="delivery" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -16 }}>
+                <motion.form key="delivery" noValidate onSubmit={submitStep(handleSubmit)} initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -16 }}>
                   <h2 className="text-xl font-bold text-white mb-1">{copy.delivery.title}</h2>
                   <p className="text-brand-400 text-sm mb-6">{copy.delivery.subtitle}</p>
 
                   <div className="space-y-5">
                     <div>
-                      <label className="block text-white font-medium mb-2 text-sm">Correo corporativo *</label>
+                      <label htmlFor={FIELD_IDS.contact_email} className="block text-white font-medium mb-2 text-sm">
+                        Correo corporativo *
+                      </label>
                       <input
+                        {...fieldA11y('contact_email', errors)}
                         type="email"
+                        name="email"
+                        autoComplete="email"
                         value={formData.contact_email}
                         onChange={(e) => patchForm({ contact_email: e.target.value })}
+                        onBlur={validateEmailOnBlur}
                         className={`${inputClass} ${errors.contact_email ? 'border-red-500/50' : ''}`}
                         placeholder="admin@miempresa.com"
                       />
-                      {errors.contact_email && <p className="text-red-400 text-xs mt-2">{errors.contact_email}</p>}
+                      <FieldError field="contact_email" errors={errors} />
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-white font-medium mb-2 text-sm">Su nombre (opcional)</label>
+                        <label htmlFor="ventas-name" className="block text-white font-medium mb-2 text-sm">
+                          Tu nombre (opcional)
+                        </label>
                         <input
+                          id="ventas-name"
                           type="text"
+                          name="name"
+                          autoComplete="name"
                           value={formData.contact_name || ''}
                           onChange={(e) => patchForm({ contact_name: e.target.value })}
                           className={inputClass}
@@ -773,13 +872,22 @@ export default function CotizacionGuiadaLead({
                         />
                       </div>
                       <div>
-                        <label className="block text-white font-medium mb-2 text-sm">Teléfono / WhatsApp</label>
+                        <label htmlFor="ventas-phone" className="block text-white font-medium mb-2 text-sm">
+                          Teléfono / WhatsApp (opcional)
+                        </label>
                         <input
+                          id="ventas-phone"
                           type="tel"
+                          name="tel"
+                          autoComplete="tel"
                           value={formData.phone || ''}
                           onChange={(e) => patchForm({ phone: e.target.value })}
                           className={inputClass}
-                          placeholder="+504 9999-9999"
+                          placeholder={
+                            VENTAS_PHONE_PLACEHOLDER[
+                              isCountryCode(formData.country_code) ? formData.country_code : 'HND'
+                            ]
+                          }
                           inputMode="tel"
                         />
                       </div>
@@ -787,7 +895,7 @@ export default function CotizacionGuiadaLead({
                   </div>
 
                   {errors.submit && (
-                    <div className="bg-red-500/10 border border-red-500/50 rounded-lg p-3 mt-4">
+                    <div role="alert" className="bg-red-500/10 border border-red-500/50 rounded-lg p-3 mt-4">
                       <p className="text-red-400 text-sm text-center">{errors.submit}</p>
                     </div>
                   )}
@@ -799,9 +907,8 @@ export default function CotizacionGuiadaLead({
                       Atrás
                     </button>
                     <button
-                      type="button"
-                      onClick={handleSubmit}
-                      disabled={isLoading || hasValidationErrors(ventasDeliveryErrors(formData))}
+                      type="submit"
+                      disabled={isLoading}
                       className="flex-1 btn-shiny bg-brand-500 hover:bg-brand-600 text-white py-3 rounded-xl font-semibold inline-flex items-center justify-center disabled:opacity-50"
                     >
                       {isLoading ? (
@@ -817,7 +924,7 @@ export default function CotizacionGuiadaLead({
                       )}
                     </button>
                   </div>
-                </motion.div>
+                </motion.form>
               )}
             </AnimatePresence>
           </CardContent>

@@ -6,7 +6,7 @@ export const COTIZACION_GUIADA_COPY = {
   intro: {
     headline: '¿Qué deseas delegar en este servicio?',
     subheadline:
-      'Propuesta ajustada a la medida en 3 pasos. Reciba PDF listo para gerencia y credenciales de acceso gratuito en un solo paso.',
+      'Tu propuesta a la medida en 3 pasos. Te llegan al correo el PDF para gerencia y tu acceso gratis.',
     cta: 'Empezar mi propuesta',
   },
 

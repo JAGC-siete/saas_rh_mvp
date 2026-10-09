@@ -7,21 +7,21 @@ const PATTERNS: Array<{ match: RegExp; context: VentasUtmContext }> = [
   {
     match: /info|secreto|mission|m5/i,
     context: {
-      headline: 'Ya vio el costo del reprocesamiento. Estos son los números.',
-      subheadline: 'Propuesta formal en PDF — nómina y asistencia según las leyes de su país.',
+      headline: 'Ya viste el costo del reprocesamiento. Estos son los números.',
+      subheadline: 'Propuesta formal en PDF — nómina y asistencia según las leyes de tu país.',
     },
   },
   {
     match: /activar|trial|motor/i,
     context: {
-      headline: 'Su entorno de prueba está activo. Aquí la propuesta para operación real.',
-      subheadline: 'Mismos parámetros legales, escala de su equipo y modalidad de contratación.',
+      headline: 'Tu entorno de prueba está activo. Aquí la propuesta para operación real.',
+      subheadline: 'Mismos parámetros legales, escala de tu equipo y modalidad de contratación.',
     },
   },
   {
     match: /calculadora|calc_|deducc|prestac|benefit/i,
     context: {
-      headline: 'Validó los números. Esta es la inversión para automatizarlos.',
+      headline: 'Validaste los números. Esta es la inversión para automatizarlos.',
       subheadline: 'Cotización exacta con IHSS, RAP e ISR locales — PDF listo para gerencia.',
     },
   },
