@@ -5,7 +5,9 @@ import {
   ventasCompanyErrors,
   ventasDeliveryErrors,
   ventasScopeErrors,
+  VENTAS_PHONE_PLACEHOLDER,
 } from '../lib/ventas-game/ventas-form'
+import { SUPPORTED_COUNTRY_CODES } from '../lib/country/supported'
 import {
   ACTIVAR_DEMO_DEPARTMENTS,
   ACTIVAR_FALLBACK_EMPLOYEE_RANGES,
@@ -41,6 +43,18 @@ describe('ventas form step validators', () => {
 
   it('ventasDeliveryErrors is empty for valid email', () => {
     assert.equal(hasValidationErrors(ventasDeliveryErrors(validQuote)), false)
+  })
+
+  it('ventasDeliveryErrors speaks in tú and says what to fix', () => {
+    assert.match(ventasDeliveryErrors({ ...validQuote, contact_email: '' }).contact_email || '', /^Indica/)
+    assert.match(ventasDeliveryErrors({ ...validQuote, contact_email: 'juan@gmail' }).contact_email || '', /Revisa/)
+  })
+
+  it('VENTAS_PHONE_PLACEHOLDER uses each country dial code', () => {
+    const dial = { HND: '+504', SLV: '+503', GTM: '+502' } as const
+    for (const cc of SUPPORTED_COUNTRY_CODES) {
+      assert.ok(VENTAS_PHONE_PLACEHOLDER[cc].startsWith(dial[cc]), cc)
+    }
   })
 
   it('ventasCompanyErrors is empty for valid company', () => {

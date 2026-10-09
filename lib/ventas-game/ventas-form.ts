@@ -118,14 +118,14 @@ function employeesCountError(
   emp: number,
   tiers?: VentasPublicTier[] | null
 ): string | undefined {
-  if (!Number.isFinite(emp) || emp < 1) return 'Seleccione un rango de empleados.'
+  if (!Number.isFinite(emp) || emp < 1) return 'Elige un rango de empleados.'
   if (tiers && tiers.length > 0) {
     if (!findPublicTierForEmployees(emp, tiers)) {
-      return 'Seleccione un rango de empleados de la lista.'
+      return 'Elige un rango de empleados de la lista.'
     }
     return undefined
   }
-  if (emp > 10000) return 'Seleccione un rango de empleados válido.'
+  if (emp > 10000) return 'Elige un rango de empleados válido.'
   return undefined
 }
 
@@ -136,8 +136,8 @@ export function computeVentasErrors(
 ): VentasValidationErrors {
   const e: VentasValidationErrors = {}
   const email = (fd.contact_email || '').trim()
-  if (!email) e.contact_email = 'Indique un correo; ahí le enviamos la propuesta.'
-  else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) e.contact_email = 'Correo no válido.'
+  if (!email) e.contact_email = 'Indica un correo; ahí te enviamos la propuesta.'
+  else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) e.contact_email = 'Revisa el correo: falta algo, como @ o .com.'
 
   const company = (fd.company_name || '').trim()
   if (!company) e.company_name = 'Nombre de empresa obligatorio.'
@@ -170,15 +170,15 @@ export function computeVentasErrors(
 
   const cc = fd.country_code
   if (!cc || !isCountryCode(cc)) {
-    e.country_code = 'Seleccione el país donde opera la empresa.'
+    e.country_code = 'Elige el país donde opera la empresa.'
   }
 
   if (product.chargeHardware) {
     const t = Number(fd.terminals_count)
     const maxT = maxTerminals(limits)
-    if (!Number.isFinite(t) || t < 1) e.terminals_count = 'Indique cuántos terminales necesita.'
+    if (!Number.isFinite(t) || t < 1) e.terminals_count = 'Indica cuántas terminales necesitas.'
     else if (t > maxT) {
-      e.terminals_count = `Indique entre 1 y ${maxT} terminales.`
+      e.terminals_count = `Elige entre 1 y ${maxT} terminales.`
     }
   }
 
@@ -192,7 +192,7 @@ export function ventasScopeErrors(
 ): VentasValidationErrors {
   const e: VentasValidationErrors = {}
   const cc = fd.country_code
-  if (!cc || !isCountryCode(cc)) e.country_code = 'Seleccione el país.'
+  if (!cc || !isCountryCode(cc)) e.country_code = 'Elige el país.'
 
   const emp = Number(fd.employees_count)
   const empErr = employeesCountError(emp, tiers)
@@ -222,7 +222,7 @@ export function ventasScopeErrors(
     const t = Number(fd.terminals_count)
     const maxT = maxTerminals(limits)
     if (!Number.isFinite(t) || t < 1 || t > maxT) {
-      e.terminals_count = 'Indique terminales válidas.'
+      e.terminals_count = 'Elige una cantidad de terminales válida.'
     }
   }
 
@@ -241,8 +241,8 @@ export function ventasCompanyErrors(fd: QuotationRequest): VentasValidationError
 export function ventasDeliveryErrors(fd: QuotationRequest): VentasValidationErrors {
   const e: VentasValidationErrors = {}
   const email = (fd.contact_email || '').trim()
-  if (!email) e.contact_email = 'Indique un correo; ahí le enviamos la propuesta.'
-  else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) e.contact_email = 'Correo no válido.'
+  if (!email) e.contact_email = 'Indica un correo; ahí te enviamos la propuesta.'
+  else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) e.contact_email = 'Revisa el correo: falta algo, como @ o .com.'
   return e
 }
 
@@ -250,6 +250,12 @@ export const VENTAS_COUNTRY_LABEL: Record<CountryCode, string> = {
   HND: 'Honduras',
   SLV: 'El Salvador',
   GTM: 'Guatemala',
+}
+
+export const VENTAS_PHONE_PLACEHOLDER: Record<CountryCode, string> = {
+  HND: '+504 9999-9999',
+  SLV: '+503 7777-7777',
+  GTM: '+502 5555-5555',
 }
 
 export const VENTAS_SECTOR_OPTIONS: { value: string; label: string }[] = [
