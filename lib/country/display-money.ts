@@ -39,10 +39,9 @@ export function formatMoneyForCountry(
   const country = normalizeCountryCode(countryCode)
   const currency = currencyForCountryCode(country)
   const locale = localeForCountry(country)
-  const {
-    minimumFractionDigits = 2,
-    maximumFractionDigits = 2,
-  } = options || {}
+  const { maximumFractionDigits = 2 } = options || {}
+  // Intl lanza RangeError si min > max (p. ej. solo { maximumFractionDigits: 0 } con el min por defecto 2).
+  const minimumFractionDigits = Math.min(options?.minimumFractionDigits ?? 2, maximumFractionDigits)
   return new Intl.NumberFormat(locale, {
     style: 'currency',
     currency,

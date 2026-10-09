@@ -71,7 +71,7 @@ export default function Dashboard() {
   const firstName = userProfile?.name?.trim().split(/\s+/)[0]
   const isManagerScope = data?.scope.kind === 'departments'
   const scopeLabel = isManagerScope ? 'tu equipo' : 'toda la empresa'
-  const formatMoney = (n: number) => format(n, { maximumFractionDigits: 0 })
+  const formatMoney = (n: number) => format(n, { minimumFractionDigits: 0, maximumFractionDigits: 0 })
 
   return (
     <ProtectedRoute>
