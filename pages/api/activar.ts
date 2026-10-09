@@ -71,7 +71,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       typeof countryCodeRaw === 'string' ? countryCodeRaw.trim().toUpperCase() : ''
     if (!isCountryCode(countryCandidate)) {
       return res.status(400).json({
-        error: 'Seleccioná un país válido: Honduras (HND), El Salvador (SLV) o Guatemala (GTM).',
+        error: 'Elige tu país: Honduras, El Salvador o Guatemala.',
       })
     }
     const countryCode: CountryCode = countryCandidate
@@ -92,13 +92,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Validar campos requeridos
     if (!contactoEmail) {
       return res.status(400).json({ 
-        error: 'El email es requerido para continuar' 
+        error: 'Escribe tu correo para mandarte el acceso a la prueba.'
       })
     }
 
     if (!empresa || empresa.trim() === '') {
       return res.status(400).json({ 
-        error: 'El nombre de la empresa es requerido' 
+        error: 'Escribe el nombre de tu empresa o negocio.'
       })
     }
 
@@ -107,7 +107,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const normalized = normalizeSoftPhone(contactoWhatsApp)
       if (!normalized) {
         return res.status(400).json({
-          error: '📱 Número de WhatsApp inválido. Incluye el código de país y al menos 7 dígitos.',
+          error: 'Revisa tu WhatsApp: elige el código de país y escribe al menos 7 dígitos.',
         })
       }
     }
@@ -116,14 +116,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRegex.test(contactoEmail)) {
       return res.status(400).json({ 
-        error: '📧 Por favor ingresa un email válido' 
+        error: 'Revisa tu correo. Escríbelo así: nombre@empresa.com'
       })
     }
 
     // Validar número de empleados
     if (empleados < TRIAL_CONFIG.MIN_EMPLOYEES || empleados > TRIAL_CONFIG.MAX_EMPLOYEES) {
       return res.status(400).json({ 
-        error: `👥 El número de empleados debe estar entre ${TRIAL_CONFIG.MIN_EMPLOYEES} y ${TRIAL_CONFIG.MAX_EMPLOYEES}` 
+        error: `La prueba admite entre ${TRIAL_CONFIG.MIN_EMPLOYEES} y ${TRIAL_CONFIG.MAX_EMPLOYEES} empleados. Elige otro rango.`
       })
     }
 
@@ -132,7 +132,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     
     if (!validacionEmail.puedeContinuar) {
       return res.status(409).json({ 
-        error: validacionEmail.razon || 'Este email ya tiene un trial activo. Por favor, utiliza otro email o espera a que expire tu trial actual.'
+        error: validacionEmail.razon || 'Este correo ya tiene una prueba activa. Usa otro correo o entra con los datos que te mandamos.'
       })
     }
 
@@ -173,7 +173,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (dbError) {
       console.error('❌ Database error:', dbError)
-      return res.status(500).json({ error: 'Error guardando datos en la base de datos' })
+      return res.status(500).json({ error: 'No pudimos crear tu prueba. Intenta de nuevo en un momento o escríbenos a humanosisu@humanosisu.net.' })
     }
 
     console.log('✅ Datos guardados exitosamente en activaciones')
@@ -267,7 +267,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   } catch (error) {
     console.error('💥 Error general en handler:', error)
-    return res.status(500).json({ error: 'Error procesando la solicitud de trial' })
+    return res.status(500).json({ error: 'No pudimos crear tu prueba. Intenta de nuevo en un momento o escríbenos a humanosisu@humanosisu.net.' })
   }
 }
 
@@ -304,7 +304,7 @@ async function verificarEmailDuplicado(supabase: any, email: string): Promise<{
         const diasRestantes = Math.ceil((expiresAt.getTime() - ahora.getTime()) / (1000 * 60 * 60 * 24))
         return {
           puedeContinuar: false,
-          razon: `Ya tienes un trial activo que expira en ${diasRestantes} día${diasRestantes > 1 ? 's' : ''}. Por favor, utiliza otro email o espera a que expire.`,
+          razon: `Ya tienes una prueba activa con este correo (le quedan ${diasRestantes} día${diasRestantes > 1 ? 's' : ''}). Entra con los datos que te mandamos o usa otro correo.`,
           trialExistente: trial
         }
       }
@@ -333,7 +333,7 @@ async function verificarEmailDuplicado(supabase: any, email: string): Promise<{
       if (diasRestantes > 0) {
         return {
           puedeContinuar: false,
-          razon: `Ya solicitaste un trial hace ${diasDesdeUltima} día${diasDesdeUltima > 1 ? 's' : ''}. Puedes solicitar otro en ${diasRestantes} día${diasRestantes > 1 ? 's' : ''}.`
+          razon: `Ya pediste una prueba con este correo hace ${diasDesdeUltima} día${diasDesdeUltima > 1 ? 's' : ''}. Puedes pedir otra en ${diasRestantes} día${diasRestantes > 1 ? 's' : ''}.`
         }
       }
     }
@@ -370,7 +370,7 @@ async function verificarEmailDuplicado(supabase: any, email: string): Promise<{
               const diasRestantes = Math.ceil((expiresAt.getTime() - ahora.getTime()) / (1000 * 60 * 60 * 24))
               return {
                 puedeContinuar: false,
-                razon: `Ya tienes una cuenta con trial activo que expira en ${diasRestantes} día${diasRestantes > 1 ? 's' : ''}. Por favor, inicia sesión con tus credenciales o utiliza otro email.`
+                razon: `Ya tienes una cuenta con prueba activa (le quedan ${diasRestantes} día${diasRestantes > 1 ? 's' : ''}). Inicia sesión con tus datos o usa otro correo.`
               }
             }
           }

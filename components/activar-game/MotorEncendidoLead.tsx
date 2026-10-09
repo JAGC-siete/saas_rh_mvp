@@ -222,7 +222,7 @@ export default function MotorEncendidoLead({ utmContext = {}, initialCountryCode
       try {
         data = await response.json()
       } catch {
-        data = { error: 'Error al procesar tu solicitud. Por favor, intenta de nuevo.' }
+        data = { error: 'No pudimos crear tu prueba. Intenta de nuevo en un momento.' }
       }
 
       if (response.ok) {
@@ -244,10 +244,10 @@ export default function MotorEncendidoLead({ utmContext = {}, initialCountryCode
         await router.push('/activar/gracias')
         return
       } else {
-        setErrors({ submit: data.error || 'Error al procesar tu solicitud. Por favor, intenta de nuevo.' })
+        setErrors({ submit: data.error || 'No pudimos crear tu prueba. Intenta de nuevo en un momento.' })
       }
     } catch {
-      setErrors({ submit: 'Error de conexión. Verifica tu internet e intenta de nuevo.' })
+      setErrors({ submit: 'No pudimos conectarnos. Revisa tu internet e intenta de nuevo.' })
     } finally {
       setIsLoading(false)
     }
@@ -347,7 +347,7 @@ export default function MotorEncendidoLead({ utmContext = {}, initialCountryCode
 
                     <div>
                       <label htmlFor="activar-empleados" className="block text-white font-medium mb-2">
-                        Selecciona tu rango de empleados
+                        ¿Cuántos empleados tiene tu negocio?
                       </label>
                       <select
                         id="activar-empleados"
