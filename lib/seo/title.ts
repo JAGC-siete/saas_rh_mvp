@@ -49,7 +49,7 @@ export const pageTitles = {
   // Keyword-first ≤~60 chars for SERP CTR (brand at end).
   home: 'Software RRHH Honduras 2026 | Nómina + biométrico | Prueba gratis',
   activate: 'Probar nómina gratis 30 días | Sin tarjeta | Humano SISU',
-  activarGracias: 'Trial activado | Llaves enviadas | Humano SISU',
+  activarGracias: 'Tu prueba está lista | Humano SISU',
   affiliates: 'Programa de Afiliados | Humano SISU',
   calculator: 'Calculadoras laborales gratis HN SV GT | IHSS ISSS IGSS 2026',
   calculatorSlv: 'Calculadora ISR El Salvador 2026 | ISSS AFP | GRATIS',

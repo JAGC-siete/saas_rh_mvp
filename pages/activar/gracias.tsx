@@ -26,7 +26,7 @@ export default function ActivarGraciasPage() {
     trackTrialThankYouPageView()
   }, [])
 
-  const displayName = ctx?.displayName?.trim() || 'Equipo'
+  const displayName = ctx?.displayName?.trim() || undefined
   const empresa = ctx?.empresa?.trim() || 'tu empresa'
   const empleados =
     typeof ctx?.empleados === 'number' && ctx.empleados > 0 ? ctx.empleados : 1
@@ -55,11 +55,7 @@ export default function ActivarGraciasPage() {
           <p className="text-lg text-brand-300 mb-6">
             {copy.success.body(countryLabel, empresa, empleados)}
           </p>
-          <p className="text-brand-300">
-            {ctx?.emailHintMasked
-              ? `Revisá ${ctx.emailHintMasked} (y spam).`
-              : copy.success.emailHint}
-          </p>
+          <p className="text-brand-300">{copy.success.emailHint(ctx?.emailHintMasked)}</p>
         </div>
 
         <Card variant="liquid" className="mb-8 text-left">

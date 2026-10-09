@@ -41,7 +41,7 @@ export const pageDescriptions = {
   home: 'Nómina con IHSS/RAP/ISR y asistencia biométrica para HN, SV y GT. Sin Excel. Prueba 30 días gratis — sin tarjeta.',
   activate: 'Activa Humano SISU en minutos: planilla local (HN/SV/GT), asistencia y deducciones. Trial gratis, sin tarjeta de crédito.',
   activarGracias:
-    'Confirmación de trial Humano SISU. Revisá tu correo para las credenciales del entorno de prueba.',
+    'Tu prueba gratis de Humano SISU está lista. Revisa tu correo para entrar.',
   affiliates: 'Únete al programa de afiliados de Humano SISU. Gana comisiones recomendando la mejor solución de nómina para MIPYMES en la región.',
   calculator: 'Calculadoras gratis de deducciones e indemnización para Honduras, El Salvador y Guatemala. Mismo motor legal que Humano SISU.',
   calculatorSlv: 'Calculadora ISR El Salvador: ISSS, AFP y sueldo neto en USD. Motor de nómina Humano SISU. Automatiza planilla en El Salvador.',

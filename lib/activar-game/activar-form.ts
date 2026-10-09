@@ -31,9 +31,9 @@ export function computeActivarErrors(fd: ActivarFormData): ActivarValidationErro
 
   const vEmail = fd.contactoEmail.trim()
   if (!vEmail) {
-    e.contactoEmail = 'Necesitamos tu email para enviarte la llave de acceso.'
+    e.contactoEmail = 'Escribe tu correo para mandarte el acceso a la prueba.'
   } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(vEmail)) {
-    e.contactoEmail = 'El formato del email no es válido. Ejemplo: nombre@empresa.com'
+    e.contactoEmail = 'Revisa tu correo. Escríbelo así: nombre@empresa.com'
   }
 
   const vEmpresa = fd.empresa.trim()
@@ -58,13 +58,13 @@ export function computeActivarErrors(fd: ActivarFormData): ActivarValidationErro
   }
 
   if (!isCountryCode(fd.countryCode)) {
-    e.countryCode = 'Seleccioná el país donde opera tu negocio.'
+    e.countryCode = 'Elige el país donde opera tu negocio.'
   }
 
   const waCombined = `${fd.whatsappCountryCallingCode || ''} ${fd.whatsappNumber || ''}`.trim()
   const waNormalized = normalizeSoftPhone(waCombined)
   if (waCombined && !waNormalized) {
-    e.contactoWhatsApp = 'Número de WhatsApp inválido.'
+    e.contactoWhatsApp = 'Revisa tu WhatsApp. Escríbelo así: 9999-9999.'
   }
 
   return e
@@ -72,9 +72,9 @@ export function computeActivarErrors(fd: ActivarFormData): ActivarValidationErro
 
 export function activarStep1Errors(fd: ActivarFormData): ActivarValidationErrors {
   const e: ActivarValidationErrors = {}
-  if (!isCountryCode(fd.countryCode)) e.countryCode = 'Seleccioná tu país.'
+  if (!isCountryCode(fd.countryCode)) e.countryCode = 'Elige tu país.'
   if (fd.empleados < TRIAL_CONFIG.MIN_EMPLOYEES || fd.empleados > TRIAL_CONFIG.MAX_EMPLOYEES) {
-    e.empleados = 'Ajustá el número de empleados de prueba.'
+    e.empleados = 'Elige cuántos empleados tiene tu negocio.'
   }
   return e
 }
@@ -84,9 +84,9 @@ export function activarStep2Errors(fd: ActivarFormData): ActivarValidationErrors
 
   const vEmail = fd.contactoEmail.trim()
   if (!vEmail) {
-    e.contactoEmail = 'Necesitamos tu email para enviarte la llave de acceso.'
+    e.contactoEmail = 'Escribe tu correo para mandarte el acceso a la prueba.'
   } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(vEmail)) {
-    e.contactoEmail = 'El formato del email no es válido. Ejemplo: nombre@empresa.com'
+    e.contactoEmail = 'Revisa tu correo. Escríbelo así: nombre@empresa.com'
   }
 
   const vEmpresa = fd.empresa.trim()

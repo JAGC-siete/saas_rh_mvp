@@ -8,19 +8,19 @@ const PATTERNS: Array<{ match: RegExp; context: ActivarUtmContext }> = [
     match: /info|secreto|m5|mission/i,
     context: {
       subheadline:
-        'Subí a un entorno de prueba con las leyes de tu país — sin Excel de por medio, con paz de verdad.',
+        'Prueba tu planilla con las leyes de tu país, sin Excel de por medio.',
     },
   },
   {
     match: /calculadora|calc_/i,
     context: {
-      subheadline: 'Tocá las nubes del motor legal en vivo — empleados ficticios, cero tarjeta.',
+      subheadline: 'Mira esos mismos cálculos en una planilla completa, con empleados de ejemplo y sin tarjeta.',
     },
   },
   {
     match: /ventas|cotiz/i,
     context: {
-      subheadline: '30 días para ver si alcanzás la paz que hoy se pierde en Excel.',
+      subheadline: '30 días para comprobar cuánto tiempo te ahorras frente a Excel.',
     },
   },
 ]
