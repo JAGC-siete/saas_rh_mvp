@@ -1,527 +1,249 @@
-import { useState, useEffect } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/router'
-import Link from 'next/link'
+import { Bars3Icon } from '@heroicons/react/24/outline'
 import { useAuth } from '../lib/auth'
-import { Button } from './ui/button'
-import AppMeshShell from './landing/AppMeshShell'
-import { SessionExpiryWarning, useSessionExpiryMonitor } from './SessionExpiryWarning'
-import { SessionStatusIndicator } from './SessionStatusIndicator'
-import { 
-  UserIcon, 
-  ClockIcon, 
-  CurrencyDollarIcon, 
-  ChartBarIcon,
-  DocumentChartBarIcon,
-  CalendarDaysIcon,
-  Cog6ToothIcon,
-  ArrowLeftOnRectangleIcon,
-  UsersIcon,
-  GiftIcon,
-  BanknotesIcon,
-  CalculatorIcon,
-  ScaleIcon,
-  LifebuoyIcon
-} from '@heroicons/react/24/outline'
-import { TrophyIcon } from '@heroicons/react/24/solid'
-import { ClipboardList } from 'lucide-react'
-import { ClipboardCheck } from 'lucide-react'
-import NotificationBell from './ui/NotificationBell'
-import HelpButton from './support/HelpButton'
-import { normalizePermissionsToCanonical } from '../lib/security/canonical-permissions'
-import { canAccessPayrollNavigation } from '../lib/auth/role-access'
-import { canAccessReportsModule } from '../lib/security/report-access'
-import { canAccessDeduccionesModule } from '../lib/security/deducciones-access'
+import { useCompanyContext } from '../lib/useCompanyContext'
 import { companyRoleLabel } from '../lib/company/users'
+import { NAVIGATION, filterNavigation, findActiveItem, findGroupOf } from '../lib/navigation/sidebar'
+import AppMeshShell from './landing/AppMeshShell'
+import HelpButton from './support/HelpButton'
+import NotificationBell from './ui/NotificationBell'
+import SidebarContent, { type SidebarAccount } from './layout/SidebarContent'
+import { useNavPermissions } from './layout/useNavPermissions'
+import { useNavBadges } from './layout/useNavBadges'
 
 interface DashboardLayoutProps {
   children: React.ReactNode
 }
 
-interface UserPermissions {
-  dashboard?: boolean
-  employees?: boolean
-  departments?: boolean
-  attendance?: boolean
-  leave?: boolean
-  payroll?: boolean
-  deducciones?: boolean
-  reports?: boolean
-  gamification?: boolean
-  settings?: boolean
-  admin?: boolean
-  affiliates?: boolean // Add affiliates permission
-  mtp?: boolean
-  performance?: boolean
+const COLLAPSED_KEY = 'sisu.sidebar.collapsed'
+const GROUPS_KEY = 'sisu.sidebar.groups'
+const RAIL_W = 64
+const PANEL_W = 256
+const PEEK_OPEN_MS = 120
+const PEEK_CLOSE_MS = 200
+
+/**
+ * Preferencias del menú. Cada página monta su propio DashboardLayout, así que se guardan
+ * en localStorage (entre sesiones) y en memoria del módulo (para no parpadear al navegar).
+ */
+let prefsCache: { collapsed: boolean; groups: Record<string, boolean> } | null = null
+
+function readPrefs() {
+  if (prefsCache) return prefsCache
+  let collapsed = false
+  let groups: Record<string, boolean> = {}
+  try {
+    collapsed = localStorage.getItem(COLLAPSED_KEY) === '1'
+    groups = JSON.parse(localStorage.getItem(GROUPS_KEY) || '{}') || {}
+  } catch {
+    // localStorage bloqueado (modo privado): valores por defecto
+  }
+  prefsCache = { collapsed, groups }
+  return prefsCache
 }
 
-/** Ocultarse mientras cargan permisos o si el estado quedara ambiguo (fail-safe). */
-const GUARD_WHILE_RESOLVING: (keyof UserPermissions)[] = [
-  'payroll',
-  'deducciones',
-  'reports',
-  'mtp',
-  'performance',
-]
+function writePrefs(next: { collapsed: boolean; groups: Record<string, boolean> }) {
+  prefsCache = next
+  try {
+    localStorage.setItem(COLLAPSED_KEY, next.collapsed ? '1' : '0')
+    localStorage.setItem(GROUPS_KEY, JSON.stringify(next.groups))
+  } catch {
+    // sin persistencia: queda en memoria
+  }
+}
+
+function initialsOf(name: string) {
+  return (
+    name
+      .split(/[\s@._-]+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((w) => w[0]?.toUpperCase())
+      .join('') || 'U'
+  )
+}
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
-  const { user, userProfile, logout } = useAuth()
-  const [sidebarOpen, setSidebarOpen] = useState(true)
-  // Deny-by-default en módulos sensibles hasta resolver rol/canónico (evita sidebar “todo abierto”).
-  const [userPermissions, setUserPermissions] = useState<UserPermissions>({
-    dashboard: true,
-    employees: true,
-    departments: true,
-    attendance: true,
-    leave: true,
-    payroll: false,
-    deducciones: false,
-    reports: false,
-    gamification: true,
-    settings: false,
-    admin: false,
-    affiliates: true,
-    mtp: false,
-    performance: false,
-  })
-  /** true hasta conocer canon+rol aplicado (OK o fallback explícito). */
-  const [loadingPermissions, setLoadingPermissions] = useState(true)
-  /**
-   * Feature flags derived from the company's plan + per-company overrides
-   * (resolved via has_feature() in the DB). `null` while loading so items with
-   * a mapped feature_key are shown optimistically and hidden only once we know
-   * the plan excludes them.
-   */
-  const [companyFeatures, setCompanyFeatures] = useState<Record<string, boolean> | null>(null)
   const router = useRouter()
-  
-  // Session expiry monitoring for 90-min idle timeout
-  // Note: The SessionExpiryWarning component handles this automatically
-  // when added to the layout (pages/_app.tsx)
+  const { user, userProfile, logout } = useAuth()
+  const { company } = useCompanyContext()
 
-  // Obtener permisos del usuario
+  const { permissions, features, resolving } = useNavPermissions(user?.id, userProfile)
+  const nav = useMemo(() => filterNavigation(NAVIGATION, permissions, features, resolving), [permissions, features, resolving])
+  const active = findActiveItem(nav, router.asPath || router.pathname)
+  const activeGroup = findGroupOf(nav, active?.id)
+  const badges = useNavBadges(user?.id, permissions.dashboard !== false)
+
+  // ---- Preferencias (colapsado, grupos abiertos) ----
+  const [collapsed, setCollapsed] = useState(() => prefsCache?.collapsed ?? false)
+  const [groupPrefs, setGroupPrefs] = useState<Record<string, boolean>>(() => prefsCache?.groups ?? {})
   useEffect(() => {
-    const fetchUserPermissions = async () => {
-      if (!user?.id) {
-        setLoadingPermissions(false)
-        return
-      }
+    const p = readPrefs()
+    setCollapsed(p.collapsed)
+    setGroupPrefs(p.groups)
+  }, [])
 
-      try {
-        setLoadingPermissions(true)
-        console.log('🔍 Fetching permissions for user:', user.id, user.email)
-        // #region agent log
-        fetch('/api/__debug/log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'25b418',runId:'pre-fix',hypothesisId:'H1',location:'components/DashboardLayout.tsx:fetchUserPermissions(entry)',message:'Entered fetchUserPermissions',data:{hasUserProfile:!!userProfile,userIdPresent:!!user?.id,path:typeof window!=='undefined'?window.location.pathname:null},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion agent log
-        
-        // Primero intentar usar userProfile del contexto de auth
-        if (userProfile) {
-          console.log('✅ Using userProfile from auth context:', userProfile)
-          let rawPermissions: any = {}
-          if (userProfile.permissions) {
-            if (typeof userProfile.permissions === 'string') {
-              try {
-                rawPermissions = JSON.parse(userProfile.permissions)
-              } catch (e) {
-                console.error('Error parsing permissions JSON:', e)
-                rawPermissions = {}
-              }
-            } else {
-              rawPermissions = userProfile.permissions
-            }
-          }
-          
-          const normalizedRole = (userProfile.role || '').toString().trim().toLowerCase()
-          const canonical = normalizePermissionsToCanonical(normalizedRole, rawPermissions)
-          const isAdmin = ['super_admin', 'company_admin', 'hr_manager', 'manager', 'admin'].includes(normalizedRole)
-          const showPayrollSidebarGroup = canAccessPayrollNavigation(normalizedRole)
-          // #region agent log
-          fetch('/api/__debug/log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'25b418',runId:'pre-fix',hypothesisId:'H2',location:'components/DashboardLayout.tsx:userProfileBranch',message:'Computed canonical permissions (userProfile branch)',data:{normalizedRole,hasRawPermissions:!!userProfile.permissions,rawPermissionKeys:Object.keys(rawPermissions||{}).slice(0,50),can_view_settings:canonical.can_view_settings,can_manage_settings:canonical.can_manage_settings,can_view_reports:canonical.can_view_reports,isAdmin},timestamp:Date.now()})}).catch(()=>{});
-          // #endregion agent log
+  // El grupo de la página actual siempre se muestra abierto.
+  const openGroups = useMemo(
+    () => (activeGroup ? { ...groupPrefs, [activeGroup.id]: true } : groupPrefs),
+    [groupPrefs, activeGroup]
+  )
 
-          const permissions: UserPermissions = {
-            dashboard: !!canonical.can_access_dashboard,
-            employees: !!canonical.can_view_employees,
-            departments: !!canonical.can_view_departments,
-            attendance: !!canonical.can_view_attendance,
-            leave: !!canonical.can_request_leave,
-            payroll: showPayrollSidebarGroup && !!(canonical.can_view_payroll || canonical.can_manage_payroll),
-            deducciones: canAccessDeduccionesModule(normalizedRole, rawPermissions),
-            reports: canAccessReportsModule(normalizedRole, rawPermissions),
-            gamification: !!canonical.can_access_dashboard,
-            settings: !!(canonical.can_view_settings || canonical.can_create_work_schedules),
-            admin: isAdmin && !!canonical.can_access_dashboard,
-            affiliates: !!canonical.can_access_dashboard,
-            mtp: !!showPayrollSidebarGroup && rawPermissions?.mtp !== false,
-            performance: !!showPayrollSidebarGroup && rawPermissions?.performance !== false,
-          }
-          // #region agent log
-          fetch('/api/__debug/log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'25b418',runId:'pre-fix',hypothesisId:'H3',location:'components/DashboardLayout.tsx:userProfileBranch(setUserPermissions)',message:'Setting UI permissions (userProfile branch)',data:{settings:permissions.settings,reports:permissions.reports,admin:permissions.admin},timestamp:Date.now()})}).catch(()=>{});
-          // #endregion agent log
-          
-          setUserPermissions(permissions)
-          setLoadingPermissions(false)
-          return
-        }
-        
-        // Si no hay userProfile en el contexto, usar la API
-        console.log('⚠️ No userProfile in context, fetching from API...')
-        const response = await fetch('/api/user-profiles')
-        
-        if (!response.ok) {
-          console.error('Error fetching user profile from API:', response.status)
-          console.warn('No user profile data found, using deny-by-default for sensitive routes')
-          setUserPermissions({
-            dashboard: true,
-            employees: false,
-            departments: false,
-            attendance: false,
-            leave: false,
-            payroll: false,
-            deducciones: false,
-            reports: false,
-            gamification: false,
-            settings: false,
-            admin: false,
-            affiliates: false,
-            mtp: false,
-            performance: false,
-          })
-          setLoadingPermissions(false)
-          return
-        }
-        
-        const { profiles } = await response.json()
-        // CRITICAL: Pick the current user's profile (not the newest one in the company)
-        const profile = (profiles || []).find((p: any) => p?.id === user?.id) || profiles?.[0]
-        
-        if (!profile) {
-          console.warn('No user profile data found — deny payroll-nav and guarded actions')
-          setUserPermissions({
-            dashboard: true,
-            employees: false,
-            departments: false,
-            attendance: false,
-            leave: false,
-            payroll: false,
-            deducciones: false,
-            reports: false,
-            gamification: false,
-            settings: false,
-            admin: false,
-            affiliates: false,
-            mtp: false,
-            performance: false,
-          })
-          setLoadingPermissions(false)
-          return
-        }
-        
-        console.log('📋 Profile from API:', profile)
-        
-        // Parsear permissions si viene como string JSON
-        let rawPermissions: any = {}
-        if (profile.permissions) {
-          if (typeof profile.permissions === 'string') {
-            try {
-              rawPermissions = JSON.parse(profile.permissions)
-            } catch (e) {
-              console.error('Error parsing permissions JSON:', e)
-              rawPermissions = {}
-            }
-          } else {
-            rawPermissions = profile.permissions
-          }
-        }
-        
-        console.log('📦 Raw permissions from DB:', rawPermissions)
-        console.log('👤 User role:', profile.role, 'Type:', typeof profile.role)
-        
-        // CRÍTICO: Normalizar el rol (trim, lowercase) para comparación robusta
-        const normalizedRole = (profile.role || '').toString().trim().toLowerCase()
-        console.log('🔍 Normalized role:', normalizedRole)
-        
-        const canonical = normalizePermissionsToCanonical(normalizedRole, rawPermissions)
-        const isAdmin = ['super_admin', 'company_admin', 'hr_manager', 'manager', 'admin'].includes(normalizedRole)
-        const showPayrollSidebarGroup = canAccessPayrollNavigation(normalizedRole)
-        // #region agent log
-        fetch('/api/__debug/log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'25b418',runId:'pre-fix',hypothesisId:'H4',location:'components/DashboardLayout.tsx:apiProfileBranch',message:'Computed canonical permissions (API profile branch)',data:{normalizedRole,rawPermissionKeys:Object.keys(rawPermissions||{}).slice(0,50),can_view_settings:canonical.can_view_settings,can_manage_settings:canonical.can_manage_settings,can_view_reports:canonical.can_view_reports,isAdmin,selectedProfileId:profile?.id===user?.id?'self':'other'},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion agent log
+  const toggleCollapsed = useCallback(() => {
+    setCollapsed((prev) => {
+      const next = !prev
+      writePrefs({ collapsed: next, groups: readPrefs().groups })
+      return next
+    })
+    setPeek(false)
+  }, [])
 
-        console.log('🔐 Permission checks:', { isAdmin, normalizedRole, can_view_settings: canonical.can_view_settings, can_view_reports: canonical.can_view_reports })
+  const toggleGroup = useCallback(
+    (groupId: string) => {
+      setGroupPrefs((prev) => {
+        const next = { ...prev, [groupId]: !(openGroups[groupId] ?? true) }
+        writePrefs({ collapsed: readPrefs().collapsed, groups: next })
+        return next
+      })
+    },
+    [openGroups]
+  )
 
-        // Construir objeto de permisos final - FORZAR settings y admin basado en rol
-        const permissions: UserPermissions = {
-          dashboard: !!canonical.can_access_dashboard,
-          employees: !!canonical.can_view_employees,
-          departments: !!canonical.can_view_departments,
-          attendance: !!canonical.can_view_attendance,
-          leave: !!canonical.can_request_leave,
-          payroll: showPayrollSidebarGroup && !!(canonical.can_view_payroll || canonical.can_manage_payroll),
-          deducciones: canAccessDeduccionesModule(normalizedRole, rawPermissions),
-          reports: canAccessReportsModule(normalizedRole, rawPermissions),
-          gamification: !!canonical.can_access_dashboard,
-          settings: !!(canonical.can_view_settings || canonical.can_create_work_schedules),
-          admin: isAdmin && !!canonical.can_access_dashboard,
-          affiliates: !!canonical.can_access_dashboard,
-          mtp: !!showPayrollSidebarGroup && rawPermissions?.mtp !== false,
-          performance: !!showPayrollSidebarGroup && rawPermissions?.performance !== false,
-        }
-        // #region agent log
-        fetch('/api/__debug/log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'25b418',runId:'pre-fix',hypothesisId:'H5',location:'components/DashboardLayout.tsx:apiProfileBranch(setUserPermissions)',message:'Setting UI permissions (API profile branch)',data:{settings:permissions.settings,reports:permissions.reports,admin:permissions.admin},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion agent log
-        
-        console.log('✅ Final permissions FORCED by role:', {
-          originalRole: profile.role,
-          normalizedRole,
-          permissions,
-          isAdmin,
-          settingsValue: permissions.settings,
-          adminValue: permissions.admin,
-          note: 'settings/reports are derived from canonical can_* (with legacy mapping)'
-        })
-        
-        setUserPermissions(permissions)
-      } catch (error) {
-        console.error('Error in fetchUserPermissions:', error)
-        setUserPermissions({
-          dashboard: true,
-          employees: false,
-          departments: false,
-          attendance: false,
-          leave: false,
-          payroll: false,
-          deducciones: false,
-          reports: false,
-          gamification: false,
-          settings: false,
-          admin: false,
-          affiliates: false,
-          mtp: false,
-          performance: false,
-        })
-        console.warn('⚠️ Error loading permissions, applied pessimistic sidebar')
-      } finally {
-        setLoadingPermissions(false)
-      }
-    }
+  // ---- Escritorio: vista previa al pasar el cursor (encima del contenido, sin moverlo) ----
+  const [peek, setPeek] = useState(false)
+  const peekTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const schedulePeek = (value: boolean, ms: number) => {
+    if (peekTimer.current) clearTimeout(peekTimer.current)
+    peekTimer.current = setTimeout(() => setPeek(value), ms)
+  }
+  useEffect(() => () => {
+    if (peekTimer.current) clearTimeout(peekTimer.current)
+  }, [])
+  const expanded = !collapsed || peek
 
-    fetchUserPermissions()
-  }, [user?.id, userProfile])
+  // ---- Móvil: panel encima del contenido ----
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  const menuButtonRef = useRef<HTMLButtonElement | null>(null)
+  const drawerRef = useRef<HTMLDivElement | null>(null)
+  const closeDrawer = useCallback(() => {
+    setDrawerOpen(false)
+    menuButtonRef.current?.focus()
+  }, [])
 
-  // Pull effective feature flags (plan + overrides) from the backend so the
-  // sidebar hides modules the company doesn't have access to.
   useEffect(() => {
-    let cancelled = false
-    const fetchFeatures = async () => {
-      if (!user?.id) return
-      try {
-        const res = await fetch('/api/me/features', { credentials: 'include' })
-        if (!res.ok) {
-          if (!cancelled) setCompanyFeatures({})
-          return
-        }
-        const data = await res.json()
-        if (!cancelled) setCompanyFeatures(data?.features || {})
-      } catch (err) {
-        console.warn('Error fetching company features', err)
-        if (!cancelled) setCompanyFeatures({})
-      }
+    const onRoute = () => {
+      setDrawerOpen(false)
+      setPeek(false)
     }
-    fetchFeatures()
+    router.events.on('routeChangeStart', onRoute)
+    return () => router.events.off('routeChangeStart', onRoute)
+  }, [router.events])
+
+  useEffect(() => {
+    if (!drawerOpen) return
+    document.body.style.overflow = 'hidden'
+    drawerRef.current?.querySelector<HTMLElement>('button, a')?.focus()
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closeDrawer()
+    }
+    document.addEventListener('keydown', onKey)
     return () => {
-      cancelled = true
+      // Siempre se libera: guardar el valor previo falla si el efecto corre dos veces con el panel abierto.
+      document.body.style.overflow = ''
+      document.removeEventListener('keydown', onKey)
     }
-  }, [user?.id])
+  }, [drawerOpen, closeDrawer])
 
   const handleSignOut = async () => {
     await logout()
     router.push('/app/login')
   }
 
-  // Navigation: `permission` gates by role (from user_profiles.permissions / canonical keys),
-  // `feature_key` gates by the company plan (via has_feature()). Leaving feature_key
-  // undefined means the item is always visible to users who have the permission.
-  const navigationItems: Array<{
-    name: string
-    href: string
-    icon: any
-    permission: keyof UserPermissions
-    feature_key?: string
-  }> = [
-    { name: 'Inicio',           href: '/app/dashboard',            icon: ChartBarIcon,          permission: 'dashboard' },
-    { name: 'Empleados',        href: '/app/employees',            icon: UsersIcon,             permission: 'employees',  feature_key: 'employees' },
-    { name: 'Departamentos',    href: '/app/departments',          icon: UsersIcon,             permission: 'departments', feature_key: 'departments' },
-    { name: 'Asistencia',       href: '/app/attendance/dashboard', icon: ClockIcon,             permission: 'attendance',  feature_key: 'attendance' },
-    { name: 'Permisos',         href: '/app/leave',                icon: UserIcon,              permission: 'leave' },
-    { name: 'Nómina',           href: '/app/payroll',              icon: CurrencyDollarIcon,    permission: 'payroll',     feature_key: 'payroll' },
-    { name: 'Cesantías',        href: '/app/cesantias',            icon: ScaleIcon,             permission: 'payroll',     feature_key: 'cesantias' },
-    { name: 'Deducciones',      href: '/app/deducciones',          icon: BanknotesIcon,         permission: 'deducciones', feature_key: 'deducciones' },
-    { name: '13.º y 14.º salario', href: '/app/13-14-salario',        icon: GiftIcon,              permission: 'payroll',     feature_key: 'decimo_13_14' },
-    { name: 'Reportes',         href: '/app/reports',              icon: DocumentChartBarIcon,  permission: 'reports',     feature_key: 'reports' },
-    { name: 'MTP Puestos',      href: '/app/mtp',                  icon: ClipboardList,         permission: 'mtp',         feature_key: 'mtp_job_descriptions' },
-    { name: 'Evaluaciones',     href: '/app/performance-evaluations', icon: ClipboardCheck,      permission: 'performance', feature_key: 'performance_evaluations' },
-    { name: 'Contabilidad',     href: '/app/accounting',           icon: CalculatorIcon,        permission: 'payroll',     feature_key: 'contabilidad' },
-    // { name: 'Gamificación',  href: '/app/gamification',         icon: TrophyIcon,            permission: 'gamification' },
-    // { name: 'Programa de Afiliados', href: '/app/affiliates',   icon: CurrencyDollarIcon,    permission: 'affiliates' },
-    { name: 'Parámetros',       href: '/app/settings',             icon: Cog6ToothIcon,         permission: 'settings' },
-    { name: 'Soporte',          href: '/app/support',              icon: LifebuoyIcon,          permission: 'dashboard' },
-  ]
+  const displayName = userProfile?.name?.trim() || user?.email || 'Usuario'
+  const account: SidebarAccount = {
+    name: displayName,
+    email: user?.email ?? null,
+    roleLabel: companyRoleLabel(userProfile?.role),
+    companyName: company?.name ?? null,
+    initials: initialsOf(displayName),
+  }
 
-  // Filtrar navegación basada en permisos (rol) + features (plan/overrides).
-  const filteredNavigation = navigationItems.filter(item => {
-    const permKey = item.permission as keyof UserPermissions
-    const isGuardedRoute = GUARD_WHILE_RESOLVING.includes(permKey)
-    if (loadingPermissions && isGuardedRoute) {
-      return false
-    }
-
-    const hasPermission = userPermissions[permKey]
-    // Role-based gate: hide only on explicit false (undefined = show).
-    if (hasPermission === false) {
-      console.log(`🚫 Filtering out (role): ${item.name}`, {
-        permission: item.permission,
-        value: hasPermission,
-        allPermissions: userPermissions
-      })
-      return false
-    }
-
-    // Plan-based gate via has_feature(). Skip while loading the matrix to avoid
-    // a flash of an empty sidebar.
-    if (item.feature_key && companyFeatures !== null) {
-      const enabled = companyFeatures[item.feature_key]
-      if (enabled === false) {
-        return false
-      }
-    }
-
-    return true
-  })
-  
-  // Debug: mostrar navegación filtrada
-  useEffect(() => {
-    if (!loadingPermissions) {
-      console.log('📋 Filtered navigation items:', filteredNavigation.map(item => item.name))
-      console.log('🔑 Current user permissions:', userPermissions)
-    }
-  }, [filteredNavigation, userPermissions, loadingPermissions])
+  const shared = { nav, activeId: active?.id ?? null, badges, openGroups, onToggleGroup: toggleGroup, account, onSignOut: handleSignOut }
 
   return (
-    <AppMeshShell className="h-screen min-h-0">
-      <div className="sidebar-hover-zone" aria-hidden="true" />
-
-      <aside
-        className={`dashboard-sidebar ${sidebarOpen ? 'w-64' : 'w-16'} relative glass-modern border-r border-white/10 transition-all duration-300 ease-in-out shadow-glass z-20 shrink-0`}
-      >
-        <div className="flex flex-col h-full">
-          {/* Header (sin logo) */}
-          <div className="flex items-center justify-between h-16 px-4 border-b border-white/10 bg-white/5 backdrop-blur-lg">
-            <div className="text-sm font-semibold text-white/90">
-              {sidebarOpen ? 'SISU' : 'S'}
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-1 text-gray-200 hover:text-white hover:bg-white/10"
-            >
-              {sidebarOpen ? '←' : '→'}
-            </Button>
-          </div>
-
-          {/* Navigation */}
-          <nav className="flex-1 px-2 py-4 space-y-1">
-            {filteredNavigation.map((item, index) => {
-              const isActive = router.pathname === item.href
-              return (
-                <Link
-                  key={`nav-${index}`}
-                  href={item.href}
-                  className={`group flex items-center px-2 py-2 text-sm font-medium rounded-lg transition-all duration-200 border ${
-                    isActive
-                      ? 'bg-brand-600/20 text-white border-brand-400/30 shadow-sm'
-                      : 'text-white/70 hover:bg-white/10 hover:text-white border-transparent'
-                  }`}
-                  onClick={(e) => {
-                    // Add explicit handling to ensure clicks are properly processed
-                    e.stopPropagation()
-                  }}
-                >
-                  <item.icon
-                    className={`mr-3 h-5 w-5 flex-shrink-0 ${
-                      isActive ? 'text-brand-400' : 'text-white/50 group-hover:text-white'
-                    }`}
-                  />
-                  <span className={`nav-text-hidden whitespace-nowrap ${!sidebarOpen ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'}`}>
-                    {item.name}
-                  </span>
-                </Link>
-              )
-            })}
-          </nav>
-
-          {/* User section */}
-          <div className="flex-shrink-0 border-t border-white/10 p-4 relative">
-            {/* Vista completa - visible cuando sidebarOpen es true o en hover */}
-            <div className={`user-section-full transition-opacity duration-200 ${sidebarOpen ? 'opacity-100' : 'opacity-0 absolute pointer-events-none'}`}>
-              <div className="space-y-3">
-                <div className="flex items-center">
-                  <div className="flex-shrink-0">
-                    <div className="h-8 w-8 rounded-full bg-brand-900 flex items-center justify-center">
-                      <span className="text-sm font-medium text-white">
-                        {user?.email?.charAt(0).toUpperCase() || 'U'}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="ml-3 flex-1 min-w-0">
-                    <p className="text-sm font-medium text-white truncate">{user?.email}</p>
-                    <p className="text-xs text-gray-300">{companyRoleLabel(userProfile?.role)}</p>
-                  </div>
-                </div>
-                <SessionStatusIndicator />
-                <Button
-                  onClick={handleSignOut}
-                  className="w-full flex items-center justify-center gap-2 text-white bg-red-600 hover:bg-red-700 border-red-600"
-                >
-                  <ArrowLeftOnRectangleIcon className="h-4 w-4" />
-                  Cerrar Sesión
-                </Button>
-              </div>
-            </div>
-            
-            {/* Vista compacta - visible cuando sidebarOpen es false y sin hover */}
-            <div className={`user-section-compact transition-opacity duration-200 ${!sidebarOpen ? 'opacity-100' : 'opacity-0 absolute pointer-events-none'}`}>
-              <div className="flex flex-col items-center space-y-2">
-                <div className="h-8 w-8 rounded-full bg-brand-900 flex items-center justify-center">
-                  <span className="text-sm font-medium text-white">
-                    {user?.email?.charAt(0).toUpperCase() || 'U'}
-                  </span>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleSignOut}
-                  className="p-1 text-red-400 hover:text-red-300 hover:bg-red-500/20"
-                  title="Cerrar sesión"
-                >
-                  <ArrowLeftOnRectangleIcon className="h-5 w-5" />
-                </Button>
-              </div>
-            </div>
-          </div>
+    <AppMeshShell className="h-screen min-h-0 flex-col lg:flex-row">
+      {/* Móvil: barra superior */}
+      <header className="z-30 flex shrink-0 items-center gap-2 border-b border-[#1c2740] bg-[#0e1628] px-3 py-2.5 lg:hidden">
+        <button
+          ref={menuButtonRef}
+          type="button"
+          onClick={() => setDrawerOpen(true)}
+          aria-label="Abrir menú"
+          aria-expanded={drawerOpen}
+          aria-controls="mobile-nav"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-[#22304d] bg-[#121a2c] text-slate-200"
+        >
+          <Bars3Icon className="h-5 w-5" aria-hidden />
+        </button>
+        <div className="flex min-w-0 flex-1 flex-col">
+          <span className="truncate text-[11px] text-slate-400">{activeGroup?.label ?? 'Humano SISU'}</span>
+          <span className="truncate text-base font-bold text-white">{active?.label ?? 'Humano SISU'}</span>
         </div>
-      </aside>
+        <NotificationBell panelClassName="right-0" />
+      </header>
 
-      <div className="flex-1 flex flex-col overflow-hidden relative z-10 min-w-0">
-        <header className="glass-modern border-b border-white/10 shadow-glass shrink-0 sticky top-0 z-40">
-          <div className="h-16 px-4 flex items-center justify-end">
-            <NotificationBell />
-          </div>
-        </header>
-        <main className="flex-1 overflow-auto">{children}</main>
+      {/* Escritorio: menú lateral. El contenedor reserva 64 o 256 px; la vista previa se dibuja encima. */}
+      <div
+        className="relative hidden shrink-0 transition-[width] duration-200 lg:block"
+        style={{ width: collapsed ? RAIL_W : PANEL_W }}
+      >
+        <aside
+          aria-label="Menú principal"
+          onMouseEnter={() => collapsed && schedulePeek(true, PEEK_OPEN_MS)}
+          onMouseLeave={() => collapsed && schedulePeek(false, PEEK_CLOSE_MS)}
+          onFocus={() => collapsed && setPeek(true)}
+          onBlur={(e) => {
+            if (collapsed && !e.currentTarget.contains(e.relatedTarget as Node | null)) setPeek(false)
+          }}
+          className={`absolute inset-y-0 left-0 z-30 border-r border-[#1c2740] bg-[#0e1628] transition-[width] duration-150 ${
+            collapsed && peek ? 'shadow-[16px_0_40px_rgba(0,0,0,0.45)]' : ''
+          }`}
+          style={{ width: expanded ? PANEL_W : RAIL_W }}
+        >
+          <SidebarContent
+            {...shared}
+            variant={expanded ? 'full' : 'rail'}
+            headerAction={{ kind: collapsed ? 'pin' : 'collapse', onClick: toggleCollapsed }}
+            notificationPanelClassName="left-full right-auto bottom-0 mt-0 ml-3"
+          />
+        </aside>
       </div>
+
+      {/* Móvil: panel del menú */}
+      {drawerOpen && (
+        <div className="fixed inset-0 z-[60] lg:hidden">
+          <button
+            type="button"
+            aria-label="Cerrar menú"
+            tabIndex={-1}
+            onClick={closeDrawer}
+            className="absolute inset-0 h-full w-full bg-slate-950/70"
+          />
+          <aside
+            id="mobile-nav"
+            ref={drawerRef}
+            aria-label="Menú principal"
+            className="absolute inset-y-0 left-0 w-[304px] max-w-[85vw] border-r border-[#1c2740] bg-[#0e1628] shadow-2xl"
+          >
+            <SidebarContent {...shared} variant="full" touch headerAction={{ kind: 'close', onClick: closeDrawer }} />
+          </aside>
+        </div>
+      )}
+
+      <main className="relative z-10 min-h-0 min-w-0 flex-1 overflow-auto px-4 py-5 lg:px-8 lg:py-6">{children}</main>
 
       <HelpButton />
     </AppMeshShell>
   )
-} 
+}

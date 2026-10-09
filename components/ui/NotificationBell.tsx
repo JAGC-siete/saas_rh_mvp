@@ -14,7 +14,14 @@ const NotificationInbox = dynamic(() => import('./NotificationInbox'), {
   ),
 })
 
-export default function NotificationBell({ className }: { className?: string }) {
+export default function NotificationBell({
+  className,
+  panelClassName,
+}: {
+  className?: string
+  /** Posición del panel (p. ej. a la derecha del menú lateral en lugar de debajo). */
+  panelClassName?: string
+}) {
   const { notifications, unreadCount, markAllAsRead } = useNotificationContext()
   const [open, setOpen] = useState(false)
   const panelRef = useRef<HTMLDivElement | null>(null)
@@ -33,7 +40,8 @@ export default function NotificationBell({ className }: { className?: string }) 
       <Button
         variant="ghost"
         size="icon"
-        aria-label="Notificaciones"
+        aria-label={unreadCount > 0 ? `Notificaciones (${unreadCount} sin leer)` : 'Notificaciones'}
+        aria-expanded={open}
         className="relative h-9 w-9 rounded-full hover:bg-white/10"
         onClick={() => setOpen((v) => !v)}
       >
@@ -59,7 +67,10 @@ export default function NotificationBell({ className }: { className?: string }) 
             ref={panelRef}
             role="region"
             aria-label="Centro de notificaciones"
-            className="absolute right-0 mt-2 z-50 w-[380px] rounded-xl border border-white/20 bg-black/80 backdrop-blur-xl shadow-2xl overflow-hidden"
+            className={cn(
+              'absolute right-0 mt-2 z-50 w-[380px] max-w-[calc(100vw-24px)] rounded-xl border border-white/20 bg-black/80 backdrop-blur-xl shadow-2xl overflow-hidden',
+              panelClassName
+            )}
           >
             <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
               <h3 className="font-semibold text-white">Notificaciones</h3>
