@@ -5,6 +5,12 @@
 export const BIOMETRIC_MODES = ['STRICT_2', 'STRICT_4', 'FLEXIBLE'] as const
 export type BiometricMode = (typeof BIOMETRIC_MODES)[number]
 
+export const BIOMETRIC_MODE_LABELS: Record<BiometricMode, string> = {
+  STRICT_2: '2 marcas (entrada y salida)',
+  STRICT_4: '4 marcas (con almuerzo)',
+  FLEXIBLE: 'Flexible (2 o 4 marcas)',
+}
+
 export const DEFAULT_ATTENDANCE_TIMEZONE = 'America/Tegucigalpa'
 
 export interface AttendanceMetadata {

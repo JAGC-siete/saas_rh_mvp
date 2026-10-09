@@ -54,9 +54,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (record.check_in) {
         events.push({
           ts_local: record.check_in,
-          event_type: record.late_minutes > 5 ? 'Check-in Tarde' :
-                     record.late_minutes < -5 ? 'Check-in Temprano' :
-                     'Check-in',
+          event_type: record.late_minutes > 5 ? 'Entrada tarde' :
+                     record.late_minutes < -5 ? 'Entrada temprana' :
+                     'Entrada',
           source: 'attendance_system',
           justification: record.late_minutes > 5 ? `Llegó ${record.late_minutes} minutos tarde` : null,
           _day: day,
@@ -83,7 +83,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (record.check_out) {
         events.push({
           ts_local: record.check_out,
-          event_type: 'Check-out',
+          event_type: 'Salida',
           source: 'attendance_system',
           justification: null,
           _day: day,
@@ -175,15 +175,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const thirtyDaysAgo = new Date()
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
     
-    // Count working days (Monday-Friday) in the last 30 days
+    // Días laborables según el horario del empleado (lun–vie si no hay horario).
+    const DAY_START_KEYS = [
+      'sunday_start', 'monday_start', 'tuesday_start', 'wednesday_start',
+      'thursday_start', 'friday_start', 'saturday_start',
+    ] as const
+    const scheduleSources = [schedule, employee.work_schedules as any].filter(Boolean)
+    const scheduledDows = new Set<number>()
+    DAY_START_KEYS.forEach((key, dow) => {
+      if (scheduleSources.some((s: any) => s?.[key])) scheduledDows.add(dow)
+    })
+    if (scheduledDows.size === 0) [1, 2, 3, 4, 5].forEach((d) => scheduledDows.add(d))
+
     const getWorkingDays = (startDate: Date, endDate: Date): number => {
       let workingDays = 0
       const current = new Date(startDate)
       
       while (current <= endDate) {
-        const dayOfWeek = current.getDay()
-        // Count Monday (1) through Friday (5) as working days
-        if (dayOfWeek >= 1 && dayOfWeek <= 5) {
+        if (scheduledDows.has(current.getDay())) {
           workingDays++
         }
         current.setDate(current.getDate() + 1)
@@ -203,8 +212,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .gte('date', thirtyDaysAgo.toISOString().split('T')[0])
       .not('check_in', 'is', null)
     
-    const attendanceAverage = totalWorkingDays > 0 && presentDays 
-      ? ((presentDays / totalWorkingDays) * 100).toFixed(1) 
+    // Marcas en días libres pueden superar los días programados: se limita a 100 %.
+    const attendanceAverage = totalWorkingDays > 0 && presentDays
+      ? Math.min(100, (presentDays / totalWorkingDays) * 100).toFixed(1)
       : '0.0'
 
     res.status(200).json({

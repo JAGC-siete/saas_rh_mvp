@@ -34,6 +34,16 @@ interface ArrivalTableProps {
 
 type SeverityFilter = 'all' | 'early' | 'on_time' | 'warn' | 'alert' | 'danger'
 
+/** -178 → "2 h 58 min antes"; 12 → "12 min tarde"; 0 → "A tiempo". */
+function formatArrivalDelta(delta: number): string {
+  if (delta === 0) return 'A tiempo'
+  const abs = Math.abs(delta)
+  const h = Math.floor(abs / 60)
+  const m = abs % 60
+  const amount = h > 0 ? (m > 0 ? `${h} h ${m} min` : `${h} h`) : `${m} min`
+  return `${amount} ${delta < 0 ? 'antes' : 'tarde'}`
+}
+
 function timeOrDash(value: string | null | undefined): string {
   if (value == null || value === '') return '—'
   return formatTimeDisplay(value)
@@ -202,7 +212,7 @@ export default function ArrivalTable({
                           </button>
                           <div className="flex items-center gap-3 flex-shrink-0">
                             <span className={`text-sm font-medium tabular-nums ${row.color}`}>
-                              {row.delta > 0 ? `+${row.delta}m` : row.delta < 0 ? `${row.delta}m` : '0m'}
+                              {formatArrivalDelta(row.delta)}
                             </span>
                             <span className="text-sm text-gray-400 tabular-nums">
                               {formatTimeDisplay(row.check_in_time ?? row.check_in ?? null)}

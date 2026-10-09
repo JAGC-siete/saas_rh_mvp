@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
+import { createPortal } from 'react-dom'
 import { DateTime } from 'luxon'
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card'
 import { Button } from '../ui/button'
@@ -10,6 +11,8 @@ import { useCompanyContext } from '../../lib/useCompanyContext'
 import { HONDURAS_TIMEZONE, formatDateTimeForHonduras, getTodayInHonduras } from '../../lib/timezone'
 import type { BiometricMode } from '../../lib/attendance/attendance-metadata'
 import DailyCloseWizard, { type DailyCloseWizardStep } from './DailyCloseWizard'
+import { BIOMETRIC_MODE_LABELS } from '../../lib/attendance/attendance-metadata'
+import { useDialogFocus } from '../../lib/hooks/useDialogFocus'
 
 export type DailyCloseItem = {
   employee: {
@@ -110,6 +113,10 @@ export default function DailyClosePanel({
   const [editLunchStart, setEditLunchStart] = useState('')
   const [editLunchEnd, setEditLunchEnd] = useState('')
   const [editError, setEditError] = useState<string | null>(null)
+  const closeEdit = useCallback(() => {
+    if (!actionLoading) setEditOpen(false)
+  }, [actionLoading])
+  const editDialogRef = useDialogFocus<HTMLDivElement>(editOpen && !!editItem, closeEdit)
 
   const [selectedIds, setSelectedIds] = useState<Record<string, boolean>>({})
   const [bulkCheckOut, setBulkCheckOut] = useState('')
@@ -532,7 +539,7 @@ export default function DailyClosePanel({
           </CardHeader>
           <CardContent className="flex flex-wrap items-end gap-4">
             <div>
-              <label className="block text-xs text-gray-400 mb-1">Fecha local (YYYY-MM-DD)</label>
+              <label className="block text-xs text-gray-400 mb-1">Fecha</label>
               <Input
                 type="date"
                 value={date}
@@ -630,7 +637,7 @@ export default function DailyClosePanel({
               disabled={!canLoad || loading || !!actionLoading}
               onClick={() => void runClose()}
             >
-              {actionLoading === 'run' ? 'Consolidando…' : 'Consolidar marcas (run)'}
+              {actionLoading === 'run' ? 'Consolidando…' : 'Consolidar marcas'}
             </Button>
             <Button
               type="button"
@@ -741,7 +748,11 @@ export default function DailyClosePanel({
             )}
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <SummaryTile label="Modalidad" value={data.meta.biometric_mode} sub={data.meta.timezone} />
+              <SummaryTile
+                label="Modalidad de marcas"
+                value={BIOMETRIC_MODE_LABELS[data.meta.biometric_mode] ?? data.meta.biometric_mode}
+                sub={data.meta.timezone}
+              />
               <SummaryTile label="Empleados activos" value={String(data.summary.total_employees)} />
               <SummaryTile label="Con marcas hoy" value={String(data.summary.total_with_events)} />
               <SummaryTile
@@ -776,6 +787,28 @@ export default function DailyClosePanel({
                     </tr>
                   </thead>
                   <tbody>
+                    {wizardVisibleItems.length === 0 && (
+                      <tr>
+                        <td colSpan={9} className="p-6 text-center text-sm text-gray-400">
+                          {wizardStep !== 3 && data.items.length > 0 ? (
+                            <>
+                              {wizardStep === 1
+                                ? 'No hay anomalías para revisar.'
+                                : 'No hay registros consolidados para ajustar.'}{' '}
+                              <button
+                                type="button"
+                                className="text-brand-400 hover:text-brand-300 underline-offset-2 hover:underline"
+                                onClick={() => setWizardStep(3)}
+                              >
+                                Ver los {data.items.length} registros del día
+                              </button>
+                            </>
+                          ) : (
+                            'No hay registros para la fecha y filtros seleccionados.'
+                          )}
+                        </td>
+                      </tr>
+                    )}
                     {wizardVisibleItems.map((row) => {
                       const rec = row.record as {
                         id?: string
@@ -855,8 +888,8 @@ export default function DailyClosePanel({
                           <td className="p-3 text-xs text-gray-300">
                             {rec ? (
                               <div className="space-y-0.5">
-                                <div>In: {rec.check_in ? formatDateTimeForHonduras(rec.check_in) : '—'}</div>
-                                <div>Out: {rec.check_out ? formatDateTimeForHonduras(rec.check_out) : '—'}</div>
+                                <div>Entrada: {rec.check_in ? formatDateTimeForHonduras(rec.check_in) : '—'}</div>
+                                <div>Salida: {rec.check_out ? formatDateTimeForHonduras(rec.check_out) : '—'}</div>
                                 <div className="text-gray-500">{rec.status ?? ''}</div>
                               </div>
                             ) : (
@@ -888,16 +921,26 @@ export default function DailyClosePanel({
         {loading && <p className="text-gray-400 text-sm">Cargando…</p>}
       </div>
 
-      {editOpen && editItem && (
+      {typeof document !== 'undefined' &&
+        editOpen &&
+        editItem &&
+        createPortal(
         <div
           className="fixed inset-0 z-[60] bg-black/60 flex items-center justify-center p-4"
-          onClick={() => !actionLoading && setEditOpen(false)}
+          onClick={closeEdit}
         >
           <div
+            ref={editDialogRef}
+            tabIndex={-1}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="daily-close-edit-title"
             className="bg-gray-900 border border-white/20 rounded-xl max-w-lg w-full p-6 shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="text-lg font-semibold text-white mb-4">Ajustar registro — {editItem.employee.name}</h3>
+            <h3 id="daily-close-edit-title" className="text-lg font-semibold text-white mb-4">
+              Ajustar registro — {editItem.employee.name}
+            </h3>
             <p className="text-xs text-amber-200/90 mb-4">
               Corrige horarios antes de finalizar si necesitas horas calculadas. Se marca como excepción de administrador.
               Horas en zona Honduras.
@@ -917,7 +960,7 @@ export default function DailyClosePanel({
               </div>
             )}
             <div className="flex justify-end gap-2 mt-6">
-              <Button type="button" variant="ghost" className="text-gray-300" onClick={() => setEditOpen(false)}>
+              <Button type="button" variant="ghost" className="text-gray-300" onClick={closeEdit}>
                 Cancelar
               </Button>
               <Button
@@ -930,7 +973,8 @@ export default function DailyClosePanel({
               </Button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   )

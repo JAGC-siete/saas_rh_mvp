@@ -70,9 +70,11 @@ export default function DailyCloseWizard({
         <div className="flex items-center gap-4">
           <RadialProgress pct={progressPct} />
           <div>
-            <p className="text-sm font-semibold text-white">Modo enfoque</p>
+            <p className="text-sm font-semibold text-white">Progreso del cierre</p>
             <p className="text-xs text-gray-400">
-              {resolvedAnomalies} de {totalAnomalies} anomalías resueltas
+              {totalAnomalies === 0
+                ? 'Sin anomalías para revisar'
+                : `${resolvedAnomalies} de ${totalAnomalies} anomalías resueltas`}
             </p>
           </div>
         </div>
@@ -116,7 +118,7 @@ export default function DailyCloseWizard({
                 onClick={() => onFocusEdit(item)}
                 className="text-xs font-semibold text-amber-200 hover:text-white bg-amber-500/15 hover:bg-amber-500/25 rounded-lg py-2 transition-colors"
               >
-                Quick Fix →
+                Corregir →
               </button>
             </div>
           ))}

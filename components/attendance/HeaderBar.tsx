@@ -128,9 +128,9 @@ export default function HeaderBar({
           <Link
             href="/app/attendance/scheduling"
             className="px-3 py-2 rounded-lg text-sm font-medium bg-white/5 hover:bg-white/10 text-gray-200"
-            title="Asignación de turnos por fecha (Scheduling)"
+            title="Asignación de turnos por fecha"
           >
-            Scheduling
+            Turnos
           </Link>
 
           <div className="flex items-center gap-1">
@@ -203,7 +203,7 @@ export default function HeaderBar({
                       onClick={() => onExportColumnIdsChange?.([])}
                       title="Usar columnas por defecto configuradas"
                     >
-                      Reset (default)
+                      Restablecer
                     </button>
                     <button
                       type="button"

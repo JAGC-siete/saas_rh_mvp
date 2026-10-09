@@ -40,7 +40,6 @@ export default function KpiCards({
     borderColor: string
     activeRing: string
     Icon: typeof CheckCircleIcon
-    pulse?: boolean
     filterable?: boolean
   }[] = [
     {
@@ -82,7 +81,6 @@ export default function KpiCards({
       borderColor: 'border-red-500/30',
       activeRing: 'ring-red-400/50 shadow-[0_0_20px_rgba(248,113,113,0.15)]',
       Icon: XCircleIcon,
-      pulse: ausentes > 0,
     },
     ...(permisosPagados > 0
       ? [{
@@ -137,7 +135,7 @@ export default function KpiCards({
                 isActive
                   ? `${k.borderColor} ring-2 ${k.activeRing}`
                   : `${k.borderColor} hover:border-white/25`
-              } ${canFilter ? 'cursor-pointer' : ''} ${k.pulse && !isActive ? 'animate-pulse-slow' : ''}`}
+              } ${canFilter ? 'cursor-pointer' : ''}`}
               onClick={() => handleClick(k.id, k.filterable !== false)}
               role={canFilter ? 'button' : undefined}
               aria-pressed={canFilter ? isActive : undefined}

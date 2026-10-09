@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
@@ -129,6 +129,7 @@ export default function AttendanceDashboardApp() {
   const [urlSynced, setUrlSynced] = useState(false)
   const [drawer, setDrawer] = useState<{
     open: boolean
+    loading?: boolean
     name: string
     events: AttendanceEmployeeTimelineEvent[]
     rawPunches?: EmployeeDrawerRawPunch[]
@@ -435,7 +436,12 @@ export default function AttendanceDashboardApp() {
     }
   }
 
+  const drawerRequestRef = useRef(0)
+
   const handleEmployeeClick = async (id: string, name: string) => {
+    // Abrir el panel de inmediato con un esqueleto; descartar respuestas de clics anteriores o tras cerrar.
+    const requestId = ++drawerRequestRef.current
+    setDrawer({ open: true, loading: true, name, events: [], rawPunches: [], periodLabel: getPresetLabel(preset, from, to) })
     try {
       const range =
         preset === 'custom' && from && to
@@ -444,8 +450,10 @@ export default function AttendanceDashboardApp() {
       const employeeUrl = `/api/attendance/employee/${id}?preset=${preset}${range}`
       const res = await fetch(employeeUrl, { credentials: 'include' })
       const data = (await res.json()) as AttendanceEmployeeApiResponse
+      if (requestId !== drawerRequestRef.current) return
 
       if (!res.ok) {
+        closeDrawer()
         addNotification({
           type: 'error',
           title: 'Empleado',
@@ -456,6 +464,7 @@ export default function AttendanceDashboardApp() {
 
       setDrawer({
         open: true,
+        loading: false,
         name: data.employee?.name || name,
         events: Array.isArray(data.timeline) ? data.timeline : [],
         rawPunches: Array.isArray(data.raw_punches) ? data.raw_punches : [],
@@ -465,11 +474,14 @@ export default function AttendanceDashboardApp() {
         schedule: data.schedule,
       })
     } catch (err: unknown) {
+      if (requestId !== drawerRequestRef.current) return
+      closeDrawer()
       addNotification({ type: 'error', title: 'Empleado', message: mapAttendanceError(err) })
     }
   }
 
-  const closeDrawer = useCallback(() => {
+  function closeDrawer() {
+    drawerRequestRef.current++
     setDrawer({
       open: false,
       name: '',
@@ -480,7 +492,7 @@ export default function AttendanceDashboardApp() {
       stats: undefined,
       schedule: undefined,
     })
-  }, [])
+  }
 
   const tablesSectionKey = `${preset}-${selectedEmployeeId}-${selectedRole}-${selectedDepartmentId}-${from ?? ''}-${to ?? ''}`
 
@@ -697,6 +709,7 @@ export default function AttendanceDashboardApp() {
         </motion.div>
         <EmployeeDrawer
           open={drawer.open}
+          loading={drawer.loading}
           onClose={closeDrawer}
           name={drawer.name}
           events={drawer.events}
