@@ -7,17 +7,20 @@ export const VENTAS_PDF_THEME = {
   textLight: LIQUID.textMuted,
   white: '#ffffff',
   headerBg: LIQUID.brand900,
+  headerKicker: LIQUID.textAccent,
+  headerMeta: LIQUID.textSoft,
 } as const
 
 /** Unified PDF type scale (Helvetica family only). */
 export const PDF_TYPE = {
-  brand: 20,
+  brand: 11,
+  title: 18,
   ref: 8.5,
-  section: 9,
+  section: 10.5,
   label: 7,
   value: 9,
   body: 8,
-  price: 20,
+  price: 22,
   savings: 8,
   footnote: 6.5,
   bankMono: 8,
