@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { formatDateTimeForHonduras } from '../../lib/timezone'
 import {
@@ -14,6 +15,7 @@ import {
   PencilSquareIcon,
 } from '@heroicons/react/24/outline'
 import type { AttendanceEmployeeDetail } from '../../lib/attendance/dashboard-types'
+import { useDialogFocus } from '../../lib/hooks/useDialogFocus'
 
 interface TimelineEvent {
   ts_local: string
@@ -33,6 +35,8 @@ export interface EmployeeDrawerRawPunch {
 interface EmployeeDrawerProps {
   open: boolean
   onClose: () => void
+  /** Detalle aún cargando: se muestra el panel con un esqueleto. */
+  loading?: boolean
   name: string
   events: TimelineEvent[]
   periodLabel?: string
@@ -57,17 +61,25 @@ function isAnomalyEvent(ev: TimelineEvent): boolean {
 /** Check-in / entrada only — do not match "Inicio almuerzo" via substring "in". */
 function isCheckInEvent(eventType: string): boolean {
   const t = eventType.toLowerCase()
-  return t.startsWith('check-in') || t === 'entrada' || t.includes('check-in')
+  return t.startsWith('entrada') || t.includes('check-in')
 }
 
 function isCheckOutEvent(eventType: string): boolean {
   const t = eventType.toLowerCase()
-  return t.startsWith('check-out') || t === 'salida' || t.includes('check-out')
+  return t.startsWith('salida') || t.includes('check-out')
+}
+
+/** "11:30:00" → "11:30" */
+function shortTime(value: unknown): string {
+  if (typeof value !== 'string') return ''
+  const m = /^(\d{1,2}:\d{2})/.exec(value)
+  return m ? m[1] : value
 }
 
 export default function EmployeeDrawer({
   open,
   onClose,
+  loading = false,
   name,
   events,
   periodLabel,
@@ -77,6 +89,7 @@ export default function EmployeeDrawer({
   schedule,
 }: EmployeeDrawerProps) {
   const [historyTab, setHistoryTab] = useState<'consolidated' | 'device'>('consolidated')
+  const dialogRef = useDialogFocus<HTMLElement>(open, onClose)
 
   useEffect(() => {
     if (rawPunches.length === 0) setHistoryTab('consolidated')
@@ -87,7 +100,10 @@ export default function EmployeeDrawer({
   const workSchedule = employeeData?.work_schedules
   const employeeId = employeeData?.id
 
-  return (
+  if (typeof document === 'undefined') return null
+
+  // Portal: el <main> del layout crea un contexto de apilamiento (z-10) que deja el panel bajo el encabezado.
+  return createPortal(
     <AnimatePresence>
       {open && (
         <>
@@ -97,12 +113,14 @@ export default function EmployeeDrawer({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.25 }}
-            className="fixed inset-0 bg-black/40 z-50 backdrop-blur-[2px]"
+            className="fixed inset-0 bg-black/40 z-[70] backdrop-blur-[2px]"
             onClick={onClose}
             aria-hidden
           />
           <motion.aside
             key="drawer"
+            ref={dialogRef}
+            tabIndex={-1}
             role="dialog"
             aria-modal="true"
             aria-label={`Detalle de ${name}`}
@@ -110,7 +128,7 @@ export default function EmployeeDrawer({
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', stiffness: 320, damping: 32 }}
-            className="fixed right-0 top-0 h-full w-full max-w-2xl z-50 bg-gradient-to-br from-gray-900/95 to-gray-800/95 border-l border-white/10 shadow-2xl flex flex-col backdrop-blur-xl"
+            className="fixed right-0 top-0 h-full w-full max-w-2xl z-[70] bg-gradient-to-br from-gray-900/95 to-gray-800/95 border-l border-white/10 shadow-2xl flex flex-col backdrop-blur-xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="sticky top-0 z-10 bg-gray-900/90 border-b border-white/10 p-6 backdrop-blur-md">
@@ -132,6 +150,18 @@ export default function EmployeeDrawer({
               </div>
             </div>
 
+            {loading ? (
+              <div className="flex-1 p-6 space-y-4" aria-busy="true" aria-live="polite">
+                <span className="sr-only">Cargando detalle…</span>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <div key={i} className="h-[74px] rounded-xl bg-white/5 border border-white/10 animate-pulse" />
+                  ))}
+                </div>
+                <div className="h-32 rounded-xl bg-white/5 border border-white/10 animate-pulse" />
+                <div className="h-48 rounded-xl bg-white/5 border border-white/10 animate-pulse" />
+              </div>
+            ) : (
             <div className="flex-1 overflow-y-auto p-6 space-y-6 pb-28">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {department && (
@@ -162,7 +192,7 @@ export default function EmployeeDrawer({
                       <ClockIcon className="h-5 w-5 text-emerald-400" />
                       <div>
                         <p className="text-xs text-gray-500">Horario esperado</p>
-                        <p className="text-white font-medium text-sm">{schedule.expectedCheckIn}</p>
+                        <p className="text-white font-medium text-sm">{shortTime(schedule.expectedCheckIn)}</p>
                       </div>
                     </div>
                   </div>
@@ -172,7 +202,7 @@ export default function EmployeeDrawer({
                     <div className="flex items-center gap-3">
                       <ChartBarIcon className="h-5 w-5 text-amber-400" />
                       <div>
-                        <p className="text-xs text-gray-500">Promedio histórico</p>
+                        <p className="text-xs text-gray-500">Asistencia últimos 30 días</p>
                         <p className="text-white font-medium text-sm">
                           {stats.attendanceAverage} · {stats.presentDays}/{stats.totalDays} días
                         </p>
@@ -195,13 +225,15 @@ export default function EmployeeDrawer({
                       ['Mié', workSchedule.wednesday_start, workSchedule.wednesday_end],
                       ['Jue', workSchedule.thursday_start, workSchedule.thursday_end],
                       ['Vie', workSchedule.friday_start, workSchedule.friday_end],
+                      ['Sáb', workSchedule.saturday_start, workSchedule.saturday_end],
+                      ['Dom', workSchedule.sunday_start, workSchedule.sunday_end],
                     ]
                       .filter(([, s]) => s)
                       .map(([day, start, end]) => (
                         <div key={day as string} className="flex justify-between">
                           <span>{day}</span>
                           <span className="text-gray-300">
-                            {start} – {end}
+                            {shortTime(start)} – {shortTime(end)}
                           </span>
                         </div>
                       ))}
@@ -308,6 +340,7 @@ export default function EmployeeDrawer({
                 )}
               </div>
             </div>
+            )}
 
             {/* Quick actions — sticky glass footer */}
             <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-white/10 bg-gray-900/70 backdrop-blur-md">
@@ -331,6 +364,7 @@ export default function EmployeeDrawer({
           </motion.aside>
         </>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   )
 }

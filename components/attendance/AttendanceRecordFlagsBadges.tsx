@@ -37,14 +37,6 @@ export function AttendanceRecordFlagsBadges({ flags }: { flags?: AttendanceListF
     })
   }
 
-  if (flags.biometric_mode && ['STRICT_2', 'STRICT_4', 'FLEXIBLE'].includes(flags.biometric_mode)) {
-    chips.push({
-      key: 'mode',
-      label: flags.biometric_mode.replace('_', '·'),
-      className: 'bg-white/10 text-gray-300 border-white/15',
-    })
-  }
-
   if (chips.length === 0) return null
 
   return (

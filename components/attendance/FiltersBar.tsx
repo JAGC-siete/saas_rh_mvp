@@ -316,10 +316,12 @@ export default function FiltersBar({
           <div className="flex flex-wrap gap-2">
             {selectedEmployeeId && (
               <span className="inline-flex items-center gap-1 px-2 py-1 bg-brand-500/20 text-brand-300 text-xs rounded-full">
-                Empleado seleccionado
-                <button 
+                {employees.find((e) => e.id === selectedEmployeeId)?.name ?? 'Empleado seleccionado'}
+                <button
+                  type="button"
                   onClick={() => handleEmployeeChange('')}
                   className="hover:text-brand-100"
+                  aria-label="Quitar filtro de empleado"
                 >
                   <XMarkIcon className="h-3 w-3" />
                 </button>

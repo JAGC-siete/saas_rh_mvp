@@ -66,6 +66,8 @@ export default function AttendanceCorrectionsPage() {
   const [lunchStart, setLunchStart] = useState('')
   const [lunchEnd, setLunchEnd] = useState('')
   const [creating, setCreating] = useState(false)
+  const [rejectingId, setRejectingId] = useState<string | null>(null)
+  const [rejectNote, setRejectNote] = useState('')
 
   const canCreate = useMemo(() => {
     if (isEmployee) return true
@@ -157,9 +159,9 @@ export default function AttendanceCorrectionsPage() {
     }
   }
 
-  const review = async (id: string, action: 'approve' | 'reject') => {
+  const review = async (id: string, action: 'approve' | 'reject', note?: string) => {
     try {
-      const reviewer_note = action === 'reject' ? 'Rechazado' : 'Aprobado'
+      const reviewer_note = action === 'reject' ? note?.trim() || 'Rechazado' : 'Aprobado'
       const res = await fetch(`/api/attendance/corrections/${id}`, {
         method: 'PATCH',
         credentials: 'include',
@@ -169,6 +171,8 @@ export default function AttendanceCorrectionsPage() {
       const json = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(json.error || json.message || `HTTP ${res.status}`)
       addNotification({ type: 'success', title: 'Correcciones', message: action === 'approve' ? 'Aprobada.' : 'Rechazada.' })
+      setRejectingId(null)
+      setRejectNote('')
       await load()
     } catch (e) {
       addNotification({ type: 'error', title: 'Correcciones', message: e instanceof Error ? e.message : 'Error al procesar' })
@@ -292,7 +296,12 @@ export default function AttendanceCorrectionsPage() {
                 Las horas se aplican al día de Fecha (Honduras). Si la salida es antes que la entrada, se guarda al día siguiente (turno noche). Si hay almuerzo: Entrada &lt; Inicio almuerzo &lt; Fin almuerzo &lt; Salida.
               </p>
 
-              <div className="flex justify-end">
+              <div className="flex flex-wrap items-center justify-end gap-3">
+                {!creating && (!canCreate || !reason.trim()) && (
+                  <span className="text-xs text-gray-400">
+                    {!canCreate ? 'Seleccione un empleado.' : 'Indique el motivo.'}
+                  </span>
+                )}
                 <button
                   type="button"
                   onClick={submit}
@@ -352,7 +361,10 @@ export default function AttendanceCorrectionsPage() {
                           <div className="flex items-center gap-2">
                             <button
                               type="button"
-                              onClick={() => review(r.id, 'reject')}
+                              onClick={() => {
+                                setRejectingId(r.id)
+                                setRejectNote('')
+                              }}
                               className="px-3 py-2 rounded-lg text-sm bg-white/5 hover:bg-white/10 text-gray-200"
                             >
                               Rechazar
@@ -369,6 +381,39 @@ export default function AttendanceCorrectionsPage() {
                           </div>
                         )}
                       </div>
+                      {rejectingId === r.id && (
+                        <div className="mt-3 pt-3 border-t border-white/10 space-y-2">
+                          <label className="block text-sm text-gray-300">
+                            Motivo del rechazo
+                            <textarea
+                              autoFocus
+                              rows={2}
+                              className="mt-1 w-full bg-gray-900/60 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
+                              value={rejectNote}
+                              onChange={(e) => setRejectNote(e.target.value)}
+                              placeholder="Ej. La marca del reloj confirma la hora original."
+                            />
+                          </label>
+                          <p className="text-xs text-gray-400">El empleado verá este motivo.</p>
+                          <div className="flex justify-end gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setRejectingId(null)}
+                              className="px-3 py-2 rounded-lg text-sm text-gray-300 hover:bg-white/10"
+                            >
+                              Cancelar
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => review(r.id, 'reject', rejectNote)}
+                              disabled={!rejectNote.trim()}
+                              className="px-3 py-2 rounded-lg text-sm bg-red-600 hover:bg-red-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              Confirmar rechazo
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                     )
                   })}

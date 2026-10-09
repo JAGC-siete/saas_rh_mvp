@@ -157,7 +157,7 @@ export default function AttendanceSchedulingPage() {
     if (!workScheduleId || !validFrom || !validTo || selectedIds.length === 0) {
       addNotification({
         type: 'error',
-        title: 'Scheduling',
+        title: 'Turnos',
         message: 'Complete empleado(s), horario y rango de fechas.',
       })
       return
@@ -190,14 +190,14 @@ export default function AttendanceSchedulingPage() {
       const trimmed = json.trimmed ?? 0
       addNotification({
         type: 'success',
-        title: 'Scheduling',
+        title: 'Turnos',
         message: `Asignaciones creadas: ${json.inserted ?? 0}${trimmed ? ` · ${trimmed} conflicto(s) recortados` : ''}`,
       })
       void loadAssignments()
     } catch (e) {
       addNotification({
         type: 'error',
-        title: 'Scheduling',
+        title: 'Turnos',
         message: e instanceof Error ? e.message : 'Error al guardar',
       })
     } finally {
@@ -213,10 +213,10 @@ export default function AttendanceSchedulingPage() {
     })
     const json = await res.json().catch(() => ({}))
     if (!res.ok) {
-      addNotification({ type: 'error', title: 'Scheduling', message: json.error || 'No se pudo eliminar' })
+      addNotification({ type: 'error', title: 'Turnos', message: json.error || 'No se pudo eliminar' })
       return
     }
-    addNotification({ type: 'success', title: 'Scheduling', message: 'Asignación eliminada' })
+    addNotification({ type: 'success', title: 'Turnos', message: 'Asignación eliminada' })
     void loadAssignments()
   }
 
@@ -241,13 +241,13 @@ export default function AttendanceSchedulingPage() {
       })
       const json = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(json.error || 'Error al actualizar')
-      addNotification({ type: 'success', title: 'Scheduling', message: 'Asignación actualizada' })
+      addNotification({ type: 'success', title: 'Turnos', message: 'Asignación actualizada' })
       setEditingAssignment(null)
       void loadAssignments()
     } catch (e) {
       addNotification({
         type: 'error',
-        title: 'Scheduling',
+        title: 'Turnos',
         message: e instanceof Error ? e.message : 'Error al actualizar',
       })
     } finally {
