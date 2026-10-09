@@ -585,6 +585,7 @@ export default function PayrollFixedTable({
                         disabled={loading || !row.line_id}
                         className="bg-white/10 border-white/30 text-white hover:bg-white/20"
                         title="Ver comprobante"
+                        aria-label={`Ver comprobante de ${row.name || 'empleado'}`}
                       >
                         <Icon name="eye" className="h-4 w-4" />
                       </Button>
@@ -595,6 +596,7 @@ export default function PayrollFixedTable({
                         disabled={loading || !row.line_id}
                         className="bg-white/10 border-white/30 text-white hover:bg-white/20"
                         title="Descargar comprobante PDF"
+                        aria-label={`Descargar comprobante PDF de ${row.name || 'empleado'}`}
                       >
                         <Icon name="download" className="h-4 w-4" />
                       </Button>
@@ -606,6 +608,7 @@ export default function PayrollFixedTable({
                           disabled={loading}
                           className="bg-white/10 border-white/30 text-white hover:bg-white/20"
                           title="Editar campos personalizados"
+                          aria-label={`Editar campos personalizados de ${row.name || 'empleado'}`}
                         >
                           <Icon name="edit" className="h-4 w-4" />
                         </Button>
@@ -625,6 +628,7 @@ export default function PayrollFixedTable({
                           disabled={loading}
                           className="bg-white/10 border-white/30 text-white hover:bg-white/20"
                           title="Recalcular desde asistencia (quita ediciones manuales de esta línea)"
+                          aria-label={`Recalcular desde asistencia la línea de ${row.name || 'empleado'}`}
                           onClick={async () => {
                             if (
                               !confirm(
@@ -680,8 +684,8 @@ export default function PayrollFixedTable({
           document.body
         )}
 
-      {daysModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      {daysModal && createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true">
           <div className="w-full max-w-md rounded-lg border border-white/20 bg-gray-900 p-6 text-white shadow-xl">
             <h3 className="text-lg font-semibold">Ajustar días trabajados</h3>
             <p className="mt-1 text-sm text-gray-300">{daysModal.employeeName}</p>
@@ -728,11 +732,12 @@ export default function PayrollFixedTable({
               </Button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
-      {otModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      {otModal && createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true">
           <div className="w-full max-w-md rounded-lg border border-white/20 bg-gray-900 p-6 text-white shadow-xl max-h-[90vh] overflow-y-auto">
             <h3 className="text-lg font-semibold">Ajustar horas extras</h3>
             <p className="mt-1 text-sm text-gray-300">{otModal.employeeName}</p>
@@ -799,11 +804,12 @@ export default function PayrollFixedTable({
               </Button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
-      {statutoryModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      {statutoryModal && createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true">
           <div className="w-full max-w-md rounded-lg border border-white/20 bg-gray-900 p-6 text-white shadow-xl">
             <h3 className="text-lg font-semibold">Editar retenciones de ley</h3>
             <p className="mt-1 text-sm text-gray-300">{statutoryModal.employeeName}</p>
@@ -900,7 +906,8 @@ export default function PayrollFixedTable({
               </Button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )

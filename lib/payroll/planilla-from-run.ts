@@ -341,6 +341,9 @@ export async function loadPlanillaFromRun(
     country_code: normalizeCountryCode(company?.country_code),
   }
 
+  // Mismo orden por defecto que el detalle UI (nombre A-Z); la consulta no garantiza orden.
+  planilla.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'es', { sensitivity: 'base' }))
+
   // Match detalle UI: only exact hourly on “por hora”; fixed + admin_floor on fijos.
   const planillaFixed = planilla.filter((p) => !isExactHourlyPlanillaTablePayType(p.pay_type))
   const planillaHourly = planilla.filter((p) => isExactHourlyPlanillaTablePayType(p.pay_type))

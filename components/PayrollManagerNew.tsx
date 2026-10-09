@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback, useMemo } from 'react'
 import { Card, CardContent } from './ui/card'
 import { Button } from './ui/button'
 import { Icon } from './Icon'
+import { createPortal } from 'react-dom'
 import { usePayrollManager } from '../lib/hooks/usePayrollManager'
 import { useCompanyMoney } from '../lib/hooks/useCompanyMoney'
 import UnifiedPayrollTable from './UnifiedPayrollTable'
@@ -354,14 +355,18 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
       error: 'bg-red-500/20 text-red-300'
     }
     
+    // Un solo indicador: si el borrador ya está persistido, el badge lo dice
+    const isSavedDraft = (status === 'draft' || status === 'edited') && !!payroll.runId
+
     return (
-      <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+      <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium whitespace-nowrap ${
         variants[status as keyof typeof variants] || variants.idle
       }`}>
+        {isSavedDraft && <Icon name="check" className="h-4 w-4" />}
         {status === 'idle' ? 'Inactivo' :
          status === 'previewing' ? 'Generando vista previa' :
-         status === 'draft' ? 'Borrador' :
-         status === 'edited' ? 'Editado' :
+         status === 'draft' ? (isSavedDraft ? 'Borrador guardado' : 'Borrador') :
+         status === 'edited' ? (isSavedDraft ? 'Editado · guardado' : 'Editado') :
          status === 'authorizing' ? 'Autorizando' :
          status === 'authorized' ? 'Autorizado' :
          status === 'distributed' ? 'Distribuido' :
@@ -380,14 +385,6 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
         </div>
         
         <div className="flex items-center gap-2">
-          {/* Indicador de borrador guardado */}
-          {(payroll.status === 'draft' || payroll.status === 'edited') && payroll.runId && (
-            <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/20 border border-blue-500/30">
-              <Icon name="check" className="h-4 w-4 text-blue-300" />
-              <span className="text-sm font-medium text-blue-300">Borrador Guardado</span>
-            </div>
-          )}
-          
           {getStatusBadge(payroll.status)}
           
           {payroll.loading && (
@@ -683,6 +680,15 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
           status={payroll.status}
           companyId={payroll.companyId}
           onGenerate={handleGenerateJournalEntries}
+          onGoToAuthorize={() => {
+            setActiveTab('planilla')
+            // Esperar a que la pestaña Planilla monte la barra de acciones
+            requestAnimationFrame(() => {
+              document
+                .getElementById('payroll-actions')
+                ?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+            })
+          }}
         />
       )}
 
@@ -716,8 +722,8 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
       )}
 
       {/* Custom Fields Modal */}
-      {showCustomFieldsModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      {showCustomFieldsModal && createPortal(
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true">
           <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <CustomPayrollFieldsForm
@@ -734,7 +740,8 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
               />
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       <VoucherPreviewModal

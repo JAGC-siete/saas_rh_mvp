@@ -4,6 +4,7 @@ import type { PlanillaPreviewData, PlanillaPreviewEmployeeRow } from '../../lib/
 import type { PayrollPdfGroupBy } from '../../lib/payroll/pdf-layout'
 import { Button } from '../ui/button'
 import { Icon } from '../Icon'
+import { createPortal } from 'react-dom'
 
 type PlanillaPreviewModalProps = {
   open: boolean
@@ -144,7 +145,8 @@ export default function PlanillaPreviewModal({
 
   if (!open) return null
 
-  return (
+  // Portal a body: el contenido del layout crea un stacking context (z-10) bajo el sidebar
+  return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
       role="dialog"
@@ -304,6 +306,7 @@ export default function PlanillaPreviewModal({
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }

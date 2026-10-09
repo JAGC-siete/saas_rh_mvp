@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
+import { DateTime } from 'luxon'
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card'
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
 import { useAuth } from '../../lib/auth'
 import { useCompanyContext } from '../../lib/useCompanyContext'
-import { formatDateTimeForHonduras, getTodayInHonduras } from '../../lib/timezone'
+import { HONDURAS_TIMEZONE, formatDateTimeForHonduras, getTodayInHonduras } from '../../lib/timezone'
 import type { BiometricMode } from '../../lib/attendance/attendance-metadata'
 import DailyCloseWizard, { type DailyCloseWizardStep } from './DailyCloseWizard'
 
@@ -45,19 +46,20 @@ function recordFlags(rec: Record<string, unknown> | null): { close_state?: strin
   return rec.flags as { close_state?: string }
 }
 
+/** ISO (UTC) → valor de input datetime-local en hora de Honduras, sin importar la zona del navegador. */
 function isoForDatetimeLocal(iso: string | null | undefined): string {
   if (!iso) return ''
-  const d = new Date(iso)
-  if (isNaN(d.getTime())) return ''
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+  const dt = DateTime.fromISO(iso, { setZone: true }).setZone(HONDURAS_TIMEZONE)
+  if (!dt.isValid) return ''
+  return dt.toFormat("yyyy-MM-dd'T'HH:mm")
 }
 
+/** Valor datetime-local interpretado como hora de Honduras → ISO UTC. */
 function datetimeLocalToIso(value: string): string | null {
   if (!value.trim()) return null
-  const d = new Date(value)
-  if (isNaN(d.getTime())) return null
-  return d.toISOString()
+  const dt = DateTime.fromISO(value, { zone: HONDURAS_TIMEZONE })
+  if (!dt.isValid) return null
+  return dt.toUTC().toISO()
 }
 
 export type DailyClosePanelVariant = 'page' | 'embedded'
@@ -107,6 +109,7 @@ export default function DailyClosePanel({
   const [editCheckOut, setEditCheckOut] = useState('')
   const [editLunchStart, setEditLunchStart] = useState('')
   const [editLunchEnd, setEditLunchEnd] = useState('')
+  const [editError, setEditError] = useState<string | null>(null)
 
   const [selectedIds, setSelectedIds] = useState<Record<string, boolean>>({})
   const [bulkCheckOut, setBulkCheckOut] = useState('')
@@ -255,6 +258,10 @@ export default function DailyClosePanel({
       setMessage({ type: 'err', text: 'Seleccione al menos un registro.' })
       return
     }
+    if (!bulkCheckOut.trim() && !bulkLunchStart.trim() && !bulkLunchEnd.trim()) {
+      setMessage({ type: 'err', text: 'Indique al menos una hora para aplicar.' })
+      return
+    }
     setActionLoading('bulk')
     setMessage(null)
     try {
@@ -262,9 +269,13 @@ export default function DailyClosePanel({
         ...bodyBase,
         record_ids: selectedRecordIds,
       }
-      if (bulkCheckOut.trim() || bulkCheckOut === '') payload.check_out = datetimeLocalToIso(bulkCheckOut)
-      if (bulkLunchStart.trim() || bulkLunchStart === '') payload.lunch_start = datetimeLocalToIso(bulkLunchStart)
-      if (bulkLunchEnd.trim() || bulkLunchEnd === '') payload.lunch_end = datetimeLocalToIso(bulkLunchEnd)
+      // Solo se envían los campos con valor: un campo vacío no debe borrar la marca existente.
+      const checkOutIso = datetimeLocalToIso(bulkCheckOut)
+      const lunchStartIso = datetimeLocalToIso(bulkLunchStart)
+      const lunchEndIso = datetimeLocalToIso(bulkLunchEnd)
+      if (checkOutIso) payload.check_out = checkOutIso
+      if (lunchStartIso) payload.lunch_start = lunchStartIso
+      if (lunchEndIso) payload.lunch_end = lunchEndIso
 
       const res = await fetch('/api/attendance/daily-close/bulk', {
         method: 'PATCH',
@@ -413,20 +424,22 @@ export default function DailyClosePanel({
     setEditCheckOut(isoForDatetimeLocal(rec?.check_out ?? null))
     setEditLunchStart(isoForDatetimeLocal(rec?.lunch_start ?? null))
     setEditLunchEnd(isoForDatetimeLocal(rec?.lunch_end ?? null))
+    setEditError(null)
     setEditOpen(true)
   }
 
   const submitEdit = async () => {
     if (!editItem?.record) {
-      setMessage({ type: 'err', text: 'No hay registro consolidado para este empleado. Ejecute consolidación primero.' })
+      setEditError('No hay registro consolidado para este empleado. Ejecute consolidación primero.')
       return
     }
     const rid = (editItem.record as { id?: string }).id
     if (!rid) {
-      setMessage({ type: 'err', text: 'Registro sin id.' })
+      setEditError('Registro sin id.')
       return
     }
     setActionLoading('patch')
+    setEditError(null)
     setMessage(null)
     try {
       const payload: Record<string, unknown> = {
@@ -451,7 +464,7 @@ export default function DailyClosePanel({
       await fetchReport()
       onAfterRecordPatch?.()
     } catch (e) {
-      setMessage({ type: 'err', text: e instanceof Error ? e.message : 'Error al guardar' })
+      setEditError(e instanceof Error ? e.message : 'Error al guardar')
     } finally {
       setActionLoading(null)
     }
@@ -659,6 +672,7 @@ export default function DailyClosePanel({
                 <CardContent className="flex flex-wrap items-end gap-3">
                   <div className="text-sm text-gray-300">
                     Seleccionados: <span className="font-semibold text-white">{selectedRecordIds.length}</span>
+                    <p className="text-xs text-gray-500 mt-0.5">Los campos vacíos no se modifican.</p>
                   </div>
                   <div className="min-w-[220px]">
                     <label className="block text-xs text-gray-400 mb-1">Salida (aplicar)</label>
@@ -886,6 +900,7 @@ export default function DailyClosePanel({
             <h3 className="text-lg font-semibold text-white mb-4">Ajustar registro — {editItem.employee.name}</h3>
             <p className="text-xs text-amber-200/90 mb-4">
               Corrige horarios antes de finalizar si necesitas horas calculadas. Se marca como excepción de administrador.
+              Horas en zona Honduras.
             </p>
             <div className="space-y-3">
               <Field label="Entrada" value={editCheckIn} onChange={setEditCheckIn} />
@@ -893,6 +908,14 @@ export default function DailyClosePanel({
               <Field label="Inicio almuerzo" value={editLunchStart} onChange={setEditLunchStart} />
               <Field label="Fin almuerzo" value={editLunchEnd} onChange={setEditLunchEnd} />
             </div>
+            {editError && (
+              <div
+                role="alert"
+                className="mt-4 rounded-lg px-3 py-2 text-sm bg-red-500/10 border border-red-500/30 text-red-200"
+              >
+                {editError}
+              </div>
+            )}
             <div className="flex justify-end gap-2 mt-6">
               <Button type="button" variant="ghost" className="text-gray-300" onClick={() => setEditOpen(false)}>
                 Cancelar

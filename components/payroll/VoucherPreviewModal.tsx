@@ -3,6 +3,7 @@ import { useCompanyMoney } from '../../lib/hooks/useCompanyMoney'
 import type { VoucherPreviewData } from '../../lib/payroll/voucher-preview'
 import { Button } from '../ui/button'
 import { Icon } from '../Icon'
+import { createPortal } from 'react-dom'
 
 type VoucherPreviewModalProps = {
   open: boolean
@@ -80,7 +81,8 @@ export default function VoucherPreviewModal({
 
   if (!open) return null
 
-  return (
+  // Portal a body: el contenido del layout crea un stacking context (z-10) bajo el sidebar
+  return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
       role="dialog"
@@ -229,6 +231,7 @@ export default function VoucherPreviewModal({
           </Button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }

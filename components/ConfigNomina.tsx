@@ -77,6 +77,37 @@ export default function ConfigNomina({
     return `${monthName} ${year} · ${quincena === 2 ? biweeklyLabels.q2 : biweeklyLabels.q1}`
   }, [isMonthly, isWeekly, monthName, year, monthlyRangeLabel, quincena, biweeklyLabels])
 
+  // Fecha de cierre del período seleccionado (null en semanal: la semana no se mapea a fechas aquí)
+  const periodBounds = useMemo(() => {
+    if (isWeekly) return null
+    const lastDay = new Date(year, month, 0).getDate()
+    let start: number
+    let end: number
+    if (isMonthly) {
+      const custom = paymentCutDates?.monthly_type === 'custom'
+      start = custom ? paymentCutDates?.monthly_start ?? 1 : 1
+      end = custom ? paymentCutDates?.monthly_end ?? lastDay : lastDay
+    } else if (quincena === 2) {
+      start = paymentCutDates?.biweekly_second_start ?? 16
+      end = paymentCutDates?.biweekly_second_end ?? lastDay
+    } else {
+      start = paymentCutDates?.biweekly_first_start ?? 1
+      end = paymentCutDates?.biweekly_first_end ?? 15
+    }
+    // Corte que cruza de mes (p. ej. 26–10): el cierre cae en el mes siguiente
+    const endMonthIndex = end < start ? month : month - 1
+    const endLastDay = new Date(year, endMonthIndex + 1, 0).getDate()
+    return {
+      start: new Date(year, month - 1, Math.min(start, lastDay)),
+      end: new Date(year, endMonthIndex, Math.min(end, endLastDay), 23, 59, 59),
+    }
+  }, [isWeekly, isMonthly, year, month, quincena, paymentCutDates])
+
+  const now = Date.now()
+  const periodNotStarted = periodBounds !== null && periodBounds.start.getTime() > now
+  const periodInProgress = periodBounds !== null && !periodNotStarted && periodBounds.end.getTime() > now
+  const formatDay = (d: Date) => d.toLocaleDateString('es-HN', { day: 'numeric', month: 'long' })
+
   const description = isMonthly
     ? 'Define el período para generar la nómina (año y mes)'
     : isWeekly
@@ -229,6 +260,26 @@ export default function ConfigNomina({
             )}
           </div>
         </div>
+
+        {(periodInProgress || periodNotStarted) && periodBounds && (
+          <div
+            role="status"
+            className="mt-3 flex items-start gap-2 p-3 rounded-lg border border-amber-400/30 bg-amber-500/10 text-sm text-amber-100"
+          >
+            <Icon name="clock" className="h-4 w-4 mt-0.5 shrink-0 text-amber-300" />
+            {periodNotStarted ? (
+              <span>
+                <span className="font-semibold">Período futuro:</span> inicia el {formatDay(periodBounds.start)}.
+                Aún no hay asistencia registrada para calcularlo.
+              </span>
+            ) : (
+              <span>
+                <span className="font-semibold">Período en curso:</span> cierra el {formatDay(periodBounds.end)}.
+                Los días trabajados y los montos pueden cambiar hasta esa fecha.
+              </span>
+            )}
+          </div>
+        )}
       </CardContent>
     </Card>
   )

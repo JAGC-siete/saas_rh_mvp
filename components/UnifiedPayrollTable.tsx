@@ -617,7 +617,10 @@ export default function UnifiedPayrollTable({
         )}
 
         {/* Action Buttons */}
-        <div className="flex items-center gap-4 mt-6 pt-6 border-t border-white/20">
+        <div
+          id="payroll-actions"
+          className="flex flex-wrap items-center gap-3 sm:gap-4 mt-6 pt-6 border-t border-white/20 scroll-mt-24"
+        >
           {/* Pre-Authorize Button - Only show in draft status */}
           {onPreAuthorize && status === 'draft' && (
             <Button

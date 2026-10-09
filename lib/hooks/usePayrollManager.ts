@@ -404,12 +404,16 @@ export const usePayrollManager = () => {
         dispatch({ type: 'SET_RUN_ID', payload: draft.run_id })
         dispatch({ type: 'SET_STATUS', payload: draft.status as UIRunStatus })
         
-        // Show toast notification
-        toast.success(
-          'Borrador Cargado',
-          `Se encontró un borrador guardado con ${draft.edited_lines} líneas editadas`,
-          5000
-        )
+        // Solo notificar si el borrador tiene cambios; un borrador sin ediciones es ruido
+        if (draft.edited_lines > 0) {
+          toast.success(
+            'Borrador cargado',
+            draft.edited_lines === 1
+              ? 'Se recuperó un borrador con 1 línea editada'
+              : `Se recuperó un borrador con ${draft.edited_lines} líneas editadas`,
+            5000
+          )
+        }
       }
 
       // Loading unified payroll data
@@ -997,12 +1001,16 @@ export const usePayrollManager = () => {
           dispatch({ type: 'SET_RUN_ID', payload: draft.run_id })
           dispatch({ type: 'SET_STATUS', payload: draft.status as UIRunStatus })
           
-          // Show toast notification
-          toast.success(
-            'Borrador Cargado',
-            `Se encontró un borrador guardado con ${draft.edited_lines} líneas editadas`,
-            5000
-          )
+          // Solo notificar si el borrador tiene cambios; un borrador sin ediciones es ruido
+          if (draft.edited_lines > 0) {
+            toast.success(
+              'Borrador cargado',
+              draft.edited_lines === 1
+                ? 'Se recuperó un borrador con 1 línea editada'
+                : `Se recuperó un borrador con ${draft.edited_lines} líneas editadas`,
+              5000
+            )
+          }
         }
 
         const data = await fetchUnifiedPayroll(

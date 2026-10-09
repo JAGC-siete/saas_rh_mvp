@@ -80,7 +80,7 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans;
     padding-bottom: var(--hs-cookie-offset, 0px);
   }
   svg { width: var(--icon-size); height: var(--icon-size); stroke-width: var(--icon-stroke); }
