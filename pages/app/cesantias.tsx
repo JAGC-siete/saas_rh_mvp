@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../..
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select'
-import { CesantiasRequestInput, motivoSalidaEnum } from '../../lib/payroll/cesantias-schema'
+import { CesantiasRequestInput, MOTIVO_SALIDA_OPTIONS, motivoSalidaEnum } from '../../lib/payroll/cesantias-schema'
 import { useCompanyMoney } from '../../lib/hooks/useCompanyMoney'
 
 type LiquidacionResponse = import('../../lib/payroll/cesantias').LiquidacionResult
@@ -15,17 +15,6 @@ type ZodValidationError = {
   _errors?: string[]
   [key: string]: ZodValidationError | string[] | undefined
 }
-
-const MOTIVO_SALIDA_OPTIONS: { value: CesantiasRequestInput['parametrosCalculo']['motivoSalida']; label: string }[] = [
-  { value: 'RENUNCIA', label: 'Renuncia' },
-  { value: 'DESPIDO_JUSTIFICADO', label: 'Despido Justificado' },
-  { value: 'DESPIDO_INJUSTIFICADO', label: 'Despido Injustificado' },
-  { value: 'CAUSA_AJENA_TRABAJADOR', label: 'Causa ajena a la voluntad del trabajador' },
-  { value: 'FALLECIMIENTO', label: 'Fallecimiento del trabajador' },
-  { value: 'PENSION_JUBILACION_EQUIVALENTE', label: 'Jubilación / pensión equivalente' },
-  { value: 'FIN_CONTRATO', label: 'Fin de contrato' },
-  { value: 'MUTUO_ACUERDO', label: 'Mutuo acuerdo' }
-]
 
 export default function CesantiasPage() {
   const { format: formatCurrency } = useCompanyMoney()

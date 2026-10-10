@@ -1,8 +1,9 @@
 -- The reports_* functions are SECURITY DEFINER and trust p_company_id without checking
 -- the caller, so any logged-in user could call supabase.rpc('reports_payroll', ...) with
 -- another company's id and read its employees, DNI and salaries.
+-- 20261010120000 already revoked PUBLIC/anon; this closes authenticated.
 -- Only the API (service_role, after requireCompanyAccess) needs to call them.
--- PUBLIC is revoked too: Postgres grants EXECUTE to PUBLIC by default on new functions.
+-- PUBLIC/anon are repeated so this file stands on its own (REVOKE is idempotent).
 --
 -- Deploy the API change (routes calling these via the admin client) BEFORE applying this,
 -- or reports fail with "permission denied" in between.

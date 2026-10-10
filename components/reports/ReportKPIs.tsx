@@ -121,6 +121,8 @@ function formatSummaryKey(key: string): string {
     totalLiquidaciones: 'Liquidaciones',
     montoTotal: 'Monto Total',
     periodoCalculado: 'Período',
+    pagaEmpresa: 'Paga la empresa',
+    pagaRap: 'Paga el RAP',
     liquidacion: 'Liquidación'
   }
   
