@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { requireCompanyAccess } from '../../../../lib/auth/api-auth-fixed'
+import { requireAccountingAccess } from '../../../../lib/accounting/api-access'
+import { findForeignAccountIds } from '../../../../lib/accounting/access-rules'
 import { withGeneralRateLimit } from '../../../../lib/security/rate-limiting'
 import { createAdminClient } from '../../../../lib/supabase/server'
 
@@ -14,7 +15,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   }
 
   try {
-    const auth = await requireCompanyAccess(req, res)
+    const auth = await requireAccountingAccess(req, res)
+    if (!auth) return
     const { id } = req.query
     const { debit_account_id, credit_account_id } = req.body || {}
 
@@ -51,6 +53,29 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
     if (Object.keys(updates).length === 0) {
       return res.status(400).json({ error: 'Debe enviar debit_account_id o credit_account_id' })
+    }
+
+    const requestedAccountIds = [updates.debit_account_id, updates.credit_account_id].filter(
+      (v): v is string => typeof v === 'string' && v.length > 0
+    )
+    if (requestedAccountIds.length > 0) {
+      const { data: ownedAccounts, error: accountsError } = await supabase
+        .from('chart_of_accounts')
+        .select('id')
+        .eq('company_id', companyId)
+        .in('id', requestedAccountIds)
+
+      if (
+        accountsError ||
+        findForeignAccountIds(
+          requestedAccountIds,
+          (ownedAccounts ?? []).map((a: { id: string }) => a.id)
+        ).length > 0
+      ) {
+        return res.status(400).json({
+          error: 'Esa cuenta no pertenece al catálogo de tu empresa. Elige una cuenta de la lista.'
+        })
+      }
     }
 
     const { data: updated, error: updateError } = await supabase

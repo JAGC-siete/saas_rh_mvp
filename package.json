@@ -18,7 +18,7 @@
     "dev:trace": "node -r ./lib/tracing.js node_modules/.bin/next dev",
     "test": "tsx --test 'tests/*.test.ts'",
     "test:schema": "tsx --test tests/integration/landings-schema-drift.test.ts",
-    "test:security": "npx tsx --test tests/shape-employee.test.ts tests/field-level-security.test.ts tests/field-level-security-phase2.test.ts tests/settings-access.test.ts tests/company-users.test.ts tests/attendance-kiosk-and-identity.test.ts",
+    "test:security": "npx tsx --test tests/shape-employee.test.ts tests/field-level-security.test.ts tests/field-level-security-phase2.test.ts tests/settings-access.test.ts tests/company-users.test.ts tests/attendance-kiosk-and-identity.test.ts tests/accounting-access.test.ts",
     "audit": "./scripts/run-complete-audit.sh",
     "audit:system": "node scripts/audit-system.js",
     "audit:supabase": "node scripts/audit-supabase.js",
