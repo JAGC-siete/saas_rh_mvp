@@ -55,7 +55,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     )
 
     if (!result.success) {
-      return res.status(400).json({
+      return res.status(result.code === 'ALREADY_GENERATED' ? 409 : 400).json({
         error: result.error,
         journalEntryIds: result.journalEntryIds
       })

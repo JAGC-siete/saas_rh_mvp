@@ -5,6 +5,16 @@ import {
   calculateProvisionVacaciones,
   calculateProvisionCesantia
 } from '../../../lib/payroll/labor-provisions'
+import {
+  allocateSeverance,
+  buildSeveranceJournalEntry,
+  centsToAmount,
+  toCents
+} from '../../../lib/accounting/journal-builder'
+import {
+  loadConceptMappings,
+  persistJournalEntry
+} from '../../../lib/accounting/journal-generator'
 import { withGeneralRateLimit } from '../../../lib/security/rate-limiting'
 
 /**
@@ -103,90 +113,56 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
     const monthlyProvVac = calculateProvisionVacaciones(avgSalary)
     const monthlyProvCes = calculateProvisionCesantia(avgSalary)
-    const provisionedVacaciones = Math.min(
-      vacationBalance,
-      monthsTotal * monthlyProvVac
-    )
-    const provisionedCesantia = Math.min(
-      severanceAmount,
-      monthsTotal * monthlyProvCes
-    )
-    const excessNotProvisioned =
-      totalSettlement - provisionedVacaciones - provisionedCesantia
 
-    const { data: accounts } = await supabase
-      .from('chart_of_accounts')
-      .select('id, code')
-      .eq('company_id', companyId)
-      .in('code', ['2104-03', '2104-04', '6104-01', '2101-01'])
-
-    const accMap = new Map((accounts || []).map((a: any) => [a.code, a.id]))
-    const provVacId = accMap.get('2104-03')
-    const provCesId = accMap.get('2104-04')
-    const gastoIndId = accMap.get('6104-01')
-    const sueldosPorPagarId = accMap.get('2101-01')
-
-    if (!sueldosPorPagarId) {
-      return res.status(400).json({
-        error: 'Cuentas contables no configuradas',
-        message:
-          'Ejecute accounting_seed_company_defaults(company_id) primero.'
-      })
-    }
-
-    const entryDate = termination_date
-    const empName = (calc.employee_name as string) || 'Empleado'
-    const description = `Liquidación - ${empName} - ${termination_date}`
-
-    const lines: Array<{
-      account_id: string
-      debit_amount: number
-      credit_amount: number
-      description: string
-    }> = []
-
-    if (provisionedVacaciones > 0 && provVacId) {
-      lines.push({
-        account_id: provVacId,
-        debit_amount: Math.round(provisionedVacaciones * 100) / 100,
-        credit_amount: 0,
-        description: 'Uso provisión vacaciones'
-      })
-    }
-    if (provisionedCesantia > 0 && provCesId) {
-      lines.push({
-        account_id: provCesId,
-        debit_amount: Math.round(provisionedCesantia * 100) / 100,
-        credit_amount: 0,
-        description: 'Uso provisión cesantía'
-      })
-    }
-    if (excessNotProvisioned > 0 && gastoIndId) {
-      lines.push({
-        account_id: gastoIndId,
-        debit_amount: Math.round(excessNotProvisioned * 100) / 100,
-        credit_amount: 0,
-        description: 'Gasto indemnizaciones (exceso no provisionado)'
-      })
-    }
-
-    lines.push({
-      account_id: sueldosPorPagarId,
-      debit_amount: 0,
-      credit_amount: Math.round(totalSettlement * 100) / 100,
-      description: 'Sueldos por pagar - Liquidación'
-    })
-
-    const { data: je, error: jeError } = await supabase
+    const { data: existing } = await supabase
       .from('journal_entries')
-      .insert({
+      .select('id')
+      .eq('company_id', companyId)
+      .neq('status', 'void')
+      .contains('source_reference', { type: 'severance', employee_id, termination_date })
+      .limit(1)
+
+    if (existing?.length) {
+      return res.status(409).json({
+        error: 'Esta liquidación ya tiene su asiento contable. Puedes verlo o exportarlo en Contabilidad.'
+      })
+    }
+
+    const loaded = await loadConceptMappings(supabase, companyId)
+    if ('error' in loaded) {
+      return res.status(400).json({ error: loaded.error })
+    }
+
+    const empName = (calc.employee_name as string) || 'Empleado'
+    const requested = {
+      settlementCents: toCents(totalSettlement),
+      provVacCents: toCents(Math.min(vacationBalance, monthsTotal * monthlyProvVac)),
+      provCesCents: toCents(Math.min(severanceAmount, monthsTotal * monthlyProvCes))
+    }
+    const built = buildSeveranceJournalEntry({
+      description: `Liquidación - ${empName} - ${termination_date}`,
+      ...requested,
+      mappings: loaded.mappings,
+      conceptNames: loaded.conceptNames
+    })
+    if (!built.ok) {
+      return res.status(400).json({ error: built.error })
+    }
+
+    const allocation = allocateSeverance(requested)
+    const provisionedVacaciones = centsToAmount(allocation.provVac)
+    const provisionedCesantia = centsToAmount(allocation.provCes)
+    const excessNotProvisioned = centsToAmount(allocation.excess)
+
+    const saved = await persistJournalEntry(
+      supabase,
+      {
         company_id: companyId,
         payroll_run_id: null,
-        entry_date: entryDate,
+        entry_date: termination_date,
         currency: 'HNL',
         exchange_rate: 1,
         status: 'draft',
-        description,
         created_by: auth.user?.id ?? null,
         source_reference: {
           type: 'severance',
@@ -199,26 +175,17 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           provisioned_cesantia: provisionedCesantia,
           excess: excessNotProvisioned
         }
-      })
-      .select('id')
-      .single()
+      },
+      built.entries[0]
+    )
 
-    if (jeError || !je) {
+    if ('error' in saved) {
       return res.status(500).json({
         error: 'Error creando partida contable',
-        details: jeError?.message ?? 'unknown'
+        details: saved.error
       })
     }
-
-    for (const line of lines) {
-      await supabase.from('journal_entry_lines').insert({
-        journal_entry_id: je.id,
-        account_id: line.account_id,
-        debit_amount: line.debit_amount,
-        credit_amount: line.credit_amount,
-        description: line.description
-      })
-    }
+    const je = saved
 
     return res.status(200).json({
       success: true,
