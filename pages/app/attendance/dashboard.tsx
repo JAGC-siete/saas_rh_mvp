@@ -13,6 +13,7 @@ import {
 import ProtectedRoute from '../../../components/ProtectedRoute'
 import DashboardLayout from '../../../components/DashboardLayout'
 import HeaderBar from '../../../components/attendance/HeaderBar'
+import AttendanceSectionNav from '../../../components/attendance/AttendanceSectionNav'
 import KpiCards from '../../../components/attendance/KpiCards'
 import AttendanceTablesSection from '../../../components/attendance/AttendanceTablesSection'
 import type { TrendData } from '../../../components/attendance/TrendsChart'
@@ -513,116 +514,15 @@ export default function AttendanceDashboardApp() {
             </div>
           )}
 
-          <header className="border-b border-white/10 pb-6">
-            <h1 className="text-2xl font-bold text-white tracking-tight">Asistencia</h1>
-            <p className="mt-2 text-sm text-gray-400 max-w-3xl">
-              Resumen operativo del período y filtros seleccionados: presentes, ausencias, llegadas y
-              excepciones. Las cifras siguen las mismas reglas que la exportación (consolidado post-cierre
-              cuando aplica).
-            </p>
-            <p className="mt-3 text-sm">
-              <Link
-                href="/app/attendance/daily-close"
-                className="text-brand-400 font-medium hover:text-brand-300 underline-offset-2 hover:underline"
-              >
-                Control de horas extras
-              </Link>
-              <span className="text-gray-500"> — revisar marcas del reloj, horas y anomalías.</span>
-            </p>
-          </header>
-
-          {preset === 'today' && dailyCloseHint && dailyCloseHint.withEvents > 0 && (
-            <div
-              className={`rounded-xl border overflow-hidden ${
-                dailyCloseHint.anomalies > 0
-                  ? 'bg-amber-500/10 border-amber-500/35 text-amber-100'
-                  : 'bg-blue-500/10 border-blue-500/30 text-blue-100'
-              }`}
-            >
-              <div className="px-4 py-3 sm:px-5 sm:py-4 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-                <div className="space-y-3 min-w-0">
-                  <h2 className="text-sm font-semibold text-white">
-                    Control de horas extras · {getTodayInHonduras()}
-                  </h2>
-                  <dl className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
-                    <div>
-                      <dt className="text-gray-400 text-xs uppercase tracking-wide">Con marcas</dt>
-                      <dd className="font-semibold tabular-nums text-lg">{dailyCloseHint.withEvents}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-gray-400 text-xs uppercase tracking-wide">Anomalías</dt>
-                      <dd className="font-semibold tabular-nums text-lg">{dailyCloseHint.anomalies}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-gray-400 text-xs uppercase tracking-wide">Finalizados</dt>
-                      <dd className="font-semibold tabular-nums text-lg">{dailyCloseHint.finalized}</dd>
-                    </div>
-                  </dl>
-                  <p className="text-xs text-gray-400 leading-snug max-w-xl">
-                    <span className="text-gray-300">Finalizado</span> indica registro ya cerrado en el
-                    flujo de cierre; las marcas crudas del dispositivo siguen visibles en esa pantalla.
-                  </p>
-                </div>
-                <Link
-                  href="/app/attendance/daily-close"
-                  className="inline-flex items-center justify-center shrink-0 px-4 py-2 rounded-lg bg-white/10 hover:bg-white/15 border border-white/20 text-sm font-medium text-white"
-                >
-                  Ir a control de horas extras
-                </Link>
-              </div>
+          <header className="space-y-4 border-b border-white/10 pb-5">
+            <div>
+              <h1 className="text-2xl font-bold text-white tracking-tight">Asistencia</h1>
+              <p className="mt-1 text-sm text-gray-400">
+                Quién llegó, quién faltó y quién llegó tarde en el período que elijas.
+              </p>
             </div>
-          )}
-
-          <section aria-labelledby="attendance-summary-heading" className="space-y-4">
-            <h2 id="attendance-summary-heading" className="sr-only">
-              Resumen del período
-            </h2>
-            <KpiCards
-              presentes={kpis?.presentes ?? 0}
-              ausentes={kpis?.ausentes ?? 0}
-              permisosPagados={kpis?.permisos_pagados ?? 0}
-              temprano={kpis?.tempranos ?? 0}
-              tarde={kpis?.tardes ?? 0}
-              presetLabel={` ${getPresetLabel(preset, from, to)}`}
-              loading={loading}
-              activeFilter={kpiFilter}
-              onFilterChange={setKpiFilter}
-            />
-
-            <Card variant="liquid" className="border border-white/10">
-              <button
-                type="button"
-                onClick={() => setShowDistribution((v) => !v)}
-                className="w-full p-4 sm:p-5 flex items-center justify-between gap-3 text-left hover:bg-white/5 transition-colors rounded-xl"
-                aria-expanded={showDistribution}
-                aria-controls="attendance-distribution-panel"
-                id="attendance-distribution-toggle"
-              >
-                <span className="flex items-center gap-2 text-base font-semibold text-white">
-                  <ChartBarIcon className="h-6 w-6 text-gray-300 shrink-0" aria-hidden />
-                  Distribución de asistencia
-                </span>
-                {showDistribution ? (
-                  <ChevronDownIcon className="h-5 w-5 text-gray-400 shrink-0" aria-hidden />
-                ) : (
-                  <ChevronRightIcon className="h-5 w-5 text-gray-400 shrink-0" aria-hidden />
-                )}
-              </button>
-              <div
-                id="attendance-distribution-panel"
-                role="region"
-                aria-labelledby="attendance-distribution-toggle"
-                hidden={!showDistribution}
-                className={showDistribution ? 'px-4 sm:px-5 pb-5 pt-0' : 'hidden'}
-              >
-                <KpiBarsChart
-                  kpis={kpis}
-                  loading={loading}
-                  barLabel={barChartXLabel(preset)}
-                />
-              </div>
-            </Card>
-          </section>
+            <AttendanceSectionNav />
+          </header>
 
           <HeaderBar
             preset={preset}
@@ -647,6 +547,44 @@ export default function AttendanceDashboardApp() {
             onRangeChange={handleRangeChange}
           />
 
+          {preset === 'today' && dailyCloseHint && dailyCloseHint.anomalies > 0 && (
+            <div
+              role="status"
+              className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-xl border border-amber-500/35 bg-amber-500/10 px-4 py-3 text-sm text-amber-100"
+            >
+              <p>
+                <span className="font-semibold text-white">
+                  {dailyCloseHint.anomalies} {dailyCloseHint.anomalies === 1 ? 'registro' : 'registros'} de hoy
+                  {dailyCloseHint.anomalies === 1 ? ' necesita' : ' necesitan'} revisión
+                </span>{' '}
+                antes del cierre del día ({dailyCloseHint.finalized} de {dailyCloseHint.withEvents} cerrados).
+              </p>
+              <Link
+                href="/app/attendance/daily-close"
+                className="inline-flex shrink-0 items-center justify-center rounded-lg border border-white/20 bg-white/10 px-4 py-2 font-medium text-white hover:bg-white/15"
+              >
+                Revisar cierre del día
+              </Link>
+            </div>
+          )}
+
+          <section aria-labelledby="attendance-summary-heading" className="space-y-4">
+            <h2 id="attendance-summary-heading" className="sr-only">
+              Resumen del período
+            </h2>
+            <KpiCards
+              presentes={kpis?.presentes ?? 0}
+              ausentes={kpis?.ausentes ?? 0}
+              permisosPagados={kpis?.permisos_pagados ?? 0}
+              temprano={kpis?.tempranos ?? 0}
+              tarde={kpis?.tardes ?? 0}
+              presetLabel={` ${getPresetLabel(preset, from, to)}`}
+              loading={loading}
+              activeFilter={kpiFilter}
+              onFilterChange={setKpiFilter}
+            />
+          </section>
+
           <AttendanceTablesSection
             key={tablesSectionKey}
             absent={absent}
@@ -659,6 +597,40 @@ export default function AttendanceDashboardApp() {
             kpiFilter={kpiFilter}
             onKpiFilterChange={setKpiFilter}
           />
+
+          <Card variant="liquid" className="border border-white/10">
+            <button
+              type="button"
+              onClick={() => setShowDistribution((v) => !v)}
+              className="w-full p-4 sm:p-5 flex items-center justify-between gap-3 text-left hover:bg-white/5 transition-colors rounded-xl"
+              aria-expanded={showDistribution}
+              aria-controls="attendance-distribution-panel"
+              id="attendance-distribution-toggle"
+            >
+              <span className="flex items-center gap-2 text-base font-semibold text-white">
+                <ChartBarIcon className="h-6 w-6 text-gray-300 shrink-0" aria-hidden />
+                Distribución de asistencia
+              </span>
+              {showDistribution ? (
+                <ChevronDownIcon className="h-5 w-5 text-gray-400 shrink-0" aria-hidden />
+              ) : (
+                <ChevronRightIcon className="h-5 w-5 text-gray-400 shrink-0" aria-hidden />
+              )}
+            </button>
+            <div
+              id="attendance-distribution-panel"
+              role="region"
+              aria-labelledby="attendance-distribution-toggle"
+              hidden={!showDistribution}
+              className={showDistribution ? 'px-4 sm:px-5 pb-5 pt-0' : 'hidden'}
+            >
+              <KpiBarsChart
+                kpis={kpis}
+                loading={loading}
+                barLabel={barChartXLabel(preset)}
+              />
+            </div>
+          </Card>
 
           <Card variant="liquid" className="border border-white/10">
             <div className="p-6">

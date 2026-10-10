@@ -357,7 +357,7 @@ export default function EmployeeDrawer({
                   className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-white/10 hover:bg-white/15 text-white text-sm font-medium border border-white/15 transition-colors"
                 >
                   <ClockIcon className="h-4 w-4" />
-                  Cierre diario
+                  Cierre del día
                 </Link>
               </div>
             </div>

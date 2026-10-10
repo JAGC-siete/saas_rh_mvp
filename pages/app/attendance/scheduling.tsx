@@ -3,6 +3,7 @@ import ProtectedRoute from '../../../components/ProtectedRoute'
 import DashboardLayout from '../../../components/DashboardLayout'
 import { Card } from '../../../components/ui/card'
 import { useNotificationContext } from '../../../components/NotificationProvider'
+import AttendanceSectionNav from '../../../components/attendance/AttendanceSectionNav'
 
 type DepartmentRow = { id: string; name: string }
 type EmployeeRow = {
@@ -259,6 +260,7 @@ export default function AttendanceSchedulingPage() {
     <ProtectedRoute>
       <DashboardLayout>
         <div className="max-w-6xl mx-auto px-4 py-8 space-y-6">
+          <AttendanceSectionNav />
           <div>
             <h1 className="text-2xl font-bold text-white">Asignación de turnos</h1>
             <p className="text-sm text-gray-400 mt-1">

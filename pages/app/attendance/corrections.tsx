@@ -11,6 +11,7 @@ import {
 import { getAttendanceMarksValidationError } from '../../../lib/attendance/validate-marks'
 import { getTodayInHonduras } from '../../../lib/timezone'
 import { useNotificationContext } from '../../../components/NotificationProvider'
+import AttendanceSectionNav from '../../../components/attendance/AttendanceSectionNav'
 
 type Status = 'pending' | 'approved' | 'rejected'
 
@@ -183,6 +184,7 @@ export default function AttendanceCorrectionsPage() {
     <ProtectedRoute>
       <DashboardLayout>
         <div className="max-w-6xl mx-auto px-4 py-8 space-y-6">
+          <AttendanceSectionNav />
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h1 className="text-2xl font-bold text-white">Correcciones de asistencia</h1>
             <div className="flex items-center gap-2">

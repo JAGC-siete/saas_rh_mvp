@@ -1,6 +1,5 @@
 import { useState } from 'react'
-import Link from 'next/link'
-import { InformationCircleIcon } from '@heroicons/react/24/outline'
+import { AdjustmentsHorizontalIcon } from '@heroicons/react/24/outline'
 import FiltersBar from './FiltersBar'
 import { ExportFormatButtons } from '../ui/ExportFormatButtons'
 import { getStandardColumns } from '../../lib/reports/standard-columns'
@@ -80,25 +79,9 @@ export default function HeaderBar({
   }
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
-      {/* Filtros */}
-      <FiltersBar 
-        preset={preset} 
-        onPresetChange={onPresetChange}
-        selectedEmployeeId={selectedEmployeeId}
-        onEmployeeChange={onEmployeeChange}
-        selectedRole={selectedRole}
-        onRoleChange={onRoleChange}
-        selectedDepartmentId={selectedDepartmentId}
-        onDepartmentChange={onDepartmentChange}
-        loading={loading}
-        from={from}
-        to={to}
-        onRangeChange={onRangeChange}
-      />
-
-      {/* Acciones del header */}
-      <div className="flex flex-col items-stretch sm:items-end gap-2 w-full sm:w-auto">
+    <div className="space-y-3">
+      {/* Acciones */}
+      <div className="flex flex-col items-stretch sm:items-end gap-2">
         <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
           {lastUpdated && (
             <span className="text-xs text-gray-400 order-first sm:order-none">
@@ -112,41 +95,30 @@ export default function HeaderBar({
               onClick={() => onRecalculateNow()}
               disabled={recalcLoading}
               className="px-3 py-2 rounded-lg text-sm font-medium bg-white/10 hover:bg-white/15 text-white disabled:opacity-50 disabled:cursor-not-allowed"
-              title="Recalcular horas (Capa Base) para hoy"
+              title="Vuelve a calcular las horas de hoy con las marcas más recientes"
             >
               {recalcLoading ? 'Recalculando…' : 'Recalcular ahora'}
             </button>
           )}
 
-          <Link
-            href="/app/attendance/corrections"
-            className="px-3 py-2 rounded-lg text-sm font-medium bg-white/5 hover:bg-white/10 text-gray-200"
-            title="Solicitudes y revisión de correcciones de asistencia"
-          >
-            Correcciones
-          </Link>
-          <Link
-            href="/app/attendance/scheduling"
-            className="px-3 py-2 rounded-lg text-sm font-medium bg-white/5 hover:bg-white/10 text-gray-200"
-            title="Asignación de turnos por fecha"
-          >
-            Turnos
-          </Link>
-
-          <div className="flex items-center gap-1">
+          <div className="flex flex-wrap items-center justify-end gap-2">
             <div className="relative">
               <button
                 type="button"
                 onClick={() => setColumnsOpen((v) => !v)}
                 className="px-3 py-2 rounded-lg text-sm font-medium bg-gray-800/80 hover:bg-gray-800 text-white"
                 aria-expanded={columnsOpen}
+                aria-haspopup="dialog"
               >
-                Columnas
+                <span className="inline-flex items-center gap-1.5">
+                  <AdjustmentsHorizontalIcon className="h-4 w-4" aria-hidden />
+                  Opciones de exportación
+                </span>
               </button>
               {columnsOpen && (
                 <div className="absolute right-0 mt-2 w-72 rounded-xl border border-white/10 bg-gray-950/95 backdrop-blur p-3 shadow-xl z-50">
                   <div className="flex items-center justify-between gap-2 mb-2">
-                    <span className="text-xs font-semibold text-gray-200">Exportación</span>
+                    <span className="text-xs font-semibold text-gray-200">Opciones de exportación</span>
                     <button
                       type="button"
                       className="text-xs text-gray-400 hover:text-white"
@@ -155,6 +127,11 @@ export default function HeaderBar({
                       Cerrar
                     </button>
                   </div>
+
+                  <p className="text-xs text-gray-400 mb-3 leading-snug">
+                    El archivo incluye los registros ya cerrados. Las marcas del reloj sin cerrar se revisan en
+                    Cierre del día.
+                  </p>
 
                   <div className="flex items-center gap-2 mb-3">
                     <span className="text-xs text-gray-400">Hora:</span>
@@ -174,6 +151,7 @@ export default function HeaderBar({
                     </button>
                   </div>
 
+                  <p className="text-xs text-gray-400 mb-2">Columnas:</p>
                   <div className="max-h-64 overflow-auto pr-1 space-y-2">
                     {availableColumns.map((c) => {
                       const checked = exportColumnIds.includes(c.id)
@@ -230,20 +208,25 @@ export default function HeaderBar({
               }
               variant="primary"
             />
-            <button
-              type="button"
-              className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors shrink-0"
-              title="Las exportaciones reflejan registros consolidados (post-cierre). Las marcas crudas del reloj biométrico se revisan en Control de horas extras."
-              aria-label="Información sobre exportaciones y control de horas extras"
-            >
-              <InformationCircleIcon className="h-5 w-5" aria-hidden />
-            </button>
           </div>
         </div>
-        <p className="text-xs text-gray-500 max-w-md text-left sm:text-right leading-snug hidden sm:block">
-          Consolidado post-cierre. Marcas del reloj: revisar en Control de horas extras.
-        </p>
       </div>
+
+      {/* Filtros */}
+      <FiltersBar
+        preset={preset}
+        onPresetChange={onPresetChange}
+        selectedEmployeeId={selectedEmployeeId}
+        onEmployeeChange={onEmployeeChange}
+        selectedRole={selectedRole}
+        onRoleChange={onRoleChange}
+        selectedDepartmentId={selectedDepartmentId}
+        onDepartmentChange={onDepartmentChange}
+        loading={loading}
+        from={from}
+        to={to}
+        onRangeChange={onRangeChange}
+      />
     </div>
   )
 }

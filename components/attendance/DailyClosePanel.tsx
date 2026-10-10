@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import Link from 'next/link'
 import { useRouter } from 'next/router'
 import { createPortal } from 'react-dom'
 import { DateTime } from 'luxon'
@@ -13,6 +12,7 @@ import type { BiometricMode } from '../../lib/attendance/attendance-metadata'
 import DailyCloseWizard, { type DailyCloseWizardStep } from './DailyCloseWizard'
 import { BIOMETRIC_MODE_LABELS } from '../../lib/attendance/attendance-metadata'
 import { useDialogFocus } from '../../lib/hooks/useDialogFocus'
+import AttendanceSectionNav from './AttendanceSectionNav'
 
 export type DailyCloseItem = {
   employee: {
@@ -479,21 +479,18 @@ export default function DailyClosePanel({
 
   const headerBlock =
     variant === 'page' ? (
-      <div className="flex flex-wrap items-end justify-between gap-4">
+      <div className="space-y-4 border-b border-white/10 pb-5">
         <div>
-          <h1 className="text-2xl font-bold text-white">Control de horas extras</h1>
+          <h1 className="text-2xl font-bold text-white">Cierre del día</h1>
           <p className="text-gray-400 text-sm mt-1">
-            Revisión del día: consolida marcas biométricas, valida horas normales y extras (AHC), corrige anomalías
-            y finaliza cuando corresponda. La finalización calcula horas solo si hay entrada y salida definidas.
+            Revisa las marcas del reloj, corrige lo que falte y cierra el día para calcular horas normales y extras.
           </p>
         </div>
-        <Link href="/app/attendance/dashboard" className="text-sm text-brand-400 hover:text-brand-300">
-          ← Volver al panel de asistencia
-        </Link>
+        <AttendanceSectionNav />
       </div>
     ) : (
       <div>
-        <h2 className="text-lg font-semibold text-white">Control de horas extras</h2>
+        <h2 className="text-lg font-semibold text-white">Cierre del día</h2>
         <p className="text-gray-400 text-sm mt-1">
           Consolidación, edición de registros y finalización para la fecha seleccionada (horas incluidas).
         </p>

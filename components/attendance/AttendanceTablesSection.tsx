@@ -46,10 +46,10 @@ export default function AttendanceTablesSection({
   const presentCount = early.length + late.length
 
   const tabs: { id: AttendanceListTab; label: string; count: number }[] = [
-    { id: 'temprano', label: 'Temprano', count: early.length },
-    { id: 'tarde', label: 'Tarde', count: lateOnly.length },
     { id: 'presentes', label: 'Presentes', count: presentCount },
     { id: 'ausentes', label: 'Ausentes', count: absent.length },
+    { id: 'tarde', label: 'Tarde', count: lateOnly.length },
+    { id: 'temprano', label: 'Temprano', count: early.length },
     { id: 'outside', label: 'Fuera de horario', count: outsideSchedule.length },
   ]
 

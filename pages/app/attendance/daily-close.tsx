@@ -3,7 +3,7 @@ import DashboardLayout from '../../../components/DashboardLayout'
 import DailyClosePanel from '../../../components/attendance/DailyClosePanel'
 
 /**
- * Pantalla Control de horas extras / cierre operativo del día (desde Attendance).
+ * Cierre del día: revisión de marcas, ajustes y cálculo de horas normales y extras.
  */
 export default function AttendanceDailyCloseRedirectPage() {
   return (
