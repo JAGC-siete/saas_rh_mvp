@@ -7,6 +7,7 @@ import {
 } from '../../../lib/payroll-client-specific'
 import {
   computeCustomFieldsEffectiveAmounts,
+  buildCustomFieldsAdjustmentRows,
   isPayrollRunEditableForCustomFields,
 } from '../../../lib/payroll/custom-fields-eff-amounts'
 
@@ -226,47 +227,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             }
           }
 
-          const oldEffBruto = Number(existingLine.eff_bruto) || 0
-          const oldEffNeto = Number(existingLine.eff_neto) || 0
-          const adjustmentsToInsert: Array<{ run_line_id: string; company_id: string; field: string; old_value: number | null; new_value: number; user_id: string }> = []
-          if (oldEffBruto !== newEffBruto) {
-            adjustmentsToInsert.push({
-              run_line_id: update.run_line_id,
-              company_id: companyId,
-              field: 'bruto',
-              old_value: oldEffBruto,
-              new_value: newEffBruto,
-              user_id: user.id
-            })
-          }
-          if (oldEffNeto !== newEffNeto) {
-            adjustmentsToInsert.push({
-              run_line_id: update.run_line_id,
-              company_id: companyId,
-              field: 'neto',
-              old_value: oldEffNeto,
-              new_value: newEffNeto,
-              user_id: user.id
-            })
-          }
-          const allKeys = new Set([...Object.keys(existingMetadata), ...Object.keys(mergedMetadata)])
-          for (const key of allKeys) {
-            if (key === '_deduction_plan_ids' || key === '_deduction_plan_breakdown') continue
-            const oldVal = existingMetadata[key]
-            const newVal = mergedMetadata[key]
-            const oldNum = typeof oldVal === 'number' ? oldVal : (typeof oldVal === 'string' && !isNaN(parseFloat(oldVal)) ? parseFloat(oldVal) : null)
-            const newNum = typeof newVal === 'number' ? newVal : (typeof newVal === 'string' && !isNaN(parseFloat(newVal)) ? parseFloat(newVal) : null)
-            if (newNum !== null && oldNum !== newNum && /^[a-z0-9_]+$/.test(key) && key.length <= 64) {
-              adjustmentsToInsert.push({
-                run_line_id: update.run_line_id,
-                company_id: companyId,
-                field: key,
-                old_value: oldNum,
-                new_value: newNum,
-                user_id: user.id
-              })
-            }
-          }
+          const adjustmentsToInsert = buildCustomFieldsAdjustmentRows({
+            runLineId: update.run_line_id,
+            companyId,
+            userId: user.id,
+            oldEffBruto: Number(existingLine.eff_bruto) || 0,
+            newEffBruto,
+            oldEffNeto: Number(existingLine.eff_neto) || 0,
+            newEffNeto,
+            existingMetadata,
+            mergedMetadata,
+          })
           if (adjustmentsToInsert.length > 0) {
             const { error: adjError } = await supabase.from('payroll_adjustments').insert(adjustmentsToInsert)
             if (adjError) console.error(`Error inserting payroll_adjustments for line ${update.run_line_id}:`, adjError)
