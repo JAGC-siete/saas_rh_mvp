@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { requireCompanyAccess } from '../../../lib/auth/api-auth-fixed'
+import { requireAccountingAccess } from '../../../lib/accounting/api-access'
 import { createAdminClient } from '../../../lib/supabase/server'
 import {
   calculateProvisionVacaciones,
@@ -21,7 +21,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   }
 
   try {
-    const auth = await requireCompanyAccess(req, res)
+    const auth = await requireAccountingAccess(req, res)
+    if (!auth) return
     const { employee_id, termination_date, company_id: bodyCompanyId } =
       req.body || {}
 

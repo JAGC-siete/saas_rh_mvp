@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { requireCompanyAccess } from '../../../lib/auth/api-auth-fixed'
+import { requireAccountingAccess } from '../../../lib/accounting/api-access'
 import { withGeneralRateLimit } from '../../../lib/security/rate-limiting'
 import { createAdminClient } from '../../../lib/supabase/server'
 
@@ -15,7 +15,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   }
 
   try {
-    const auth = await requireCompanyAccess(req, res)
+    const auth = await requireAccountingAccess(req, res)
+    if (!auth) return
     const { payroll_run_id } = req.query
 
     if (!payroll_run_id || typeof payroll_run_id !== 'string') {

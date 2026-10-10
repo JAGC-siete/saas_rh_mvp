@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { requireCompanyAccess } from '../../../lib/auth/api-auth-fixed'
+import { requireAccountingAccess } from '../../../lib/accounting/api-access'
 import { loadPayrollDerivedMappingsPayload } from '../../../lib/accounting/payroll-derived-mappings'
 import { withPayrollRateLimit } from '../../../lib/security/rate-limiting'
 
@@ -11,12 +11,10 @@ type SaveBody = {
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
-    const { supabase, companyId, role } = await requireCompanyAccess(req, res)
+    const auth = await requireAccountingAccess(req, res)
+    if (!auth) return
+    const { supabase, companyId } = auth
     if (!companyId) return res.status(400).json({ error: 'Company ID is required' })
-
-    if (!['super_admin', 'company_admin', 'hr_manager', 'manager'].includes(role)) {
-      return res.status(403).json({ error: 'Permisos insuficientes' })
-    }
 
     if (req.method === 'GET') {
       try {

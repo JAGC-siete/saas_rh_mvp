@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { requireCompanyAccess } from '../../../lib/auth/api-auth-fixed'
+import { requireAccountingAccess } from '../../../lib/accounting/api-access'
 import { withSetupRateLimit } from '../../../lib/security/rate-limiting'
 import { createAdminClient } from '../../../lib/supabase/server'
 
@@ -17,7 +17,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   }
 
   try {
-    const auth = await requireCompanyAccess(req, res)
+    const auth = await requireAccountingAccess(req, res)
+    if (!auth) return
     const { company_id: bodyCompanyId } = req.body || {}
 
     let companyId = auth.companyId ?? bodyCompanyId

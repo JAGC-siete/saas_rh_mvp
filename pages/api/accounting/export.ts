@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { requireCompanyAccess } from '../../../lib/auth/api-auth-fixed'
+import { requireAccountingAccess } from '../../../lib/accounting/api-access'
+import { isExportScopeValid } from '../../../lib/accounting/access-rules'
 import { withGeneralRateLimit } from '../../../lib/security/rate-limiting'
 import { createAdminClient } from '../../../lib/supabase/server'
 
@@ -15,7 +16,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   }
 
   try {
-    const auth = await requireCompanyAccess(req, res)
+    const auth = await requireAccountingAccess(req, res)
+    if (!auth) return
     const { journal_entry_id, journal_entry_ids, format } = req.query
 
     const ids = (
@@ -36,24 +38,17 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
     const supabase = createAdminClient()
 
-    const { data: entries, error: entriesError } = await supabase
+    let entriesQuery = supabase
       .from('journal_entries')
       .select('id, company_id, entry_date, description, status, currency')
       .in('id', ids)
-
-    if (entriesError || !entries?.length) {
-      return res.status(404).json({ error: 'Partida(s) no encontrada(s)' })
+    if (auth.role !== 'super_admin') {
+      entriesQuery = entriesQuery.eq('company_id', auth.companyId)
     }
+    const { data: entries, error: entriesError } = await entriesQuery
 
-    const companyId = entries[0].company_id
-    if (
-      auth.role !== 'super_admin' &&
-      auth.companyId &&
-      auth.companyId !== companyId
-    ) {
-      return res.status(403).json({
-        error: 'No tiene permiso para exportar partidas de esta empresa'
-      })
+    if (entriesError || !entries || !isExportScopeValid(ids, entries)) {
+      return res.status(404).json({ error: 'Partida(s) no encontrada(s)' })
     }
 
     const validIds = entries.map((e: any) => e.id)

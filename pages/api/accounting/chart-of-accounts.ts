@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { requireCompanyAccess } from '../../../lib/auth/api-auth-fixed'
+import { requireAccountingAccess } from '../../../lib/accounting/api-access'
+import { sanitizeAccountSearchTerm } from '../../../lib/accounting/access-rules'
 import { withGeneralRateLimit } from '../../../lib/security/rate-limiting'
 
 /**
@@ -14,7 +15,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   }
 
   try {
-    const auth = await requireCompanyAccess(req, res)
+    const auth = await requireAccountingAccess(req, res)
+    if (!auth) return
     const { company_id: queryCompanyId, q } = req.query
 
     let companyId = auth.companyId ?? (queryCompanyId as string)
@@ -45,8 +47,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       .eq('is_active', true)
       .order('code')
 
-    if (q && typeof q === 'string' && q.trim()) {
-      const term = q.trim()
+    const term = typeof q === 'string' ? sanitizeAccountSearchTerm(q) : ''
+    if (term) {
       query = query.or(`code.ilike.%${term}%,name.ilike.%${term}%`)
     }
 
