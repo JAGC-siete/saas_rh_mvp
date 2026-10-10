@@ -1,5 +1,4 @@
 import Image from 'next/image'
-import { CheckBadgeIcon } from '@heroicons/react/24/solid'
 import ScrollReveal from './landing/ScrollReveal'
 import BorderBeam from './landing/BorderBeam'
 import { getHomeCopy } from '../lib/i18n/landings/home'
@@ -20,17 +19,14 @@ export default function AWSCertificationsSection() {
       <div className="max-w-6xl mx-auto">
         <ScrollReveal>
           <div className="text-center mb-10">
-            <h2 className="text-2xl sm:text-3xl font-bold landing-ink mb-6">{copy.title}</h2>
-            <p className="landing-muted max-w-4xl mx-auto mb-4 text-base sm:text-lg font-medium landing-dark-text">
-              {copy.designedBy}
-            </p>
-            <p className="text-sm landing-muted max-w-2xl mx-auto font-medium">
-              <span className="landing-ink font-semibold">{copy.dataSecureLabel}</span> {copy.dataSecure}
+            <h2 className="text-2xl sm:text-3xl font-bold landing-ink mb-4">{copy.title}</h2>
+            <p className="landing-muted max-w-2xl mx-auto text-base sm:text-lg font-medium landing-dark-text">
+              {copy.dataSecure}
             </p>
           </div>
         </ScrollReveal>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
           {certifications.map((cert, i) => (
             <ScrollReveal key={cert.name} delay={i * 0.08}>
               <BorderBeam>
@@ -42,15 +38,6 @@ export default function AWSCertificationsSection() {
             </ScrollReveal>
           ))}
         </div>
-
-        <ScrollReveal delay={0.2}>
-          <div className="text-center">
-            <div className="inline-flex items-center gap-3 bg-green-500/10 text-green-400 px-4 py-2 rounded-full border border-green-500/20">
-              <CheckBadgeIcon className="h-5 w-5" />
-              <span className="font-medium text-sm">{copy.guarantee}</span>
-            </div>
-          </div>
-        </ScrollReveal>
       </div>
     </section>
   )

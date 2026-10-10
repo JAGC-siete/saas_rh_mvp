@@ -111,12 +111,12 @@ export default function DockNavbar({
         <div className="flex items-center gap-2 sm:gap-3 h-11 sm:h-12">
           <Link prefetch={false} href={href('/')} className="shrink-0">
             <Image
-              src="/brand/logo-humano-sisu-sm.png"
+              src={isLight ? '/brand/logo-humano-sisu-nav.png' : '/brand/logo-humano-sisu-nav-dark.png'}
               alt="Humano SISU"
-              width={64}
-              height={36}
+              width={79}
+              height={32}
               priority
-              className="rounded-md h-8 w-auto"
+              className="h-8 w-auto"
             />
           </Link>
 

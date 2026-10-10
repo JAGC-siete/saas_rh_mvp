@@ -27,7 +27,7 @@ export default function TrustBar({
           {[...TRUST_CLIENT_NAMES, ...TRUST_CLIENT_NAMES].map((name, i) => (
             <span
               key={`${name}-${i}`}
-              className="text-sm sm:text-base font-semibold text-slate-500 grayscale opacity-50 whitespace-nowrap"
+              className="text-sm sm:text-base font-semibold text-slate-500 whitespace-nowrap"
             >
               {name}
             </span>

@@ -49,10 +49,7 @@ export type HomeCopy = {
   }
   aws: {
     title: string
-    designedBy: string
-    dataSecureLabel: string
     dataSecure: string
-    guarantee: string
   }
   stickyWhatsApp: {
     label: string
@@ -172,12 +169,12 @@ const byLocale: Record<LandingLocale, HomeCopy> = {
     metaKeywords:
       'software recursos humanos, RRHH, control de asistencia, reloj biométrico, huella digital, planillas, nómina, Honduras El Salvador Guatemala, Humano SISU',
     bannerAria: 'Anuncio',
-    bannerText: '¿Problemas de Recursos Humanos 😰?',
-    bannerCta: 'Dale clic aquí',
+    bannerText: '¿Te cansaste de cuadrar la planilla a mano?',
+    bannerCta: 'Mira cómo dejarlo atrás',
     bannerClose: 'Cerrar',
     hero: {
       badgeLaws: 'Adaptado a leyes de CA (HN, SV, GT)',
-      badgeSpeed: 'Implementación rápida',
+      badgeSpeed: 'Implementación en 72 horas',
       badgeSupport: 'Soporte local',
       title:
         'Del reloj de asistencia a la planilla de pago, sin intervención manual',
@@ -193,7 +190,7 @@ const byLocale: Record<LandingLocale, HomeCopy> = {
       overlayTeam: '35 colaboradores',
     },
     socialProof: {
-      titleLead: 'Clientes SISU certifican: ',
+      titleLead: 'Lo que dicen nuestros clientes: ',
       titleAccent: 'el reloj de asistencia integrado a la nómina es la diferencia',
       aria: 'Testimonios de clientes',
     },
@@ -210,7 +207,7 @@ const byLocale: Record<LandingLocale, HomeCopy> = {
         },
         {
           title: 'El cerebro digital procesa',
-          desc: 'Cruza las horas reales y calcula deducciones al centavo (IHSS, RAP, ISR) sin que toqués una sola hoja de cálculo.',
+          desc: 'Cruza las horas reales y calcula deducciones al centavo (IHSS, RAP, ISR) sin que toques una sola hoja de cálculo.',
         },
         {
           title: 'Nómina y comprobantes al instante',
@@ -224,14 +221,11 @@ const byLocale: Record<LandingLocale, HomeCopy> = {
       lead: 'Valida deducciones de sueldo con las mismas reglas legales del software de RRHH Humano SISU. Cuando estés listo, activa el control de asistencia con huella y la nómina completa.',
     },
     aws: {
-      title: 'Potenciada con la tecnología de la nube utilizada por gigantes mundiales como Netflix o Airbnb.',
-      designedBy: 'Diseñada por ingenieros certificados',
-      dataSecureLabel: 'Datos seguros:',
-      dataSecure: 'Infraestructura AWS regional encriptada',
-      guarantee: 'Garantía de calidad y seguridad certificada por AWS',
+      title: 'Diseñado por ingenieros certificados AWS.',
+      dataSecure: 'Datos cifrados en la nube de AWS.',
     },
     stickyWhatsApp: {
-      label: 'Escribinos por WhatsApp',
+      label: 'Escríbenos por WhatsApp',
       aria: 'Abrir WhatsApp para escribir a Humano SISU',
       prefill: 'Hola, quiero información de Humano SISU',
     },
@@ -240,12 +234,12 @@ const byLocale: Record<LandingLocale, HomeCopy> = {
     metaKeywords:
       'human resources software, HR software, attendance control, biometric clock, fingerprint attendance, payroll, Honduras El Salvador Guatemala, Humano SISU',
     bannerAria: 'Announcement',
-    bannerText: 'HR headaches 😰?',
-    bannerCta: 'Click here',
+    bannerText: 'Tired of doing payroll by hand?',
+    bannerCta: 'See how to stop',
     bannerClose: 'Close',
     hero: {
       badgeLaws: 'Built for CA labor rules (HN, SV, GT)',
-      badgeSpeed: 'Fast implementation',
+      badgeSpeed: 'Go-live in 72 hours',
       badgeSupport: 'Local support',
       title:
         'From the attendance clock to payroll, without manual work',
@@ -261,7 +255,7 @@ const byLocale: Record<LandingLocale, HomeCopy> = {
       overlayTeam: '35 employees',
     },
     socialProof: {
-      titleLead: 'SISU customers certify: ',
+      titleLead: 'What our customers say: ',
       titleAccent: 'the attendance clock integrated with payroll is the difference',
       aria: 'Customer testimonials',
     },
@@ -291,11 +285,8 @@ const byLocale: Record<LandingLocale, HomeCopy> = {
       lead: 'Validate payroll deductions with the same legal rules as Humano SISU HR software. When you are ready, activate fingerprint attendance control and full payroll.',
     },
     aws: {
-      title: 'Powered by the same cloud technology used by global giants like Netflix and Airbnb.',
-      designedBy: 'Designed by certified engineers',
-      dataSecureLabel: 'Secure data:',
-      dataSecure: 'Encrypted regional AWS infrastructure',
-      guarantee: 'Quality and security assurance certified by AWS',
+      title: 'Designed by AWS-certified engineers.',
+      dataSecure: 'Data encrypted in the AWS cloud.',
     },
     stickyWhatsApp: {
       label: 'Message us on WhatsApp',

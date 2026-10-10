@@ -168,7 +168,7 @@ export default function LandingPage() {
                 <div className="min-w-0">
                   <p className="landing-ink font-medium truncate">{testimonial.name}</p>
                   {testimonial.company ? (
-                    <p className="landing-muted text-sm font-medium opacity-50 grayscale truncate">
+                    <p className="landing-muted text-sm font-medium truncate">
                       {testimonial.company}
                     </p>
                   ) : (
