@@ -8,6 +8,7 @@ import {
 } from '../lib/payroll/thirteenth-fourteenth/calculate'
 import { resolvePeriod13, resolvePeriod14 } from '../lib/payroll/thirteenth-fourteenth/calendar'
 import { calcularLiquidacionHonduras } from '../lib/payroll/cesantias'
+import { buildBenefitPreview } from '../lib/payroll/thirteenth-fourteenth/preview'
 
 describe('thirteenth-fourteenth calendar', () => {
   it('13vo: cuenta días desde 1 ene del año de cálculo', () => {
@@ -107,5 +108,56 @@ describe('parity with cesantias liquidation', () => {
 
     assert.equal(aguinaldo.monto, liq.rubros.aguinaldo)
     assert.equal(catorceavo.monto, liq.rubros.decimoCuarto)
+  })
+})
+
+describe('buildBenefitPreview', () => {
+  const emp = (id: string, hire_date: string | null, base_salary: number | null = 18000) => ({
+    id,
+    name: id,
+    hire_date,
+    base_salary,
+  })
+
+  it('13vo: año completo paga un salario entero', () => {
+    const r = buildBenefitPreview([emp('a', '2020-03-10')], '13AVO', 2026)
+    assert.deepEqual(r.periodo, { inicio: '2026-01-01', fin: '2026-12-31' })
+    assert.equal(r.rows[0].days_worked, 360)
+    assert.equal(r.rows[0].amount, 18000)
+    assert.equal(r.total, 18000)
+  })
+
+  it('13vo: ingreso a mitad de año es proporcional', () => {
+    const r = buildBenefitPreview([emp('a', '2026-07-01')], '13AVO', 2026)
+    assert.equal(r.rows[0].days_worked, 180)
+    assert.equal(r.rows[0].amount, 9000)
+  })
+
+  it('14vo de 2026: período 1 jul 2025 – 30 jun 2026', () => {
+    const r = buildBenefitPreview([emp('a', '2020-01-01'), emp('b', '2026-01-01')], '14AVO', 2026)
+    assert.deepEqual(r.periodo, { inicio: '2025-07-01', fin: '2026-06-30' })
+    assert.equal(r.rows[0].amount, 18000)
+    assert.equal(r.rows[1].days_worked, 180)
+    assert.equal(r.rows[1].amount, 9000)
+    assert.equal(r.total, 27000)
+  })
+
+  it('excluye a quien ingresó después del corte', () => {
+    const r = buildBenefitPreview([emp('a', '2026-07-01')], '14AVO', 2026)
+    assert.equal(r.rows.length, 0)
+    assert.equal(r.total, 0)
+  })
+
+  it('sin fecha de ingreso o sin salario: L. 0 con aviso, no suma al total', () => {
+    const r = buildBenefitPreview(
+      [emp('a', null), emp('b', '2020-01-01', 0), emp('c', '2020-01-01T00:00:00')],
+      '13AVO',
+      2026
+    )
+    assert.equal(r.rows[0].warning, 'missing_hire_date')
+    assert.equal(r.rows[0].amount, 0)
+    assert.equal(r.rows[1].warning, 'missing_salary')
+    assert.equal(r.rows[2].warning, null)
+    assert.equal(r.total, 18000)
   })
 })

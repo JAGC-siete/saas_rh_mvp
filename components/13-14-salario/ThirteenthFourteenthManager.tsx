@@ -5,14 +5,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { useCompanyContext } from '../../lib/useCompanyContext'
 import { useCompanyMoney } from '../../lib/hooks/useCompanyMoney'
 import { use1314SalarioManager, type Tipo1314, type Salario1314Row } from '../../lib/hooks/use1314SalarioManager'
-import { Loader2, Gift, Users, DollarSign } from 'lucide-react'
+import { formatDateOnlyForHonduras } from '../../lib/timezone'
+import { Loader2, Gift, Users, DollarSign, AlertTriangle } from 'lucide-react'
 
-function getRowAmount(row: Salario1314Row): number {
-  return (row as { amount?: number; totalAmount?: number }).amount ?? (row as { totalAmount?: number }).totalAmount ?? 0
-}
-
-function getRowDaysWorked(row: Salario1314Row): number {
-  return (row as { days_worked?: number; daysWorked?: number }).days_worked ?? (row as { daysWorked?: number }).daysWorked ?? 0
+const WARNING_TEXT: Record<NonNullable<Salario1314Row['warning']>, string> = {
+  missing_hire_date: 'Falta la fecha de ingreso. Agrégala en su ficha para calcular el monto.',
+  missing_salary: 'Falta el salario base. Agrégalo en su ficha para calcular el monto.',
 }
 
 export default function ThirteenthFourteenthManager() {
@@ -22,6 +20,8 @@ export default function ThirteenthFourteenthManager() {
     year,
     tipo,
     data,
+    total,
+    periodo,
     loading,
     error,
     setYear,
@@ -51,7 +51,7 @@ export default function ThirteenthFourteenthManager() {
     )
   }
 
-  const totalAmount = data.reduce((sum, r) => sum + getRowAmount(r), 0)
+  const warningsCount = data.filter((r) => r.warning).length
 
   return (
     <div className="p-6 space-y-6">
@@ -73,7 +73,7 @@ export default function ThirteenthFourteenthManager() {
         <CardHeader>
           <CardTitle className="text-white text-xl font-semibold">Configuración</CardTitle>
           <CardDescription className="text-gray-200 text-base">
-            Selecciona el año y el tipo de cálculo (13avo o 14avo)
+            Elige el año y el tipo. El 14.º de un año es el que se paga en junio de ese año.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -129,13 +129,13 @@ export default function ThirteenthFourteenthManager() {
                     value="13AVO"
                     className="text-white hover:bg-white/20 focus:bg-white/20"
                   >
-                    13avo (Aguinaldo - Diciembre)
+                    13.º (aguinaldo) — se paga en diciembre
                   </SelectItem>
                   <SelectItem
                     value="14AVO"
                     className="text-white hover:bg-white/20 focus:bg-white/20"
                   >
-                    14avo (Junio)
+                    14.º — se paga en junio
                   </SelectItem>
                 </SelectContent>
               </Select>
@@ -175,10 +175,12 @@ export default function ThirteenthFourteenthManager() {
       <Card className="backdrop-blur-md bg-white/10 border border-white/20">
         <CardHeader>
           <CardTitle className="text-white text-xl font-semibold">
-            Resultados {tipo === '13AVO' ? '13avo (Aguinaldo)' : '14avo'}
+            Resultados {tipo === '13AVO' ? '13.º (aguinaldo)' : '14.º'} {year}
           </CardTitle>
           <CardDescription className="text-gray-200 text-base">
-            Año {year} — Empleados elegibles y montos calculados
+            {periodo
+              ? `Período del ${formatDateOnlyForHonduras(periodo.inicio)} al ${formatDateOnlyForHonduras(periodo.fin)}. Montos brutos: por ley no llevan deducción de IHSS ni RAP.`
+              : 'Empleados activos y montos calculados con su salario base.'}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -211,10 +213,22 @@ export default function ThirteenthFourteenthManager() {
                   </div>
                   <div>
                     <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">Total a pagar</p>
-                    <p className="text-xl font-semibold text-white">{formatCurrency(totalAmount)}</p>
+                    <p className="text-xl font-semibold text-white">{formatCurrency(total)}</p>
                   </div>
                 </div>
               </div>
+
+              {warningsCount > 0 && (
+                <div className="mb-4 flex items-start gap-2 rounded-xl border border-amber-400/30 bg-amber-500/10 p-3 text-sm text-amber-200">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                  <p>
+                    {warningsCount === 1
+                      ? '1 empleado no tiene los datos completos y no suma al total.'
+                      : `${warningsCount} empleados no tienen los datos completos y no suman al total.`}{' '}
+                    Revisa los avisos en la tabla.
+                  </p>
+                </div>
+              )}
 
               {/* Tabla de empleados */}
               <div className="overflow-x-auto rounded-lg border border-white/10">
@@ -222,10 +236,10 @@ export default function ThirteenthFourteenthManager() {
                   <thead>
                     <tr className="border-b border-white/20 text-left text-gray-300 bg-white/5">
                       <th className="pb-3 pt-2 px-4 font-semibold text-white/90">Empleado</th>
-                      <th className="pb-3 pt-2 px-4 text-right font-semibold text-white/90">Salario base</th>
-                      <th className="pb-3 pt-2 px-4 text-center font-semibold text-white/90">Días trabajados</th>
+                      <th className="hidden sm:table-cell pb-3 pt-2 px-4 text-right font-semibold text-white/90">Salario base</th>
+                      <th className="pb-3 pt-2 px-4 text-center font-semibold text-white/90">Días</th>
                       <th className="pb-3 pt-2 px-4 text-right font-semibold text-white/90">
-                        Monto {tipo === '13AVO' ? '13avo' : '14avo'}
+                        Monto {tipo === '13AVO' ? '13.º' : '14.º'}
                       </th>
                     </tr>
                   </thead>
@@ -236,16 +250,24 @@ export default function ThirteenthFourteenthManager() {
                         className="border-b border-white/10 hover:bg-white/5 transition-colors"
                       >
                         <td className="py-3 px-4 text-white">
-                          {row.name || '-'}
+                          <p>{row.name || '-'}</p>
+                          {row.hire_date && (
+                            <p className="text-xs text-gray-400">
+                              Ingreso: {formatDateOnlyForHonduras(row.hire_date)}
+                            </p>
+                          )}
+                          {row.warning && (
+                            <p className="mt-1 text-xs text-amber-300">{WARNING_TEXT[row.warning]}</p>
+                          )}
                         </td>
-                        <td className="py-3 px-4 text-right text-gray-300">
-                          {formatCurrency(row.base_salary ?? 0)}
+                        <td className="hidden sm:table-cell py-3 px-4 text-right text-gray-300">
+                          {formatCurrency(row.base_salary)}
                         </td>
                         <td className="py-3 px-4 text-center text-gray-300">
-                          {getRowDaysWorked(row) || '-'}
+                          {row.days_worked || '-'}
                         </td>
-                        <td className="py-3 px-4 text-right font-medium text-white">
-                          {formatCurrency(getRowAmount(row))}
+                        <td className="py-3 px-4 text-right font-medium text-white whitespace-nowrap">
+                          {formatCurrency(row.amount)}
                         </td>
                       </tr>
                     ))}

@@ -2,19 +2,13 @@ import { NextApiRequest, NextApiResponse } from 'next'
 import { requireCompanyAccess } from '../../../lib/auth/api-auth-fixed'
 import { withGeneralRateLimit } from '../../../lib/security/rate-limiting'
 import { createEmployeeSalaryClient } from '../../../lib/security/employee-data-access'
+import { buildBenefitPreview, type BenefitTipo } from '../../../lib/payroll/thirteenth-fourteenth/preview'
 
 /**
- * Preview API para 13avo y 14avo salario
- *
- * Reglas legales (referencia):
- * - 13avo (Aguinaldo): Promedio salarial del 1 enero al 31 diciembre.
- *   Pago en diciembre.
- * - 14avo: Promedio salarial del 1 julio al 30 junio.
- *   Pago en junio. Días trabajados deben venir de attendance_records.
- *   Requiere mínimo 200 días trabajados en el año.
- * - FÓRMULA ESTRICTA: (Salario_Promedio / 360) * Dias_Laborados_En_Periodo
- *   (Utilizar divisor 360, no 365)
- * - No aplicar deducciones de IHSS ni RAP.
+ * Preview API para 13avo y 14avo salario (activos, salario base, sin deducciones).
+ * - 13avo de `year`: 1 ene – 31 dic de `year`.
+ * - 14avo de `year`: el que se paga en junio de `year` (1 jul `year - 1` – 30 jun `year`).
+ * Fórmula: (salario base / 360) × días en período (año comercial).
  */
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -58,7 +52,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     // Consultar empleados activos de la empresa
     const { data: employees, error: empError } = await salaryClient
       .from('employees')
-      .select('id, name, base_salary, hire_date, termination_date')
+      .select('id, name, base_salary, hire_date')
       .eq('company_id', companyId)
       .eq('status', 'active')
       .order('name')
@@ -71,34 +65,10 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       })
     }
 
-    if (!employees || employees.length === 0) {
-      return res.status(200).json({
-        rows: [],
-        message: 'No hay empleados activos'
-      })
-    }
-
-    // TODO (fases posteriores):
-    // - 13avo: Calcular promedio salarial 1 ene - 31 dic del año desde payroll_records
-    // - 14avo: Calcular promedio 1 jul - 30 jun; días trabajados desde attendance_records
-    // - Aplicar fórmula: (Salario_Promedio / 360) * Dias_Laborados_En_Periodo
-    // - Para 14avo: excluir empleados con < 200 días trabajados
-
-    // Por ahora: respuesta simulado con estructura esperada
-    const rows = employees.map((emp: { id: string; name: string; base_salary: number }) => ({
-      employee_id: emp.id,
-      employeeId: emp.id,
-      name: emp.name,
-      base_salary: emp.base_salary,
-      avgSalary: 0,
-      daysWorked: 0,
-      days_worked: 0,
-      totalAmount: 0,
-      amount: 0
-    }))
+    const preview = buildBenefitPreview(employees ?? [], tipoParam as BenefitTipo, yearNum)
 
     return res.status(200).json({
-      rows,
+      ...preview,
       year: yearNum,
       tipo: tipoParam
     })
