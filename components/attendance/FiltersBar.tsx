@@ -154,16 +154,35 @@ export default function FiltersBar({
   }
 
   const hasActiveFilters = selectedEmployeeId || selectedRole || selectedDepartmentId
+  const activeFilterCount = [selectedEmployeeId, selectedRole, selectedDepartmentId].filter(Boolean).length
+  const presetSummary =
+    preset === 'custom' ? 'Rango personalizado' : presets.find((p) => p.value === preset)?.label ?? 'Hoy'
+  // En teléfono los filtros arrancan plegados para que las cifras queden en la primera pantalla.
+  const [mobileOpen, setMobileOpen] = useState(false)
   const rangeError = preset === 'custom' ? getRangeError(from, to) : null
 
   return (
     <div className="bg-white/5 rounded-xl p-4 border border-white/10 backdrop-blur-sm">
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <FunnelIcon className="h-5 w-5 text-gray-400" />
+      <div className={`flex items-center justify-between gap-2 sm:mb-4 ${mobileOpen ? 'mb-4' : ''}`}>
+        <button
+          type="button"
+          onClick={() => setMobileOpen((v) => !v)}
+          aria-expanded={mobileOpen}
+          aria-controls="attendance-filters-panel"
+          className="flex min-w-0 flex-1 items-center gap-2 text-left sm:pointer-events-none"
+        >
+          <FunnelIcon className="h-5 w-5 shrink-0 text-gray-400" aria-hidden />
           <h3 className="text-sm font-semibold text-white">Filtros</h3>
-        </div>
+          <span className="truncate text-sm text-gray-400 sm:hidden">
+            · {presetSummary}
+            {activeFilterCount > 0 ? ` · ${activeFilterCount} ${activeFilterCount === 1 ? 'filtro' : 'filtros'}` : ''}
+          </span>
+          <ChevronDownIcon
+            className={`ml-auto h-5 w-5 shrink-0 text-gray-400 transition-transform sm:hidden ${mobileOpen ? 'rotate-180' : ''}`}
+            aria-hidden
+          />
+        </button>
         {hasActiveFilters && (
           <button
             onClick={clearFilters}
@@ -176,139 +195,141 @@ export default function FiltersBar({
       </div>
 
       {/* Filter Controls */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
-        {/* Presets */}
-        <div>
-          <label className="block text-xs font-medium text-gray-400 mb-2">Período</label>
-          <div className="relative">
-            <select
-              value={preset}
-              onChange={(e) => onPresetChange(e.target.value)}
-              disabled={loading}
-              className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm font-medium cursor-pointer hover:bg-white/15 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 appearance-none pr-8"
-            >
-              {presets.map((p) => (
-                <option key={p.value} value={p.value} className="bg-gray-800">
-                  {p.label}
-                </option>
-              ))}
-              <option value="custom" className="bg-gray-800">
-                Rango personalizado
-              </option>
-            </select>
-            <ChevronDownIcon className="absolute right-2 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
-          </div>
-        </div>
-
-        {/* Employee Filter */}
-        {onEmployeeChange && (
+      <div id="attendance-filters-panel" className={`${mobileOpen ? '' : 'hidden'} sm:block`}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
+          {/* Presets */}
           <div>
-            <label className="block text-xs font-medium text-gray-400 mb-2">Empleado</label>
+            <label className="block text-xs font-medium text-gray-400 mb-2">Período</label>
             <div className="relative">
               <select
-                value={selectedEmployeeId}
-                onChange={(e) => handleEmployeeChange(e.target.value)}
-                disabled={loadingEmployees || loading}
-                className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm font-medium cursor-pointer hover:bg-white/15 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 appearance-none pr-8 disabled:opacity-50"
+                value={preset}
+                onChange={(e) => onPresetChange(e.target.value)}
+                disabled={loading}
+                className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm font-medium cursor-pointer hover:bg-white/15 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 appearance-none pr-8"
               >
-                <option value="" className="bg-gray-800">
-                  Todos los empleados
-                </option>
-                {employees.map((employee) => (
-                  <option key={employee.id} value={employee.id} className="bg-gray-800">
-                    {employee.name} {employee.employee_code ? `(${employee.employee_code})` : ''}
+                {presets.map((p) => (
+                  <option key={p.value} value={p.value} className="bg-gray-800">
+                    {p.label}
                   </option>
                 ))}
-              </select>
-              <ChevronDownIcon className="absolute right-2 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
-            </div>
-            {loadingEmployees && (
-              <div className="text-xs text-gray-500 mt-1">Cargando...</div>
-            )}
-          </div>
-        )}
-
-        {/* Team/Role Filter - filtra por employees.role */}
-        {onRoleChange && (
-          <div>
-            <label className="block text-xs font-medium text-gray-400 mb-2">Equipo</label>
-            <div className="relative">
-              <select
-                value={selectedRole}
-                onChange={(e) => handleRoleChange(e.target.value)}
-                disabled={loadingRoles || loading}
-                className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm font-medium cursor-pointer hover:bg-white/15 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 appearance-none pr-8 disabled:opacity-50"
-              >
-                <option value="" className="bg-gray-800">
-                  Todos los equipos
+                <option value="custom" className="bg-gray-800">
+                  Rango personalizado
                 </option>
-                {roles.map(role => (
-                  <option key={role} value={role} className="bg-gray-800">{role}</option>
-                ))}
               </select>
               <ChevronDownIcon className="absolute right-2 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
             </div>
-            {loadingRoles && (
-              <div className="text-xs text-gray-500 mt-1">Cargando...</div>
-            )}
           </div>
-        )}
 
-        {/* Department Filter */}
-        {onDepartmentChange && (
-          <div>
-            <label className="block text-xs font-medium text-gray-400 mb-2">Departamento</label>
-            <div className="relative">
-              <select
-                value={selectedDepartmentId}
-                onChange={(e) => handleDepartmentChange(e.target.value)}
-                disabled={loadingDepartments || loading}
-                className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm font-medium cursor-pointer hover:bg-white/15 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 appearance-none pr-8 disabled:opacity-50"
-              >
-                <option value="" className="bg-gray-800">
-                  Todos los departamentos
-                </option>
-                {departments.map((dept) => (
-                  <option key={dept.id} value={dept.id} className="bg-gray-800">{dept.name}</option>
-                ))}
-              </select>
-              <ChevronDownIcon className="absolute right-2 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
+          {/* Employee Filter */}
+          {onEmployeeChange && (
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-2">Empleado</label>
+              <div className="relative">
+                <select
+                  value={selectedEmployeeId}
+                  onChange={(e) => handleEmployeeChange(e.target.value)}
+                  disabled={loadingEmployees || loading}
+                  className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm font-medium cursor-pointer hover:bg-white/15 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 appearance-none pr-8 disabled:opacity-50"
+                >
+                  <option value="" className="bg-gray-800">
+                    Todos los empleados
+                  </option>
+                  {employees.map((employee) => (
+                    <option key={employee.id} value={employee.id} className="bg-gray-800">
+                      {employee.name} {employee.employee_code ? `(${employee.employee_code})` : ''}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDownIcon className="absolute right-2 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
+              </div>
+              {loadingEmployees && (
+                <div className="text-xs text-gray-500 mt-1">Cargando...</div>
+              )}
             </div>
-            {loadingDepartments && (
-              <div className="text-xs text-gray-500 mt-1">Cargando...</div>
+          )}
+
+          {/* Team/Role Filter - filtra por employees.role */}
+          {onRoleChange && (
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-2">Equipo</label>
+              <div className="relative">
+                <select
+                  value={selectedRole}
+                  onChange={(e) => handleRoleChange(e.target.value)}
+                  disabled={loadingRoles || loading}
+                  className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm font-medium cursor-pointer hover:bg-white/15 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 appearance-none pr-8 disabled:opacity-50"
+                >
+                  <option value="" className="bg-gray-800">
+                    Todos los equipos
+                  </option>
+                  {roles.map(role => (
+                    <option key={role} value={role} className="bg-gray-800">{role}</option>
+                  ))}
+                </select>
+                <ChevronDownIcon className="absolute right-2 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
+              </div>
+              {loadingRoles && (
+                <div className="text-xs text-gray-500 mt-1">Cargando...</div>
+              )}
+            </div>
+          )}
+
+          {/* Department Filter */}
+          {onDepartmentChange && (
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-2">Departamento</label>
+              <div className="relative">
+                <select
+                  value={selectedDepartmentId}
+                  onChange={(e) => handleDepartmentChange(e.target.value)}
+                  disabled={loadingDepartments || loading}
+                  className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm font-medium cursor-pointer hover:bg-white/15 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 appearance-none pr-8 disabled:opacity-50"
+                >
+                  <option value="" className="bg-gray-800">
+                    Todos los departamentos
+                  </option>
+                  {departments.map((dept) => (
+                    <option key={dept.id} value={dept.id} className="bg-gray-800">{dept.name}</option>
+                  ))}
+                </select>
+                <ChevronDownIcon className="absolute right-2 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
+              </div>
+              {loadingDepartments && (
+                <div className="text-xs text-gray-500 mt-1">Cargando...</div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Rango personalizado: fila propia para que las fechas no compriman los demás filtros */}
+        {preset === 'custom' && (
+          <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-2">Desde</label>
+              <input
+                type="date"
+                value={(from || '').slice(0, 10)}
+                onChange={(e) => onRangeChange && onRangeChange(e.target.value, to ?? '')}
+                className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-2">Hasta</label>
+              <input
+                type="date"
+                value={(to || '').slice(0, 10)}
+                onChange={(e) => onRangeChange && onRangeChange(from ?? '', e.target.value)}
+                className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm"
+              />
+            </div>
+            {rangeError && (
+              <div className="sm:col-span-2 flex items-center">
+                <p className="text-xs text-amber-400">{rangeError}</p>
+              </div>
             )}
           </div>
         )}
       </div>
-
-      {/* Rango personalizado: fila propia para que las fechas no compriman los demás filtros */}
-      {preset === 'custom' && (
-        <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
-          <div>
-            <label className="block text-xs font-medium text-gray-400 mb-2">Desde</label>
-            <input
-              type="date"
-              value={(from || '').slice(0, 10)}
-              onChange={(e) => onRangeChange && onRangeChange(e.target.value, to ?? '')}
-              className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-400 mb-2">Hasta</label>
-            <input
-              type="date"
-              value={(to || '').slice(0, 10)}
-              onChange={(e) => onRangeChange && onRangeChange(from ?? '', e.target.value)}
-              className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm"
-            />
-          </div>
-          {rangeError && (
-            <div className="sm:col-span-2 flex items-center">
-              <p className="text-xs text-amber-400">{rangeError}</p>
-            </div>
-          )}
-        </div>
-      )}
 
       {/* Active Filters Display */}
       {hasActiveFilters && (
