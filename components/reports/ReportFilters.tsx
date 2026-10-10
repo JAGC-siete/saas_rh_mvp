@@ -3,6 +3,7 @@ import { ReportFilters as ReportFiltersType, ReportType, Periodicity } from './R
 import { FunnelIcon, XMarkIcon } from '@heroicons/react/24/outline'
 import { nowInHonduras } from '../../lib/timezone'
 import { reportNeedsDateRange } from '../../lib/reports/report-ui-capabilities'
+import { MOTIVO_SALIDA_OPTIONS } from '../../lib/payroll/cesantias-schema'
 
 interface ReportFiltersProps {
   reportType: ReportType
@@ -190,6 +191,8 @@ export default function ReportFilters({
       attendanceStatus: undefined,
       certificateDate: undefined,
       terminationDate: undefined,
+      motivoSalida: undefined,
+      preavisoGozado: undefined,
       payrollRunId: undefined,
       payrollDerivedConcept: undefined,
       payrollType: filters.reportType === 'payroll' ? 'all' : filters.payrollType,
@@ -363,8 +366,8 @@ export default function ReportFilters({
 
       {reportType === 'severance' && (
         <p className="text-xs text-gray-400 mb-4 rounded-lg border border-white/10 bg-white/5 px-3 py-2">
-          Indica la fecha de terminación para calcular cesantía y vacaciones según el motor del sistema. Exporta el
-          resultado como CSV desde la vista previa.
+          Indica la fecha de terminación y el motivo de salida para calcular preaviso, cesantía, vacaciones, 13.º y
+          14.º. Exporta el resultado como CSV desde la vista previa.
         </p>
       )}
 
@@ -476,6 +479,40 @@ export default function ReportFilters({
             disabled={loading}
             className="w-full px-4 py-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white text-sm font-medium cursor-pointer hover:bg-white/15 transition-all focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 disabled:opacity-50"
           />
+          <label className="block text-sm font-medium text-gray-300 mt-4 mb-2">
+            Motivo de salida <span className="text-brand-400">*</span>
+          </label>
+          <select
+            value={filters.motivoSalida || ''}
+            onChange={(e) =>
+              onFiltersChange({
+                ...filters,
+                motivoSalida: (e.target.value || undefined) as ReportFiltersType['motivoSalida'],
+                preavisoGozado: undefined
+              })
+            }
+            disabled={loading}
+            className="w-full px-4 py-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white text-sm font-medium cursor-pointer hover:bg-white/15 transition-all focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 disabled:opacity-50"
+          >
+            <option value="" className="bg-gray-800 text-gray-400">Selecciona el motivo</option>
+            {MOTIVO_SALIDA_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value} className="bg-gray-800">
+                {o.label}
+              </option>
+            ))}
+          </select>
+          {(filters.motivoSalida === 'DESPIDO_INJUSTIFICADO' ||
+            filters.motivoSalida === 'CAUSA_AJENA_TRABAJADOR') && (
+            <label className="mt-3 flex items-center gap-2 text-sm text-gray-300">
+              <input
+                type="checkbox"
+                checked={filters.preavisoGozado ?? false}
+                onChange={(e) => onFiltersChange({ ...filters, preavisoGozado: e.target.checked })}
+                disabled={loading}
+              />
+              El trabajador ya laboró el preaviso
+            </label>
+          )}
         </div>
       )}
 

@@ -21,6 +21,8 @@ import {
   Receipt
 } from 'lucide-react'
 import { REPORT_TYPE_OPTIONS, type ReportType } from '../../lib/reports/report-config-schema'
+import type { LiquidacionResult, MotivoSalida } from '../../lib/payroll/cesantias'
+import { MOTIVO_SALIDA_OPTIONS } from '../../lib/payroll/cesantias-schema'
 import {
   getReportExportCapabilities,
   reportNeedsDateRange,
@@ -46,6 +48,8 @@ export interface ReportFilters {
   employeeStatus?: 'active' | 'inactive' | 'all'
   certificateDate?: string
   terminationDate?: string
+  motivoSalida?: MotivoSalida
+  preavisoGozado?: boolean
 }
 
 export interface PreviewData {
@@ -403,7 +407,8 @@ export default function ReportBuilder() {
         case 'severance': {
           const empId = filters.employeeIds?.[0]
           const term = filters.terminationDate
-          if (!empId || !term) {
+          const motivo = filters.motivoSalida
+          if (!empId || !term || !motivo) {
             setPreviewData(null)
             break
           }
@@ -411,14 +416,27 @@ export default function ReportBuilder() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
-            body: JSON.stringify({ employeeId: empId, terminationDate: term })
+            body: JSON.stringify({
+              employeeId: empId,
+              terminationDate: term,
+              motivoSalida: motivo,
+              preavisoGozado: filters.preavisoGozado ?? false
+            })
           })
           if (!response.ok) {
             const err = await response.json().catch(() => ({}))
             throw new Error(err.message || err.error || 'Error al calcular liquidación')
           }
           const json = await response.json()
-          const d = json.data
+          const d = json.data as LiquidacionResult & {
+            employee_name: string
+            dni: string | null
+            hire_date: string
+            termination_date: string
+          }
+          const { rubros, tiempos } = d
+          const pagaRap = rubros.rapAplicado + rubros.reservaLaboralEnTotal
+          const motivoLabel = MOTIVO_SALIDA_OPTIONS.find((o) => o.value === motivo)?.label ?? motivo
 
           setPreviewData({
             headers: ['Concepto', 'Valor'],
@@ -427,15 +445,22 @@ export default function ReportBuilder() {
               ['DNI', d.dni],
               ['Fecha ingreso', d.hire_date],
               ['Fecha terminación', d.termination_date],
-              ['Años servicio', d.years_tenure],
-              ['Salario promedio', formatHnl(d.average_salary)],
-              ['Cesantía', formatHnl(d.severance_amount)],
-              ['Vacaciones', formatHnl(d.vacation_balance)],
-              ['Total liquidación', formatHnl(d.total_settlement)]
+              ['Motivo de salida', motivoLabel],
+              ['Antigüedad', `${tiempos.anos} años, ${tiempos.meses} meses, ${tiempos.dias} días`],
+              ['Salario base mensual', formatHnl(d.bases.salarioBaseMensual)],
+              ['Salario promedio mensual', formatHnl(d.bases.salarioPromedioMensual)],
+              ['Preaviso', formatHnl(rubros.preaviso)],
+              ['Cesantía', formatHnl(rubros.cesantiaBruta)],
+              ['Vacaciones', formatHnl(rubros.vacaciones)],
+              ['Décimo tercer mes (aguinaldo)', formatHnl(rubros.aguinaldo)],
+              ['Décimo cuarto mes', formatHnl(rubros.decimoCuarto)],
+              ['Paga la empresa', formatHnl(rubros.totalEmpresa)],
+              ['Paga el RAP (reserva laboral, estimado)', formatHnl(pagaRap)],
+              ['Total que recibe el trabajador', formatHnl(rubros.totalPagar)]
             ],
             summary: {
-              totalLiquidaciones: 1,
-              montoTotal: formatHnl(d.total_settlement),
+              pagaEmpresa: formatHnl(rubros.totalEmpresa),
+              pagaRap: formatHnl(pagaRap),
               periodoCalculado: term
             },
             totalCount: 1
@@ -474,7 +499,7 @@ export default function ReportBuilder() {
 
     if (
       filters.reportType === 'severance' &&
-      (!filters.employeeIds?.length || !filters.terminationDate)
+      (!filters.employeeIds?.length || !filters.terminationDate || !filters.motivoSalida)
     ) {
       setPreviewData(null)
       return
@@ -599,8 +624,8 @@ export default function ReportBuilder() {
         }
       case 'severance':
         return {
-          title: 'Empleado y fecha de terminación',
-          body: 'Selecciona empleado e indica la fecha de terminación para calcular y exportar la liquidación (CSV).'
+          title: 'Empleado, fecha y motivo de salida',
+          body: 'Selecciona el empleado, la fecha de terminación y el motivo de salida para calcular y exportar la liquidación (CSV).'
         }
       case 'voucher':
         return {
