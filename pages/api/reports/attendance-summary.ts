@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { requireCompanyAccess } from '../../../lib/auth/api-auth-fixed'
 import { logger } from '../../../lib/logger'
+import { createAdminClient } from '../../../lib/supabase/server'
 import { canViewAttendanceReports, ATTENDANCE_REPORTS_FORBIDDEN } from '../../../lib/security/permissions'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -9,7 +10,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const { supabase, companyId, role, userProfile } = await requireCompanyAccess(req, res)
+    const { companyId, role, userProfile } = await requireCompanyAccess(req, res)
 
     if (!companyId) {
       return res.status(400).json({ error: 'Company ID is required' })
@@ -41,7 +42,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       ? (Array.isArray(departmentIds) ? departmentIds : departmentIds.split(',').filter((id: string) => id.trim()))
       : null
 
-    const { data, error } = await supabase.rpc('reports_attendance_summary', {
+    // reports_* RPCs are service_role-only: they trust p_company_id, which here comes from the caller's profile.
+    const { data, error } = await createAdminClient().rpc('reports_attendance_summary', {
       p_company_id: companyId,
       p_from: from as string,
       p_to: to as string,

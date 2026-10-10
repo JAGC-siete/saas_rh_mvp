@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { requireCompanyAccess } from '../../../lib/auth/api-auth-fixed'
 import { logger } from '../../../lib/logger'
+import { createAdminClient } from '../../../lib/supabase/server'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -8,7 +9,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const { supabase, companyId } = await requireCompanyAccess(req, res)
+    const { companyId } = await requireCompanyAccess(req, res)
 
     if (!companyId) {
       return res.status(400).json({ error: 'Company ID is required' })
@@ -23,7 +24,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       ? (Array.isArray(departmentIds) ? departmentIds : departmentIds.split(',').filter((id: string) => id.trim()))
       : null
 
-    const { data, error } = await supabase.rpc('reports_employees', {
+    // reports_* RPCs are service_role-only: they trust p_company_id, which here comes from the caller's profile.
+    const { data, error } = await createAdminClient().rpc('reports_employees', {
       p_company_id: companyId,
       p_status_filter: status as string,
       p_department_ids: departmentIdsArray
