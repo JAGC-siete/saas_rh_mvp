@@ -72,6 +72,8 @@ export interface RubrosLiquidacion {
   reservaLaboralEstimada: number
   reservaLaboralEnTotal: number
   totalPagar: number
+  /** What the employer pays: totalPagar without the RAP-funded reserve and compensation. */
+  totalEmpresa: number
 }
 
 export interface LiquidacionResult {
@@ -377,6 +379,7 @@ export function calcularLiquidacionHonduras(
     .plus(aguinaldoDec)
     .plus(decimoCuartoDec)
     .plus(reservaLaboralEnTotalDec)
+  const totalEmpresaDec = totalPagarDec.sub(reservaLaboralEnTotalDec)
 
   const rubros: RubrosLiquidacion = {
     cesantiaBruta: cesantiaBrutaDec.toDecimalPlaces(2).toNumber(),
@@ -388,7 +391,8 @@ export function calcularLiquidacionHonduras(
     rapAplicado: rapAplicadoDec.toDecimalPlaces(2).toNumber(),
     reservaLaboralEstimada: reservaLaboralEstimadaDec.toDecimalPlaces(2).toNumber(),
     reservaLaboralEnTotal: reservaLaboralEnTotalDec.toDecimalPlaces(2).toNumber(),
-    totalPagar: totalPagarDec.toDecimalPlaces(2).toNumber()
+    totalPagar: totalPagarDec.toDecimalPlaces(2).toNumber(),
+    totalEmpresa: totalEmpresaDec.toDecimalPlaces(2).toNumber()
   }
 
   return {
