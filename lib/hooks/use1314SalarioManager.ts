@@ -1,22 +1,19 @@
 import { useState, useCallback } from 'react'
 import { useCompanyContext } from '../useCompanyContext'
+import type {
+  BenefitPreviewRow,
+  BenefitTipo,
+} from '../payroll/thirteenth-fourteenth/preview'
 
-export type Tipo1314 = '13AVO' | '14AVO'
-
-export interface Salario1314Row {
-  employee_id: string
-  name: string
-  base_salary: number
-  amount: number
-  months_worked?: number
-  days_worked?: number
-  [key: string]: unknown
-}
+export type Tipo1314 = BenefitTipo
+export type Salario1314Row = BenefitPreviewRow
 
 export interface Use1314SalarioManagerState {
   year: number
   tipo: Tipo1314
   data: Salario1314Row[]
+  total: number
+  periodo: { inicio: string; fin: string } | null
   loading: boolean
   error: string | null
 }
@@ -30,16 +27,18 @@ export function use1314SalarioManager() {
     year: getCurrentYear(),
     tipo: '13AVO',
     data: [],
+    total: 0,
+    periodo: null,
     loading: false,
     error: null
   })
 
   const setYear = useCallback((year: number) => {
-    setState((prev) => ({ ...prev, year }))
+    setState((prev) => ({ ...prev, year, data: [], total: 0, periodo: null }))
   }, [])
 
   const setTipo = useCallback((tipo: Tipo1314) => {
-    setState((prev) => ({ ...prev, tipo }))
+    setState((prev) => ({ ...prev, tipo, data: [], total: 0, periodo: null }))
   }, [])
 
   const fetchPreview = useCallback(async () => {
@@ -73,6 +72,8 @@ export function use1314SalarioManager() {
       setState((prev) => ({
         ...prev,
         data: rows,
+        total: typeof json.total === 'number' ? json.total : 0,
+        periodo: json.periodo ?? null,
         loading: false,
         error: null
       }))
@@ -81,6 +82,8 @@ export function use1314SalarioManager() {
       setState((prev) => ({
         ...prev,
         data: [],
+        total: 0,
+        periodo: null,
         loading: false,
         error: message
       }))
@@ -93,6 +96,8 @@ export function use1314SalarioManager() {
     year: state.year,
     tipo: state.tipo,
     data: state.data,
+    total: state.total,
+    periodo: state.periodo,
     loading: state.loading,
     error: state.error,
     setYear,
