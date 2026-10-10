@@ -43,26 +43,6 @@ export default function KpiCards({
     filterable?: boolean
   }[] = [
     {
-      id: 'temprano',
-      label: 'Temprano',
-      value: temprano,
-      color: 'text-blue-400',
-      bgColor: 'bg-blue-500/10',
-      borderColor: 'border-blue-500/30',
-      activeRing: 'ring-blue-400/50',
-      Icon: ClockIcon,
-    },
-    {
-      id: 'tarde',
-      label: 'Tarde',
-      value: tarde,
-      color: 'text-amber-400',
-      bgColor: 'bg-amber-500/10',
-      borderColor: 'border-amber-500/30',
-      activeRing: 'ring-amber-400/50',
-      Icon: ExclamationTriangleIcon,
-    },
-    {
       id: 'presentes',
       label: 'Presentes',
       value: presentes,
@@ -81,6 +61,26 @@ export default function KpiCards({
       borderColor: 'border-red-500/30',
       activeRing: 'ring-red-400/50 shadow-[0_0_20px_rgba(248,113,113,0.15)]',
       Icon: XCircleIcon,
+    },
+    {
+      id: 'tarde',
+      label: 'Tarde',
+      value: tarde,
+      color: 'text-amber-400',
+      bgColor: 'bg-amber-500/10',
+      borderColor: 'border-amber-500/30',
+      activeRing: 'ring-amber-400/50',
+      Icon: ExclamationTriangleIcon,
+    },
+    {
+      id: 'temprano',
+      label: 'Temprano',
+      value: temprano,
+      color: 'text-blue-400',
+      bgColor: 'bg-blue-500/10',
+      borderColor: 'border-blue-500/30',
+      activeRing: 'ring-blue-400/50',
+      Icon: ClockIcon,
     },
     ...(permisosPagados > 0
       ? [{
