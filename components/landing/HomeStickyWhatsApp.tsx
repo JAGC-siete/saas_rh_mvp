@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import TrackedWhatsAppLink from '../TrackedWhatsAppLink'
 import { useLandingPreferences } from './LandingPreferencesProvider'
 import { getHomeCopy } from '../../lib/i18n/landings/home'
@@ -8,6 +9,17 @@ export default function HomeStickyWhatsApp() {
   const { locale } = useLandingPreferences()
   const copy = getHomeCopy(locale).stickyWhatsApp
   const href = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(copy.prefill)}`
+  const [pastHero, setPastHero] = useState(false)
+
+  // Hidden on the first screen so it doesn't cover the hero CTAs on phones.
+  useEffect(() => {
+    const onScroll = () => setPastHero(window.scrollY > window.innerHeight * 0.8)
+    onScroll()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
+
+  if (!pastHero) return null
 
   return (
     <div
