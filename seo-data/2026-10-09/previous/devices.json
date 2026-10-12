@@ -1,0 +1,23 @@
+[
+ {
+  "device": "DESKTOP",
+  "clicks": 13,
+  "impressions": 1154,
+  "ctr": 0.011265164644714038,
+  "position": 6.786828422876949
+ },
+ {
+  "device": "MOBILE",
+  "clicks": 5,
+  "impressions": 532,
+  "ctr": 0.009398496240601503,
+  "position": 6.101503759398496
+ },
+ {
+  "device": "TABLET",
+  "clicks": 0,
+  "impressions": 6,
+  "ctr": 0,
+  "position": 7.5
+ }
+]
