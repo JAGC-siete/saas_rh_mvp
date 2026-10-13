@@ -27,6 +27,7 @@ const navByLocale: Record<LandingLocale, NavCopy> = {
   es: {
     links: [
       { href: '/#como-funciona', label: 'Cómo funciona' },
+      { href: '/#precios', label: 'Precios' },
       { href: '/suscripcion', label: 'Alertas de sueldo' },
       { href: '/afiliados', label: 'Afiliados' },
     ],
@@ -83,6 +84,7 @@ const navByLocale: Record<LandingLocale, NavCopy> = {
   en: {
     links: [
       { href: '/#como-funciona', label: 'How it works' },
+      { href: '/#precios', label: 'Pricing' },
       { href: '/suscripcion', label: 'Pay alerts' },
       { href: '/afiliados', label: 'Affiliates' },
     ],
