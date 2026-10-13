@@ -14,7 +14,9 @@ function publicPayload(
   currency: string,
   rules: ReturnType<typeof mergeVentasBusinessRules>,
   enterprise_annual_price: number,
-  tiers: VentasPricingTier[]
+  tiers: VentasPricingTier[],
+  /** False on the fallback path: fallback tier prices may be stale, so they are not published. */
+  includePrices: boolean
 ) {
   return {
     currency,
@@ -33,6 +35,7 @@ function publicPayload(
       max_employees: t.max_employees,
       annual_terminal_mode: t.annual_terminal_mode || 'auto',
       included_terminals_max: t.included_terminals_max ?? null,
+      price: includePrices ? t.price : null,
     })),
   }
 }
@@ -55,13 +58,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     )
 
     return res.status(200).json(
-      publicPayload(cfg.currency, rules, enterprise_annual_price, cfg.tiers || [])
+      publicPayload(cfg.currency, rules, enterprise_annual_price, cfg.tiers || [], true)
     )
   } catch (e: any) {
     logger.warn('ventas public-config fallback', { error: e?.message })
     const rules = DEFAULT_VENTAS_BUSINESS_RULES
     return res.status(200).json(
-      publicPayload('HNL', rules, rules.enterprise_annual_price, FALLBACK_VENTAS_TIERS)
+      publicPayload('HNL', rules, rules.enterprise_annual_price, FALLBACK_VENTAS_TIERS, false)
     )
   }
 }
