@@ -104,8 +104,8 @@ export default function DockNavbar({
     >
       <motion.nav
         layout
-        className={`pointer-events-auto mx-auto rounded-full transition-all duration-300 ${navSurface} ${
-          isScrolled ? 'max-w-3xl py-1.5 px-3' : 'max-w-5xl py-2 px-4'
+        className={`pointer-events-auto mx-auto max-w-5xl rounded-full transition-all duration-300 ${navSurface} ${
+          isScrolled ? 'py-1.5 px-3' : 'py-2 px-4'
         }`}
       >
         <div className="flex items-center gap-2 sm:gap-3 h-11 sm:h-12">
@@ -121,7 +121,7 @@ export default function DockNavbar({
           </Link>
 
           {/* Desktop nav */}
-          <div className="hidden md:flex items-center gap-1 flex-1 justify-center">
+          <div className="hidden lg:flex items-center gap-1 flex-1 justify-center">
             {!isLocalChrome &&
               nav.links.map((link) => (
               <Link
@@ -187,7 +187,7 @@ export default function DockNavbar({
             )}
           </div>
 
-          <div className="hidden md:flex items-center gap-1.5 ml-auto shrink-0">
+          <div className="hidden lg:flex items-center gap-1.5 ml-auto shrink-0">
             {showThemeToggle && (
               <button
                 type="button"
@@ -201,7 +201,9 @@ export default function DockNavbar({
             )}
             {enabled && (
               <Link prefetch={false} href={switchLocaleHref} className={chromeBtnClass} hrefLang={locale === 'es' ? 'en' : 'es'}>
-                {locale === 'es' ? nav.switchToEn : nav.switchToEs}
+                {/* Full label only from xl: between lg and xl the bar has no room once "Iniciar sesión" appears. */}
+                <span className="xl:hidden">{locale === 'es' ? 'EN' : 'ES'}</span>
+                <span className="hidden xl:inline">{locale === 'es' ? nav.switchToEn : nav.switchToEs}</span>
               </Link>
             )}
             {!isLocalChrome && (
@@ -244,7 +246,7 @@ export default function DockNavbar({
           </div>
 
           {/* Mobile chrome + menu toggle */}
-          <div className="flex md:hidden items-center gap-0.5 ml-auto">
+          <div className="flex lg:hidden items-center gap-0.5 ml-auto">
             {showThemeToggle && (
               <button
                 type="button"
@@ -296,7 +298,7 @@ export default function DockNavbar({
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className={`pointer-events-auto md:hidden mt-2 mx-auto max-w-sm rounded-2xl p-3 ${
+            className={`pointer-events-auto lg:hidden mt-2 mx-auto max-w-sm rounded-2xl p-3 ${
               isLight
                 ? 'bg-white/95 backdrop-blur-md border border-slate-200 shadow-lg'
                 : 'glass-modern border border-white/10'
