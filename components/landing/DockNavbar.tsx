@@ -121,7 +121,7 @@ export default function DockNavbar({
           </Link>
 
           {/* Desktop nav */}
-          <div className="hidden md:flex items-center gap-1 flex-1 justify-center">
+          <div className="hidden lg:flex items-center gap-1 flex-1 justify-center">
             {!isLocalChrome &&
               nav.links.map((link) => (
               <Link
@@ -187,7 +187,7 @@ export default function DockNavbar({
             )}
           </div>
 
-          <div className="hidden md:flex items-center gap-1.5 ml-auto shrink-0">
+          <div className="hidden lg:flex items-center gap-1.5 ml-auto shrink-0">
             {showThemeToggle && (
               <button
                 type="button"
@@ -244,7 +244,7 @@ export default function DockNavbar({
           </div>
 
           {/* Mobile chrome + menu toggle */}
-          <div className="flex md:hidden items-center gap-0.5 ml-auto">
+          <div className="flex lg:hidden items-center gap-0.5 ml-auto">
             {showThemeToggle && (
               <button
                 type="button"
@@ -296,7 +296,7 @@ export default function DockNavbar({
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className={`pointer-events-auto md:hidden mt-2 mx-auto max-w-sm rounded-2xl p-3 ${
+            className={`pointer-events-auto lg:hidden mt-2 mx-auto max-w-sm rounded-2xl p-3 ${
               isLight
                 ? 'bg-white/95 backdrop-blur-md border border-slate-200 shadow-lg'
                 : 'glass-modern border border-white/10'
