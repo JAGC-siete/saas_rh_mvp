@@ -104,8 +104,8 @@ export default function DockNavbar({
     >
       <motion.nav
         layout
-        className={`pointer-events-auto mx-auto rounded-full transition-all duration-300 ${navSurface} ${
-          isScrolled ? 'max-w-3xl py-1.5 px-3' : 'max-w-5xl py-2 px-4'
+        className={`pointer-events-auto mx-auto max-w-5xl rounded-full transition-all duration-300 ${navSurface} ${
+          isScrolled ? 'py-1.5 px-3' : 'py-2 px-4'
         }`}
       >
         <div className="flex items-center gap-2 sm:gap-3 h-11 sm:h-12">
@@ -201,7 +201,9 @@ export default function DockNavbar({
             )}
             {enabled && (
               <Link prefetch={false} href={switchLocaleHref} className={chromeBtnClass} hrefLang={locale === 'es' ? 'en' : 'es'}>
-                {locale === 'es' ? nav.switchToEn : nav.switchToEs}
+                {/* Full label only from xl: between lg and xl the bar has no room once "Iniciar sesión" appears. */}
+                <span className="xl:hidden">{locale === 'es' ? 'EN' : 'ES'}</span>
+                <span className="hidden xl:inline">{locale === 'es' ? nav.switchToEn : nav.switchToEs}</span>
               </Link>
             )}
             {!isLocalChrome && (
