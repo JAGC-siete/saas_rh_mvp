@@ -56,6 +56,28 @@ export type HomeCopy = {
     aria: string
     prefill: string
   }
+  pricing: {
+    eyebrow: string
+    title: string
+    lead: string
+    perYear: string
+    taxNote: string
+    quoteLabel: string
+    basic: { name: string; desc: string; features: string[]; cta: string }
+    withClock: {
+      /** {min} and {max} are replaced with the tier's employee range. */
+      name: string
+      desc: string
+      terminalsOne: string
+      /** {n} is replaced with the number of included clocks. */
+      terminalsMany: string
+      features: string[]
+      cta: string
+    }
+    /** {min} is replaced with the first employee count that gets a custom quote. */
+    enterprise: { text: string; cta: string }
+    trialNote: string
+  }
 }
 
 const testimonialsEs: HomeCopy['testimonials'] = [
@@ -229,6 +251,33 @@ const byLocale: Record<LandingLocale, HomeCopy> = {
       aria: 'Abrir WhatsApp para escribir a Humano SISU',
       prefill: 'Hola, quiero información de Humano SISU',
     },
+    pricing: {
+      eyebrow: 'Precios',
+      title: 'Un solo pago al año, sin cobros por usuario',
+      lead: 'Elige si necesitas reloj biométrico. Todos los planes incluyen planilla con IHSS, RAP e ISR, soporte local y actualizaciones de ley.',
+      perYear: 'al año',
+      taxNote: 'ISV incluido. Precios en lempiras.',
+      quoteLabel: 'Cotiza',
+      basic: {
+        name: 'Esencial',
+        desc: 'Sin reloj. Para formalizar tu planilla desde hoy.',
+        features: ['Empleados ilimitados', 'Asistencia sin comprar reloj', 'Recibos de pago y expedientes'],
+        cta: 'Ver plan Esencial',
+      },
+      withClock: {
+        name: 'Con reloj · {min} a {max} empleados',
+        desc: 'La asistencia del reloj pasa sola a la planilla.',
+        terminalsOne: '1 reloj biométrico incluido',
+        terminalsMany: '{n} relojes biométricos incluidos',
+        features: ['Huella o reconocimiento facial', 'Instalación y capacitación incluidas'],
+        cta: 'Solicitar cotización',
+      },
+      enterprise: {
+        text: '¿Tienes {min} empleados o más? Te armamos un precio a la medida.',
+        cta: 'Cotiza aquí',
+      },
+      trialNote: 'Pruébalo gratis 30 días, sin tarjeta.',
+    },
   },
   en: {
     metaKeywords:
@@ -292,6 +341,33 @@ const byLocale: Record<LandingLocale, HomeCopy> = {
       label: 'Message us on WhatsApp',
       aria: 'Open WhatsApp to message Humano SISU',
       prefill: 'Hi, I want information about Humano SISU',
+    },
+    pricing: {
+      eyebrow: 'Pricing',
+      title: 'One yearly payment, no per-user fees',
+      lead: 'Choose whether you need a biometric clock. Every plan includes payroll with IHSS, RAP and income tax, local support and legal updates.',
+      perYear: 'per year',
+      taxNote: 'Sales tax (ISV) included. Prices in lempiras.',
+      quoteLabel: 'Quote',
+      basic: {
+        name: 'Essential',
+        desc: 'No clock. Formalize your payroll today.',
+        features: ['Unlimited employees', 'Attendance without buying a clock', 'Payslips and employee records'],
+        cta: 'See Essential plan',
+      },
+      withClock: {
+        name: 'With clock · {min} to {max} employees',
+        desc: 'Clock attendance flows straight into payroll.',
+        terminalsOne: '1 biometric clock included',
+        terminalsMany: '{n} biometric clocks included',
+        features: ['Fingerprint or facial recognition', 'Installation and training included'],
+        cta: 'Request a quote',
+      },
+      enterprise: {
+        text: '{min} or more employees? We build a custom price for you.',
+        cta: 'Get a quote',
+      },
+      trialNote: 'Try it free for 30 days, no credit card.',
     },
   },
 }

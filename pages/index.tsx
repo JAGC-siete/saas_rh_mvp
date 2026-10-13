@@ -31,6 +31,7 @@ import { LOCALE_SCHEMA_LANG } from '../lib/i18n/locale'
 const CursorSpotlight = dynamic(() => import('../components/landing/CursorSpotlight'), { ssr: false })
 const ScrollReveal = dynamic(() => import('../components/landing/ScrollReveal'))
 const HowItWorksBento = dynamic(() => import('../components/landing/HowItWorksBento'))
+const PricingSection = dynamic(() => import('../components/landing/PricingSection'))
 const FreeToolsSection = dynamic(() => import('../components/FreeToolsSection'))
 const AWSCertificationsSection = dynamic(() => import('../components/AWSCertificationsSection'))
 
@@ -198,6 +199,7 @@ export default function LandingPage() {
       </section>
 
       <HowItWorksBento />
+      <PricingSection />
       <FreeToolsSection />
       <AWSCertificationsSection />
       <TrustBar />
