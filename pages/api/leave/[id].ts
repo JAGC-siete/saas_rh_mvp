@@ -4,6 +4,7 @@ import { createClient } from '../../../lib/supabase/server'
 import { logger } from '../../../lib/logger'
 import { getHondurasTimestamp, nowInHonduras } from '../../../lib/timezone'
 import { fetchLeaveAttendanceSummaryForRange } from '../../../lib/leave/leave-attendance-summary'
+import { checkLeaveDecision } from '../../../lib/leave/leave-decision'
 
 const leaveEmployeeGateSelect = `
   id,
@@ -209,6 +210,21 @@ async function handleUpdateLeaveRequest(
       return res.status(403).json({ error: 'Access denied' })
     }
 
+    const decision = checkLeaveDecision({
+      currentStatus: currentRequest.status,
+      requestEmployeeId: currentRequest.employee_id,
+      actorEmployeeId: userProfile.employee_id
+    })
+    if (!decision.ok) {
+      logger.warn('Leave decision rejected', {
+        userId: userProfile.id,
+        leaveRequestId,
+        currentStatus: currentRequest.status,
+        reason: decision.error
+      })
+      return res.status(decision.httpStatus).json({ error: decision.error, message: decision.message })
+    }
+
     // Prepare update data
     const updateData: any = {
       status,
@@ -237,12 +253,21 @@ async function handleUpdateLeaveRequest(
       .from('leave_requests')
       .update(updateData)
       .eq('id', leaveRequestId)
+      // Guards against a concurrent decision between the read above and this write
+      .eq('status', 'pending')
       .select(leaveSelectEnriched)
-      .single()
+      .maybeSingle()
 
     if (error) {
       logger.error('Error updating leave request', error)
       return res.status(500).json({ error: 'Error updating leave request' })
+    }
+
+    if (!data) {
+      return res.status(409).json({
+        error: 'Leave request already decided',
+        message: 'Esta solicitud ya no está pendiente. Recarga la página para ver su estado.'
+      })
     }
 
     logger.info('Leave request updated successfully', {
