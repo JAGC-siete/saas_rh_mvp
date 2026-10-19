@@ -46,7 +46,9 @@ interface LandingPageProps {
 }
 
 export default function LandingPage({ pricing }: LandingPageProps) {
-  const [bannerVisible, setBannerVisible] = useState(false)
+  // Reserve the banner's space from the server render. It mounts after hydration (it reads
+  // localStorage), and growing the padding only then pushed the whole page down (CLS).
+  const [bannerVisible, setBannerVisible] = useState(true)
   const { tone, locale } = useLandingPreferences()
   const home = getHomeCopy(locale)
   const isLight = tone === 'light'
