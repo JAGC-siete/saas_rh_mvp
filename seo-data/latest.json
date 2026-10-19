@@ -1,15 +1,15 @@
 {
- "dir": "2026-10-09",
+ "dir": "2026-10-16",
  "site": "sc-domain:humanosisu.net",
  "windowDays": 28,
- "generatedAt": "2026-10-12T20:04:44.962Z",
+ "generatedAt": "2026-10-19T17:18:05.023Z",
  "dryRun": false,
  "current": {
-  "startDate": "2026-09-12",
-  "endDate": "2026-10-09"
+  "startDate": "2026-09-19",
+  "endDate": "2026-10-16"
  },
  "previous": {
-  "startDate": "2026-08-15",
-  "endDate": "2026-09-11"
+  "startDate": "2026-08-22",
+  "endDate": "2026-09-18"
  }
 }
