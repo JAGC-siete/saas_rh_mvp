@@ -30,6 +30,11 @@ interface PublicPageShellProps {
   toneLock?: PublicPageTone
   /** @deprecated Prefer toneLock or preference; kept for call-site compatibility. */
   tone?: PublicPageTone
+  /**
+   * Public ES path when a rewrite serves this page from another file (e.g. `/info` → `/cerrar-planilla-en-paz`).
+   * At build time asPath is the file path, so without this the canonical points at the internal URL.
+   */
+  canonicalPath?: string
 }
 
 export default function PublicPageShell({
@@ -44,6 +49,7 @@ export default function PublicPageShell({
   centered = false,
   toneLock,
   tone: toneProp,
+  canonicalPath,
 }: PublicPageShellProps) {
   const { tone: prefTone } = useLandingPreferences()
   useLandingToneLock(toneLock)
@@ -57,7 +63,7 @@ export default function PublicPageShell({
       }`}
     >
       <MarketingStyles sheets={['landing', 'landing-liquid']} />
-      <LandingHreflang />
+      <LandingHreflang path={canonicalPath} />
       {!isLight && <MeshBackground />}
       {showSpotlight && !isLight && <CursorSpotlight />}
       <DockNavbar
