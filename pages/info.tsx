@@ -57,7 +57,7 @@ export default function InfoPage() {
   }, [])
 
   return (
-    <PublicPageShell showSpotlight loginAlwaysVisible>
+    <PublicPageShell showSpotlight loginAlwaysVisible canonicalPath={INFO_FUNNEL_PUBLIC_PATH}>
       <CampaignStyles sheets={['viernes']} />
       <PublicPageHead title={pageTitle} description={pageDescription} canonicalPath={INFO_FUNNEL_PUBLIC_PATH} />
       <SchemaMarkup schema={[webPageSchema, breadcrumbSchema, faqSchema]} />

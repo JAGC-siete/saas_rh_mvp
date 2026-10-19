@@ -5,14 +5,19 @@ import { isBilingualLandingPath } from '../../lib/i18n/bilingual-paths'
 
 const BASE = 'https://humanosisu.net'
 
+interface LandingHreflangProps {
+  /** Public ES path; overrides asPath for pages served through a rewrite. */
+  path?: string
+}
+
 /**
  * Single owner of marketing canonical + hreflang (+ og:url/locale).
  * EN alternate only when the path has real EN copy.
  */
-export default function LandingHreflang() {
+export default function LandingHreflang({ path }: LandingHreflangProps = {}) {
   const router = useRouter()
   const locale = getLocaleFromAsPath(router.asPath || '/')
-  const bare = stripLocalePrefix(router.asPath || '/')
+  const bare = path ?? stripLocalePrefix(router.asPath || '/')
   const pathOnly = bare.split(/[?#]/)[0] || '/'
   const bilingual = isBilingualLandingPath(pathOnly)
   const esPath = localizedHref('es', pathOnly)

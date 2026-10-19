@@ -1,11 +1,11 @@
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
 import { CheckIcon } from '@heroicons/react/24/outline'
 import BorderBeam from './BorderBeam'
 import ScrollReveal from './ScrollReveal'
 import { getHomeCopy } from '../../lib/i18n/landings/home'
 import { useLandingPreferences } from './LandingPreferencesProvider'
 import { VENTAS_BASIC_ANNUAL_PRICE } from '../../lib/ventas/business-rules'
+import type { PublicVentasConfig } from '../../lib/ventas/public-config'
 
 /** Tiers above this size are quoted, not listed. */
 const PUBLIC_TIER_MAX_EMPLOYEES = 50
@@ -17,7 +17,27 @@ type PublicPricedTier = {
   price: number | null
 }
 
-type TiersState = { status: 'loading' } | { status: 'ready'; tiers: PublicPricedTier[] }
+export type PricingSectionData = {
+  basicAnnualPrice: number
+  tiers: PublicPricedTier[]
+}
+
+/** Runs in getStaticProps so the prices ship in the HTML instead of loading after hydration. */
+export function pricingSectionData(config: PublicVentasConfig): PricingSectionData {
+  const basicAnnualPrice = Number(config.basic_annual_price)
+  return {
+    basicAnnualPrice:
+      Number.isFinite(basicAnnualPrice) && basicAnnualPrice > 0 ? basicAnnualPrice : VENTAS_BASIC_ANNUAL_PRICE,
+    tiers: config.tiers
+      .map((t) => ({
+        min_employees: Number(t.min_employees),
+        max_employees: Number(t.max_employees),
+        included_terminals_max: t.included_terminals_max == null ? null : Number(t.included_terminals_max),
+        price: t.price == null || !Number.isFinite(Number(t.price)) ? null : Number(t.price),
+      }))
+      .filter((t) => t.max_employees <= PUBLIC_TIER_MAX_EMPLOYEES),
+  }
+}
 
 function fill(template: string, values: Record<string, number>): string {
   return template.replace(/\{(\w+)\}/g, (match, key: string) =>
@@ -25,7 +45,7 @@ function fill(template: string, values: Record<string, number>): string {
   )
 }
 
-/** A null price means the API served its fallback tiers, whose clock counts may be stale too. */
+/** A null price means the config served its fallback tiers, whose clock counts may be stale too. */
 function terminalsFeature(
   tier: PublicPricedTier,
   copy: { terminalsOne: string; terminalsMany: string }
@@ -39,42 +59,9 @@ function formatLempiras(amount: number): string {
   return `L. ${Math.round(amount).toLocaleString('es-HN')}`
 }
 
-export default function PricingSection() {
+export default function PricingSection({ pricing }: { pricing: PricingSectionData }) {
   const { locale, href } = useLandingPreferences()
   const copy = getHomeCopy(locale).pricing
-  const [basicAnnualPrice, setBasicAnnualPrice] = useState(VENTAS_BASIC_ANNUAL_PRICE)
-  const [tiersState, setTiersState] = useState<TiersState>({ status: 'loading' })
-
-  useEffect(() => {
-    let cancelled = false
-    ;(async () => {
-      try {
-        const res = await fetch('/api/ventas/public-config', { cache: 'no-store' })
-        const data = await res.json()
-        if (cancelled) return
-        if (!res.ok) throw new Error('public-config failed')
-        const price = Number(data.basic_annual_price)
-        if (Number.isFinite(price) && price > 0) setBasicAnnualPrice(price)
-        const tiers: PublicPricedTier[] = (Array.isArray(data.tiers) ? data.tiers : [])
-          .map((t: Record<string, unknown>) => ({
-            min_employees: Number(t.min_employees),
-            max_employees: Number(t.max_employees),
-            included_terminals_max:
-              t.included_terminals_max == null ? null : Number(t.included_terminals_max),
-            price: t.price == null || !Number.isFinite(Number(t.price)) ? null : Number(t.price),
-          }))
-          .filter((t: PublicPricedTier) => t.max_employees <= PUBLIC_TIER_MAX_EMPLOYEES)
-        setTiersState({ status: 'ready', tiers })
-      } catch {
-        if (!cancelled) setTiersState({ status: 'ready', tiers: [] })
-      }
-    })()
-    return () => {
-      cancelled = true
-    }
-  }, [])
-
-  const clockTiers = tiersState.status === 'ready' ? tiersState.tiers : null
   const enterpriseMin = PUBLIC_TIER_MAX_EMPLOYEES + 1
 
   return (
@@ -97,29 +84,27 @@ export default function PricingSection() {
         <PlanCard
           name={copy.basic.name}
           desc={copy.basic.desc}
-          price={formatLempiras(basicAnnualPrice)}
+          price={formatLempiras(pricing.basicAnnualPrice)}
           perYear={copy.perYear}
           features={copy.basic.features}
           cta={copy.basic.cta}
           ctaHref={href('/membresia-anual')}
         />
 
-        {clockTiers === null
-          ? [0, 1].map((i) => <PlanCardSkeleton key={i} />)
-          : clockTiers.map((tier, i) => (
-              <PlanCard
-                key={`${tier.min_employees}-${tier.max_employees}`}
-                name={fill(copy.withClock.name, { min: tier.min_employees, max: tier.max_employees })}
-                desc={copy.withClock.desc}
-                price={tier.price == null ? copy.quoteLabel : formatLempiras(tier.price)}
-                perYear={tier.price == null ? null : copy.perYear}
-                features={[...terminalsFeature(tier, copy.withClock), ...copy.withClock.features]}
-                cta={copy.withClock.cta}
-                ctaHref={href('/ventas')}
-                highlighted={i === 0}
-                delay={(i + 1) * 0.08}
-              />
-            ))}
+        {pricing.tiers.map((tier, i) => (
+          <PlanCard
+            key={`${tier.min_employees}-${tier.max_employees}`}
+            name={fill(copy.withClock.name, { min: tier.min_employees, max: tier.max_employees })}
+            desc={copy.withClock.desc}
+            price={tier.price == null ? copy.quoteLabel : formatLempiras(tier.price)}
+            perYear={tier.price == null ? null : copy.perYear}
+            features={[...terminalsFeature(tier, copy.withClock), ...copy.withClock.features]}
+            cta={copy.withClock.cta}
+            ctaHref={href('/ventas')}
+            highlighted={i === 0}
+            delay={(i + 1) * 0.08}
+          />
+        ))}
       </div>
 
       <div className="max-w-6xl mx-auto mt-6 text-center space-y-2">
@@ -197,15 +182,5 @@ function PlanCard({
         </div>
       </BorderBeam>
     </ScrollReveal>
-  )
-}
-
-function PlanCardSkeleton() {
-  return (
-    <div className="glass-modern rounded-2xl p-5 sm:p-6 h-full min-h-[22rem] animate-pulse" aria-hidden>
-      <div className="h-5 w-2/3 rounded bg-slate-500/20 mb-3" />
-      <div className="h-4 w-full rounded bg-slate-500/20 mb-6" />
-      <div className="h-9 w-1/2 rounded bg-slate-500/20" />
-    </div>
   )
 }

@@ -1,3 +1,4 @@
+import { GetStaticProps } from 'next'
 import Head from 'next/head'
 import Image from 'next/image'
 import { useCallback, useEffect, useState } from 'react'
@@ -27,6 +28,8 @@ import {
 import RelatedGuides from '../components/SEO/RelatedGuides'
 import { initGoogleAdsTracking } from '../lib/analytics/googleAds'
 import { LOCALE_SCHEMA_LANG } from '../lib/i18n/locale'
+import { loadPublicVentasConfig } from '../lib/ventas/public-config'
+import { pricingSectionData, type PricingSectionData } from '../components/landing/PricingSection'
 
 const CursorSpotlight = dynamic(() => import('../components/landing/CursorSpotlight'), { ssr: false })
 const ScrollReveal = dynamic(() => import('../components/landing/ScrollReveal'))
@@ -38,7 +41,11 @@ const AWSCertificationsSection = dynamic(() => import('../components/AWSCertific
 /** Approx banner height — keeps dock + page padding clear of the stripe. */
 const HOME_BANNER_OFFSET_PX = 36
 
-export default function LandingPage() {
+interface LandingPageProps {
+  pricing: PricingSectionData
+}
+
+export default function LandingPage({ pricing }: LandingPageProps) {
   const [bannerVisible, setBannerVisible] = useState(false)
   const { tone, locale } = useLandingPreferences()
   const home = getHomeCopy(locale)
@@ -199,7 +206,7 @@ export default function LandingPage() {
       </section>
 
       <HowItWorksBento />
-      <PricingSection />
+      <PricingSection pricing={pricing} />
       <FreeToolsSection />
       <AWSCertificationsSection />
       <TrustBar />
@@ -214,3 +221,9 @@ export default function LandingPage() {
     </div>
   )
 }
+
+/** ISR: prices ship in the HTML and Next regenerates the page at most every 10 minutes. */
+export const getStaticProps: GetStaticProps<LandingPageProps> = async () => ({
+  props: { pricing: pricingSectionData(await loadPublicVentasConfig()) },
+  revalidate: 600,
+})

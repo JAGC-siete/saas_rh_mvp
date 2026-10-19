@@ -50,7 +50,13 @@ export default function ViernesLanding() {
   }, [router.isReady, router.query.unlock])
 
   return (
-    <PublicPageShell showTrustBar loginAlwaysVisible mainClassName="flex flex-col" showFooter={false}>
+    <PublicPageShell
+      showTrustBar
+      loginAlwaysVisible
+      mainClassName="flex flex-col"
+      showFooter={false}
+      canonicalPath={VIERNES_PUBLIC_PATH}
+    >
       <CampaignStyles sheets={['viernes']} />
       <PublicPageHead
         title={copy.seo.title}
