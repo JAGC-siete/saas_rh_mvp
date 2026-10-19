@@ -9,6 +9,11 @@ import DockNavbar from '../components/landing/DockNavbar'
 import HomeAnnouncementBanner from '../components/landing/HomeAnnouncementBanner'
 import MagneticHero from '../components/landing/MagneticHero'
 import HomeStickyWhatsApp from '../components/landing/HomeStickyWhatsApp'
+import ScrollReveal from '../components/landing/ScrollReveal'
+import HowItWorksBento from '../components/landing/HowItWorksBento'
+import PricingSection, { pricingSectionData, type PricingSectionData } from '../components/landing/PricingSection'
+import FreeToolsSection from '../components/FreeToolsSection'
+import AWSCertificationsSection from '../components/AWSCertificationsSection'
 import TrustBar from '../components/landing/TrustBar'
 import MeshBackground from '../components/landing/MeshBackground'
 import MarketingStyles from '../components/marketing/MarketingStyles'
@@ -29,14 +34,10 @@ import RelatedGuides from '../components/SEO/RelatedGuides'
 import { initGoogleAdsTracking } from '../lib/analytics/googleAds'
 import { LOCALE_SCHEMA_LANG } from '../lib/i18n/locale'
 import { loadPublicVentasConfig } from '../lib/ventas/public-config'
-import { pricingSectionData, type PricingSectionData } from '../components/landing/PricingSection'
 
+// Only the mouse-only spotlight stays lazy. The sections render on the server anyway, so
+// next/dynamic just split them into extra requests ahead of hydration.
 const CursorSpotlight = dynamic(() => import('../components/landing/CursorSpotlight'), { ssr: false })
-const ScrollReveal = dynamic(() => import('../components/landing/ScrollReveal'))
-const HowItWorksBento = dynamic(() => import('../components/landing/HowItWorksBento'))
-const PricingSection = dynamic(() => import('../components/landing/PricingSection'))
-const FreeToolsSection = dynamic(() => import('../components/FreeToolsSection'))
-const AWSCertificationsSection = dynamic(() => import('../components/AWSCertificationsSection'))
 
 /** Approx banner height — keeps dock + page padding clear of the stripe. */
 const HOME_BANNER_OFFSET_PX = 36
@@ -49,6 +50,8 @@ export default function LandingPage({ pricing }: LandingPageProps) {
   // Reserve the banner's space from the server render. It mounts after hydration (it reads
   // localStorage), and growing the padding only then pushed the whole page down (CLS).
   const [bannerVisible, setBannerVisible] = useState(true)
+  // Mouse-only effect: never download its chunk on touch screens.
+  const [canHover, setCanHover] = useState(false)
   const { tone, locale } = useLandingPreferences()
   const home = getHomeCopy(locale)
   const isLight = tone === 'light'
@@ -58,6 +61,7 @@ export default function LandingPage({ pricing }: LandingPageProps) {
 
   useEffect(() => {
     initGoogleAdsTracking()
+    setCanHover(window.matchMedia('(hover: hover) and (pointer: fine)').matches)
 
     const handleHashScroll = () => {
       if (window.location.hash) {
@@ -128,7 +132,7 @@ export default function LandingPage({ pricing }: LandingPageProps) {
       <SchemaMarkup schema={[organizationSchema, webSiteSchema, softwareSchema, webPageSchema]} />
 
       {!isLight && <MeshBackground />}
-      {!isLight && <CursorSpotlight />}
+      {!isLight && canHover && <CursorSpotlight />}
       <HomeAnnouncementBanner onVisibilityChange={onBannerVisibilityChange} />
       <DockNavbar topOffsetPx={bannerVisible ? HOME_BANNER_OFFSET_PX : 0} tone={tone} />
 

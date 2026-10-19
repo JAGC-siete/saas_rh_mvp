@@ -85,6 +85,7 @@ export default function MagneticHero() {
                 width={682}
                 height={1024}
                 priority
+                fetchPriority="high"
                 className={`relative z-10 block w-full max-w-full h-auto object-contain object-bottom ${
                   isLight ? 'drop-shadow-2xl' : 'drop-shadow-[0_24px_40px_rgba(0,0,0,0.45)]'
                 }`}
