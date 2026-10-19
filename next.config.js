@@ -80,12 +80,11 @@ const nextConfig = {
   // Configuración para rutas internas (no subdominios)
   async rewrites() {
     return {
-      // /en/... → same page files; locale read from asPath (no Next i18n — keeps /app clean)
-      beforeFiles: [
+      afterFiles: [
+        // /en/... → same page files; locale read from asPath (no Next i18n — keeps /app clean).
+        // afterFiles so bilingual pages in pages/en/ win and get English HTML at build time.
         { source: '/en', destination: '/' },
         { source: '/en/:path*', destination: '/:path*' },
-      ],
-      afterFiles: [
         {
           source: '/favicon.ico',
           destination: '/brand/favicon-humano-sisu.png',
