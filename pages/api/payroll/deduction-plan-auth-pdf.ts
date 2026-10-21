@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { requireCompanyAccess } from '../../../lib/auth/api-auth-fixed'
+import { createAdminClient } from '../../../lib/supabase/server'
 import { generateDeductionPlanAuthPDF } from '../../../lib/payroll/deduction-plan-auth-pdf'
 import { withExportRateLimit } from '../../../lib/security/rate-limiting'
 import { canAccessDeduccionesModule } from '../../../lib/security/deducciones-access'
@@ -37,7 +38,10 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
     // employees has department_id / position / role — not a `department` column
     // (selecting `department` makes PostgREST fail → toast "Error obteniendo el plan…")
-    const { data: plan, error } = await supabase
+    // Service role so a manager with Deducciones gets the employee's name and DNI
+    // (employees RLS limits managers to their department). Scoped by company_id.
+    const adminClient = createAdminClient()
+    const { data: plan, error } = await adminClient
       .from('employee_deduction_plans')
       .select(
         `

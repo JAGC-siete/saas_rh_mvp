@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { requireCompanyAccess } from '../../../lib/auth/api-auth-fixed'
+import { createAdminClient } from '../../../lib/supabase/server'
 import { generateDeductionPlansReportPDF, type DeductionPlanPDFItem } from '../../../lib/payroll/deduction-plans-report'
 import { withExportRateLimit } from '../../../lib/security/rate-limiting'
 import { canAccessDeduccionesModule } from '../../../lib/security/deducciones-access'
@@ -27,7 +28,10 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       })
     }
 
-    const { data: plans, error } = await supabase
+    // Service role so a manager with Deducciones sees every employee's name
+    // (employees RLS limits managers to their department). Scoped by company_id.
+    const adminClient = createAdminClient()
+    const { data: plans, error } = await adminClient
       .from('employee_deduction_plans')
       .select(`
         field_key,
