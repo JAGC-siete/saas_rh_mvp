@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { AnimatePresence, motion } from 'framer-motion'
 import { MoonIcon, SunIcon } from '@heroicons/react/24/outline'
 import { useScrollThreshold, useScrollY } from '../../lib/hooks/useScrollThreshold'
 import { getNavCopy } from '../../lib/i18n/landings/nav'
@@ -102,8 +101,7 @@ export default function DockNavbar({
       className="fixed left-0 right-0 z-[100] px-4 pointer-events-none isolate"
       style={topStyle}
     >
-      <motion.nav
-        layout
+      <nav
         className={`pointer-events-auto mx-auto max-w-5xl rounded-full transition-all duration-300 ${navSurface} ${
           isScrolled ? 'py-1.5 px-3' : 'py-2 px-4'
         }`}
@@ -154,17 +152,14 @@ export default function DockNavbar({
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                 </svg>
               </button>
-              <AnimatePresence>
-                {isCalculatorMenuOpen && (
-                  <motion.div
-                    id={calculatorMenuId}
-                    role="menu"
-                    initial={{ opacity: 0, y: -8, scale: 0.96 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: -8, scale: 0.96 }}
-                    transition={{ duration: 0.15 }}
-                    className={`absolute left-1/2 -translate-x-1/2 mt-2 w-[320px] ${menuSurface}`}
-                  >
+              {isCalculatorMenuOpen && (
+                <div
+                  id={calculatorMenuId}
+                  role="menu"
+                  className="absolute left-1/2 -translate-x-1/2 mt-2 w-[320px]"
+                >
+                  {/* Animation on an inner box: its transform would override the centering translate. */}
+                  <div className={`animate-fade-in ${menuSurface}`}>
                     {nav.calculatorMenu.map((item, i) => (
                       <div key={item.href}>
                         {i === 1 && <div className={dividerClass} />}
@@ -180,9 +175,9 @@ export default function DockNavbar({
                         </Link>
                       </div>
                     ))}
-                  </motion.div>
-                )}
-              </AnimatePresence>
+                  </div>
+                </div>
+              )}
             </div>
             )}
           </div>
@@ -223,25 +218,16 @@ export default function DockNavbar({
                 {localCta.label}
               </a>
             )}
-            {!isLocalChrome && (
-            <AnimatePresence>
-              {showLogin && (
-                <motion.div
-                  initial={{ opacity: 0, width: 0 }}
-                  animate={{ opacity: 1, width: 'auto' }}
-                  exit={{ opacity: 0, width: 0 }}
-                  transition={{ duration: 0.2 }}
+            {!isLocalChrome && showLogin && (
+              <div className="animate-fade-in">
+                <Link
+                  prefetch={false}
+                  href="/app/login"
+                  className="bg-brand-600 hover:bg-brand-700 text-white px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-colors whitespace-nowrap block min-h-[36px] leading-[36px]"
                 >
-                  <Link
-                    prefetch={false}
-                    href="/app/login"
-                    className="bg-brand-600 hover:bg-brand-700 text-white px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-colors whitespace-nowrap block min-h-[36px] leading-[36px]"
-                  >
-                    {nav.login}
-                  </Link>
-                </motion.div>
-              )}
-            </AnimatePresence>
+                  {nav.login}
+                </Link>
+              </div>
             )}
           </div>
 
@@ -289,91 +275,86 @@ export default function DockNavbar({
             )}
           </div>
         </div>
-      </motion.nav>
+      </nav>
 
       {/* Mobile menu */}
-      <AnimatePresence>
-        {isMobileMenuOpen && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className={`pointer-events-auto lg:hidden mt-2 mx-auto max-w-sm rounded-2xl p-3 ${
-              isLight
-                ? 'bg-white/95 backdrop-blur-md border border-slate-200 shadow-lg'
-                : 'glass-modern border border-white/10'
-            }`}
-          >
-            {nav.links.map((link) => (
-              <Link
-                prefetch={false}
-                key={link.href}
-                href={href(link.href)}
-                className={mobileLinkClass}
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                {link.label}
-              </Link>
-            ))}
+      {isMobileMenuOpen && (
+        <div
+          className={`animate-fade-in pointer-events-auto lg:hidden mt-2 mx-auto max-w-sm rounded-2xl p-3 ${
+            isLight
+              ? 'bg-white/95 backdrop-blur-md border border-slate-200 shadow-lg'
+              : 'glass-modern border border-white/10'
+          }`}
+        >
+          {nav.links.map((link) => (
             <Link
               prefetch={false}
-              href={href('/calculadora')}
+              key={link.href}
+              href={href(link.href)}
               className={mobileLinkClass}
               onClick={() => setIsMobileMenuOpen(false)}
             >
-              {nav.calculator}
+              {link.label}
             </Link>
-            <button
-              type="button"
-              className={`w-full flex items-center justify-between px-3 py-2.5 text-sm rounded-xl ${
-                isLight ? 'text-slate-600 hover:text-slate-900' : 'text-slate-400 hover:text-white'
-              }`}
-              onClick={() => setIsCalculatorMobileOpen((v) => !v)}
-            >
-              {nav.calculatorPick}
-              <svg className={`h-4 w-4 transition-transform ${isCalculatorMobileOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-            {isCalculatorMobileOpen && (
-              <div className="pl-2 pb-1 space-y-0.5">
-                {nav.calculatorMobile.map((link) => (
-                  <Link
-                    prefetch={false}
-                    key={link.href}
-                    href={href(link.href)}
-                    className={`block px-3 py-2 text-xs rounded-lg ${
-                      isLight ? 'text-slate-500 hover:text-slate-900' : 'text-slate-400 hover:text-white'
-                    }`}
-                    onClick={() => {
-                      setIsCalculatorMobileOpen(false)
-                      setIsMobileMenuOpen(false)
-                    }}
-                  >
-                    {link.label}
-                  </Link>
-                ))}
-              </div>
-            )}
-            <Link
-              prefetch={false}
-              href={href('/activar')}
-              className="block w-full mt-2 text-center bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl text-sm font-medium min-h-[48px]"
-              onClick={() => setIsMobileMenuOpen(false)}
-            >
-              {nav.activateMobile}
-            </Link>
-            <Link
-              prefetch={false}
-              href="/app/login"
-              className="block w-full mt-2 text-center bg-brand-600 hover:bg-brand-700 text-white py-3 rounded-xl text-sm font-medium min-h-[48px]"
-              onClick={() => setIsMobileMenuOpen(false)}
-            >
-              {nav.login}
-            </Link>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          ))}
+          <Link
+            prefetch={false}
+            href={href('/calculadora')}
+            className={mobileLinkClass}
+            onClick={() => setIsMobileMenuOpen(false)}
+          >
+            {nav.calculator}
+          </Link>
+          <button
+            type="button"
+            className={`w-full flex items-center justify-between px-3 py-2.5 text-sm rounded-xl ${
+              isLight ? 'text-slate-600 hover:text-slate-900' : 'text-slate-400 hover:text-white'
+            }`}
+            onClick={() => setIsCalculatorMobileOpen((v) => !v)}
+          >
+            {nav.calculatorPick}
+            <svg className={`h-4 w-4 transition-transform ${isCalculatorMobileOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+          {isCalculatorMobileOpen && (
+            <div className="pl-2 pb-1 space-y-0.5">
+              {nav.calculatorMobile.map((link) => (
+                <Link
+                  prefetch={false}
+                  key={link.href}
+                  href={href(link.href)}
+                  className={`block px-3 py-2 text-xs rounded-lg ${
+                    isLight ? 'text-slate-500 hover:text-slate-900' : 'text-slate-400 hover:text-white'
+                  }`}
+                  onClick={() => {
+                    setIsCalculatorMobileOpen(false)
+                    setIsMobileMenuOpen(false)
+                  }}
+                >
+                  {link.label}
+                </Link>
+              ))}
+            </div>
+          )}
+          <Link
+            prefetch={false}
+            href={href('/activar')}
+            className="block w-full mt-2 text-center bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl text-sm font-medium min-h-[48px]"
+            onClick={() => setIsMobileMenuOpen(false)}
+          >
+            {nav.activateMobile}
+          </Link>
+          <Link
+            prefetch={false}
+            href="/app/login"
+            className="block w-full mt-2 text-center bg-brand-600 hover:bg-brand-700 text-white py-3 rounded-xl text-sm font-medium min-h-[48px]"
+            onClick={() => setIsMobileMenuOpen(false)}
+          >
+            {nav.login}
+          </Link>
+        </div>
+      )}
     </header>
   )
 }

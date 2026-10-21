@@ -1,22 +1,43 @@
-import { motion, type HTMLMotionProps } from 'framer-motion'
-import { type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 
-interface ScrollRevealProps extends Omit<HTMLMotionProps<'div'>, 'children'> {
+interface ScrollRevealProps {
   children: ReactNode
   delay?: number
+  className?: string
 }
 
-export default function ScrollReveal({ children, delay = 0, className, ...props }: ScrollRevealProps) {
+/** Fades in once when scrolled into view. CSS + IntersectionObserver keeps framer-motion off landing bundles. */
+export default function ScrollReveal({ children, delay = 0, className = '' }: ScrollRevealProps) {
+  const ref = useRef<HTMLDivElement>(null)
+  const [visible, setVisible] = useState(false)
+
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    if (typeof IntersectionObserver === 'undefined') {
+      setVisible(true)
+      return
+    }
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          setVisible(true)
+          observer.disconnect()
+        }
+      },
+      { rootMargin: '-80px' }
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
+
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20, scale: 0.95 }}
-      whileInView={{ opacity: 1, y: 0, scale: 1 }}
-      viewport={{ once: true, margin: '-80px' }}
-      transition={{ duration: 0.5, delay, ease: [0.22, 1, 0.36, 1] }}
-      className={className}
-      {...props}
+    <div
+      ref={ref}
+      className={`scroll-reveal${visible ? ' is-visible' : ''}${className ? ` ${className}` : ''}`}
+      style={delay ? { transitionDelay: `${delay}s` } : undefined}
     >
       {children}
-    </motion.div>
+    </div>
   )
 }

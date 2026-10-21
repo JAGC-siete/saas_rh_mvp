@@ -121,6 +121,26 @@
 
 /* Landing page components */
 @layer components {
+  /* components/landing/ScrollReveal: short class keeps the SSR HTML small on every section. */
+  .scroll-reveal {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+    transition:
+      opacity 0.5s cubic-bezier(0.22, 1, 0.36, 1),
+      transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .scroll-reveal.is-visible {
+    opacity: 1;
+    transform: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .scroll-reveal {
+      transition: none;
+    }
+  }
+
   .btn-primary {
     @apply inline-flex items-center justify-center px-6 py-3 text-base font-semibold text-white rounded-lg shadow-lg transition-all duration-200 ease-in-out transform hover:scale-105;
     background: linear-gradient(135deg, var(--primary-color), var(--primary-hover));
