@@ -4,6 +4,7 @@ import { loadEnterpriseAnnualPriceFromCatalog } from './enterprise-price'
 import { FALLBACK_VENTAS_TIERS, loadActiveVentasConfig } from './load-ventas-config'
 import { sortVentasTiersByEmployees } from './pricing'
 import type { VentasPricingTier } from './types'
+import { FALLBACK_LADDER_PLANS, loadLadderPlans, type LadderPlanPrice } from './ladder'
 import { logger } from '../logger'
 
 function publicPayload(
@@ -11,6 +12,7 @@ function publicPayload(
   rules: ReturnType<typeof mergeVentasBusinessRules>,
   enterprise_annual_price: number,
   tiers: VentasPricingTier[],
+  plans: LadderPlanPrice[],
   /** False on the fallback path: fallback tier prices may be stale, so they are not published. */
   includePrices: boolean
 ) {
@@ -33,6 +35,16 @@ function publicPayload(
       included_terminals_max: t.included_terminals_max ?? null,
       price: includePrices ? t.price : null,
     })),
+    plans: plans.map((p) => ({
+      plan_key: p.plan_key,
+      name: p.name,
+      description: p.description,
+      included_terminals_annual: p.included_terminals_annual,
+      monthly_price_hnl: includePrices ? p.monthly_price_hnl : null,
+      annual_price_hnl: includePrices ? p.annual_price_hnl : null,
+      monthly_price_usd: includePrices ? p.monthly_price_usd : null,
+      annual_price_usd: includePrices ? p.annual_price_usd : null,
+    })),
   }
 }
 
@@ -52,10 +64,19 @@ export async function loadPublicVentasConfig(): Promise<PublicVentasConfig> {
       rules.enterprise_annual_price
     )
 
-    return publicPayload(cfg.currency, rules, enterprise_annual_price, cfg.tiers || [], true)
+    const plans = await loadLadderPlans(supabase as any)
+
+    return publicPayload(cfg.currency, rules, enterprise_annual_price, cfg.tiers || [], plans, true)
   } catch (e: any) {
     logger.warn('ventas public-config fallback', { error: e?.message })
     const rules = DEFAULT_VENTAS_BUSINESS_RULES
-    return publicPayload('HNL', rules, rules.enterprise_annual_price, FALLBACK_VENTAS_TIERS, false)
+    return publicPayload(
+      'HNL',
+      rules,
+      rules.enterprise_annual_price,
+      FALLBACK_VENTAS_TIERS,
+      FALLBACK_LADDER_PLANS,
+      false
+    )
   }
 }

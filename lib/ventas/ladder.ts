@@ -304,3 +304,12 @@ export function ladderFirstPaymentTotal(quote: QuotationQuote): number {
   }
   return roundMoney(quote.annual_total + hardware)
 }
+
+export function ventasLadderCustomQuoteMessage(rules?: Partial<VentasBusinessRules> | null): string {
+  const max = mergeVentasBusinessRules(rules).max_auto_quote_employees
+  return `Para más de ${max} colaboradores preparamos una cotización a medida. Escríbenos por WhatsApp y te la enviamos.`
+}
+
+export function ventasLadderTooManyTerminalsMessage(maxTerminals: number): string {
+  return `Para más de ${maxTerminals} relojes cotizamos aparte. Escríbenos por WhatsApp y te confirmamos el monto.`
+}
