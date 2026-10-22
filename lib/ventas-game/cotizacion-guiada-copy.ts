@@ -11,19 +11,19 @@ export const COTIZACION_GUIADA_COPY = {
   },
 
   scope: {
-    title: 'Qué vas a delegar',
-    subtitle: 'País, tamaño del equipo y modalidad: así ajustamos la propuesta.',
-    tierHint: (rangeLabel: string, country: string) =>
-      `Con ${rangeLabel} en ${country}, armamos el alcance con leyes locales aplicadas.`,
-    membershipLabel: 'Contratar afiliación anual',
-    terminalsLabel: 'Enlazar relojes de asistencia',
-    enterpriseLabel: 'Agregar módulos empresariales',
+    title: 'Elige tu plan',
+    subtitle: 'Plan, forma de pago, tamaño del equipo y relojes: así armamos tu propuesta.',
+    employeesHint: 'Todos los planes son sin límite de colaboradores.',
+    terminalsHint:
+      'El plan anual incluye 1 reloj biométrico. Si ya tienes relojes, elige "Sin reloj".',
+    pricesLater: 'Verás los montos exactos en tu cotización.',
+    summaryTitle: 'Tu propuesta',
+    customQuoteCta: 'Pedir cotización por WhatsApp',
   },
 
   company: {
     title: 'Para quién es la propuesta',
     subtitle: 'Personalizamos el PDF y las credenciales a nombre de tu empresa.',
-    couponToggle: '¿Tienes código promocional?',
   },
 
   delivery: {
