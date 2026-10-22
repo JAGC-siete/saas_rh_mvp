@@ -17,12 +17,12 @@ const baseAnnual: QuotationQuote = {
   tier: { min_employees: 1, max_employees: 30 },
   billing_modality: 'annual',
   currency: 'HNL',
-  annual_subtotal: 24700,
+  annual_subtotal: 26870,
   annual_discount_amount: 0,
-  annual_total: 24700,
-  monthly_software_total: 2058.33,
+  annual_total: 26870,
+  monthly_software_total: 2239.17,
   monthly_hardware_fee: 0,
-  monthly_total: 2058.33,
+  monthly_total: 2239.17,
   hardware_sale_total: 6500,
   hardware_sale_unit_price: 6500,
   coupon_applied: false,
@@ -40,8 +40,8 @@ describe('ventas currency localization', () => {
   })
 
   it('converts HNL list amounts to USD and GTQ', () => {
-    assert.equal(convertVentasMoney(24700, 'HNL', 'USD'), 1000)
-    assert.equal(convertVentasMoney(7750, 'HNL', 'GTQ'), 2431.68)
+    assert.equal(convertVentasMoney(26870, 'HNL', 'USD'), 1000)
+    assert.equal(convertVentasMoney(7750, 'HNL', 'GTQ'), 2235.3)
   })
 
   it('localizes quote money fields and formatMoney prefixes', () => {
@@ -57,7 +57,7 @@ describe('ventas currency localization', () => {
 
   it('email and plan summary localize monthly/annual amounts by country currency', () => {
     const usd = localizeQuotationQuote(
-      { ...baseAnnual, billing_modality: 'monthly', monthly_hardware_fee: 958.33, monthly_total: 3016.66 },
+      { ...baseAnnual, billing_modality: 'monthly', monthly_hardware_fee: 958.33, monthly_total: 3197.5 },
       'HNL',
       'USD'
     )

@@ -10,7 +10,7 @@ export const VENTAS_PRICE_LIST_CURRENCY: CurrencyCode = 'HNL'
  */
 function hnlPerUsd(): number {
   const raw = Number(process.env.VENTAS_FX_HNL_PER_USD)
-  return Number.isFinite(raw) && raw > 0 ? raw : 24.7
+  return Number.isFinite(raw) && raw > 0 ? raw : 26.87
 }
 
 function gtqPerUsd(): number {
