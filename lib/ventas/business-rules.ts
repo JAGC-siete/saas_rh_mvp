@@ -23,6 +23,12 @@ export const VENTAS_MEMBERSHIP_DISCOUNT_PCT = 0.15
 /** Fallback del add-on Enterprise si plan_catalog.annual_price es null. */
 export const VENTAS_ENTERPRISE_ANNUAL_PRICE = 0
 
+/** Escalera: tope de empleados para cotizar en automático (más = cotización a medida). */
+export const VENTAS_MAX_AUTO_QUOTE_EMPLOYEES = 300
+
+/** Escalera: arranque asistido en HNL con ISV (≈ $99), solo Esencial y Profesional mensual. */
+export const VENTAS_ONBOARDING_FEE_HNL = 2700
+
 /**
  * En plan anual, las terminales biométricas se incluyen desde este número
  * de empleados (inclusive). Por debajo se venden one-shot.
@@ -62,6 +68,10 @@ export type VentasBusinessRules = {
   membership_discount_pct: number
   /** Add-on Enterprise anual (fallback si plan_catalog no tiene precio). */
   enterprise_annual_price: number
+  /** Escalera: por encima de este número de empleados la cotización es a medida. */
+  max_auto_quote_employees: number
+  /** Escalera: arranque asistido (pago único, HNL con ISV) en Esencial y Profesional mensual. */
+  onboarding_fee_hnl: number
 }
 
 export type VentasTierHardwareHints = {
@@ -83,6 +93,8 @@ export const DEFAULT_VENTAS_BUSINESS_RULES: VentasBusinessRules = {
   basic_annual_price: VENTAS_BASIC_ANNUAL_PRICE,
   membership_discount_pct: VENTAS_MEMBERSHIP_DISCOUNT_PCT,
   enterprise_annual_price: VENTAS_ENTERPRISE_ANNUAL_PRICE,
+  max_auto_quote_employees: VENTAS_MAX_AUTO_QUOTE_EMPLOYEES,
+  onboarding_fee_hnl: VENTAS_ONBOARDING_FEE_HNL,
 }
 
 function finiteOr(n: unknown, fallback: number): number {
@@ -154,6 +166,11 @@ export function mergeVentasBusinessRules(raw?: Partial<VentasBusinessRules> | nu
       0,
       finiteOr(raw?.enterprise_annual_price, d.enterprise_annual_price)
     ),
+    max_auto_quote_employees: Math.max(
+      1,
+      Math.trunc(finiteOr(raw?.max_auto_quote_employees, d.max_auto_quote_employees))
+    ),
+    onboarding_fee_hnl: Math.max(0, finiteOr(raw?.onboarding_fee_hnl, d.onboarding_fee_hnl)),
   }
 }
 
