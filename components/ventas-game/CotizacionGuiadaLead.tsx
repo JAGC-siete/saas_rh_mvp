@@ -167,10 +167,8 @@ function ChoiceCard({
         checked ? 'border-emerald-400/70 bg-emerald-500/10' : 'border-white/15 bg-white/5 hover:bg-white/10'
       }`}
     >
-      <span className="flex items-baseline justify-between gap-3">
-        <span className="text-white font-semibold">{title}</span>
-        {price ? <span className="text-emerald-300 text-sm font-semibold tabular-nums">{price}</span> : null}
-      </span>
+      <span className="block text-white font-semibold">{title}</span>
+      {price ? <span className="block text-emerald-300 text-sm font-semibold tabular-nums">{price}</span> : null}
       {children ? <span className="mt-1 block text-xs text-brand-300 leading-relaxed">{children}</span> : null}
     </button>
   )
