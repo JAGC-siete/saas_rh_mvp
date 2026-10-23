@@ -27,6 +27,7 @@ import {
   LADDER_PLAN_MODULES,
   ladderPlanPrices,
   ladderTerminalUnitPrice,
+  parseLadderPlanKey,
   parseLadderPlans,
   type LadderPlanKey,
   type LadderPlanPrice,
@@ -224,6 +225,13 @@ export default function CotizacionGuiadaLead({
       document.removeEventListener('visibilitychange', onVis)
     }
   }, [])
+
+  // The home pricing cards link here with ?plan=pro|enterprise.
+  useEffect(() => {
+    if (!router.isReady) return
+    const fromQuery = parseLadderPlanKey(router.query.plan)
+    if (fromQuery) setFormData((prev) => ({ ...prev, plan_key: fromQuery }))
+  }, [router.isReady, router.query.plan])
 
   const headline = utmContext.headline ?? copy.intro.headline
   const subheadline = utmContext.subheadline ?? copy.intro.subheadline

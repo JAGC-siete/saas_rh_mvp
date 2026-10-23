@@ -107,14 +107,14 @@ export const MARKETING_LANDINGS: MarketingLandingEntry[] = [
     path: '/membresia-anual',
     pageFile: 'pages/membresia-anual.tsx',
     aliases: ['/plan-basico'],
-    name: 'Membresía anual (sin reloj)',
+    name: 'Plan Esencial',
     kind: 'commercial',
     status: 'active',
-    purpose: 'Oferta anual L. 6,500: expedientes, asistencia sin hardware, recibos.',
+    purpose: 'Plan Esencial: L. 1,300/mes o L. 15,600/año con 1 reloj incluido; planilla, 13.º y 14.º, asistencia.',
     primaryCta: 'Formulario → /api/quote',
     launched: '2026-09-12',
     notes:
-      'Canónico /membresia-anual. /plan-basico → 301. Copy de conversión: reclamos laborales + empleados ilimitados. Deslinde en FAQ y microcopy bajo el submit.',
+      'Canónico /membresia-anual (URL se mantiene por SEO). /plan-basico → 301. Desde 2026-10 es la página del plan Esencial y cotiza con plan_key=basic. Deslinde en FAQ y microcopy bajo el submit.',
   },
   {
     path: '/calculadora',

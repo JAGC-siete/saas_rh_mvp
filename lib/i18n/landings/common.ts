@@ -62,7 +62,7 @@ const byLocale: Record<LandingLocale, CommonCopy> = {
       implementacion48h: 'Implementación biométrica en 72 horas',
       alternativaOdoo: 'Complemento a Odoo',
       domingosSinPlanilla: 'Domingos sin planilla',
-      planBasico: 'Membresía anual',
+      planBasico: 'Plan Esencial',
     },
   },
   en: {
@@ -94,7 +94,7 @@ const byLocale: Record<LandingLocale, CommonCopy> = {
       implementacion48h: 'Biometric go-live in 72 hours',
       alternativaOdoo: 'Odoo complement',
       domingosSinPlanilla: 'Sundays without payroll',
-      planBasico: 'Annual membership',
+      planBasico: 'Essential plan',
     },
   },
 }

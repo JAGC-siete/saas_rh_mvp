@@ -28,8 +28,8 @@ const PATTERNS: Array<{ match: RegExp; context: VentasUtmContext }> = [
   {
     match: /plan-basico|plan_basico|membresia-anual|micro-6500/i,
     context: {
-      headline: 'Membresía anual sin reloj. Aquí la propuesta.',
-      subheadline: 'L. 6,500 al año: expedientes, marcas a mano y recibos.',
+      headline: 'Compara los planes y arma tu propuesta.',
+      subheadline: 'Esencial, Profesional o Empresarial, con colaboradores ilimitados. PDF listo para gerencia.',
     },
   },
 ]

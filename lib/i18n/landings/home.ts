@@ -1,4 +1,5 @@
 import type { LandingLocale } from '../locale'
+import type { LadderPlanKey } from '../../ventas/ladder'
 
 export type HomeCopy = {
   metaKeywords: string
@@ -60,21 +61,16 @@ export type HomeCopy = {
     eyebrow: string
     title: string
     lead: string
-    perYear: string
+    perMonth: string
+    /** {price} is the annual price; {n} the number of included clocks. */
+    annualOne: string
+    annualMany: string
+    annualNoClock: string
+    /** {fee} is the one-time assisted start on monthly plans. */
     taxNote: string
     quoteLabel: string
-    basic: { name: string; desc: string; features: string[]; cta: string }
-    withClock: {
-      /** {min} and {max} are replaced with the tier's employee range. */
-      name: string
-      desc: string
-      terminalsOne: string
-      /** {n} is replaced with the number of included clocks. */
-      terminalsMany: string
-      features: string[]
-      cta: string
-    }
-    /** {min} is replaced with the first employee count that gets a custom quote. */
+    plans: Record<LadderPlanKey, { name: string; desc: string; features: string[]; cta: string }>
+    /** {max} is the largest team quoted online. */
     enterprise: { text: string; cta: string }
     trialNote: string
   }
@@ -253,27 +249,44 @@ const byLocale: Record<LandingLocale, HomeCopy> = {
     },
     pricing: {
       eyebrow: 'Precios',
-      title: 'Un solo pago al año, sin cobros por usuario',
-      lead: 'Elige si necesitas reloj biométrico. Todos los planes incluyen planilla con IHSS, RAP e ISR, soporte local y actualizaciones de ley.',
-      perYear: 'al año',
-      taxNote: 'ISV incluido. Precios en lempiras.',
+      title: 'Un precio fijo al mes, sin cobro por empleado',
+      lead: 'Todos los planes incluyen colaboradores ilimitados, planilla con IHSS, RAP e ISR, soporte local y actualizaciones de ley. Paga mes a mes sin permanencia, o el año con reloj biométrico incluido.',
+      perMonth: 'al mes',
+      annualOne: 'o {price} al año, con 1 reloj biométrico incluido',
+      annualMany: 'o {price} al año, con {n} relojes biométricos incluidos',
+      annualNoClock: 'o {price} al año',
+      taxNote: 'ISV incluido. Precios en lempiras. En pago mensual, Esencial y Profesional llevan un arranque asistido único de {fee}.',
       quoteLabel: 'Cotiza',
-      basic: {
-        name: 'Esencial',
-        desc: 'Sin reloj. Para formalizar tu planilla desde hoy.',
-        features: ['Empleados ilimitados', 'Asistencia sin comprar reloj', 'Recibos de pago y expedientes'],
-        cta: 'Ver plan Esencial',
-      },
-      withClock: {
-        name: 'Con reloj · {min} a {max} empleados',
-        desc: 'La asistencia del reloj pasa sola a la planilla.',
-        terminalsOne: '1 reloj biométrico incluido',
-        terminalsMany: '{n} relojes biométricos incluidos',
-        features: ['Huella o reconocimiento facial', 'Instalación y capacitación incluidas'],
-        cta: 'Solicitar cotización',
+      plans: {
+        basic: {
+          name: 'Esencial',
+          desc: 'Para formalizar tu planilla desde hoy.',
+          features: [
+            'Planilla y deducciones de ley (IHSS, RAP, ISR)',
+            '13.º y 14.º salario',
+            'Asistencia, departamentos y reportes',
+          ],
+          cta: 'Ver plan Esencial',
+        },
+        pro: {
+          name: 'Profesional',
+          desc: 'Para cerrar también liquidaciones y contabilidad.',
+          features: ['Todo lo del plan Esencial', 'Cesantías y liquidaciones', 'Contabilidad de planilla'],
+          cta: 'Cotizar Profesional',
+        },
+        enterprise: {
+          name: 'Empresarial',
+          desc: 'Para equipos que quieren autogestión y desempeño.',
+          features: [
+            'Todo lo del plan Profesional',
+            'Portal de empleados',
+            'Evaluaciones de desempeño y descriptores de puesto',
+          ],
+          cta: 'Cotizar Empresarial',
+        },
       },
       enterprise: {
-        text: '¿Tienes {min} empleados o más? Te armamos un precio a la medida.',
+        text: '¿Más de {max} colaboradores? Te armamos un precio a la medida.',
         cta: 'Cotiza aquí',
       },
       trialNote: 'Pruébalo gratis 30 días, sin tarjeta.',
@@ -344,27 +357,44 @@ const byLocale: Record<LandingLocale, HomeCopy> = {
     },
     pricing: {
       eyebrow: 'Pricing',
-      title: 'One yearly payment, no per-user fees',
-      lead: 'Choose whether you need a biometric clock. Every plan includes payroll with IHSS, RAP and income tax, local support and legal updates.',
-      perYear: 'per year',
-      taxNote: 'Sales tax (ISV) included. Prices in lempiras.',
+      title: 'One fixed monthly price, no per-employee fees',
+      lead: 'Every plan includes unlimited employees, payroll with IHSS, RAP and income tax, local support and legal updates. Pay monthly with no commitment, or yearly with a biometric clock included.',
+      perMonth: 'per month',
+      annualOne: 'or {price} per year, with 1 biometric clock included',
+      annualMany: 'or {price} per year, with {n} biometric clocks included',
+      annualNoClock: 'or {price} per year',
+      taxNote: 'Sales tax (ISV) included. Prices in lempiras. On monthly billing, Essential and Professional include a one-time assisted start of {fee}.',
       quoteLabel: 'Quote',
-      basic: {
-        name: 'Essential',
-        desc: 'No clock. Formalize your payroll today.',
-        features: ['Unlimited employees', 'Attendance without buying a clock', 'Payslips and employee records'],
-        cta: 'See Essential plan',
-      },
-      withClock: {
-        name: 'With clock · {min} to {max} employees',
-        desc: 'Clock attendance flows straight into payroll.',
-        terminalsOne: '1 biometric clock included',
-        terminalsMany: '{n} biometric clocks included',
-        features: ['Fingerprint or facial recognition', 'Installation and training included'],
-        cta: 'Request a quote',
+      plans: {
+        basic: {
+          name: 'Essential',
+          desc: 'Formalize your payroll today.',
+          features: [
+            'Payroll and statutory deductions (IHSS, RAP, income tax)',
+            '13th and 14th month pay',
+            'Attendance, departments and reports',
+          ],
+          cta: 'See Essential plan',
+        },
+        pro: {
+          name: 'Professional',
+          desc: 'Also handle severance and payroll accounting.',
+          features: ['Everything in Essential', 'Severance and final settlements', 'Payroll accounting'],
+          cta: 'Quote Professional',
+        },
+        enterprise: {
+          name: 'Enterprise',
+          desc: 'For teams that want self-service and performance reviews.',
+          features: [
+            'Everything in Professional',
+            'Employee portal',
+            'Performance reviews and job descriptions',
+          ],
+          cta: 'Quote Enterprise',
+        },
       },
       enterprise: {
-        text: '{min} or more employees? We build a custom price for you.',
+        text: 'More than {max} employees? We build a custom price for you.',
         cta: 'Get a quote',
       },
       trialNote: 'Try it free for 30 days, no credit card.',
