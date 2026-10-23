@@ -12,6 +12,8 @@ import {
   quoteIncludesBiometricTerminals,
   ventasMonthlyUnavailableMessage,
 } from './business-rules'
+import { isLadderQuote } from './ladder'
+import { buildLadderComparisonSnapshot, buildLadderModalityComparison } from './ladder-display'
 
 export type ModalityComparison = {
   primaryModality: 'annual' | 'monthly'
@@ -32,6 +34,7 @@ export function buildModalityComparison(params: {
   now?: Date
 }): ModalityComparison | null {
   const { quote, sentAt = new Date(), now } = params
+  if (isLadderQuote(quote)) return buildLadderModalityComparison({ quote, sentAt, now })
   const employees = employeesCountFromQuote(quote)
   const primaryModality = quote.billing_modality
   const alternateModality: 'annual' | 'monthly' =
@@ -107,6 +110,7 @@ export function modalityComparisonUnavailableNote(
 }
 
 export function buildModalityComparisonSnapshot(quote: QuotationQuote) {
+  if (isLadderQuote(quote)) return buildLadderComparisonSnapshot(quote)
   const monthlyHardwareFee = resolveHardwareFeeForModality(quote, 'monthly')
   return {
     primary: quote.billing_modality,

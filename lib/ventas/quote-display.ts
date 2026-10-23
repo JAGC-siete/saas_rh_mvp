@@ -11,6 +11,8 @@ import {
   type VentasTierHardwareHints,
 } from './business-rules'
 import { VENTAS_BASIC_MODULE_LABELS } from './product-catalog'
+import { isLadderQuote } from './ladder'
+import { buildLadderPlanSummary } from './ladder-display'
 
 export function hardwareOptsFromQuote(quote: QuotationQuote): {
   rules: QuotationQuote['business_rules']
@@ -260,6 +262,7 @@ export function buildQuotationPlanSummary(params: {
   applyUrgencyOffer?: boolean
 }): QuotationPlanSummary {
   const { quote, sentAt = new Date(), now, billingModality, applyUrgencyOffer = false } = params
+  if (isLadderQuote(quote)) return buildLadderPlanSummary({ quote, sentAt, now, billingModality })
   const fmt = (n: number) => formatMoney(quote.currency, n)
   const resolvedModality = billingModality ?? quote.billing_modality
   const isMonthly = resolvedModality === 'monthly'

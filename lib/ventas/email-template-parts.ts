@@ -2,6 +2,8 @@ import type { QuotationQuote } from './types'
 import { buildQuotationPlanSummary, employeesCountFromQuote } from './quote-display'
 import { getVentasModalityDefinition } from './modality-includes'
 import { VENTAS_BRAND as B, buildTerminalsDisplayLabel } from './brand-styles'
+import { isLadderQuote } from './ladder'
+import { ladderModalityLabel } from './ladder-display'
 
 export function escapeVentasHtml(v: string): string {
   return v
@@ -39,14 +41,22 @@ export function buildClientFichaHtml(params: {
   hardwareMode?: 'included' | 'sale' | 'continuity'
   includedCount?: number
   extraCount?: number
+  /** Escalera: texto ya armado de relojes (p. ej. "1 (incluido)"). */
+  terminalsLabel?: string
+  scopeTitle?: string
+  terminalsTitle?: string
 }): string {
-  const terminals = buildTerminalsDisplayLabel({
-    terminalsCount: params.terminalsCount,
-    includesTerminals: params.includesTerminals,
-    hardwareMode: params.hardwareMode,
-    includedCount: params.includedCount,
-    extraCount: params.extraCount,
-  })
+  const terminals =
+    params.terminalsLabel ??
+    buildTerminalsDisplayLabel({
+      terminalsCount: params.terminalsCount,
+      includesTerminals: params.includesTerminals,
+      hardwareMode: params.hardwareMode,
+      includedCount: params.includedCount,
+      extraCount: params.extraCount,
+    })
+  const scopeTitle = params.scopeTitle ?? 'Alcance'
+  const terminalsTitle = params.terminalsTitle ?? '# de terminales'
 
   return `
     <div style="background: ${B.emailGlassBg}; border: 1px solid ${B.emailGlassBorder}; border-radius: 16px; padding: 14px 16px; margin: 0 0 18px 0; font-family: Montserrat, Arial, Helvetica, sans-serif;">
@@ -56,7 +66,7 @@ export function buildClientFichaHtml(params: {
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse;">
         <tr>
           <td width="50%" style="padding: 0 8px 4px 0; font-size: 10px; color: ${B.emailTextMuted}; text-transform: uppercase; letter-spacing: 0.04em;">Empresa</td>
-          <td width="50%" style="padding: 0 0 4px 0; font-size: 10px; color: ${B.emailTextMuted}; text-transform: uppercase; letter-spacing: 0.04em;">Alcance</td>
+          <td width="50%" style="padding: 0 0 4px 0; font-size: 10px; color: ${B.emailTextMuted}; text-transform: uppercase; letter-spacing: 0.04em;">${escapeVentasHtml(scopeTitle)}</td>
         </tr>
         <tr>
           <td style="padding: 0 8px 10px 0; font-size: 14px; font-weight: bold; color: ${B.emailText}; vertical-align: top;">${escapeVentasHtml(params.companyName)}</td>
@@ -64,7 +74,7 @@ export function buildClientFichaHtml(params: {
         </tr>
         <tr>
           <td style="padding: 0 8px 4px 0; font-size: 10px; color: ${B.emailTextMuted}; text-transform: uppercase; letter-spacing: 0.04em;">País</td>
-          <td style="padding: 0 0 4px 0; font-size: 10px; color: ${B.emailTextMuted}; text-transform: uppercase; letter-spacing: 0.04em;"># de terminales</td>
+          <td style="padding: 0 0 4px 0; font-size: 10px; color: ${B.emailTextMuted}; text-transform: uppercase; letter-spacing: 0.04em;">${escapeVentasHtml(terminalsTitle)}</td>
         </tr>
         <tr>
           <td style="padding: 0 8px 0 0; font-size: 14px; color: ${B.emailTextSoft}; vertical-align: top;">${escapeVentasHtml(params.countryLabel)}</td>
@@ -84,16 +94,18 @@ export function buildPriceCardHtml(params: {
   const { showPdfNote = true } = params
   const summary = buildQuotationPlanSummary(params)
   const employees = employeesCountFromQuote(params.quote)
-  const modalityLabel = getVentasModalityDefinition(params.quote.billing_modality, {
-    employeesCount: employees,
-    currency: params.quote.currency,
-    rules: params.quote.business_rules,
-    tier: {
-      annual_terminal_mode: params.quote.tier?.annual_terminal_mode,
-      included_terminals_max: params.quote.tier?.included_terminals_max,
-    },
-    productKind: params.quote.product_kind,
-  }).label
+  const modalityLabel = isLadderQuote(params.quote)
+    ? ladderModalityLabel(params.quote.billing_modality)
+    : getVentasModalityDefinition(params.quote.billing_modality, {
+        employeesCount: employees,
+        currency: params.quote.currency,
+        rules: params.quote.business_rules,
+        tier: {
+          annual_terminal_mode: params.quote.tier?.annual_terminal_mode,
+          included_terminals_max: params.quote.tier?.included_terminals_max,
+        },
+        productKind: params.quote.product_kind,
+      }).label
 
   let inner = ''
   for (const line of summary.lines) {

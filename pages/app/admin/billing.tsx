@@ -86,11 +86,13 @@ export default function BillingPage() {
   const [showPaymentForm, setShowPaymentForm] = useState(false)
   const [paymentForm, setPaymentForm] = useState({
     company_id: '',
+    payment_kind: 'deposit' as 'deposit' | 'renewal',
     quote_id: '',
     amount_hnl: '',
     reference: '',
     paid_at: new Date().toISOString().split('T')[0]
   })
+  const isRenewalPayment = paymentForm.payment_kind === 'renewal'
   const [pendingQuotes, setPendingQuotes] = useState<PendingQuote[]>([])
   const [loadingPendingQuotes, setLoadingPendingQuotes] = useState(false)
   const [selectedQuote, setSelectedQuote] = useState<PendingQuote | null>(null)
@@ -215,7 +217,7 @@ export default function BillingPage() {
       ...prev,
       quote_id: quote.id,
       amount_hnl: deposit != null ? String(deposit) : prev.amount_hnl,
-      reference: `Cotización ${quote.id.slice(0, 8)} — 50% anticipo`,
+      reference: `Cotización ${quote.id.slice(0, 8)} — anticipo`,
     }))
   }
 
@@ -241,6 +243,7 @@ export default function BillingPage() {
       setShowPaymentForm(false)
       setPaymentForm({
         company_id: '',
+        payment_kind: 'deposit',
         quote_id: '',
         amount_hnl: '',
         reference: '',
@@ -543,6 +546,32 @@ export default function BillingPage() {
                             </select>
                           </div>
                           <div>
+                            <label className="block text-sm text-white/70 mb-1">Tipo de pago *</label>
+                            <select
+                              value={paymentForm.payment_kind}
+                              onChange={(e) => {
+                                const kind = e.target.value === 'renewal' ? 'renewal' : 'deposit'
+                                setSelectedQuote(null)
+                                setPaymentForm((prev) => ({
+                                  ...prev,
+                                  payment_kind: kind,
+                                  quote_id: '',
+                                  reference: kind === 'renewal' ? 'Renovación de suscripción' : '',
+                                }))
+                              }}
+                              className="input-glass w-full text-white"
+                            >
+                              <option value="deposit">Primer pago de una cotización</option>
+                              <option value="renewal">Renovación (siguiente mes o año)</option>
+                            </select>
+                            {isRenewalPayment && (
+                              <p className="mt-1 text-xs text-white/60">
+                                Suma un periodo desde el vencimiento actual y mantiene el plan de la empresa.
+                              </p>
+                            )}
+                          </div>
+                          {!isRenewalPayment && (
+                          <div>
                             <label className="block text-sm text-white/70 mb-1">Cotización pendiente</label>
                             <select
                               value={paymentForm.quote_id}
@@ -568,7 +597,8 @@ export default function BillingPage() {
                               ))}
                             </select>
                           </div>
-                          {selectedQuote && (
+                          )}
+                          {selectedQuote && !isRenewalPayment && (
                             <div className="md:col-span-2 rounded-md border border-white/15 bg-white/5 p-3 text-sm text-white/80">
                               <p>
                                 <span className="text-white/60">Modalidad:</span>{' '}
@@ -583,7 +613,7 @@ export default function BillingPage() {
                                 {formatCurrency(Number(selectedQuote.expected_total_hnl ?? selectedQuote.total))}
                               </p>
                               <p>
-                                <span className="text-white/60">Depósito esperado (50%):</span>{' '}
+                                <span className="text-white/60">Depósito esperado:</span>{' '}
                                 {selectedQuote.expected_deposit_hnl != null
                                   ? formatCurrency(Number(selectedQuote.expected_deposit_hnl))
                                   : '—'}

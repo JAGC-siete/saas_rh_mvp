@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { useRouter } from 'next/router'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
@@ -14,27 +14,25 @@ import {
   buildQuotationAcquisitionWhatsAppText,
   buildVentasSupportWhatsAppUrl,
 } from '../../lib/ventas/bank-details'
-import { getVentasModalityDefinition, annualTerminalsSaleFieldHint } from '../../lib/ventas/modality-includes'
 import {
-  annualIncludesExtrasMessage,
   mergeVentasBusinessRules,
-  resolveHardwareMode,
-  resolveIncludedTerminalsCap,
-  VENTAS_ANNUAL_TERMINALS_INCLUDED_MIN_EMPLOYEES,
-  VENTAS_BASIC_ANNUAL_PRICE,
-  VENTAS_ENTERPRISE_ANNUAL_PRICE,
-  VENTAS_EXTRA_TERMINALS_DISCOUNT_PCT,
-  VENTAS_HARDWARE_SALE_UNIT_PRICE,
-  VENTAS_MAX_AUTO_QUOTE_TERMINALS,
-  VENTAS_MEMBERSHIP_DISCOUNT_PCT,
-  VENTAS_MICRO_MAX_EMPLOYEES,
-  VENTAS_MONTHLY_MIN_EMPLOYEES,
-  type VentasAnnualTerminalMode,
   type VentasBusinessRules,
 } from '../../lib/ventas/business-rules'
 import {
-  resolveVentasProductSelection,
-} from '../../lib/ventas/product-catalog'
+  computeLadderQuote,
+  FALLBACK_LADDER_PLANS,
+  findLadderPlan,
+  isLadderPlanKey,
+  LADDER_PLAN_KEYS,
+  LADDER_PLAN_MODULES,
+  ladderPlanPrices,
+  ladderTerminalUnitPrice,
+  parseLadderPlans,
+  type LadderPlanKey,
+  type LadderPlanPrice,
+} from '../../lib/ventas/ladder'
+import { buildLadderPlanSummary } from '../../lib/ventas/ladder-display'
+import { formatMoney } from '../../lib/ventas/pricing'
 import { isCountryCode, currencyForCountryCode, type CountryCode } from '../../lib/country/supported'
 import {
   buildMetaApiTrackingFields,
@@ -45,22 +43,19 @@ import { maskEmailForHint, writeThankYouContext } from '../../lib/analytics/than
 import type { VentasUtmContext } from '../../lib/ventas-game/ventas-utm-context'
 import { COTIZACION_GUIADA_COPY } from '../../lib/ventas-game/cotizacion-guiada-copy'
 import {
-  computeVentasErrors,
-  findPublicTierForEmployees,
-  formatEmployeeRangeLabel,
-  formatTerminalSelectLabel,
-  isMonthlyAvailableOnForm,
-  sortPublicTiers,
   ventasCompanyErrors,
   ventasDeliveryErrors,
-  ventasScopeErrors,
   VENTAS_COUNTRY_LABEL,
   VENTAS_PHONE_PLACEHOLDER,
   VENTAS_SECTOR_OPTIONS,
-  type VentasFormLimits,
-  type VentasPublicTier,
-  type VentasValidationErrors,
 } from '../../lib/ventas-game/ventas-form'
+import {
+  ladderAllErrors,
+  ladderFormNeedsCustomQuote,
+  ladderScopeErrors,
+  ladderTerminalOptionLabel,
+  type LadderValidationErrors,
+} from '../../lib/ventas-game/ladder-form'
 import { hasValidationErrors, omitValidationField } from '../../lib/forms/validation-errors'
 
 type WizardStep = 'intro' | 'scope' | 'company' | 'delivery'
@@ -76,27 +71,24 @@ const defaultForm = (country: CountryCode): QuotationRequest => ({
   company_name: '',
   phone: '',
   country_code: country,
-  employees_count: 2,
+  plan_key: 'basic',
+  employees_count: Number.NaN,
   billing_modality: 'annual',
   terminals_count: 1,
   sector_rubro: '',
-  coupon_code: '',
   consent_newsletter: true,
-  include_terminals: true,
-  complement_biometric: true,
-  affiliate_membership: false,
-  include_enterprise: false,
 })
 
-const VENTAS_WIZARD_STEPS: [string, string, string] = ['Alcance', 'Empresa', 'Entrega']
+const VENTAS_WIZARD_STEPS: [string, string, string] = ['Plan', 'Empresa', 'Entrega']
 
-type ErrorField = Exclude<keyof VentasValidationErrors, 'submit'>
+type ErrorField = Exclude<keyof LadderValidationErrors, 'submit'>
 
 /** Order matters: focusFirstError picks the first field with an error in this order. */
 const FIELD_IDS: Record<ErrorField, string> = {
   country_code: 'ventas-country',
-  employees_count: 'ventas-employees',
+  plan_key: 'ventas-plan',
   billing_modality: 'ventas-modality',
+  employees_count: 'ventas-employees',
   terminals_count: 'ventas-terminals',
   company_name: 'ventas-company',
   contact_email: 'ventas-email',
@@ -104,19 +96,20 @@ const FIELD_IDS: Record<ErrorField, string> = {
 
 const FIELD_STEP: Record<ErrorField, WizardStep> = {
   country_code: 'scope',
-  employees_count: 'scope',
+  plan_key: 'scope',
   billing_modality: 'scope',
+  employees_count: 'scope',
   terminals_count: 'scope',
   company_name: 'company',
   contact_email: 'delivery',
 }
 
-function firstErrorField(errors: VentasValidationErrors): ErrorField | null {
+function firstErrorField(errors: LadderValidationErrors): ErrorField | null {
   const fields = Object.keys(FIELD_IDS) as ErrorField[]
   return fields.find((f) => Boolean(errors[f])) ?? null
 }
 
-function focusFirstError(errors: VentasValidationErrors) {
+function focusFirstError(errors: LadderValidationErrors) {
   const field = firstErrorField(errors)
   if (!field) return
   // AnimatePresence mode="wait" mounts a new step only after the exit animation,
@@ -130,7 +123,7 @@ function focusFirstError(errors: VentasValidationErrors) {
   requestAnimationFrame(tryFocus)
 }
 
-function fieldA11y(field: ErrorField, errors: VentasValidationErrors) {
+function fieldA11y(field: ErrorField, errors: LadderValidationErrors) {
   const id = FIELD_IDS[field]
   return {
     id,
@@ -139,7 +132,7 @@ function fieldA11y(field: ErrorField, errors: VentasValidationErrors) {
   }
 }
 
-function FieldError({ field, errors }: { field: ErrorField; errors: VentasValidationErrors }) {
+function FieldError({ field, errors }: { field: ErrorField; errors: LadderValidationErrors }) {
   if (!errors[field]) return null
   return (
     <p id={`${FIELD_IDS[field]}-error`} className="text-red-400 text-xs mt-2">
@@ -148,35 +141,35 @@ function FieldError({ field, errors }: { field: ErrorField; errors: VentasValida
   )
 }
 
-function BooleanSwitch({
+function ChoiceCard({
   checked,
-  onChange,
-  label,
+  onSelect,
+  title,
+  price,
+  children,
+  id,
 }: {
   checked: boolean
-  onChange: (next: boolean) => void
-  label: string
+  onSelect: () => void
+  title: string
+  price?: string | null
+  children?: ReactNode
+  id?: string
 }) {
   return (
     <button
+      id={id}
       type="button"
-      role="switch"
+      role="radio"
       aria-checked={checked}
-      onClick={() => onChange(!checked)}
-      className="flex w-full items-center justify-between gap-4 rounded-xl border border-white/15 bg-white/5 px-4 py-3.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/70"
+      onClick={onSelect}
+      className={`w-full rounded-xl border px-4 py-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70 ${
+        checked ? 'border-emerald-400/70 bg-emerald-500/10' : 'border-white/15 bg-white/5 hover:bg-white/10'
+      }`}
     >
-      <span className="text-white text-sm font-medium">{label}</span>
-      <span
-        className={`relative h-7 w-12 shrink-0 rounded-full transition-colors ${
-          checked ? 'bg-blue-500' : 'bg-white/20'
-        }`}
-      >
-        <span
-          className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-transform duration-200 ${
-            checked ? 'translate-x-5' : 'translate-x-0.5'
-          }`}
-        />
-      </span>
+      <span className="block text-white font-semibold">{title}</span>
+      {price ? <span className="block text-emerald-300 text-sm font-semibold tabular-nums">{price}</span> : null}
+      {children ? <span className="mt-1 block text-xs text-brand-300 leading-relaxed">{children}</span> : null}
     </button>
   )
 }
@@ -185,7 +178,6 @@ function wizardStepIndex(step: WizardStep): number {
   if (step === 'intro') return 0
   if (step === 'scope') return 1
   if (step === 'company') return 2
-  if (step === 'delivery') return 3
   return 3
 }
 
@@ -196,91 +188,27 @@ export default function CotizacionGuiadaLead({
   const router = useRouter()
   const copy = COTIZACION_GUIADA_COPY
   const [step, setStep] = useState<WizardStep>('intro')
-  const [showCoupon, setShowCoupon] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
-  const [errors, setErrors] = useState<VentasValidationErrors>({})
+  const [errors, setErrors] = useState<LadderValidationErrors>({})
   const [formData, setFormData] = useState<QuotationRequest>(() => defaultForm(initialCountryCode))
-  const [formLimits, setFormLimits] = useState<VentasFormLimits>({
-    monthly_min_employees: VENTAS_MONTHLY_MIN_EMPLOYEES,
-    max_auto_quote_terminals: VENTAS_MAX_AUTO_QUOTE_TERMINALS,
-    annual_terminals_included_min_employees: VENTAS_ANNUAL_TERMINALS_INCLUDED_MIN_EMPLOYEES,
-    hardware_sale_unit_price: VENTAS_HARDWARE_SALE_UNIT_PRICE,
-    micro_max_employees: VENTAS_MICRO_MAX_EMPLOYEES,
-    basic_annual_price: VENTAS_BASIC_ANNUAL_PRICE,
-    membership_discount_pct: VENTAS_MEMBERSHIP_DISCOUNT_PCT,
-    enterprise_annual_price: VENTAS_ENTERPRISE_ANNUAL_PRICE,
-  })
-  const [publicTiers, setPublicTiers] = useState<VentasPublicTier[]>([])
+  const [employeesText, setEmployeesText] = useState('')
+  const [rules, setRules] = useState<VentasBusinessRules>(() => mergeVentasBusinessRules(null))
+  const [plans, setPlans] = useState<LadderPlanPrice[]>(FALLBACK_LADDER_PLANS)
+  const [pricesAvailable, setPricesAvailable] = useState(false)
 
   useEffect(() => {
     let cancelled = false
-
-    const applyPublicConfig = (data: Record<string, unknown>) => {
-      const rules = mergeVentasBusinessRules(
-        (data.business_rules as Partial<VentasBusinessRules> | undefined) ||
-          (data as Partial<VentasBusinessRules>)
-      )
-      setFormLimits({
-        monthly_min_employees: rules.monthly_min_employees,
-        max_auto_quote_terminals: rules.max_auto_quote_terminals,
-        annual_terminals_included_min_employees: rules.annual_terminals_included_min_employees,
-        hardware_sale_unit_price: rules.hardware_sale_unit_price,
-        micro_max_employees: rules.micro_max_employees,
-        basic_annual_price: rules.basic_annual_price,
-        membership_discount_pct: rules.membership_discount_pct,
-        enterprise_annual_price: rules.enterprise_annual_price,
-      })
-      if (!Array.isArray(data.tiers)) return
-      const mapped = sortPublicTiers(
-        data.tiers.map((t: any) => ({
-          min_employees: Number(t.min_employees),
-          max_employees: Number(t.max_employees),
-          annual_terminal_mode: (['auto', 'included', 'sale'].includes(t.annual_terminal_mode)
-            ? t.annual_terminal_mode
-            : 'auto') as VentasAnnualTerminalMode,
-          included_terminals_max:
-            t.included_terminals_max == null ? null : Number(t.included_terminals_max),
-        }))
-      )
-      setPublicTiers(mapped)
-      if (mapped.length === 0) return
-      setFormData((prev) => {
-        const current = Number(prev.employees_count)
-        const nextEmp = findPublicTierForEmployees(current, mapped)
-          ? current
-          : mapped[0].min_employees
-        const nextProduct = resolveVentasProductSelection({
-          employeesCount: nextEmp,
-          includeTerminals: prev.include_terminals ?? prev.complement_biometric,
-          complementBiometric: prev.complement_biometric,
-          affiliateMembership: prev.affiliate_membership,
-          includeEnterprise: prev.include_enterprise,
-          rules,
-        })
-        let modality = prev.billing_modality
-        if (nextProduct.forceAnnual) modality = 'annual'
-        else if (
-          modality === 'monthly' &&
-          !isMonthlyAvailableOnForm(nextEmp, rules, mapped)
-        ) {
-          modality = 'annual'
-        }
-        return {
-          ...prev,
-          employees_count: nextEmp,
-          billing_modality: modality,
-          include_terminals: nextProduct.includeTerminals,
-          complement_biometric: nextProduct.includeTerminals,
-        }
-      })
-    }
 
     const load = async () => {
       try {
         const res = await fetch('/api/ventas/public-config', { cache: 'no-store' })
         const data = await res.json()
         if (!res.ok || cancelled) return
-        applyPublicConfig(data)
+        setRules(mergeVentasBusinessRules(data.business_rules || data))
+        if (Array.isArray(data.plans) && data.plans.length > 0) {
+          setPlans(parseLadderPlans(data.plans))
+          setPricesAvailable(data.plans.every((p: { monthly_price_hnl?: unknown }) => p.monthly_price_hnl != null))
+        }
       } catch {
         /* keep defaults */
       }
@@ -300,75 +228,38 @@ export default function CotizacionGuiadaLead({
   const headline = utmContext.headline ?? copy.intro.headline
   const subheadline = utmContext.subheadline ?? copy.intro.subheadline
   const wizardStep = wizardStepIndex(step)
-  const countryLabel =
-    formData.country_code && isCountryCode(formData.country_code)
-      ? VENTAS_COUNTRY_LABEL[formData.country_code]
-      : ''
-
-  const employeesCount = Number(formData.employees_count) || 1
-  const product = resolveVentasProductSelection({
-    employeesCount,
-    includeTerminals: formData.include_terminals ?? formData.complement_biometric,
-    complementBiometric: formData.complement_biometric,
-    affiliateMembership: formData.affiliate_membership,
-    includeEnterprise: formData.include_enterprise,
-    rules: formLimits,
-  })
-  const monthlyMin = formLimits.monthly_min_employees ?? VENTAS_MONTHLY_MIN_EMPLOYEES
-  const maxTerminals = formLimits.max_auto_quote_terminals ?? VENTAS_MAX_AUTO_QUOTE_TERMINALS
-  const monthlyAvailable =
-    !product.forceAnnual && isMonthlyAvailableOnForm(employeesCount, formLimits, publicTiers)
-  const matchedTier = findPublicTierForEmployees(employeesCount, publicTiers)
-  const tierHints = {
-    annual_terminal_mode: matchedTier?.annual_terminal_mode ?? ('auto' as VentasAnnualTerminalMode),
-    included_terminals_max: matchedTier?.included_terminals_max ?? null,
-  }
-  const selectedRangeLabel = matchedTier
-    ? formatEmployeeRangeLabel(matchedTier.min_employees, matchedTier.max_employees)
-    : null
-  const selectEmployeesValue = matchedTier
-    ? matchedTier.min_employees
-    : publicTiers[0]?.min_employees ?? employeesCount
-  const hardwareModeForSelection = resolveHardwareMode(
-    (formData.billing_modality || 'annual') as 'annual' | 'monthly',
-    employeesCount,
-    { rules: formLimits, tier: tierHints }
+  const countryCode: CountryCode = isCountryCode(formData.country_code) ? formData.country_code : 'HND'
+  const currency = currencyForCountryCode(countryCode)
+  const fmt = (n: number) => formatMoney(currency, n)
+  const planKey: LadderPlanKey = isLadderPlanKey(formData.plan_key) ? formData.plan_key : 'basic'
+  const plan = findLadderPlan(plans, planKey)
+  const modality = formData.billing_modality === 'monthly' ? 'monthly' : 'annual'
+  const prices = ladderPlanPrices(plan, currency)
+  const employeesCount = Number(formData.employees_count)
+  const terminalsCount = Number(formData.terminals_count) || 0
+  const needsCustomQuote = ladderFormNeedsCustomQuote(formData, rules)
+  const preview =
+    Number.isInteger(employeesCount) && employeesCount >= 1 && !needsCustomQuote
+      ? buildLadderPlanSummary({
+          quote: computeLadderQuote({
+            plan,
+            billingModality: modality,
+            terminalsCount,
+            employeesCount,
+            currency,
+            rules,
+          }),
+        })
+      : null
+  const unitPriceLabel = fmt(ladderTerminalUnitPrice(currency, rules))
+  const customQuoteUrl = buildVentasSupportWhatsAppUrl(
+    `Hola, quiero una cotización a medida de Humano SISU para ${
+      Number.isFinite(employeesCount) ? employeesCount : 'más de 300'
+    } colaboradores en ${VENTAS_COUNTRY_LABEL[countryCode]}.`
   )
-  const includedCap = resolveIncludedTerminalsCap(formLimits, tierHints)
-  const selectedTerminals = Number(formData.terminals_count) || 1
-  const showAnnualExtrasHint =
-    hardwareModeForSelection === 'included' && selectedTerminals > includedCap
-  const extrasCount = Math.max(0, selectedTerminals - includedCap)
-  const extrasPct = Math.round(VENTAS_EXTRA_TERMINALS_DISCOUNT_PCT * 100)
 
   const patchForm = (patch: Partial<QuotationRequest>) => {
-    setFormData((prev) => {
-      const next = { ...prev, ...patch }
-      const emp = Number(next.employees_count)
-      const nextProduct = resolveVentasProductSelection({
-        employeesCount: emp,
-        includeTerminals: next.include_terminals ?? next.complement_biometric,
-        complementBiometric: next.complement_biometric,
-        affiliateMembership: next.affiliate_membership,
-        includeEnterprise: next.include_enterprise,
-        rules: formLimits,
-      })
-      next.include_terminals = nextProduct.includeTerminals
-      next.complement_biometric = nextProduct.includeTerminals
-      if (nextProduct.forceAnnual) next.billing_modality = 'annual'
-      if (
-        next.billing_modality === 'monthly' &&
-        Number.isFinite(emp) &&
-        !isMonthlyAvailableOnForm(emp, formLimits, publicTiers)
-      ) {
-        next.billing_modality = 'annual'
-      }
-      if (nextProduct.chargeHardware && !(Number(next.terminals_count) >= 1)) {
-        next.terminals_count = 1
-      }
-      if (!nextProduct.chargeHardware) next.terminals_count = 0
-      return next
-    })
+    setFormData((prev) => ({ ...prev, ...patch }))
     setErrors((prev) => (prev.submit ? omitValidationField(prev, 'submit') : prev))
   }
 
@@ -378,7 +269,7 @@ export default function CotizacionGuiadaLead({
   }
 
   const goCompany = () => {
-    const e = ventasScopeErrors(formData, formLimits, publicTiers)
+    const e = ladderScopeErrors(formData, rules)
     if (hasValidationErrors(e)) {
       setErrors(e)
       focusFirstError(e)
@@ -413,7 +304,7 @@ export default function CotizacionGuiadaLead({
   }
 
   const handleSubmit = async () => {
-    const all = computeVentasErrors(formData, formLimits, publicTiers)
+    const all = ladderAllErrors(formData, rules)
     if (hasValidationErrors(all)) {
       setErrors(all)
       const field = firstErrorField(all)
@@ -432,17 +323,13 @@ export default function CotizacionGuiadaLead({
         contact_name: formData.contact_name?.trim() || '',
         company_name: formData.company_name?.trim() || '',
         phone: formData.phone?.trim() || '',
-        country_code: isCountryCode(formData.country_code) ? formData.country_code : 'HND',
-        employees_count: Number(formData.employees_count),
-        billing_modality: formData.billing_modality || 'annual',
-        terminals_count: Number(formData.terminals_count) || (product.chargeHardware ? 1 : 0),
+        country_code: countryCode,
+        plan_key: planKey,
+        employees_count: employeesCount,
+        billing_modality: modality,
+        terminals_count: terminalsCount,
         sector_rubro: formData.sector_rubro?.trim() || '',
-        coupon_code: formData.coupon_code?.trim() || '',
         consent_newsletter: formData.consent_newsletter === true,
-        complement_biometric: product.includeTerminals,
-        include_terminals: product.includeTerminals,
-        affiliate_membership: product.affiliateMembership,
-        include_enterprise: product.includeEnterprise,
       }
 
       const resp = await fetch('/api/quote', {
@@ -553,7 +440,7 @@ export default function CotizacionGuiadaLead({
                       </label>
                       <select
                         {...fieldA11y('country_code', errors)}
-                        value={formData.country_code || 'HND'}
+                        value={countryCode}
                         onChange={(e) => {
                           const v = e.target.value
                           if (isCountryCode(v)) patchForm({ country_code: v })
@@ -568,172 +455,152 @@ export default function CotizacionGuiadaLead({
                     </div>
 
                     <div>
-                      <label htmlFor={FIELD_IDS.employees_count} className="block text-white font-medium mb-2 text-sm">
-                        Rango de empleados *
-                      </label>
-                      <select
-                        {...fieldA11y('employees_count', errors)}
-                        value={selectEmployeesValue}
-                        onChange={(e) =>
-                          patchForm({ employees_count: parseInt(e.target.value, 10) || 1 })
-                        }
-                        disabled={publicTiers.length === 0}
-                        className={`${inputClass} ${errors.employees_count ? 'border-red-500/50' : ''}`}
+                      <p id="ventas-plan-label" className="block text-white font-medium mb-2 text-sm">
+                        Plan *
+                      </p>
+                      <div
+                        role="radiogroup"
+                        aria-labelledby="ventas-plan-label"
+                        aria-describedby={errors.plan_key ? `${FIELD_IDS.plan_key}-error` : undefined}
+                        className="grid grid-cols-1 sm:grid-cols-3 gap-3"
                       >
-                        {publicTiers.length === 0 ? (
-                          <option value={selectEmployeesValue} className="bg-slate-800">
-                            Cargando rangos…
-                          </option>
-                        ) : (
-                          publicTiers.map((t) => (
-                            <option
-                              key={`${t.min_employees}-${t.max_employees}`}
-                              value={t.min_employees}
-                              className="bg-slate-800"
+                        {LADDER_PLAN_KEYS.map((key, i) => {
+                          const option = findLadderPlan(plans, key)
+                          const optionPrices = ladderPlanPrices(option, currency)
+                          return (
+                            <ChoiceCard
+                              key={key}
+                              id={i === 0 ? FIELD_IDS.plan_key : undefined}
+                              checked={planKey === key}
+                              onSelect={() => patchForm({ plan_key: key })}
+                              title={option.name}
+                              price={pricesAvailable ? `${fmt(optionPrices.monthly)} / mes` : null}
                             >
-                              {formatEmployeeRangeLabel(t.min_employees, t.max_employees)}
-                            </option>
-                          ))
-                        )}
-                      </select>
-                      <FieldError field="employees_count" errors={errors} />
-                      {countryLabel && selectedRangeLabel && (
-                        <p className="text-xs text-brand-400 mt-2">
-                          {copy.scope.tierHint(selectedRangeLabel, countryLabel)}
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="space-y-3">
-                      <BooleanSwitch
-                        label={copy.scope.membershipLabel}
-                        checked={!!formData.affiliate_membership}
-                        onChange={(next) => patchForm({ affiliate_membership: next })}
-                      />
-                      <BooleanSwitch
-                        label={copy.scope.terminalsLabel}
-                        checked={!!formData.include_terminals}
-                        onChange={(next) =>
-                          patchForm({
-                            include_terminals: next,
-                            complement_biometric: next,
-                          })
-                        }
-                      />
-                      <BooleanSwitch
-                        label={copy.scope.enterpriseLabel}
-                        checked={!!formData.include_enterprise}
-                        onChange={(next) => patchForm({ include_enterprise: next })}
-                      />
-                    </div>
-
-                    <div className={`grid grid-cols-1 ${product.chargeHardware ? 'sm:grid-cols-2' : ''} gap-4`}>
-                      <div>
-                        <label htmlFor={FIELD_IDS.billing_modality} className="block text-white font-medium mb-2 text-sm">
-                          Modalidad
-                        </label>
-                        <select
-                          {...fieldA11y('billing_modality', errors)}
-                          value={formData.billing_modality || 'annual'}
-                          onChange={(e) =>
-                            patchForm({ billing_modality: e.target.value as 'annual' | 'monthly' })
-                          }
-                          className={`${inputClass} ${errors.billing_modality ? 'border-red-500/50' : ''}`}
-                        >
-                          <option value="annual" className="bg-slate-800">
-                            Anual (recomendado)
-                          </option>
-                          <option
-                            value="monthly"
-                            className="bg-slate-800"
-                            disabled={!monthlyAvailable}
-                          >
-                            {monthlyAvailable
-                              ? 'Mensual'
-                              : product.forceAnnual
-                                ? 'Mensual (plan básico es anual)'
-                                : `Mensual (desde ${monthlyMin} empleados)`}
-                          </option>
-                        </select>
-                        {!monthlyAvailable && (
-                          <p className="text-xs text-brand-400 mt-2">
-                            {product.forceAnnual
-                              ? 'El plan básico se contrata solo en modalidad anual.'
-                              : `Modalidad mensual disponible a partir de ${monthlyMin} empleados.`}
-                          </p>
-                        )}
-                        <FieldError field="billing_modality" errors={errors} />
+                              {LADDER_PLAN_MODULES[key].join(' · ')}
+                            </ChoiceCard>
+                          )
+                        })}
                       </div>
-                      {product.chargeHardware && (
+                      <FieldError field="plan_key" errors={errors} />
+                    </div>
+
+                    <div>
+                      <p id="ventas-modality-label" className="block text-white font-medium mb-2 text-sm">
+                        Forma de pago *
+                      </p>
+                      <div role="radiogroup" aria-labelledby="ventas-modality-label" className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <ChoiceCard
+                          id={FIELD_IDS.billing_modality}
+                          checked={modality === 'monthly'}
+                          onSelect={() => patchForm({ billing_modality: 'monthly' })}
+                          title="Mensual"
+                          price={pricesAvailable ? `${fmt(prices.monthly)} / mes` : null}
+                        >
+                          Sin permanencia. Los relojes se compran aparte.
+                        </ChoiceCard>
+                        <ChoiceCard
+                          checked={modality === 'annual'}
+                          onSelect={() => patchForm({ billing_modality: 'annual' })}
+                          title="Anual"
+                          price={pricesAvailable ? `${fmt(prices.annual)} / año` : null}
+                        >
+                          12 meses con {plan.included_terminals_annual} reloj biométrico incluido y arranque asistido.
+                        </ChoiceCard>
+                      </div>
+                      <FieldError field="billing_modality" errors={errors} />
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label htmlFor={FIELD_IDS.employees_count} className="block text-white font-medium mb-2 text-sm">
+                          Colaboradores *
+                        </label>
+                        <input
+                          {...fieldA11y('employees_count', errors)}
+                          type="number"
+                          inputMode="numeric"
+                          min={1}
+                          step={1}
+                          value={employeesText}
+                          onChange={(e) => {
+                            setEmployeesText(e.target.value)
+                            patchForm({ employees_count: e.target.value === '' ? Number.NaN : Number(e.target.value) })
+                          }}
+                          className={`${inputClass} ${errors.employees_count ? 'border-red-500/50' : ''}`}
+                          placeholder="Ej. 25"
+                        />
+                        <FieldError field="employees_count" errors={errors} />
+                        {!errors.employees_count && (
+                          <p className="text-xs text-brand-400 mt-2">{copy.scope.employeesHint}</p>
+                        )}
+                      </div>
                       <div>
                         <label htmlFor={FIELD_IDS.terminals_count} className="block text-white font-medium mb-2 text-sm">
-                          Terminales
+                          Relojes biométricos
                         </label>
                         <select
                           {...fieldA11y('terminals_count', errors)}
-                          value={Number(formData.terminals_count) || 1}
-                          onChange={(e) => patchForm({ terminals_count: parseInt(e.target.value, 10) || 1 })}
+                          value={terminalsCount}
+                          onChange={(e) => patchForm({ terminals_count: parseInt(e.target.value, 10) || 0 })}
                           className={`${inputClass} ${errors.terminals_count ? 'border-red-500/50' : ''}`}
                         >
-                          {Array.from({ length: maxTerminals }, (_, i) => i + 1).map((n) => (
+                          {Array.from({ length: rules.max_auto_quote_terminals + 1 }, (_, n) => n).map((n) => (
                             <option key={n} value={n} className="bg-slate-800">
-                              {formatTerminalSelectLabel({
+                              {ladderTerminalOptionLabel({
                                 n,
-                                hardwareMode: hardwareModeForSelection,
-                                includedCap,
+                                modality,
+                                includedAnnual: plan.included_terminals_annual,
+                                unitPriceLabel: pricesAvailable ? unitPriceLabel : undefined,
                               })}
                             </option>
                           ))}
                         </select>
-                        {hardwareModeForSelection === 'included' && (
-                          <p className="text-xs text-brand-400 mt-2">
-                            {annualIncludesExtrasMessage(includedCap)}
-                          </p>
-                        )}
-                        {hardwareModeForSelection === 'sale' && (
-                          <p className="text-xs text-brand-400 mt-2">
-                            {annualTerminalsSaleFieldHint(
-                              currencyForCountryCode(
-                                isCountryCode(formData.country_code) ? formData.country_code : 'HND'
-                              ),
-                              formLimits
-                            )}
-                          </p>
-                        )}
-                        {showAnnualExtrasHint && (
-                          <p className="text-xs text-amber-300/90 mt-2">
-                            Elegiste {selectedTerminals}: {includedCap} incluidas sin costo y{' '}
-                            {extrasCount} adicional{extrasCount === 1 ? '' : 'es'} a precio unitario
-                            con −{extrasPct}% de descuento, sumadas al total anual.
-                          </p>
-                        )}
-                        {hardwareModeForSelection === 'continuity' && (
-                          <p className="text-xs text-brand-400 mt-2">
-                            En plan mensual cada terminal suma Continuidad de Hardware (cuota
-                            mensual decreciente).
-                          </p>
-                        )}
                         <FieldError field="terminals_count" errors={errors} />
+                        {!errors.terminals_count && (
+                          <p className="text-xs text-brand-400 mt-2">{copy.scope.terminalsHint}</p>
+                        )}
                       </div>
-                      )}
                     </div>
 
-                    <p className="text-xs text-brand-300 bg-black/20 p-3 rounded-lg border border-white/10">
-                      {
-                        getVentasModalityDefinition(
-                          (formData.billing_modality || 'annual') === 'monthly' ? 'monthly' : 'annual',
-                          {
-                            employeesCount,
-                            currency: currencyForCountryCode(
-                              isCountryCode(formData.country_code) ? formData.country_code : 'HND'
-                            ),
-                            rules: formLimits,
-                            tier: tierHints,
-                            productKind: product.kind,
-                          }
-                        ).formHint
-                      }
-                    </p>
+                    {needsCustomQuote ? (
+                      <div className="rounded-xl border border-amber-400/40 bg-amber-500/10 p-4">
+                        <p className="text-amber-100 text-sm">{errors.employees_count || ladderScopeErrors(formData, rules).employees_count}</p>
+                        <a
+                          href={customQuoteUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="mt-3 inline-flex items-center rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-600"
+                        >
+                          {copy.scope.customQuoteCta}
+                        </a>
+                      </div>
+                    ) : (
+                      <div className="rounded-xl border border-white/10 bg-black/20 p-4" aria-live="polite">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-emerald-300 mb-2">
+                          {copy.scope.summaryTitle}
+                        </p>
+                        {preview && pricesAvailable ? (
+                          <>
+                            <ul className="space-y-1">
+                              {preview.lines.map((line) => (
+                                <li key={line.label} className="flex justify-between gap-3 text-sm text-brand-200">
+                                  <span>{line.label}</span>
+                                  <span className="tabular-nums">{line.value}</span>
+                                </li>
+                              ))}
+                            </ul>
+                            <p className="mt-3 text-xl font-bold text-white tabular-nums">{preview.totalValue}</p>
+                            <p className="text-xs text-brand-300">{preview.totalLabel}</p>
+                          </>
+                        ) : (
+                          <p className="text-sm text-brand-300">
+                            {pricesAvailable
+                              ? 'Indica cuántos colaboradores tiene tu empresa para ver el resumen.'
+                              : copy.scope.pricesLater}
+                          </p>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   <div className="flex gap-3 mt-8">
@@ -742,7 +609,8 @@ export default function CotizacionGuiadaLead({
                     </button>
                     <button
                       type="submit"
-                      className="flex-1 btn-shiny bg-brand-500 hover:bg-brand-600 text-white py-3 rounded-xl font-semibold"
+                      disabled={needsCustomQuote}
+                      className="flex-1 btn-shiny bg-brand-500 hover:bg-brand-600 text-white py-3 rounded-xl font-semibold disabled:opacity-50"
                     >
                       Siguiente
                     </button>
@@ -791,30 +659,6 @@ export default function CotizacionGuiadaLead({
                       </select>
                     </div>
 
-                    {!showCoupon ? (
-                      <button
-                        type="button"
-                        onClick={() => setShowCoupon(true)}
-                        className="text-sm text-emerald-300 hover:text-emerald-200"
-                      >
-                        {copy.company.couponToggle}
-                      </button>
-                    ) : (
-                      <div>
-                        <label htmlFor="ventas-coupon" className="block text-white font-medium mb-2 text-sm">
-                          Cupón
-                        </label>
-                        <input
-                          id="ventas-coupon"
-                          type="text"
-                          autoComplete="off"
-                          value={formData.coupon_code || ''}
-                          onChange={(e) => patchForm({ coupon_code: e.target.value })}
-                          className={inputClass}
-                          placeholder="Código si aplica"
-                        />
-                      </div>
-                    )}
                   </div>
 
                   <div className="flex gap-3 mt-8">

@@ -7,7 +7,7 @@ import { logger } from '../../lib/logger'
 import { maskEmail, normalizeSoftPhone } from '../../lib/privacy'
 import { notificationManager } from '../../lib/notification-providers'
 import { getResendFromContact } from '../../lib/resend-from'
-import type { QuotationRequest, QuotationResponse, CurrencyCode } from '../../lib/ventas/types'
+import type { QuotationQuote, QuotationRequest, QuotationResponse, CurrencyCode } from '../../lib/ventas/types'
 import { clampInt, resolveTierByEmployees } from '../../lib/ventas/pricing'
 import {
   DEFAULT_VENTAS_BUSINESS_RULES,
@@ -18,6 +18,16 @@ import {
   ventasMonthlyUnavailableMessage,
   ventasTooManyTerminalsErrorMessage,
 } from '../../lib/ventas/business-rules'
+import {
+  computeLadderQuote,
+  findLadderPlan,
+  isLadderQuote,
+  ladderNeedsCustomQuote,
+  loadLadderPlans,
+  parseLadderPlanKey,
+  ventasLadderCustomQuoteMessage,
+  ventasLadderTooManyTerminalsMessage,
+} from '../../lib/ventas/ladder'
 import { loadEnterpriseAnnualPriceFromCatalog } from '../../lib/ventas/enterprise-price'
 import { computeVentasQuotationQuote } from '../../lib/ventas/compute-quote'
 import { resolveVentasProductSelection } from '../../lib/ventas/product-catalog'
@@ -298,72 +308,122 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
     const couponCodeApplied = promo.couponCodeApplied
 
     let pricingTierId: string | null = null
+    let pricingTierSnapshot: Record<string, unknown>
+    /** Montos en la moneda de lista (HNL): de aquí salen los montos congelados para cobro. */
+    let quoteList: QuotationQuote
+    /** Montos al cliente: dólares (SV), quetzales (GT), lempiras (HN). */
+    let quote: QuotationQuote
 
-    const tier = resolveTierByEmployees(tiers, employeesCount)
-    if (!tier) {
-      return res.status(400).json({ error: 'No hay un rango de precios válido para el número de empleados indicado.' })
-    }
-    pricingTierId = (tier as any).id || null
+    const ladderPlanKey = parseLadderPlanKey((body as any).plan_key)
+    if (ladderPlanKey) {
+      if (ladderNeedsCustomQuote(employeesCount, businessRules)) {
+        return res.status(400).json({ error: ventasLadderCustomQuoteMessage(businessRules) })
+      }
+      const maxTerminals = resolveFormMaxTerminals(businessRules)
+      if (terminalsCount > maxTerminals) {
+        return res.status(400).json({ error: ventasLadderTooManyTerminalsMessage(maxTerminals) })
+      }
+      const plans = await loadLadderPlans(supabase as any)
+      const plan = findLadderPlan(plans, ladderPlanKey)
+      const ladderInput = {
+        plan,
+        billingModality,
+        terminalsCount,
+        employeesCount,
+        rules: businessRules,
+      }
+      quoteList = computeLadderQuote({ ...ladderInput, currency: listCurrency })
+      quote = computeLadderQuote({ ...ladderInput, currency: displayCurrency })
+      pricingTierSnapshot = {
+        pricing_model: 'ladder',
+        plan_key: plan.plan_key,
+        plan_name: plan.name,
+        monthly_price: quote.monthly_total,
+        annual_price: quote.annual_total,
+        list_currency: listCurrency,
+      }
+    } else {
+      const tier = resolveTierByEmployees(tiers, employeesCount)
+      if (!tier) {
+        return res.status(400).json({ error: 'No hay un rango de precios válido para el número de empleados indicado.' })
+      }
+      pricingTierId = (tier as any).id || null
 
-    const enterpriseAnnualPrice = await loadEnterpriseAnnualPriceFromCatalog(
-      supabase as any,
-      mergeVentasBusinessRules(businessRules).enterprise_annual_price
-    )
+      const enterpriseAnnualPrice = await loadEnterpriseAnnualPriceFromCatalog(
+        supabase as any,
+        mergeVentasBusinessRules(businessRules).enterprise_annual_price
+      )
 
-    const product = resolveVentasProductSelection({
-      employeesCount,
-      complementBiometric,
-      includeTerminals,
-      affiliateMembership,
-      includeEnterprise,
-      rules: businessRules,
-    })
+      const product = resolveVentasProductSelection({
+        employeesCount,
+        complementBiometric,
+        includeTerminals,
+        affiliateMembership,
+        includeEnterprise,
+        rules: businessRules,
+      })
 
-    if (product.forceAnnual && billingModality === 'monthly') {
-      return res.status(400).json({ error: ventasBasicAnnualOnlyMessage(businessRules) })
-    }
+      if (product.forceAnnual && billingModality === 'monthly') {
+        return res.status(400).json({ error: ventasBasicAnnualOnlyMessage(businessRules) })
+      }
 
-    if (
-      billingModality === 'monthly' &&
-      !isMonthlyModalityAvailable(employeesCount, businessRules, tier)
-    ) {
-      return res.status(400).json({ error: ventasMonthlyUnavailableMessage(businessRules) })
-    }
+      if (
+        billingModality === 'monthly' &&
+        !isMonthlyModalityAvailable(employeesCount, businessRules, tier)
+      ) {
+        return res.status(400).json({ error: ventasMonthlyUnavailableMessage(businessRules) })
+      }
 
-    const formMaxTerminals = resolveFormMaxTerminals(businessRules)
-    if (product.chargeHardware) {
-      const terminalsForCheck = terminalsCount >= 1 ? terminalsCount : 1
-      if (terminalsForCheck > formMaxTerminals) {
-        return res.status(400).json({ error: ventasTooManyTerminalsErrorMessage(businessRules) })
+      const formMaxTerminals = resolveFormMaxTerminals(businessRules)
+      if (product.chargeHardware) {
+        const terminalsForCheck = terminalsCount >= 1 ? terminalsCount : 1
+        if (terminalsForCheck > formMaxTerminals) {
+          return res.status(400).json({ error: ventasTooManyTerminalsErrorMessage(businessRules) })
+        }
+      }
+
+      quoteList = computeVentasQuotationQuote({
+        employeesCount,
+        billingModality,
+        terminalsCount,
+        complementBiometric,
+        includeTerminals,
+        affiliateMembership,
+        includeEnterprise,
+        enterpriseAnnualPrice,
+        listCurrency,
+        tier,
+        businessRules,
+        coupon: {
+          applied: isCouponValid,
+          discountPct: discountPctApplied,
+          code: couponCodeApplied,
+        },
+      }).quote
+      quote = localizeQuotationQuote(quoteList, listCurrency, displayCurrency)
+      pricingTierSnapshot = {
+        min_employees: tier.min_employees,
+        max_employees: tier.max_employees,
+        price: Number(tier.price),
+        quoted_software_price: quoteList.annual_subtotal,
+        product_kind: quoteList.product_kind,
+        list_currency: listCurrency,
+        annual_terminal_mode: quoteList.tier.annual_terminal_mode,
+        included_terminals_max: quoteList.tier.included_terminals_max,
       }
     }
-
-    const { quote: quoteList } = computeVentasQuotationQuote({
-      employeesCount,
-      billingModality,
-      terminalsCount,
-      complementBiometric,
-      includeTerminals,
-      affiliateMembership,
-      includeEnterprise,
-      enterpriseAnnualPrice,
-      listCurrency,
-      tier,
-      businessRules,
-      coupon: {
-        applied: isCouponValid,
-        discountPct: discountPctApplied,
-        code: couponCodeApplied,
-      },
-    })
+    const isLadder = isLadderQuote(quote)
     const terminalsForPricing = quoteList.terminals_count
     const resolvedModality = quoteList.billing_modality
-
-    // Montos al cliente: dólares (SV), quetzales (GT), lempiras (HN).
-    const quote = localizeQuotationQuote(quoteList, listCurrency, displayCurrency)
+    // La escalera no usa cupones (se quitaron del formulario público).
+    const couponAppliedForQuote = isLadder ? false : isCouponValid
+    const discountPctForQuote = isLadder ? 0 : discountPctApplied
 
     // Persist lead
     const meta = {
+      pricing_model: quote.pricing_model,
+      plan_key: quote.plan_key,
+      onboarding_fee: quote.onboarding_fee || undefined,
       source: quoteSource,
       user_agent: String(req.headers['user-agent'] || '').slice(0, 120),
       referer: String(req.headers['referer'] || '').slice(0, 200),
@@ -401,24 +461,15 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
         phone: phoneNorm || null,
         employees_count: employeesCount,
         terminals_count: terminalsForPricing || null,
-        coupon_code_submitted: couponSubmittedNorm || null,
-        coupon_applied: isCouponValid,
-        discount_pct_applied: discountPctApplied,
+        coupon_code_submitted: isLadder ? null : couponSubmittedNorm || null,
+        coupon_applied: couponAppliedForQuote,
+        discount_pct_applied: discountPctForQuote,
         currency: quote.currency,
         subtotal: quote.annual_subtotal,
         discount_amount: quote.annual_discount_amount,
         total: quote.annual_total,
         pricing_tier_id: pricingTierId,
-        pricing_tier_snapshot: {
-          min_employees: tier.min_employees,
-          max_employees: tier.max_employees,
-          price: Number(tier.price),
-          quoted_software_price: quoteList.annual_subtotal,
-          product_kind: quoteList.product_kind,
-          list_currency: listCurrency,
-          annual_terminal_mode: quoteList.tier.annual_terminal_mode,
-          included_terminals_max: quoteList.tier.included_terminals_max,
-        },
+        pricing_tier_snapshot: pricingTierSnapshot,
         status: 'created',
         meta,
       })
@@ -461,7 +512,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
       phone: phoneNorm || undefined,
       employeesCount,
       terminalsCount: terminalsForPricing,
-      couponCodeSubmitted: couponSubmittedNorm || undefined,
+      couponCodeSubmitted: isLadder ? undefined : couponSubmittedNorm || undefined,
       countryLabel,
       sentAt,
       bankDetails,
@@ -487,7 +538,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
       contactName,
       companyName,
     })
-    const filename = `cotizacion-sisu-${quote.tier.min_employees}-${quote.tier.max_employees}.pdf`
+    const filename = isLadder
+      ? `cotizacion-sisu-${(quote.plan_name || 'plan').toLowerCase()}.pdf`
+      : `cotizacion-sisu-${quote.tier.min_employees}-${quote.tier.max_employees}.pdf`
 
     const systemCompanyId = 'system-public-tool'
     const notificationConfig = await notificationManager.getConfigForCompany(systemCompanyId)
@@ -554,9 +607,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
         employees_count: employeesCount,
         country_code: countryCode,
         sector_rubro: sectorRubro || undefined,
-        coupon_code_submitted: couponSubmittedNorm || undefined,
-        coupon_applied: isCouponValid,
+        coupon_code_submitted: isLadder ? undefined : couponSubmittedNorm || undefined,
+        coupon_applied: couponAppliedForQuote,
         product_kind: quoteList.product_kind,
+        pricing_model: quote.pricing_model,
+        plan_key: quote.plan_key,
       }
 
       const env = await createTrialEnvironmentFromQuote(supabase as any, {
@@ -574,6 +629,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
         monthlyHardwareFee: quoteList.monthly_hardware_fee,
         annualTotal: quoteList.annual_total,
         hardwareSaleTotal: quoteList.hardware_sale_total,
+        onboardingFee: quoteList.onboarding_fee,
       })
 
       await (supabase as any)

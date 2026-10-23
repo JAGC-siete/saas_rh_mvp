@@ -3,7 +3,7 @@ import { createAdminClient } from '../../../../lib/supabase/server'
 import { logger } from '../../../../lib/logger'
 import { requireSuperAdmin } from '../../../../lib/auth/api-auth-fixed'
 import { createSecureErrorResponse } from '../../../../lib/security/error-handling'
-import { activateFromQuote } from '../../../../lib/billing/activate-from-quote'
+import { activateFromQuote, parsePaymentKind } from '../../../../lib/billing/activate-from-quote'
 
 interface PaymentsResponse {
   success: boolean
@@ -199,6 +199,15 @@ async function createPayment(
       })
     }
 
+    const paymentKind = parsePaymentKind(payment_kind)
+    if (!paymentKind) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid payment kind',
+        message: 'payment_kind must be deposit, subscription, adjustment or renewal'
+      })
+    }
+
     // Validate amount
     const amount = parseFloat(amount_hnl)
     if (isNaN(amount) || amount <= 0) {
@@ -226,9 +235,11 @@ async function createPayment(
 
     const defaultReference =
       reference ||
-      (quote_id
-        ? `Cotización ${String(quote_id).slice(0, 8)} — 50% anticipo`
-        : 'Payment by super admin')
+      (paymentKind === 'renewal'
+        ? 'Renovación de suscripción'
+        : quote_id
+          ? `Cotización ${String(quote_id).slice(0, 8)} — anticipo`
+          : 'Payment by super admin')
 
     let activation
     try {
@@ -239,7 +250,7 @@ async function createPayment(
         createdBy: userId,
         quoteId: quote_id || null,
         paidAt: paid_at || new Date().toISOString(),
-        paymentKind: payment_kind || 'deposit',
+        paymentKind,
       })
     } catch (activationError: any) {
       const msg = activationError?.message || 'ACTIVATION_FAILED'

@@ -17,6 +17,8 @@ import { getVentasModalityDefinition } from './modality-includes'
 import { employeesCountFromQuote } from './quote-display'
 import { quoteIncludesBiometricTerminals, resolveHardwareMode } from './business-rules'
 import { wrapLiquidEmailFragment } from '../emails/liquid-layout'
+import { isLadderQuote } from './ladder'
+import { ladderModalityLabel, ladderTerminalsLabel } from './ladder-display'
 
 function firstNameFromContact(contactName?: string): string {
   const trimmed = contactName?.trim()
@@ -90,6 +92,9 @@ export function generateVentasQuotationEmailHTML(params: {
         hardwareMode,
         includedCount: quote.terminals_included_count,
         extraCount: quote.terminals_extra_count,
+        ...(isLadderQuote(quote)
+          ? { terminalsLabel: ladderTerminalsLabel(quote), terminalsTitle: 'Relojes' }
+          : {}),
       })}
       <p style="margin: 0 0 14px 0; font-size: 18px; line-height: 1.4; font-weight: bold; color: ${B.emailText};">${opening}</p>
       ${buildPriceCardHtml({ quote, sentAt, now })}
@@ -124,26 +129,31 @@ export function generateVentasQuotationEmailText(params: {
       included_terminals_max: quote.tier?.included_terminals_max,
     },
   }
-  const modalityLabel = getVentasModalityDefinition(quote.billing_modality, {
-    employeesCount: employees,
-    currency: quote.currency,
-    rules: quote.business_rules,
-    tier: ruleOpts.tier,
-    productKind: quote.product_kind,
-  }).label
+  const ladder = isLadderQuote(quote)
+  const modalityLabel = ladder
+    ? ladderModalityLabel(quote.billing_modality)
+    : getVentasModalityDefinition(quote.billing_modality, {
+        employeesCount: employees,
+        currency: quote.currency,
+        rules: quote.business_rules,
+        tier: ruleOpts.tier,
+        productKind: quote.product_kind,
+      }).label
   const isAnnual = quote.billing_modality === 'annual'
   const quoteLabel = isAnnual ? 'COTIZACIÓN ANUAL' : 'COTIZACIÓN MENSUAL'
   const refLabel = buildVentasRefLabel(companyName, contactName)
-  const terminals = buildTerminalsDisplayLabel({
-    terminalsCount: quote.terminals_count,
-    includesTerminals:
-      quote.hardware_mode === 'included' ||
-      quoteIncludesBiometricTerminals(quote.billing_modality, employees, ruleOpts),
-    hardwareMode:
-      quote.hardware_mode || resolveHardwareMode(quote.billing_modality, employees, ruleOpts),
-    includedCount: quote.terminals_included_count,
-    extraCount: quote.terminals_extra_count,
-  })
+  const terminals = ladder
+    ? ladderTerminalsLabel(quote)
+    : buildTerminalsDisplayLabel({
+        terminalsCount: quote.terminals_count,
+        includesTerminals:
+          quote.hardware_mode === 'included' ||
+          quoteIncludesBiometricTerminals(quote.billing_modality, employees, ruleOpts),
+        hardwareMode:
+          quote.hardware_mode || resolveHardwareMode(quote.billing_modality, employees, ruleOpts),
+        includedCount: quote.terminals_included_count,
+        extraCount: quote.terminals_extra_count,
+      })
 
   const lines: string[] = [
     'Humano SISU',
@@ -153,7 +163,7 @@ export function generateVentasQuotationEmailText(params: {
     `Empresa: ${companyLabel}`,
     `Alcance: ${summary.tierLabel}`,
     `País: ${countryLabel}`,
-    `# de terminales: ${terminals}`,
+    `${ladder ? 'Relojes' : '# de terminales'}: ${terminals}`,
     '',
     opening,
     '',

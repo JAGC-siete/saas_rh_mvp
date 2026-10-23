@@ -59,9 +59,17 @@ export interface QuotationRequest {
   affiliate_membership?: boolean
   /** Add-on Enterprise, cualquier rango. */
   include_enterprise?: boolean
+  /** Escalera: basic (Esencial), pro (Profesional) o enterprise (Empresarial). */
+  plan_key?: string
 }
 
 export interface QuotationQuote {
+  /** 'ladder' = escalera Esencial/Profesional/Empresarial. Sin valor = cotización por rangos. */
+  pricing_model?: 'ladder'
+  plan_key?: 'basic' | 'pro' | 'enterprise'
+  plan_name?: string
+  /** Escalera: arranque asistido, pago único (Esencial y Profesional mensual). */
+  onboarding_fee?: number
   currency: CurrencyCode
   /** Precio anual del software (antes de descuento) */
   annual_subtotal: number

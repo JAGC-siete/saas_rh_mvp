@@ -1,7 +1,16 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { audit } from '../audit'
 
-export type PaymentKind = 'deposit' | 'subscription' | 'adjustment'
+export const PAYMENT_KINDS = ['deposit', 'subscription', 'adjustment', 'renewal'] as const
+export type PaymentKind = (typeof PAYMENT_KINDS)[number]
+
+/** Valor del formulario → tipo de pago; null si no es uno de los permitidos. */
+export function parsePaymentKind(raw: unknown): PaymentKind | null {
+  if (raw == null || raw === '') return 'deposit'
+  return typeof raw === 'string' && (PAYMENT_KINDS as readonly string[]).includes(raw)
+    ? (raw as PaymentKind)
+    : null
+}
 
 export interface ActivateFromQuoteParams {
   companyId: string

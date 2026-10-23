@@ -14,6 +14,13 @@ import { quoteIncludesBiometricTerminals, resolveHardwareMode, resolveIncludedTe
 import { convertVentasMoney, pricesInCurrencyFooter, VENTAS_PRICE_LIST_CURRENCY } from './currency'
 import { PDF_TYPE as TYPE, VENTAS_PDF_THEME as T } from './pdf-theme'
 import { HONDURAS_TIMEZONE } from '../timezone'
+import { isLadderQuote } from './ladder'
+import {
+  ladderIncludesLabels,
+  ladderModalityLabel,
+  ladderPaymentIntroText,
+  ladderTerminalsLabel,
+} from './ladder-display'
 
 const MARGIN = 48
 
@@ -65,6 +72,8 @@ export async function generateVentasQuotationPDF(params: {
   })
   const isAnnual = quote.billing_modality === 'annual'
   const refLabel = buildVentasRefLabel(companyName, contactName)
+  const ladder = isLadderQuote(quote)
+  const modalityLabel = ladder ? ladderModalityLabel(quote.billing_modality) : modalityDef.label
 
   return new Promise<Buffer>((resolve, reject) => {
     try {
@@ -106,13 +115,16 @@ export async function generateVentasQuotationPDF(params: {
         contactName: contactName?.trim() || 'Estimado cliente',
         countryLabel,
         tierLabel: planSummary.tierLabel,
-        terminalsLabel: buildTerminalsDisplayLabel({
-          terminalsCount: quote.terminals_count,
-          includesTerminals,
-          hardwareMode,
-          includedCount: quote.terminals_included_count,
-          extraCount: quote.terminals_extra_count,
-        }),
+        terminalsLabel: ladder
+          ? ladderTerminalsLabel(quote)
+          : buildTerminalsDisplayLabel({
+              terminalsCount: quote.terminals_count,
+              includesTerminals,
+              hardwareMode,
+              includedCount: quote.terminals_included_count,
+              extraCount: quote.terminals_extra_count,
+            }),
+        terminalsTitle: ladder ? 'Relojes' : 'Terminales',
       })
 
       y = drawDivider(doc, y + 14, contentW)
@@ -138,13 +150,14 @@ export async function generateVentasQuotationPDF(params: {
               )
             : undefined),
         productKind: quote.product_kind,
+        labels: ladder ? ladderIncludesLabels(quote) : undefined,
       })
 
       y = drawPriceCard(doc, {
         y: y + 14,
         contentW,
         planSummary,
-        modalityLabel: modalityDef.label,
+        modalityLabel,
       })
 
       y = drawSummaryTable(doc, {
@@ -170,6 +183,7 @@ export async function generateVentasQuotationPDF(params: {
         hardwareSaleTotal: quote.hardware_sale_total || 0,
         currency: quote.currency,
         productKind: quote.product_kind,
+        paymentIntro: ladder ? ladderPaymentIntroText(quote) : undefined,
       })
 
       doc.end()
@@ -241,9 +255,10 @@ function drawParties(
     countryLabel: string
     tierLabel: string
     terminalsLabel: string
+    terminalsTitle: string
   }
 ): number {
-  const { y, contentW, companyName, contactName, countryLabel, tierLabel, terminalsLabel } = params
+  const { y, contentW, companyName, contactName, countryLabel, tierLabel, terminalsLabel, terminalsTitle } = params
   const colW = contentW / 2 - 12
   const colAX = MARGIN
   const colBX = MARGIN + contentW / 2 + 12
@@ -260,7 +275,7 @@ function drawParties(
     .fillColor(T.textBody)
     .font('Helvetica')
     .fontSize(TYPE.body)
-    .text(`Terminales: ${terminalsLabel}`, colBX, doc.y + 3, { width: colW })
+    .text(`${terminalsTitle}: ${terminalsLabel}`, colBX, doc.y + 3, { width: colW })
   doc.fillColor(T.textBody).font('Helvetica').fontSize(TYPE.body).text('Proveedor: Humano SISU · humanosisu.net', colBX, doc.y + 3, {
     width: colW,
   })
@@ -283,6 +298,8 @@ function drawFeaturesRow(
     includedCap?: number
     hardwareSaleUnitPrice?: number
     productKind?: QuotationQuote['product_kind']
+    /** Escalera: lista ya armada. */
+    labels?: string[]
   }
 ): number {
   const {
@@ -299,7 +316,7 @@ function drawFeaturesRow(
     hardwareSaleUnitPrice,
     productKind,
   } = params
-  const labels = getContractIncludesLabels({
+  const labels = params.labels ?? getContractIncludesLabels({
     isAnnual,
     terminalsCount,
     includesTerminals,
@@ -431,6 +448,8 @@ function drawFooter(
     hardwareSaleTotal?: number
     currency: QuotationQuote['currency']
     productKind?: QuotationQuote['product_kind']
+    /** Escalera: texto de pago ya armado. */
+    paymentIntro?: string
   }
 ) {
   const { y, pageH, contentW, bankDetails, isAnnual, includesTerminals, hardwareSaleTotal, currency } = params
@@ -442,13 +461,14 @@ function drawFooter(
     ? 'Tiempo de entrega en 3 a 5 días hábiles.'
     : 'Entrega en 3 a 5 días hábiles tras confirmar el depósito.'
 
-  const paymentIntro = isAnnual
+  const legacyPaymentIntro = isAnnual
     ? annualPaymentIntroText({
         includesTerminals,
         hardwareSaleTotal,
         productKind: params.productKind,
       })
     : 'El siguiente paso es enviar el comprobante del 100% de la primera mensualidad (software + continuidad de hardware).'
+  const paymentIntro = params.paymentIntro ?? legacyPaymentIntro
 
   drawDivider(doc, y, contentW)
   const top = y + 14
