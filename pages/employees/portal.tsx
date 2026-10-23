@@ -691,9 +691,11 @@ export default function EmployeePortal() {
   }, [session, fetchEmployeeData])
 
   const handleLoginSuccess = useCallback((sessionData: EmployeeSession) => {
+    // Password login passes the Supabase session, which has no `employee`;
+    // a throw here would surface as "Error de conexión" and skip the reload.
     clientLogger.info('Employee portal access', {
-      employeeId: sessionData.employee.id,
-      employeeName: sessionData.employee.name
+      employeeId: sessionData?.employee?.id ?? null,
+      employeeName: sessionData?.employee?.name ?? null
     })
     
     // Reload page to let useAuth pick up the new Supabase session
