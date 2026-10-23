@@ -10,6 +10,22 @@ interface EmployeePasswordLoginProps {
   onLoginSuccess: (sessionData: any) => void
 }
 
+// useAuth reads the session from the browser client (localStorage), not the
+// httpOnly cookies the APIs set; without this the portal reloads logged out.
+async function syncBrowserSession(session: any) {
+  try {
+    const supabase = await createClient()
+    if (session?.access_token && session?.refresh_token) {
+      await supabase.auth.setSession({
+        access_token: session.access_token,
+        refresh_token: session.refresh_token
+      })
+    }
+  } catch (e) {
+    console.warn('No se pudo sincronizar la sesión del navegador', e)
+  }
+}
+
 export default function EmployeePasswordLogin({ onLoginSuccess }: EmployeePasswordLoginProps) {
   const [formData, setFormData] = useState({
     email: '',
@@ -73,19 +89,7 @@ export default function EmployeePasswordLogin({ onLoginSuccess }: EmployeePasswo
           email
         })
 
-        // useAuth reads the session from the browser client (localStorage), not the
-        // httpOnly cookies the API sets; without this the portal reloads logged out.
-        try {
-          const supabase = await createClient()
-          if (data?.session?.access_token && data?.session?.refresh_token) {
-            await supabase.auth.setSession({
-              access_token: data.session.access_token,
-              refresh_token: data.session.refresh_token
-            })
-          }
-        } catch (e) {
-          console.warn('No se pudo sincronizar la sesión del navegador', e)
-        }
+        await syncBrowserSession(data.session)
 
         // Pasar session si está disponible, sino pasar la data completa
         onLoginSuccess(data.session || data)
@@ -165,6 +169,8 @@ export default function EmployeePasswordLogin({ onLoginSuccess }: EmployeePasswo
         clientLogger.info('Employee login successful via OTP', {
           email: formData.email
         })
+
+        await syncBrowserSession(data.session)
 
         // Pasar sessionData si está disponible, sino pasar la data completa
         onLoginSuccess(data.sessionData || data)
