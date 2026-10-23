@@ -18,16 +18,18 @@ import TrackedInternalCta from '../TrackedInternalCta'
 import { generateFAQPageSchema, generateWebPageSchema, generateBreadcrumbListSchema } from '../../lib/seo/schema'
 import { PLAN_BASICO_COPY, PLAN_BASICO_PUBLIC_PATH } from '../../lib/marketing/plan-basico-copy'
 import { PRIVACY_PUBLIC_PATH, TERMS_PUBLIC_PATH } from '../../lib/marketing/legal-paths'
-import { VENTAS_BASIC_ANNUAL_PRICE } from '../../lib/ventas/business-rules'
-import { VENTAS_BASIC_QUOTE_FLAGS } from '../../lib/ventas/product-catalog'
-import { convertVentasMoney, VENTAS_PRICE_LIST_CURRENCY } from '../../lib/ventas/currency'
-import { formatMoney, roundMoney } from '../../lib/ventas/pricing'
+import { mergeVentasBusinessRules, type VentasBusinessRules } from '../../lib/ventas/business-rules'
 import {
-  findPublicTierForEmployees,
-  sortPublicTiers,
-  VENTAS_COUNTRY_LABEL,
-  type VentasPublicTier,
-} from '../../lib/ventas-game/ventas-form'
+  FALLBACK_LADDER_PLANS,
+  findLadderPlan,
+  ladderOnboardingFee,
+  ladderPlanPrices,
+  parseLadderPlans,
+  ventasLadderCustomQuoteMessage,
+  type LadderPlanPrice,
+} from '../../lib/ventas/ladder'
+import { formatMoney } from '../../lib/ventas/pricing'
+import { VENTAS_COUNTRY_LABEL } from '../../lib/ventas-game/ventas-form'
 import { currencyForCountryCode, isCountryCode, type CountryCode } from '../../lib/country/supported'
 import type { QuotationRequest, QuotationResponse } from '../../lib/ventas/types'
 import {
@@ -63,8 +65,8 @@ export default function PlanBasicoLanding() {
   const salesPhone = getVentasSupportWhatsAppNumber()
   const salesWaDisplay = formatSalesWhatsApp(salesPhone)
   const [countryCode, setCountryCode] = useState<CountryCode>('HND')
-  const [basicAnnualPrice, setBasicAnnualPrice] = useState(VENTAS_BASIC_ANNUAL_PRICE)
-  const [publicTiers, setPublicTiers] = useState<VentasPublicTier[]>([])
+  const [plans, setPlans] = useState<LadderPlanPrice[]>(FALLBACK_LADDER_PLANS)
+  const [rules, setRules] = useState<VentasBusinessRules>(() => mergeVentasBusinessRules(null))
 
   useEffect(() => {
     let cancelled = false
@@ -73,16 +75,10 @@ export default function PlanBasicoLanding() {
         const res = await fetch('/api/ventas/public-config', { cache: 'no-store' })
         const data = await res.json()
         if (!res.ok || cancelled) return
-        const price = Number(data.basic_annual_price)
-        if (Number.isFinite(price) && price > 0) setBasicAnnualPrice(price)
-        if (Array.isArray(data.tiers)) {
-          const mapped = sortPublicTiers(
-            data.tiers.map((t: { min_employees: number; max_employees: number }) => ({
-              min_employees: Number(t.min_employees),
-              max_employees: Number(t.max_employees),
-            }))
-          )
-          setPublicTiers(mapped)
+        setRules(mergeVentasBusinessRules(data.business_rules || data))
+        // Null prices mean the config fell back; the in-code list has the same values.
+        if (Array.isArray(data.plans) && data.plans.every((p: { monthly_price_hnl?: unknown }) => p.monthly_price_hnl != null)) {
+          setPlans(parseLadderPlans(data.plans))
         }
       } catch {
         /* keep defaults */
@@ -93,20 +89,20 @@ export default function PlanBasicoLanding() {
     }
   }, [])
 
+  const plan = findLadderPlan(plans, 'basic')
   const displayCurrency = currencyForCountryCode(countryCode)
-  const displayAmount = convertVentasMoney(
-    basicAnnualPrice,
-    VENTAS_PRICE_LIST_CURRENCY,
-    displayCurrency
-  )
-  const priceLabel = formatMoney(displayCurrency, displayAmount)
-  const monthlyLabel = formatMoney(displayCurrency, roundMoney(displayAmount / 12))
-  const faq = copy.faq.map((item) => ({
-    question: item.question,
-    answer: typeof item.answer === 'function' ? item.answer(priceLabel) : item.answer,
-  }))
+  const prices = ladderPlanPrices(plan, displayCurrency)
+  const monthlyLabel = formatMoney(displayCurrency, prices.monthly)
+  const annualLabel = formatMoney(displayCurrency, prices.annual)
+  const feeLabel = formatMoney(displayCurrency, ladderOnboardingFee(displayCurrency, rules))
+  const [costFaq, feeFaq, ...otherFaq] = copy.faq
+  const faq = [
+    { question: costFaq.question, answer: costFaq.answer(monthlyLabel, annualLabel) },
+    { question: feeFaq.question, answer: feeFaq.answer(feeLabel) },
+    ...otherFaq,
+  ]
   const whatsappHref = buildVentasSupportWhatsAppUrl(
-    `Quiero la membresía anual de Humano SISU (${priceLabel}/año, sin reloj).`
+    `Quiero el plan Esencial de Humano SISU (${monthlyLabel} al mes).`
   )
 
   const webPageSchema = generateWebPageSchema({
@@ -117,21 +113,28 @@ export default function PlanBasicoLanding() {
   const faqSchema = generateFAQPageSchema(faq.map((item) => ({ question: item.question, answer: item.answer })))
   const breadcrumbSchema = generateBreadcrumbListSchema([
     { name: 'Inicio', url: '/' },
-    { name: 'Membresía anual', url: PLAN_BASICO_PUBLIC_PATH },
+    { name: 'Plan Esencial', url: PLAN_BASICO_PUBLIC_PATH },
   ])
   const offerSchema = {
     '@context': 'https://schema.org',
     '@type': 'Offer',
-    name: 'Membresía anual Humano SISU',
+    name: 'Plan Esencial Humano SISU',
     description: copy.seo.description,
     url: `${SEO_BASE_URL}${PLAN_BASICO_PUBLIC_PATH}`,
-    price: String(basicAnnualPrice),
+    price: String(plan.monthly_price_hnl),
     priceCurrency: 'HNL',
+    priceSpecification: {
+      '@type': 'UnitPriceSpecification',
+      price: String(plan.monthly_price_hnl),
+      priceCurrency: 'HNL',
+      unitCode: 'MON',
+      valueAddedTaxIncluded: true,
+    },
     availability: 'https://schema.org/InStock',
     seller: { '@type': 'Organization', name: 'Humano SISU' },
     itemOffered: {
       '@type': 'SoftwareApplication',
-      name: 'Humano SISU membresía anual',
+      name: 'Humano SISU plan Esencial',
       applicationCategory: 'BusinessApplication',
       operatingSystem: 'Web',
     },
@@ -161,7 +164,7 @@ export default function PlanBasicoLanding() {
               {copy.hero.headline}
             </h1>
             <p className="landing-muted mt-5 max-w-2xl text-base font-medium sm:text-lg">
-              {copy.hero.subheadline(priceLabel)}
+              {copy.hero.subheadline(monthlyLabel)}
             </p>
             <figure className="mt-5 flex max-w-2xl items-start gap-3">
               <img
@@ -189,7 +192,7 @@ export default function PlanBasicoLanding() {
                 {copy.hero.ctaPrimary}
               </button>
               <TrackedInternalCta
-                href={`/activar?utm_source=membresia-anual&utm_medium=hero&utm_campaign=micro-6500`}
+                href={`/activar?utm_source=membresia-anual&utm_medium=hero&utm_campaign=plan-esencial`}
                 ctaType="activar_trial"
                 location="plan_basico_hero"
                 className="inline-flex min-h-[48px] items-center justify-center rounded-xl border border-white/25 px-6 py-3 text-center text-base font-medium text-white transition-colors hover:bg-white/10"
@@ -202,8 +205,11 @@ export default function PlanBasicoLanding() {
           <BorderBeam>
             <div className="glass-modern relative overflow-hidden rounded-2xl p-6 sm:p-8">
               <p className="text-xs uppercase tracking-[0.2em] text-slate-400">{copy.hero.priceLabel}</p>
-              <p className="mt-2 text-4xl font-bold tabular-nums text-white sm:text-5xl">{priceLabel}</p>
-              <p className="mt-1 text-sm text-cyan-300">≈ {monthlyLabel} / mes · un solo cargo</p>
+              <p className="mt-2">
+                <span className="text-4xl font-bold tabular-nums text-white sm:text-5xl">{monthlyLabel}</span>
+                <span className="ml-1 text-sm font-medium text-slate-300">{copy.hero.perMonth}</span>
+              </p>
+              <p className="mt-1 text-sm text-cyan-300">{copy.hero.annualNote(annualLabel)}</p>
               <ul className="mt-6 space-y-3">
                 {copy.hero.modules.map((label, index) => {
                   const Icon = MODULE_ICONS[index] ?? UserGroupIcon
@@ -317,19 +323,22 @@ export default function PlanBasicoLanding() {
             <p className="mt-2 text-xs text-slate-500">{copy.form.whatsappHint}</p>
             <p className="mt-6 text-sm text-slate-400">
               <TrackedInternalCta
-                href="/ventas?utm_source=membresia-anual&utm_medium=body&utm_campaign=micro-6500"
+                href="/ventas?plan=pro&utm_source=membresia-anual&utm_medium=body&utm_campaign=plan-esencial"
                 ctaType="solicitar_cotizacion"
                 location="plan_basico_form_aside"
                 className="text-brand-300 underline-offset-2 hover:underline"
               >
-                {copy.form.moreThanTen}
+                {copy.form.morePlans}
               </TrackedInternalCta>
             </p>
           </div>
           <PlanBasicoQuoteForm
             countryCode={countryCode}
             onCountryCodeChange={setCountryCode}
-            publicTiers={publicTiers}
+            monthlyLabel={monthlyLabel}
+            annualLabel={annualLabel}
+            feeLabel={feeLabel}
+            maxEmployees={rules.max_auto_quote_employees}
           />
         </div>
       </section>
@@ -370,7 +379,7 @@ export default function PlanBasicoLanding() {
               {copy.close.primary}
             </button>
             <TrackedInternalCta
-              href="/ventas?utm_source=membresia-anual&utm_medium=cta-final&utm_campaign=micro-6500"
+              href="/#precios"
               ctaType="solicitar_cotizacion"
               location="plan_basico_final"
               className="inline-flex min-h-[48px] items-center justify-center rounded-xl border border-white/25 px-6 py-3 text-base font-medium text-white hover:bg-white/10"
@@ -389,6 +398,7 @@ type FormErrors = {
   company_name?: string
   contact_email?: string
   phone?: string
+  employees_count?: string
   consent?: string
   submit?: string
 }
@@ -396,11 +406,17 @@ type FormErrors = {
 function PlanBasicoQuoteForm({
   countryCode,
   onCountryCodeChange,
-  publicTiers,
+  monthlyLabel,
+  annualLabel,
+  feeLabel,
+  maxEmployees,
 }: {
   countryCode: CountryCode
   onCountryCodeChange: (code: CountryCode) => void
-  publicTiers: VentasPublicTier[]
+  monthlyLabel: string
+  annualLabel: string
+  feeLabel: string
+  maxEmployees: number
 }) {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
@@ -411,16 +427,9 @@ function PlanBasicoQuoteForm({
     company_name: '',
     contact_email: '',
     phone: '',
-    employees_count: 2,
+    employees: '',
+    billing_modality: 'monthly' as 'monthly' | 'annual',
   })
-
-  useEffect(() => {
-    if (publicTiers.length === 0) return
-    setForm((prev) => {
-      if (findPublicTierForEmployees(prev.employees_count, publicTiers)) return prev
-      return { ...prev, employees_count: publicTiers[0].min_employees }
-    })
-  }, [publicTiers])
 
   const fieldClass =
     'input-glass w-full text-white placeholder:text-white/50 disabled:cursor-not-allowed disabled:opacity-50'
@@ -429,11 +438,17 @@ function PlanBasicoQuoteForm({
     event.preventDefault()
     const next: FormErrors = {}
     if (form.contact_name.trim().length < 2) next.contact_name = copy.form.errorName
-    if (form.company_name.trim().length < 2) next.company_name = 'Nombre comercial obligatorio.'
+    if (form.company_name.trim().length < 2) next.company_name = copy.form.errorCompany
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.contact_email.trim())) {
-      next.contact_email = 'Correo no válido.'
+      next.contact_email = copy.form.errorEmail
     }
     if (form.phone.trim().length < 8) next.phone = copy.form.errorPhone
+    const employeesCount = Number(form.employees)
+    if (!Number.isInteger(employeesCount) || employeesCount < 1) {
+      next.employees_count = copy.form.errorEmployees
+    } else if (employeesCount > maxEmployees) {
+      next.employees_count = ventasLadderCustomQuoteMessage({ max_auto_quote_employees: maxEmployees })
+    }
     if (!consent) next.consent = copy.form.errorConsent
     if (Object.keys(next).length > 0) {
       setErrors(next)
@@ -449,8 +464,11 @@ function PlanBasicoQuoteForm({
       company_name: form.company_name.trim(),
       phone: form.phone.trim(),
       country_code: countryCode,
-      employees_count: form.employees_count,
-      ...VENTAS_BASIC_QUOTE_FLAGS,
+      plan_key: 'basic',
+      employees_count: employeesCount,
+      billing_modality: form.billing_modality,
+      // The annual plan includes one clock; monthly buys clocks separately.
+      terminals_count: form.billing_modality === 'annual' ? 1 : 0,
       consent_newsletter: true,
     }
 
@@ -466,7 +484,7 @@ function PlanBasicoQuoteForm({
       })
       const data = (await resp.json()) as QuotationResponse | { error?: string }
       if (!resp.ok) {
-        setErrors({ submit: (data as { error?: string }).error || 'No se pudo completar la solicitud.' })
+        setErrors({ submit: (data as { error?: string }).error || copy.form.errorSubmit })
         return
       }
 
@@ -478,8 +496,9 @@ function PlanBasicoQuoteForm({
         firstName: payload.contact_name,
         employeesCount: payload.employees_count,
         countryCode: payload.country_code,
-        billingModality: 'annual',
-        quoteValue: responseQuote?.annual_total,
+        billingModality: payload.billing_modality,
+        quoteValue:
+          payload.billing_modality === 'monthly' ? responseQuote?.monthly_total : responseQuote?.annual_total,
         currency: responseQuote?.currency,
       })
 
@@ -498,7 +517,7 @@ function PlanBasicoQuoteForm({
       })
       await router.push('/ventas/gracias')
     } catch {
-      setErrors({ submit: 'No se pudo enviar. Revise su conexión e intente de nuevo.' })
+      setErrors({ submit: copy.form.errorSubmit })
     } finally {
       setIsLoading(false)
     }
@@ -582,6 +601,39 @@ function PlanBasicoQuoteForm({
               </option>
             ))}
           </select>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label htmlFor="pb-employees" className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-slate-400">
+              {copy.form.employees}
+            </label>
+            <input
+              id="pb-employees"
+              type="number"
+              inputMode="numeric"
+              min={1}
+              className={fieldClass}
+              value={form.employees}
+              onChange={(e) => setForm((f) => ({ ...f, employees: e.target.value }))}
+            />
+            {errors.employees_count ? <p className="mt-1 text-xs text-red-300">{errors.employees_count}</p> : null}
+          </div>
+          <div>
+            <label htmlFor="pb-modality" className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-slate-400">
+              {copy.form.modality}
+            </label>
+            <select
+              id="pb-modality"
+              className={fieldClass}
+              value={form.billing_modality}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, billing_modality: e.target.value === 'annual' ? 'annual' : 'monthly' }))
+              }
+            >
+              <option value="monthly">{copy.form.monthlyOption(monthlyLabel, feeLabel)}</option>
+              <option value="annual">{copy.form.annualOption(annualLabel)}</option>
+            </select>
+          </div>
         </div>
         <label className="flex items-start gap-3 text-sm text-slate-300">
           <input

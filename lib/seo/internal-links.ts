@@ -38,8 +38,8 @@ export const GUIDE_LINKS: Record<string, GuideLink> = {
   },
   planBasico: {
     href: '/membresia-anual',
-    label: 'Membresía anual (sin reloj)',
-    description: 'L. 6,500/año: recibos, asistencia sin reloj y empleados ilimitados'
+    label: 'Plan Esencial',
+    description: 'Desde L. 1,300/mes: planilla, 13.º y 14.º, asistencia y colaboradores ilimitados'
   },
   domingosSinPlanilla: {
     href: '/domingos-sin-planilla',

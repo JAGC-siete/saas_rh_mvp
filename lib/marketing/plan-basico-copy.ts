@@ -1,27 +1,29 @@
-/** Copy for /membresia-anual — tres módulos, sin relojes, cualquier tamaño de equipo. */
+/** Copy for /membresia-anual — the Esencial plan page (the URL is kept for SEO). */
 
 export const PLAN_BASICO_PUBLIC_PATH = '/membresia-anual'
 export const PLAN_BASICO_LEGACY_PATH = '/plan-basico'
 
 export const PLAN_BASICO_COPY = {
   seo: {
-    title: 'Membresía anual | L. 6,500/año | Humano SISU',
+    title: 'Plan Esencial | Planilla desde L. 1,300/mes | Humano SISU',
     description:
-      'Recibos de nómina, asistencia sin relojes costosos y respaldo ante reclamos laborales. Empleados ilimitados. L. 6,500 al año. Software privado de Humano SISU.',
+      'Planilla con IHSS, RAP e ISR, 13.º y 14.º salario, asistencia y reportes. Colaboradores ilimitados desde L. 1,300 al mes, o el año con reloj biométrico incluido.',
     keywords:
-      'membresía anual RRHH Honduras, software empleados, asistencia sin reloj, recibos de nómina, Humano SISU',
+      'plan Esencial Humano SISU, software de planilla Honduras, planilla IHSS RAP ISR, asistencia, colaboradores ilimitados',
   },
 
   hero: {
-    kicker: 'Empleados ilimitados · un pago al año',
-    headline: 'Formalizá tu gestión y protegé tu negocio. Un solo pago al año.',
-    subheadline: (price: string) =>
-      `Recibos de nómina, asistencia sin relojes costosos y respaldo ante reclamos laborales. Empleados ilimitados por ${price} al año.`,
-    ctaPrimary: 'Activar acceso',
+    kicker: 'Colaboradores ilimitados · mes a mes o anual',
+    headline: 'Formaliza tu planilla y protege tu negocio desde hoy.',
+    subheadline: (monthly: string) =>
+      `Planilla con deducciones de ley, 13.º y 14.º salario, asistencia y reportes. Colaboradores ilimitados por ${monthly} al mes.`,
+    ctaPrimary: 'Quiero el plan Esencial',
     ctaSecondary: 'Probar gratis',
-    priceLabel: 'Membresía anual',
-    priceFoot: 'Empleados ilimitados · sin comprar reloj',
-    modules: ['Expedientes digitales', 'Asistencia sin hardware', 'Recibos de nómina'],
+    priceLabel: 'Plan Esencial',
+    perMonth: 'al mes',
+    annualNote: (annual: string) => `o ${annual} al año, con 1 reloj biométrico incluido`,
+    priceFoot: 'ISV incluido · sin cobro por empleado',
+    modules: ['Planilla y deducciones de ley', '13.º y 14.º salario', 'Asistencia y reportes'],
   },
 
   testimonial: {
@@ -37,38 +39,38 @@ export const PLAN_BASICO_COPY = {
     title: 'El costo de no tener controles',
     items: [
       {
-        title: 'Ante un reclamo, tenés respaldo',
+        title: 'Ante un reclamo, tienes respaldo',
         body: 'Recibos, asistencia y expedientes listos. El cuaderno y el cálculo al ojo no sirven cuando hay un malentendido laboral.',
       },
       {
-        title: 'Asistencia sin comprar reloj',
-        body: 'Entradas y salidas en el sistema, sin hardware. El reloj se cotiza aparte si lo necesitás después.',
+        title: 'La planilla cuadra con la ley',
+        body: 'IHSS, RAP, ISR, 13.º y 14.º salario calculados con las reglas vigentes. Las actualizaciones de ley van incluidas.',
       },
       {
         title: 'Un precio, equipo ilimitado',
-        body: 'El tamaño del equipo no cambia el precio. Sin cobro por usuario.',
+        body: 'El tamaño del equipo no cambia el precio. Sin cobro por usuario ni por empleado.',
       },
     ],
   },
 
   modules: {
     title: 'Qué incluye',
-    subtitle: 'Sin hardware biométrico. El precio no cambia con el tamaño del equipo.',
+    subtitle: 'Todo lo que necesitas para pagar bien y a tiempo. El precio no cambia con el tamaño del equipo.',
     items: [
       {
-        title: 'Empleados',
-        body: 'Expedientes digitales, constancias de trabajo y control de permisos y ausencias en un solo lugar.',
-        limit: 'Sin límite de empleados en este plan.',
+        title: 'Planilla',
+        body: 'Deducciones de ley (IHSS, RAP, ISR), boletas de pago para cada colaborador y reportes para gerencia.',
+        limit: 'La afiliación al IHSS o RAP se hace en las instituciones.',
       },
       {
-        title: 'Asistencia',
-        body: 'Registro simplificado de entradas y salidas. Control de asistencia sin comprar reloj.',
-        limit: 'Sin huella ni reconocimiento facial en este plan. El reloj se cotiza aparte.',
+        title: '13.º y 14.º salario',
+        body: 'Cálculo de décimo tercer y décimo cuarto mes con el historial de cada colaborador.',
+        limit: 'Cesantías y liquidaciones van en el plan Profesional.',
       },
       {
-        title: 'Nómina',
-        body: 'Deducciones de ley y boletas de pago para el colaborador.',
-        limit: 'Recibos en el sistema. La afiliación IHSS o RAP se hace en las instituciones.',
+        title: 'Asistencia y reportes',
+        body: 'Entradas, salidas y llegadas tarde por departamento. Con reloj biométrico, la marcación pasa sola a la planilla.',
+        limit: 'En el plan anual, 1 reloj biométrico va incluido.',
       },
     ],
   },
@@ -76,45 +78,52 @@ export const PLAN_BASICO_COPY = {
   included: {
     title: 'Incluye',
     items: [
-      'Acceso anual a los tres módulos, empleados ilimitados',
-      'Permisos y ausencias en el sistema',
-      'Sin contratar personal extra',
-      'Credenciales al correo el mismo día',
-      'Modalidad anual únicamente (este plan no se vende mes a mes)',
+      'Colaboradores ilimitados',
+      'Planilla con IHSS, RAP e ISR, 13.º y 14.º salario',
+      'Asistencia, departamentos y reportes',
+      'Plan anual: 1 reloj biométrico incluido, instalado y sincronizado',
+      'Plan mensual: sin permanencia mínima',
+      'Actualizaciones de ley sin costo',
     ],
   },
 
   excluded: {
     title: 'No incluye',
     items: [
-      'Reloj biométrico ni servicio de hardware',
-      'Marcación automática por huella o reconocimiento facial',
+      'Cesantías, liquidaciones y contabilidad de planilla (plan Profesional)',
+      'Portal de empleados y evaluaciones de desempeño (plan Empresarial)',
+      'Reloj biométrico en el plan mensual (se compra aparte)',
     ],
   },
 
   form: {
-    title: 'Activar acceso',
-    subtitle: 'Dejá tus datos. Recibís las credenciales en el correo.',
+    title: 'Pide tu propuesta del plan Esencial',
+    subtitle: 'Déjanos tus datos y te llega al correo la propuesta en PDF y tu acceso de prueba.',
     owner: 'Nombre del propietario o gerente',
     company: 'Nombre comercial',
     email: 'Correo',
     phone: 'Teléfono o WhatsApp',
     country: 'País de operación',
-    consent:
-      'Acepto los términos de servicio y la política de privacidad.',
-    submit: 'Activar acceso',
+    employees: 'Colaboradores',
+    modality: 'Forma de pago',
+    monthlyOption: (monthly: string, fee: string) => `Mensual · ${monthly} al mes + arranque asistido de ${fee}`,
+    annualOption: (annual: string) => `Anual · ${annual} al año con 1 reloj incluido`,
+    submit: 'Recibir mi propuesta',
     submitting: 'Enviando…',
-    moreThanTen: '¿También querés relojes de asistencia? Cotizá con terminales.',
+    morePlans: '¿Necesitas liquidaciones, contabilidad o portal de empleados? Cotiza otro plan.',
     termsPrefix: 'Acepto los',
     terms: 'términos de servicio',
     privacyJoin: 'y la',
     privacy: 'política de privacidad',
     consentSuffix: '',
-    legalMicro:
-      'Oferta comercial de software privado. No es un trámite estatal.',
-    errorConsent: 'Marcá el consentimiento para continuar.',
-    errorName: 'Indicá el nombre del responsable.',
-    errorPhone: 'Indicá un teléfono de contacto.',
+    legalMicro: 'Oferta comercial de software privado. No es un trámite estatal.',
+    errorConsent: 'Marca el consentimiento para continuar.',
+    errorName: 'Escribe el nombre del responsable.',
+    errorCompany: 'Escribe el nombre comercial.',
+    errorEmail: 'Revisa el correo, parece que no está completo.',
+    errorPhone: 'Escribe un teléfono de contacto.',
+    errorEmployees: 'Escribe cuántos colaboradores tiene tu empresa.',
+    errorSubmit: 'No se pudo enviar. Revisa tu conexión e intenta de nuevo.',
     whatsapp: 'Escribir por WhatsApp',
     whatsappHint: 'Canal de ventas.',
   },
@@ -122,35 +131,34 @@ export const PLAN_BASICO_COPY = {
   faq: [
     {
       question: '¿Cuánto cuesta y qué cubre?',
-      answer: (price: string) =>
-        `${price} al año. Expedientes, asistencia sin reloj y recibos. Empleados ilimitados. No hay un producto “gratis” y un cobro aparte.`,
+      answer: (monthly: string, annual: string) =>
+        `${monthly} al mes sin permanencia, o ${annual} al año con 1 reloj biométrico incluido. Cubre planilla con deducciones de ley, 13.º y 14.º salario, asistencia y reportes, con colaboradores ilimitados. ISV incluido.`,
     },
     {
-      question: '¿La asistencia es biométrica?',
-      answer:
-        'En este plan, no. El equipo registra entrada y salida en el sistema, sin comprar reloj. El reloj se cotiza aparte.',
+      question: '¿Hay algún pago aparte?',
+      answer: (fee: string) =>
+        `En el plan mensual se paga una sola vez el arranque asistido (${fee}): migración de tus datos y capacitación. En el plan anual va incluido.`,
     },
     {
       question: '¿Qué pasa después de enviar el formulario?',
       answer:
-        'Recibís las credenciales en el correo. La propuesta en PDF queda como respaldo comercial. WhatsApp es un canal de seguimiento, no un contrato.',
+        'Te llega al correo la propuesta en PDF y tu acceso de prueba. WhatsApp es un canal de seguimiento, no un contrato.',
     },
     {
       question: '¿Esto formaliza mi empresa?',
       answer:
-        'Formaliza procesos internos de personal. No constituye la sociedad, no afilia al IHSS o RAP y no inscribe ante el SAR.',
+        'Formaliza los procesos internos de personal. No constituye la sociedad, no afilia al IHSS o RAP y no inscribe ante el SAR.',
     },
     {
       question: '¿Esto es una notificación o un llamado del gobierno?',
-      answer:
-        'No. Es una oferta comercial de Humano SISU, software privado de recursos humanos.',
+      answer: 'No. Es una oferta comercial de Humano SISU, software privado de recursos humanos.',
     },
   ],
 
   close: {
-    headline: 'Blindá tu empresa ante reclamos. Un pago al año.',
-    sub: 'Empleados ilimitados. Precio visible. Credenciales al correo.',
-    primary: 'Activar acceso',
-    secondary: 'Cotizá con relojes',
+    headline: 'Protege tu empresa ante reclamos con una planilla en regla.',
+    sub: 'Colaboradores ilimitados. Precio visible. Propuesta al correo.',
+    primary: 'Quiero el plan Esencial',
+    secondary: 'Comparar planes',
   },
 } as const
