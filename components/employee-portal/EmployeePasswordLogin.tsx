@@ -4,6 +4,7 @@ import { Button } from '../ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card'
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline'
 import { clientLogger } from '../../lib/logger-client'
+import { createClient } from '../../lib/supabase/client'
 
 interface EmployeePasswordLoginProps {
   onLoginSuccess: (sessionData: any) => void
@@ -71,6 +72,20 @@ export default function EmployeePasswordLogin({ onLoginSuccess }: EmployeePasswo
         clientLogger.info('Employee login successful via password', {
           email
         })
+
+        // useAuth reads the session from the browser client (localStorage), not the
+        // httpOnly cookies the API sets; without this the portal reloads logged out.
+        try {
+          const supabase = await createClient()
+          if (data?.session?.access_token && data?.session?.refresh_token) {
+            await supabase.auth.setSession({
+              access_token: data.session.access_token,
+              refresh_token: data.session.refresh_token
+            })
+          }
+        } catch (e) {
+          console.warn('No se pudo sincronizar la sesión del navegador', e)
+        }
 
         // Pasar session si está disponible, sino pasar la data completa
         onLoginSuccess(data.session || data)
