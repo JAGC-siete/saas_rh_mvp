@@ -17,9 +17,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'Company ID and amount are required' })
     }
 
-    // Verify user has access to this company
-    if (userProfile?.company_id !== company_id && userProfile?.role !== 'super_admin') {
-      return res.status(403).json({ error: 'Access denied to this company' })
+    // Recording a payment activates a paid plan, so only SISU staff may do it.
+    if (userProfile?.role !== 'super_admin') {
+      return res.status(403).json({ error: 'Only SISU administrators can record payments' })
     }
 
     // Validate amount
