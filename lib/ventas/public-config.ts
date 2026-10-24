@@ -13,8 +13,12 @@ function publicPayload(
   enterprise_annual_price: number,
   tiers: VentasPricingTier[],
   plans: LadderPlanPrice[],
-  /** False on the fallback path: fallback tier prices may be stale, so they are not published. */
-  includePrices: boolean
+  /**
+   * False on the fallback path: fallback tier prices may be stale, so they are not published.
+   * Plan prices are always published: FALLBACK_LADDER_PLANS mirrors plan_catalog, and the
+   * Docker build has no Supabase access, so prerendered pages would otherwise say "Cotiza".
+   */
+  includeTierPrices: boolean
 ) {
   return {
     currency,
@@ -33,17 +37,17 @@ function publicPayload(
       max_employees: t.max_employees,
       annual_terminal_mode: t.annual_terminal_mode || 'auto',
       included_terminals_max: t.included_terminals_max ?? null,
-      price: includePrices ? t.price : null,
+      price: includeTierPrices ? t.price : null,
     })),
     plans: plans.map((p) => ({
       plan_key: p.plan_key,
       name: p.name,
       description: p.description,
       included_terminals_annual: p.included_terminals_annual,
-      monthly_price_hnl: includePrices ? p.monthly_price_hnl : null,
-      annual_price_hnl: includePrices ? p.annual_price_hnl : null,
-      monthly_price_usd: includePrices ? p.monthly_price_usd : null,
-      annual_price_usd: includePrices ? p.annual_price_usd : null,
+      monthly_price_hnl: p.monthly_price_hnl,
+      annual_price_hnl: p.annual_price_hnl,
+      monthly_price_usd: p.monthly_price_usd,
+      annual_price_usd: p.annual_price_usd,
     })),
   }
 }
