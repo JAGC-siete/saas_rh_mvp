@@ -12,6 +12,8 @@ export function statutoryDeductionLabels(country: CountryCode): StatutoryDeducti
       return { primarySocial: 'ISSS', secondarySocial: 'AFP', incomeTax: 'ISR' }
     case 'GTM':
       return { primarySocial: 'IGSS', secondarySocial: '—', incomeTax: 'ISR' }
+    case 'COL':
+      return { primarySocial: 'Salud (EPS)', secondarySocial: 'Pensión', incomeTax: 'Retención en la fuente' }
     default:
       return { primarySocial: 'IHSS', secondarySocial: 'RAP', incomeTax: 'ISR' }
   }
@@ -23,6 +25,8 @@ export function localeForCountry(country: CountryCode): string {
       return 'es-SV'
     case 'GTM':
       return 'es-GT'
+    case 'COL':
+      return 'es-CO'
     default:
       return 'es-HN'
   }
@@ -35,6 +39,8 @@ export function timezoneForCountry(country: CountryCode): string {
       return 'America/El_Salvador'
     case 'GTM':
       return 'America/Guatemala'
+    case 'COL':
+      return 'America/Bogota'
     default:
       return 'America/Tegucigalpa'
   }
@@ -52,6 +58,8 @@ export function defaultCurrencyForCountry(country: CountryCode): string {
       return 'USD'
     case 'GTM':
       return 'GTQ'
+    case 'COL':
+      return 'COP'
     default:
       return 'HNL'
   }

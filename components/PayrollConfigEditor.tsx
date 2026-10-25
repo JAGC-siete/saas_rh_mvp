@@ -538,6 +538,7 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
         HNL: 'Lempiras',
         USD: 'Dólares',
         GTQ: 'Quetzales',
+        COP: 'Pesos colombianos',
       }
       const oldCurr = currencyNoun[initialConfig.currency] || initialConfig.currency
       const newCurr = currencyNoun[cfg.currency] || cfg.currency

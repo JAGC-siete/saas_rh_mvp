@@ -115,6 +115,77 @@ const gtmV2Schema = z
 
 const gtmUnion = z.union([gtmV1Schema, gtmV2Schema])
 
+/**
+ * Colombia: varios parámetros cambian a mitad de año (recargo dominical el 1-jul, jornada el 15-jul),
+ * así que cada uno es una lista de vigencias por fecha y no un valor anual.
+ */
+const ymd = z.string().regex(/^\d{4}-\d{2}-\d{2}$/)
+
+const periodBase = z.object({ from: ymd, to: ymd.nullable(), source: z.string().optional() })
+
+function checkPeriods(periods: { from: string; to: string | null }[], ctx: z.RefinementCtx) {
+  for (let i = 0; i < periods.length; i++) {
+    const p = periods[i]
+    if (p.to != null && p.to < p.from) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: [i, 'to'], message: 'to es anterior a from' })
+    }
+    const next = periods[i + 1]
+    if (!next) continue
+    if (p.to == null || next.from <= p.to) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: [i + 1, 'from'], message: 'vigencias desordenadas o traslapadas' })
+    }
+  }
+}
+
+function datedPeriods<T extends z.ZodRawShape>(shape: T) {
+  return z
+    .array(periodBase.extend(shape))
+    .min(1)
+    .superRefine((periods, ctx) => checkPeriods(periods as unknown as { from: string; to: string | null }[], ctx))
+}
+
+const colV1Schema = z
+  .object({
+    schemaVersion: z.literal(1),
+    engine: z.literal('COL'),
+    currency: z.literal('COP'),
+    smmlv: datedPeriods({ value: z.number().positive() }),
+    transport_allowance: datedPeriods({ value: z.number().nonnegative() }),
+    uvt: datedPeriods({ value: z.number().positive() }),
+    ordinary_hours: datedPeriods({
+      weekly_hours: z.number().positive(),
+      monthly_divisor: z.number().positive()
+    }),
+    night_window: datedPeriods({ start: z.string().regex(/^\d{2}:\d{2}$/), end: z.string().regex(/^\d{2}:\d{2}$/) }),
+    surcharges: datedPeriods({
+      night: z.number().nonnegative(),
+      sunday_holiday: z.number().nonnegative(),
+      overtime_day: z.number().nonnegative(),
+      overtime_night: z.number().nonnegative()
+    }),
+    disclaimer: z.string().optional()
+  })
+  .passthrough()
+
+export type ColStatutoryConfig = z.infer<typeof colV1Schema>
+
+/** Valida el JSON de Colombia. Siempre estricto: no hay modo warn mientras el motor no exista. */
+export function parseColStatutoryConfig(raw: unknown): ColStatutoryConfig {
+  const parsed = colV1Schema.safeParse(raw)
+  if (!parsed.success) {
+    throw new StatutoryConfigInvalidError('COL', formatZodError(parsed.error))
+  }
+  return parsed.data
+}
+
+/** Vigencia que cubre la fecha (YYYY-MM-DD), o null si ninguna aplica. */
+export function resolveDatedPeriod<P extends { from: string; to: string | null }>(
+  periods: readonly P[],
+  dateYmd: string
+): P | null {
+  return periods.find((p) => p.from <= dateYmd && (p.to == null || dateYmd <= p.to)) ?? null
+}
+
 /** Staging: STATUTORY_VALIDATE_MODE=warn registra y devuelve JSON sin validar. */
 export function isStatutoryValidationWarnMode(): boolean {
   return process.env.STATUTORY_VALIDATE_MODE === 'warn'
