@@ -36,6 +36,12 @@ export function normalizeCountryCode(v: string | null | undefined): CountryCode 
   return 'HND'
 }
 
+/** Como normalizeCountryCode, pero para entradas de visitantes: lo no público cae en HND. */
+export function normalizePublicCountryCode(v: string | null | undefined): PublicCountryCode {
+  const cc = normalizeCountryCode(v)
+  return isPublicCountryCode(cc) ? cc : 'HND'
+}
+
 /**
  * Entrada estricta para calculadoras/APIs públicas.
  * Devuelve null si el código no es reconocido o no es público (sin fallback silencioso).

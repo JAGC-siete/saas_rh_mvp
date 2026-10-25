@@ -9,7 +9,7 @@ import { trackQuoteThankYouPageView } from '../../lib/analytics/googleAds'
 import { readThankYouContext, type ThankYouContext } from '../../lib/analytics/thank-you-context'
 import { COTIZACION_GUIADA_COPY } from '../../lib/ventas-game/cotizacion-guiada-copy'
 import { VENTAS_COUNTRY_LABEL } from '../../lib/ventas-game/ventas-form'
-import { isCountryCode } from '../../lib/country/supported'
+import { isPublicCountryCode } from '../../lib/country/supported'
 import { getPageTitle } from '../../lib/seo/title'
 import { getPageDescription } from '../../lib/seo/description'
 
@@ -27,7 +27,7 @@ export default function VentasGraciasPage() {
   }, [])
 
   const countryLabel =
-    ctx?.countryCode && isCountryCode(ctx.countryCode)
+    ctx?.countryCode && isPublicCountryCode(ctx.countryCode)
       ? VENTAS_COUNTRY_LABEL[ctx.countryCode]
       : null
 

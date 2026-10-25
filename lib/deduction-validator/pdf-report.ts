@@ -1,5 +1,5 @@
 import { Buffer } from 'buffer'
-import type { CountryCode } from '../country/supported'
+import type { PublicCountryCode } from '../country/supported'
 import { PUBLIC_CALCULATOR_CONFIGS } from '../public-calculator/config'
 import {
   PDF,
@@ -25,16 +25,16 @@ export interface DeductionReportData {
     minimumWage: number
     ihssCeiling: number
   }
-  countryCode?: CountryCode
+  countryCode?: PublicCountryCode
 }
 
-const LEGAL_NAMES: Record<CountryCode, string> = {
+const LEGAL_NAMES: Record<PublicCountryCode, string> = {
   HND: 'Honduras',
   SLV: 'El Salvador',
   GTM: 'Guatemala',
 }
 
-const DEDUCTIONS_PITCH: Record<CountryCode, string> = {
+const DEDUCTIONS_PITCH: Record<PublicCountryCode, string> = {
   HND: 'Seguro Social, RAP e ISR',
   SLV: 'ISSS, AFP e ISR',
   GTM: 'IGSS e ISR',
@@ -44,7 +44,7 @@ function stripParens(label: string): string {
   return label.replace(/^\(|\)$/g, '').trim()
 }
 
-function formatMoney(country: CountryCode, value: number): string {
+function formatMoney(country: PublicCountryCode, value: number): string {
   const cfg = PUBLIC_CALCULATOR_CONFIGS[country]
   return new Intl.NumberFormat(cfg.locale, {
     style: 'currency',
@@ -78,7 +78,7 @@ export async function generateDeductionReportPDF(
   return new Promise<Buffer>((resolve, reject) => {
     try {
       const PDFDocument = require('pdfkit')
-      const country: CountryCode = data.countryCode ?? 'HND'
+      const country: PublicCountryCode = data.countryCode ?? 'HND'
       const cfg = PUBLIC_CALCULATOR_CONFIGS[country]
       const legalName = LEGAL_NAMES[country]
       const money = (n: number) => formatMoney(country, n)

@@ -1,4 +1,4 @@
-import type { CountryCode } from '../country/supported'
+import type { PublicCountryCode } from '../country/supported'
 
 /**
  * Canonical public URLs for deduction calculators (match pages/calculadora-deducciones*).
@@ -8,27 +8,27 @@ export const DEDUCTION_CALCULATOR_PUBLIC_PATHS = {
   HND: '/calculadora-deducciones',
   SLV: '/calculadora-deducciones-el-salvador',
   GTM: '/calculadora-deducciones-guatemala',
-} as const satisfies Record<CountryCode, string>
+} as const satisfies Record<PublicCountryCode, string>
 
 /** Page-file routes (same as public after restore). */
 export const DEDUCTION_CALCULATOR_INTERNAL_PATHS = {
   HND: '/calculadora-deducciones',
   SLV: '/calculadora-deducciones-el-salvador',
   GTM: '/calculadora-deducciones-guatemala',
-} as const satisfies Record<CountryCode, string>
+} as const satisfies Record<PublicCountryCode, string>
 
 /** Former public slugs — 301 → DEDUCTION_CALCULATOR_PUBLIC_PATHS in next.config. */
 export const DEDUCTION_CALCULATOR_LEGACY_PATHS = {
   HND: '/calcusisuhn',
   SLV: '/calcusisusv',
   GTM: '/calcusisuguate',
-} as const satisfies Record<CountryCode, string>
+} as const satisfies Record<PublicCountryCode, string>
 
-export function deductionCalculatorPublicPath(country: CountryCode): string {
+export function deductionCalculatorPublicPath(country: PublicCountryCode): string {
   return DEDUCTION_CALCULATOR_PUBLIC_PATHS[country]
 }
 
-export function deductionCalculatorInternalPath(country: CountryCode): string {
+export function deductionCalculatorInternalPath(country: PublicCountryCode): string {
   return DEDUCTION_CALCULATOR_INTERNAL_PATHS[country]
 }
 

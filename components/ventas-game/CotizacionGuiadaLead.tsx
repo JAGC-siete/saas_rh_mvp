@@ -34,7 +34,7 @@ import {
 } from '../../lib/ventas/ladder'
 import { buildLadderPlanSummary } from '../../lib/ventas/ladder-display'
 import { formatMoney } from '../../lib/ventas/pricing'
-import { isCountryCode, currencyForCountryCode, type CountryCode } from '../../lib/country/supported'
+import { isPublicCountryCode, currencyForCountryCode, type PublicCountryCode } from '../../lib/country/supported'
 import {
   buildMetaApiTrackingFields,
   createMetaEventId,
@@ -63,10 +63,10 @@ type WizardStep = 'intro' | 'scope' | 'company' | 'delivery'
 
 type Props = {
   utmContext?: VentasUtmContext
-  initialCountryCode?: CountryCode
+  initialCountryCode?: PublicCountryCode
 }
 
-const defaultForm = (country: CountryCode): QuotationRequest => ({
+const defaultForm = (country: PublicCountryCode): QuotationRequest => ({
   contact_email: '',
   contact_name: '',
   company_name: '',
@@ -236,7 +236,7 @@ export default function CotizacionGuiadaLead({
   const headline = utmContext.headline ?? copy.intro.headline
   const subheadline = utmContext.subheadline ?? copy.intro.subheadline
   const wizardStep = wizardStepIndex(step)
-  const countryCode: CountryCode = isCountryCode(formData.country_code) ? formData.country_code : 'HND'
+  const countryCode: PublicCountryCode = isPublicCountryCode(formData.country_code) ? formData.country_code : 'HND'
   const currency = currencyForCountryCode(countryCode)
   const fmt = (n: number) => formatMoney(currency, n)
   const planKey: LadderPlanKey = isLadderPlanKey(formData.plan_key) ? formData.plan_key : 'basic'
@@ -451,7 +451,7 @@ export default function CotizacionGuiadaLead({
                         value={countryCode}
                         onChange={(e) => {
                           const v = e.target.value
-                          if (isCountryCode(v)) patchForm({ country_code: v })
+                          if (isPublicCountryCode(v)) patchForm({ country_code: v })
                         }}
                         className={`${inputClass} ${errors.country_code ? 'border-red-500/50' : ''}`}
                       >
@@ -737,7 +737,7 @@ export default function CotizacionGuiadaLead({
                           className={inputClass}
                           placeholder={
                             VENTAS_PHONE_PLACEHOLDER[
-                              isCountryCode(formData.country_code) ? formData.country_code : 'HND'
+                              isPublicCountryCode(formData.country_code) ? formData.country_code : 'HND'
                             ]
                           }
                           inputMode="tel"

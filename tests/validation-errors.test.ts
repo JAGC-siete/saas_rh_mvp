@@ -7,7 +7,7 @@ import {
   ventasScopeErrors,
   VENTAS_PHONE_PLACEHOLDER,
 } from '../lib/ventas-game/ventas-form'
-import { SUPPORTED_COUNTRY_CODES } from '../lib/country/supported'
+import { PUBLIC_COUNTRY_CODES } from '../lib/country/supported'
 import {
   ACTIVAR_DEMO_DEPARTMENTS,
   ACTIVAR_FALLBACK_EMPLOYEE_RANGES,
@@ -52,7 +52,7 @@ describe('ventas form step validators', () => {
 
   it('VENTAS_PHONE_PLACEHOLDER uses each country dial code', () => {
     const dial = { HND: '+504', SLV: '+503', GTM: '+502' } as const
-    for (const cc of SUPPORTED_COUNTRY_CODES) {
+    for (const cc of PUBLIC_COUNTRY_CODES) {
       assert.ok(VENTAS_PHONE_PLACEHOLDER[cc].startsWith(dial[cc]), cc)
     }
   })

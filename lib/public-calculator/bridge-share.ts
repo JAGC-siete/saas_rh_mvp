@@ -1,4 +1,4 @@
-import type { CountryCode } from '../country/supported'
+import type { PublicCountryCode } from '../country/supported'
 import { buildTrojanShareMessage, buildTrojanShareUrl } from './trojan-whatsapp'
 import { calculatorUtmSource } from './utm'
 
@@ -17,7 +17,7 @@ export type CalculatorShareCampaign =
 
 export function buildCalculatorShareLink(
   path: string,
-  countryCode: CountryCode,
+  countryCode: PublicCountryCode,
   campaign: CalculatorShareCampaign
 ): string {
   const params = new URLSearchParams({
@@ -31,7 +31,7 @@ export function buildCalculatorShareLink(
 export function buildPeerShareMessage(
   script: string,
   path: string,
-  countryCode: CountryCode,
+  countryCode: PublicCountryCode,
   campaign: CalculatorShareCampaign = 'bridge-share-peer'
 ): string {
   const link = buildCalculatorShareLink(path, countryCode, campaign)
@@ -41,17 +41,17 @@ export function buildPeerShareMessage(
 export function buildPeerShareUrl(
   script: string,
   path: string,
-  countryCode: CountryCode,
+  countryCode: PublicCountryCode,
   campaign: CalculatorShareCampaign = 'bridge-share-peer'
 ): string {
   const message = buildPeerShareMessage(script, path, countryCode, campaign)
   return `https://wa.me/?text=${encodeURIComponent(message)}`
 }
 
-export function buildBossShareUrl(script: string, countryCode: CountryCode): string {
+export function buildBossShareUrl(script: string, countryCode: PublicCountryCode): string {
   return buildTrojanShareUrl(script, countryCode, 'rrhh')
 }
 
-export function buildBossShareMessage(script: string, countryCode: CountryCode): string {
+export function buildBossShareMessage(script: string, countryCode: PublicCountryCode): string {
   return buildTrojanShareMessage(script, countryCode, 'rrhh')
 }

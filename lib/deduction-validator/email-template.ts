@@ -2,7 +2,7 @@
  * Plantillas de email para reportes de deducciones — Infraestructura Líquida.
  */
 
-import type { CountryCode } from '../country/supported'
+import type { PublicCountryCode } from '../country/supported'
 import { PUBLIC_CALCULATOR_CONFIGS } from '../public-calculator/config'
 import {
   liquidCta,
@@ -26,13 +26,13 @@ export interface DeductionEmailData {
   isrPercentage: number
   totalDeductions: number
   netSalary: number
-  countryCode?: CountryCode
+  countryCode?: PublicCountryCode
   useGodfatherFunnel?: boolean
   godfatherKeyword?: string
   audience?: 'empleado' | 'empresa'
 }
 
-const COUNTRY_META: Record<CountryCode, { legalName: string; deductionsPitch: string }> = {
+const COUNTRY_META: Record<PublicCountryCode, { legalName: string; deductionsPitch: string }> = {
   HND: {
     legalName: 'Honduras',
     deductionsPitch: 'Seguro Social, RAP e ISR',
@@ -47,7 +47,7 @@ const COUNTRY_META: Record<CountryCode, { legalName: string; deductionsPitch: st
   },
 }
 
-function formatMoney(country: CountryCode, value: number): string {
+function formatMoney(country: PublicCountryCode, value: number): string {
   const cfg = PUBLIC_CALCULATOR_CONFIGS[country]
   return new Intl.NumberFormat(cfg.locale, {
     style: 'currency',
@@ -57,13 +57,13 @@ function formatMoney(country: CountryCode, value: number): string {
   }).format(Number(value || 0))
 }
 
-function utmSource(country: CountryCode): string {
+function utmSource(country: PublicCountryCode): string {
   return `calculadora-deducciones-${country.toLowerCase()}`
 }
 
 export function generateDeductionEmailHTML(data: DeductionEmailData): string {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://humanosisu.net'
-  const country: CountryCode = data.countryCode ?? 'HND'
+  const country: PublicCountryCode = data.countryCode ?? 'HND'
   const meta = COUNTRY_META[country]
   const source = utmSource(country)
 

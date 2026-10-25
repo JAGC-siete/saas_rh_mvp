@@ -7,8 +7,8 @@ import { ACTIVAR_DEMO_DEPARTMENTS, activarDemoBaseSalary, trialPayrollConfigInse
 import {
   currencyForCountryCode,
   ianaTimezoneForCountryCode,
-  isCountryCode,
-  type CountryCode,
+  isPublicCountryCode,
+  type PublicCountryCode,
 } from '../../lib/country/supported'
 import { normalizeSoftPhone } from '../../lib/privacy'
 import { getResendFromContact } from '../../lib/resend-from'
@@ -69,12 +69,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const countryCandidate =
       typeof countryCodeRaw === 'string' ? countryCodeRaw.trim().toUpperCase() : ''
-    if (!isCountryCode(countryCandidate)) {
+    if (!isPublicCountryCode(countryCandidate)) {
       return res.status(400).json({
         error: 'Elige tu país: Honduras, El Salvador o Guatemala.',
       })
     }
-    const countryCode: CountryCode = countryCandidate
+    const countryCode: PublicCountryCode = countryCandidate
     const departamentos = ACTIVAR_DEMO_DEPARTMENTS.length
 
     console.log('📝 Datos recibidos:', {
@@ -397,7 +397,7 @@ async function crearEntornoTrial(supabase: any, data: {
   contactoEmail: string
   empleados: number
   departamentos: number
-  countryCode: CountryCode
+  countryCode: PublicCountryCode
   referralCode?: string // Add referral code to function signature
 }) {
   try {
@@ -650,7 +650,7 @@ async function crearEmpleadosBiblicos(
   cantidad: number,
   departments: any[],
   schedules: any[],
-  countryCode: CountryCode
+  countryCode: PublicCountryCode
 ): Promise<any[]> {
   const nombresBiblicos = [
     'Abraham', 'Isaac', 'Jacob', 'Moisés', 'Josué', 'David', 'Salomón', 'Elías', 'Eliseo', 'Daniel',
@@ -793,7 +793,7 @@ async function dispararWebhookActivaciones(data: {
   empleados: number
   tenant_id: string
   status: string
-  country_code: CountryCode
+  country_code: PublicCountryCode
 }) {
   try {
     const webhookUrl = process.env.ACTIVACIONES_WEBHOOK_URL

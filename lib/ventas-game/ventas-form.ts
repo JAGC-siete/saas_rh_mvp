@@ -10,8 +10,8 @@ import {
   type VentasBusinessRules,
   type VentasHardwareMode,
 } from '../ventas/business-rules'
-import type { CountryCode } from '../country/supported'
-import { isCountryCode } from '../country/supported'
+import type { PublicCountryCode } from '../country/supported'
+import { isPublicCountryCode } from '../country/supported'
 import { resolveVentasProductSelection } from '../ventas/product-catalog'
 
 export type VentasFormLimits = {
@@ -169,7 +169,7 @@ export function computeVentasErrors(
   }
 
   const cc = fd.country_code
-  if (!cc || !isCountryCode(cc)) {
+  if (!cc || !isPublicCountryCode(cc)) {
     e.country_code = 'Elige el país donde opera la empresa.'
   }
 
@@ -192,7 +192,7 @@ export function ventasScopeErrors(
 ): VentasValidationErrors {
   const e: VentasValidationErrors = {}
   const cc = fd.country_code
-  if (!cc || !isCountryCode(cc)) e.country_code = 'Elige el país.'
+  if (!cc || !isPublicCountryCode(cc)) e.country_code = 'Elige el país.'
 
   const emp = Number(fd.employees_count)
   const empErr = employeesCountError(emp, tiers)
@@ -246,13 +246,13 @@ export function ventasDeliveryErrors(fd: QuotationRequest): VentasValidationErro
   return e
 }
 
-export const VENTAS_COUNTRY_LABEL: Record<CountryCode, string> = {
+export const VENTAS_COUNTRY_LABEL: Record<PublicCountryCode, string> = {
   HND: 'Honduras',
   SLV: 'El Salvador',
   GTM: 'Guatemala',
 }
 
-export const VENTAS_PHONE_PLACEHOLDER: Record<CountryCode, string> = {
+export const VENTAS_PHONE_PLACEHOLDER: Record<PublicCountryCode, string> = {
   HND: '+504 9999-9999',
   SLV: '+503 7777-7777',
   GTM: '+502 5555-5555',

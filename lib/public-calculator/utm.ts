@@ -1,10 +1,10 @@
-import type { CountryCode } from '../country/supported'
+import type { PublicCountryCode } from '../country/supported'
 import { INFO_FUNNEL_PUBLIC_PATH } from '../marketing/info-funnel-path'
 import type { BenefitTipo } from './benefit-config'
 
 const DEMO_WHATSAPP = '50432226773'
 
-export function calculatorUtmSource(countryCode: CountryCode): string {
+export function calculatorUtmSource(countryCode: PublicCountryCode): string {
   return `calculadora-deducciones-${countryCode.toLowerCase()}`
 }
 
@@ -55,7 +55,7 @@ export function buildBenefitDemoWhatsAppUrl(tipo: BenefitTipo, trackingLabel: st
 }
 
 export function buildPeaceWizardUrl(
-  countryCode: CountryCode,
+  countryCode: PublicCountryCode,
   campaign: 'footer' | 'bridge' = 'footer'
 ): string {
   return appendUtmParams(`${INFO_FUNNEL_PUBLIC_PATH}?unlock=1`, countryCode, campaign)
@@ -63,7 +63,7 @@ export function buildPeaceWizardUrl(
 
 export function appendUtmParams(
   href: string,
-  countryCode: CountryCode,
+  countryCode: PublicCountryCode,
   campaign:
     | 'post-calc'
     | 'footer'
@@ -87,10 +87,10 @@ export function appendUtmParams(
 }
 
 export function buildDemoWhatsAppUrl(
-  countryCode: CountryCode,
+  countryCode: PublicCountryCode,
   trackingLabel: string
 ): string {
-  const countryNames: Record<CountryCode, string> = {
+  const countryNames: Record<PublicCountryCode, string> = {
     HND: 'Honduras',
     SLV: 'El Salvador',
     GTM: 'Guatemala',

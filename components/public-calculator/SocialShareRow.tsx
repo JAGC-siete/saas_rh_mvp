@@ -1,4 +1,4 @@
-import type { CountryCode } from '../../lib/country/supported'
+import type { PublicCountryCode } from '../../lib/country/supported'
 import type { SocialNetwork, SocialSharePlacement } from '../../lib/public-calculator/social-share'
 import { buildSocialShareUrl } from '../../lib/public-calculator/social-share'
 import { buildCalculatorShareLink } from '../../lib/public-calculator/bridge-share'
@@ -7,7 +7,7 @@ import type { CalculatorTool } from '../../lib/analytics/calculator-events'
 
 type Props = {
   path: string
-  countryCode: CountryCode
+  countryCode: PublicCountryCode
   text: string
   label: string
   calcTool: CalculatorTool

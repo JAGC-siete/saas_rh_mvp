@@ -1,4 +1,4 @@
-import type { CountryCode } from '../country/supported'
+import type { PublicCountryCode } from '../country/supported'
 import type { FAQItem } from '../seo/schema'
 import { deductionCalculatorPublicPath } from '../marketing/calculator-public-paths'
 import { SEO_BASE_URL, SEO_DEFAULT_OG_IMAGE_PATH, SEO_DEFAULT_OG_IMAGE_URL } from '../seo/assets'
@@ -15,7 +15,7 @@ export type PublicCalculatorDeductionOption = {
 }
 
 export type PublicCalculatorConfig = {
-  countryCode: CountryCode
+  countryCode: PublicCountryCode
   path: string
   canonicalUrl: string
   contactStorageKey: string
@@ -167,7 +167,7 @@ const LANDING_BRIDGE_SHARE = {
   },
 } as const
 
-export const PUBLIC_CALCULATOR_CONFIGS: Record<CountryCode, PublicCalculatorConfig> = {
+export const PUBLIC_CALCULATOR_CONFIGS: Record<PublicCountryCode, PublicCalculatorConfig> = {
   HND: {
     countryCode: 'HND',
     path: deductionCalculatorPublicPath('HND'),

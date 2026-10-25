@@ -14,11 +14,11 @@ import {
   getActivarUtmContext,
   readActivarUtmSource,
 } from '../lib/activar-game/activar-utm-context'
-import { isCountryCode, type CountryCode } from '../lib/country/supported'
+import { isPublicCountryCode, type PublicCountryCode } from '../lib/country/supported'
 
 export default function ActivarPage() {
   const router = useRouter()
-  const [countryCode, setCountryCode] = useState<CountryCode>('HND')
+  const [countryCode, setCountryCode] = useState<PublicCountryCode>('HND')
 
   useEffect(() => {
     initGoogleAdsTracking()
@@ -28,7 +28,7 @@ export default function ActivarPage() {
     const raw = router.query.country
     if (typeof raw !== 'string') return
     const cc = raw.trim().toUpperCase()
-    if (!isCountryCode(cc)) return
+    if (!isPublicCountryCode(cc)) return
     setCountryCode(cc)
   }, [router.query.country])
 

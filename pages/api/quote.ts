@@ -48,8 +48,8 @@ import { randomUUID } from 'crypto'
 import {
   currencyForCountryCode,
   ianaTimezoneForCountryCode,
-  isCountryCode,
-  type CountryCode,
+  isPublicCountryCode,
+  type PublicCountryCode,
 } from '../../lib/country/supported'
 import {
   parseMetaTrackingPayload,
@@ -121,7 +121,7 @@ async function sendEmailHtmlOnly(params: {
   })
 }
 
-function operationCountryLabel(cc: CountryCode): string {
+function operationCountryLabel(cc: PublicCountryCode): string {
   if (cc === 'SLV') return 'El Salvador'
   if (cc === 'GTM') return 'Guatemala'
   return 'Honduras'
@@ -133,7 +133,7 @@ async function createTrialEnvironmentFromQuote(supabase: any, params: {
   companyName: string
   employeesCount: number
   quoteMeta: Record<string, any>
-  countryCode: CountryCode
+  countryCode: PublicCountryCode
 }) {
   const countryCode = params.countryCode
   const companyId = randomUUID()
@@ -270,12 +270,12 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
 
   const countryCodeRaw =
     typeof (body as any).country_code === 'string' ? String((body as any).country_code).trim().toUpperCase() : ''
-  if (!isCountryCode(countryCodeRaw)) {
+  if (!isPublicCountryCode(countryCodeRaw)) {
     return res.status(400).json({
       error: 'Elige el país donde opera la empresa (Honduras, El Salvador o Guatemala).',
     })
   }
-  const countryCode: CountryCode = countryCodeRaw
+  const countryCode: PublicCountryCode = countryCodeRaw
   const countryLabel = operationCountryLabel(countryCode)
 
   try {

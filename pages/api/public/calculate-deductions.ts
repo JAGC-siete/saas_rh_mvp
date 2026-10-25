@@ -1,8 +1,8 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import {
   parseCountryCodeInput,
-  SUPPORTED_COUNTRY_CODES,
-  type CountryCode
+  PUBLIC_COUNTRY_CODES,
+  type PublicCountryCode
 } from '../../../lib/country/supported'
 import { nowInHonduras } from '../../../lib/timezone'
 import { RATE_LIMITS } from '../../../lib/rate-limit'
@@ -46,7 +46,7 @@ function coerceBoolean(value: unknown, defaultValue: boolean): boolean {
 }
 
 async function loadCalculatorConstants(
-  countryCode: CountryCode,
+  countryCode: PublicCountryCode,
   year: number,
   supabase: ReturnType<typeof createAdminClient>
 ): Promise<{ minimumWage: number; ihssCeiling: number }> {
@@ -116,7 +116,7 @@ async function calculateDeductionsHandler(
     const countryCode = parseCountryCodeInput(
       typeof country_code === 'string' ? country_code : undefined
     )
-    if (!countryCode || !SUPPORTED_COUNTRY_CODES.includes(countryCode)) {
+    if (!countryCode || !PUBLIC_COUNTRY_CODES.includes(countryCode)) {
       return res.status(400).json({
         error: 'La calculadora pública solo incluye deducciones para Honduras, El Salvador y Guatemala.'
       })
