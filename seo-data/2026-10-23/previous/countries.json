@@ -1,0 +1,282 @@
+[
+ {
+  "country": "hnd",
+  "clicks": 15,
+  "impressions": 1146,
+  "ctr": 0.013089005235602094,
+  "position": 7.325479930191972
+ },
+ {
+  "country": "slv",
+  "clicks": 2,
+  "impressions": 16,
+  "ctr": 0.125,
+  "position": 6.875
+ },
+ {
+  "country": "usa",
+  "clicks": 1,
+  "impressions": 268,
+  "ctr": 0.0037313432835820895,
+  "position": 6.223880597014926
+ },
+ {
+  "country": "ago",
+  "clicks": 0,
+  "impressions": 1,
+  "ctr": 0,
+  "position": 36
+ },
+ {
+  "country": "alb",
+  "clicks": 0,
+  "impressions": 1,
+  "ctr": 0,
+  "position": 5
+ },
+ {
+  "country": "are",
+  "clicks": 0,
+  "impressions": 5,
+  "ctr": 0,
+  "position": 4.2
+ },
+ {
+  "country": "arg",
+  "clicks": 0,
+  "impressions": 3,
+  "ctr": 0,
+  "position": 2.666666666666667
+ },
+ {
+  "country": "aus",
+  "clicks": 0,
+  "impressions": 1,
+  "ctr": 0,
+  "position": 7
+ },
+ {
+  "country": "bel",
+  "clicks": 0,
+  "impressions": 1,
+  "ctr": 0,
+  "position": 2
+ },
+ {
+  "country": "bgd",
+  "clicks": 0,
+  "impressions": 2,
+  "ctr": 0,
+  "position": 9
+ },
+ {
+  "country": "bgr",
+  "clicks": 0,
+  "impressions": 1,
+  "ctr": 0,
+  "position": 4
+ },
+ {
+  "country": "bih",
+  "clicks": 0,
+  "impressions": 1,
+  "ctr": 0,
+  "position": 5
+ },
+ {
+  "country": "bra",
+  "clicks": 0,
+  "impressions": 6,
+  "ctr": 0,
+  "position": 4
+ },
+ {
+  "country": "can",
+  "clicks": 0,
+  "impressions": 3,
+  "ctr": 0,
+  "position": 4.333333333333334
+ },
+ {
+  "country": "chl",
+  "clicks": 0,
+  "impressions": 4,
+  "ctr": 0,
+  "position": 4.5
+ },
+ {
+  "country": "col",
+  "clicks": 0,
+  "impressions": 12,
+  "ctr": 0,
+  "position": 6.333333333333333
+ },
+ {
+  "country": "cri",
+  "clicks": 0,
+  "impressions": 9,
+  "ctr": 0,
+  "position": 7.777777777777778
+ },
+ {
+  "country": "deu",
+  "clicks": 0,
+  "impressions": 2,
+  "ctr": 0,
+  "position": 3.5
+ },
+ {
+  "country": "ecu",
+  "clicks": 0,
+  "impressions": 1,
+  "ctr": 0,
+  "position": 7
+ },
+ {
+  "country": "egy",
+  "clicks": 0,
+  "impressions": 1,
+  "ctr": 0,
+  "position": 7
+ },
+ {
+  "country": "esp",
+  "clicks": 0,
+  "impressions": 6,
+  "ctr": 0,
+  "position": 6.166666666666667
+ },
+ {
+  "country": "gbr",
+  "clicks": 0,
+  "impressions": 2,
+  "ctr": 0,
+  "position": 5.5
+ },
+ {
+  "country": "grc",
+  "clicks": 0,
+  "impressions": 2,
+  "ctr": 0,
+  "position": 1
+ },
+ {
+  "country": "gtm",
+  "clicks": 0,
+  "impressions": 51,
+  "ctr": 0,
+  "position": 7.196078431372549
+ },
+ {
+  "country": "hkg",
+  "clicks": 0,
+  "impressions": 1,
+  "ctr": 0,
+  "position": 5
+ },
+ {
+  "country": "hun",
+  "clicks": 0,
+  "impressions": 1,
+  "ctr": 0,
+  "position": 4
+ },
+ {
+  "country": "ind",
+  "clicks": 0,
+  "impressions": 11,
+  "ctr": 0,
+  "position": 3.090909090909091
+ },
+ {
+  "country": "ltu",
+  "clicks": 0,
+  "impressions": 1,
+  "ctr": 0,
+  "position": 2
+ },
+ {
+  "country": "mex",
+  "clicks": 0,
+  "impressions": 35,
+  "ctr": 0,
+  "position": 5.742857142857143
+ },
+ {
+  "country": "nld",
+  "clicks": 0,
+  "impressions": 3,
+  "ctr": 0,
+  "position": 6.666666666666667
+ },
+ {
+  "country": "pan",
+  "clicks": 0,
+  "impressions": 6,
+  "ctr": 0,
+  "position": 5.166666666666667
+ },
+ {
+  "country": "per",
+  "clicks": 0,
+  "impressions": 5,
+  "ctr": 0,
+  "position": 5
+ },
+ {
+  "country": "phl",
+  "clicks": 0,
+  "impressions": 3,
+  "ctr": 0,
+  "position": 3
+ },
+ {
+  "country": "pry",
+  "clicks": 0,
+  "impressions": 1,
+  "ctr": 0,
+  "position": 9
+ },
+ {
+  "country": "rus",
+  "clicks": 0,
+  "impressions": 2,
+  "ctr": 0,
+  "position": 8.5
+ },
+ {
+  "country": "srb",
+  "clicks": 0,
+  "impressions": 1,
+  "ctr": 0,
+  "position": 8
+ },
+ {
+  "country": "tha",
+  "clicks": 0,
+  "impressions": 2,
+  "ctr": 0,
+  "position": 4
+ },
+ {
+  "country": "uga",
+  "clicks": 0,
+  "impressions": 1,
+  "ctr": 0,
+  "position": 6
+ },
+ {
+  "country": "ukr",
+  "clicks": 0,
+  "impressions": 3,
+  "ctr": 0,
+  "position": 7
+ },
+ {
+  "country": "ven",
+  "clicks": 0,
+  "impressions": 6,
+  "ctr": 0,
+  "position": 5.666666666666667
+ }
+]
