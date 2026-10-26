@@ -30,7 +30,7 @@ import {
 } from '../../lib/ventas/ladder'
 import { formatMoney } from '../../lib/ventas/pricing'
 import { VENTAS_COUNTRY_LABEL } from '../../lib/ventas-game/ventas-form'
-import { currencyForCountryCode, isCountryCode, type CountryCode } from '../../lib/country/supported'
+import { currencyForCountryCode, isPublicCountryCode, type PublicCountryCode } from '../../lib/country/supported'
 import type { QuotationRequest, QuotationResponse } from '../../lib/ventas/types'
 import {
   buildMetaApiTrackingFields,
@@ -64,7 +64,7 @@ function scrollToSolicitud() {
 export default function PlanBasicoLanding() {
   const salesPhone = getVentasSupportWhatsAppNumber()
   const salesWaDisplay = formatSalesWhatsApp(salesPhone)
-  const [countryCode, setCountryCode] = useState<CountryCode>('HND')
+  const [countryCode, setCountryCode] = useState<PublicCountryCode>('HND')
   const [plans, setPlans] = useState<LadderPlanPrice[]>(FALLBACK_LADDER_PLANS)
   const [rules, setRules] = useState<VentasBusinessRules>(() => mergeVentasBusinessRules(null))
 
@@ -411,8 +411,8 @@ function PlanBasicoQuoteForm({
   feeLabel,
   maxEmployees,
 }: {
-  countryCode: CountryCode
-  onCountryCodeChange: (code: CountryCode) => void
+  countryCode: PublicCountryCode
+  onCountryCodeChange: (code: PublicCountryCode) => void
   monthlyLabel: string
   annualLabel: string
   feeLabel: string
@@ -592,7 +592,7 @@ function PlanBasicoQuoteForm({
             value={countryCode}
             onChange={(e) => {
               const value = e.target.value
-              if (isCountryCode(value)) onCountryCodeChange(value)
+              if (isPublicCountryCode(value)) onCountryCodeChange(value)
             }}
           >
             {Object.entries(VENTAS_COUNTRY_LABEL).map(([code, label]) => (

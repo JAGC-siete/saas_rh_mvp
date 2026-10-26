@@ -1,7 +1,7 @@
 import { randomUUID } from 'crypto'
 import { NextApiRequest, NextApiResponse } from 'next'
 import { authenticateUser } from '../../../lib/auth/api-auth-fixed'
-import { normalizeCountryCode } from '../../../lib/country/supported'
+import { normalizePublicCountryCode } from '../../../lib/country/supported'
 import { timezoneForCountry } from '../../../lib/country/payroll-labels'
 import { createAdminClient } from '../../../lib/supabase/server'
 
@@ -41,7 +41,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     let finalCompanyId = company_id
 
     if (company_name && !company_id) {
-      const cc = normalizeCountryCode(
+      // Autoregistro: solo países públicos; COL se crea por super admin cuando su motor exista.
+      const cc = normalizePublicCountryCode(
         typeof bodyCountryCode === 'string' ? bodyCountryCode.toUpperCase() : 'HND'
       )
 

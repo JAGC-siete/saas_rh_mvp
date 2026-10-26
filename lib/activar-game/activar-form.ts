@@ -1,6 +1,6 @@
 import { TRIAL_CONFIG } from '../config/trial'
-import type { CountryCode } from '../country/supported'
-import { currencyForCountryCode, isCountryCode } from '../country/supported'
+import type { PublicCountryCode } from '../country/supported'
+import { currencyForCountryCode, isPublicCountryCode } from '../country/supported'
 import { normalizeSoftPhone } from '../privacy'
 import { FALLBACK_VENTAS_TIERS } from '../ventas/load-ventas-config'
 
@@ -13,7 +13,7 @@ export interface ActivarFormData {
   contactoEmail: string
   departamentos: number
   aceptaTrial: boolean
-  countryCode: CountryCode
+  countryCode: PublicCountryCode
 }
 
 export interface ActivarValidationErrors {
@@ -57,7 +57,7 @@ export function computeActivarErrors(fd: ActivarFormData): ActivarValidationErro
     e.empleados = `Máximo ${TRIAL_CONFIG.MAX_EMPLOYEES} empleados de prueba.`
   }
 
-  if (!isCountryCode(fd.countryCode)) {
+  if (!isPublicCountryCode(fd.countryCode)) {
     e.countryCode = 'Elige el país donde opera tu negocio.'
   }
 
@@ -72,7 +72,7 @@ export function computeActivarErrors(fd: ActivarFormData): ActivarValidationErro
 
 export function activarStep1Errors(fd: ActivarFormData): ActivarValidationErrors {
   const e: ActivarValidationErrors = {}
-  if (!isCountryCode(fd.countryCode)) e.countryCode = 'Elige tu país.'
+  if (!isPublicCountryCode(fd.countryCode)) e.countryCode = 'Elige tu país.'
   if (fd.empleados < TRIAL_CONFIG.MIN_EMPLOYEES || fd.empleados > TRIAL_CONFIG.MAX_EMPLOYEES) {
     e.empleados = 'Elige cuántos empleados tiene tu negocio.'
   }
@@ -101,7 +101,7 @@ export function activarStep2Errors(fd: ActivarFormData): ActivarValidationErrors
   return e
 }
 
-export const COUNTRY_LABEL: Record<CountryCode, string> = {
+export const COUNTRY_LABEL: Record<PublicCountryCode, string> = {
   HND: 'Honduras',
   SLV: 'El Salvador',
   GTM: 'Guatemala',
@@ -136,14 +136,14 @@ export function activarRangeMidpoint(min: number, max: number): number {
 }
 
 /** Salario mensual de ficha demo en la moneda del país (no reutilizar escala HNL en SLV/GTM). */
-export function activarDemoBaseSalary(country: CountryCode, index: number): number {
+export function activarDemoBaseSalary(country: PublicCountryCode, index: number): number {
   const step = index % 5
   if (country === 'SLV') return 420 + step * 35
   if (country === 'GTM') return 4200 + step * 350
   return 8000 + step * 500
 }
 
-export function trialPayrollConfigInsert(companyId: string, country: CountryCode) {
+export function trialPayrollConfigInsert(companyId: string, country: PublicCountryCode) {
   const currency = currencyForCountryCode(country)
   return {
     company_id: companyId,
@@ -179,7 +179,7 @@ export function clampActivarEmployeeRanges(
   )
 }
 
-export function defaultCallingCodeForPayrollCountry(cc: CountryCode): string {
+export function defaultCallingCodeForPayrollCountry(cc: PublicCountryCode): string {
   if (cc === 'SLV') return '+503'
   if (cc === 'GTM') return '+502'
   return '+504'

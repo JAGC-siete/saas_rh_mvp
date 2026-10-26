@@ -1,5 +1,5 @@
 import type { QuotationRequest } from '../ventas/types'
-import { isCountryCode } from '../country/supported'
+import { isPublicCountryCode } from '../country/supported'
 import { mergeVentasBusinessRules, type VentasBusinessRules } from '../ventas/business-rules'
 import { isLadderPlanKey, ventasLadderCustomQuoteMessage } from '../ventas/ladder'
 import { ventasCompanyErrors, ventasDeliveryErrors, type VentasValidationErrors } from './ventas-form'
@@ -35,7 +35,7 @@ export function ladderScopeErrors(
   const e: LadderValidationErrors = {}
   const { max_auto_quote_employees, max_auto_quote_terminals } = limitsOf(limits)
 
-  if (!fd.country_code || !isCountryCode(fd.country_code)) e.country_code = 'Elige el país.'
+  if (!fd.country_code || !isPublicCountryCode(fd.country_code)) e.country_code = 'Elige el país.'
   if (!isLadderPlanKey(fd.plan_key)) e.plan_key = 'Elige un plan.'
   if (fd.billing_modality !== 'monthly' && fd.billing_modality !== 'annual') {
     e.billing_modality = 'Elige si pagas mes a mes o el año.'

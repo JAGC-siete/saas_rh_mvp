@@ -20,7 +20,7 @@ import {
 import { hasValidationErrors, omitValidationField } from '../../lib/forms/validation-errors'
 import type { ActivarUtmContext } from '../../lib/activar-game/activar-utm-context'
 import { MOTOR_ENCENDIDO_COPY } from '../../lib/activar-game/motor-encendido-copy'
-import { isCountryCode, type CountryCode } from '../../lib/country/supported'
+import { isPublicCountryCode, type PublicCountryCode } from '../../lib/country/supported'
 import { normalizeSoftPhone } from '../../lib/privacy'
 import {
   formatEmployeeRangeLabel,
@@ -56,7 +56,7 @@ type WizardStep = 'intrigue' | 'config' | 'account' | 'confirm'
 
 type Props = {
   utmContext?: ActivarUtmContext
-  initialCountryCode?: CountryCode
+  initialCountryCode?: PublicCountryCode
 }
 
 const ACTIVAR_WIZARD_STEPS: [string, string, string] = [...MOTOR_ENCENDIDO_COPY.wizardSteps]
@@ -329,7 +329,7 @@ export default function MotorEncendidoLead({ utmContext = {}, initialCountryCode
                         value={formData.countryCode}
                         onChange={(e) => {
                           const v = e.target.value
-                          if (!isCountryCode(v)) return
+                          if (!isPublicCountryCode(v)) return
                           const patch: Partial<ActivarFormData> = { countryCode: v }
                           if (!formData.whatsappNumber.trim()) {
                             patch.whatsappCountryCallingCode = defaultCallingCodeForPayrollCountry(v)

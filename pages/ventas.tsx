@@ -5,7 +5,7 @@ import PublicPageHead from '../components/SEO/PublicPageHead'
 import CotizacionGuiadaLead from '../components/ventas-game/CotizacionGuiadaLead'
 import { getPageTitle } from '../lib/seo/title'
 import { getPageDescription } from '../lib/seo/description'
-import { isCountryCode, type CountryCode } from '../lib/country/supported'
+import { isPublicCountryCode, type PublicCountryCode } from '../lib/country/supported'
 import {
   getVentasUtmContext,
   readVentasUtmSource,
@@ -13,13 +13,13 @@ import {
 
 export default function VentasPage() {
   const router = useRouter()
-  const [countryCode, setCountryCode] = useState<CountryCode>('HND')
+  const [countryCode, setCountryCode] = useState<PublicCountryCode>('HND')
 
   useEffect(() => {
     const raw = router.query.country
     if (typeof raw !== 'string') return
     const cc = raw.trim().toUpperCase()
-    if (!isCountryCode(cc)) return
+    if (!isPublicCountryCode(cc)) return
     setCountryCode(cc)
   }, [router.query.country])
 

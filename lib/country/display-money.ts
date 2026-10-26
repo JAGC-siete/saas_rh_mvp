@@ -2,10 +2,10 @@ import type { CountryCode } from './supported'
 import { currencyForCountryCode, normalizeCountryCode } from './supported'
 import { localeForCountry, statutoryDeductionLabels } from './payroll-labels'
 
-export type DisplayCurrency = 'HNL' | 'USD' | 'GTQ'
+export type DisplayCurrency = 'HNL' | 'USD' | 'GTQ' | 'COP'
 
 export function isDisplayCurrency(v: unknown): v is DisplayCurrency {
-  return v === 'HNL' || v === 'USD' || v === 'GTQ'
+  return v === 'HNL' || v === 'USD' || v === 'GTQ' || v === 'COP'
 }
 
 /**
@@ -22,6 +22,10 @@ export function resolvePayrollDisplayCurrency(
 }
 
 export function formatPdfMoney(value: number, currency: DisplayCurrency): string {
+  // El peso colombiano no usa centavos en nómina: miles con punto, sin decimales.
+  if (currency === 'COP') {
+    return `$ ${Math.round(Number(value || 0)).toLocaleString('es-CO', { maximumFractionDigits: 0 })}`
+  }
   const formatted = Number(value || 0).toLocaleString('en-US', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
@@ -39,9 +43,12 @@ export function formatMoneyForCountry(
   const country = normalizeCountryCode(countryCode)
   const currency = currencyForCountryCode(country)
   const locale = localeForCountry(country)
-  const { maximumFractionDigits = 2 } = options || {}
+  const { maximumFractionDigits = currency === 'COP' ? 0 : 2 } = options || {}
   // Intl lanza RangeError si min > max (p. ej. solo { maximumFractionDigits: 0 } con el min por defecto 2).
-  const minimumFractionDigits = Math.min(options?.minimumFractionDigits ?? 2, maximumFractionDigits)
+  const minimumFractionDigits = Math.min(
+    options?.minimumFractionDigits ?? (currency === 'COP' ? 0 : 2),
+    maximumFractionDigits
+  )
   return new Intl.NumberFormat(locale, {
     style: 'currency',
     currency,
@@ -54,6 +61,7 @@ export function moneyMaskForCountry(countryCode: CountryCode | string | null | u
   const currency = currencyForCountryCode(normalizeCountryCode(countryCode))
   if (currency === 'USD') return '$ *******'
   if (currency === 'GTQ') return 'Q *******'
+  if (currency === 'COP') return '$ *******'
   return 'L. *******'
 }
 
@@ -65,5 +73,6 @@ export function currencyNounForCountry(countryCode: CountryCode | string | null 
   const currency = currencyForCountryCode(normalizeCountryCode(countryCode))
   if (currency === 'USD') return 'dólares'
   if (currency === 'GTQ') return 'quetzales'
+  if (currency === 'COP') return 'pesos'
   return 'lempiras'
 }

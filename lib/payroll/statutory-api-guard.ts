@@ -2,7 +2,9 @@ import type { CountryCode } from '../country/supported'
 import type { PayrollYearContext } from '../tax/registry'
 import { parseStatutoryConfigForPayroll } from '../tax/statutory-config-validate'
 import {
+  PayrollEngineNotAvailableError,
   StatutoryParamsMissingError,
+  isPayrollEngineNotAvailableError,
   isStatutoryParamsMissingError,
   isStatutoryConfigInvalidError
 } from '../tax/statutory-payroll-errors'
@@ -15,6 +17,7 @@ export async function assertNonHndStatutoryConfigParses(
   supabase: { from: (t: string) => unknown }
 ): Promise<void> {
   if (countryCode === 'HND') return
+  if (countryCode === 'COL') throw new PayrollEngineNotAvailableError(countryCode)
   const raw = await loadStatutoryConfigExact(countryCode as 'SLV' | 'GTM', year, supabase)
   if (!raw) throw new StatutoryParamsMissingError(countryCode, year)
   parseStatutoryConfigForPayroll(countryCode as 'SLV' | 'GTM', raw)
@@ -23,6 +26,17 @@ export async function assertNonHndStatutoryConfigParses(
 export function payrollStatutoryErrorResponse(
   e: unknown
 ): { status: number; body: Record<string, unknown> } | null {
+  if (isPayrollEngineNotAvailableError(e)) {
+    return {
+      status: 400,
+      body: {
+        error: 'Cálculo no disponible para este país',
+        code: e.code,
+        message: 'Todavía no calculamos nómina para este país. Escríbenos y te avisamos cuando esté listo.',
+        countryCode: e.countryCode
+      }
+    }
+  }
   if (isStatutoryParamsMissingError(e)) {
     return {
       status: 400,

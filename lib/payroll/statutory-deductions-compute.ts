@@ -1,7 +1,7 @@
 import type { CountryCode } from '../country/supported'
 import { createAdminClient } from '../supabase/server'
 import { parseStatutoryConfigForPayroll } from '../tax/statutory-config-validate'
-import { StatutoryParamsMissingError } from '../tax/statutory-payroll-errors'
+import { PayrollEngineNotAvailableError, StatutoryParamsMissingError } from '../tax/statutory-payroll-errors'
 import {
   calculateIHSS,
   calculateISR,
@@ -156,6 +156,11 @@ export async function computePayrollEmployeeStatutoryDeductions(
       rap: Math.round(rap * 100) / 100,
       isr: Math.round(isr * 100) / 100
     }
+  }
+
+  // Sin esta rama, COL caería en el cálculo de Guatemala de abajo.
+  if (countryCode === 'COL') {
+    throw new PayrollEngineNotAvailableError(countryCode)
   }
 
   if (countryCode === 'SLV') {

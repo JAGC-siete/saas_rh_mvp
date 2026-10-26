@@ -9,7 +9,7 @@ import { trackTrialThankYouPageView } from '../../lib/analytics/googleAds'
 import { readThankYouContext, type ThankYouContext } from '../../lib/analytics/thank-you-context'
 import { MOTOR_ENCENDIDO_COPY } from '../../lib/activar-game/motor-encendido-copy'
 import { COUNTRY_LABEL } from '../../lib/activar-game/activar-form'
-import { isCountryCode } from '../../lib/country/supported'
+import { isPublicCountryCode } from '../../lib/country/supported'
 import { getPageTitle } from '../../lib/seo/title'
 import { getPageDescription } from '../../lib/seo/description'
 
@@ -31,7 +31,7 @@ export default function ActivarGraciasPage() {
   const empleados =
     typeof ctx?.empleados === 'number' && ctx.empleados > 0 ? ctx.empleados : 1
   const countryLabel =
-    ctx?.countryCode && isCountryCode(ctx.countryCode)
+    ctx?.countryCode && isPublicCountryCode(ctx.countryCode)
       ? COUNTRY_LABEL[ctx.countryCode]
       : 'tu país'
 

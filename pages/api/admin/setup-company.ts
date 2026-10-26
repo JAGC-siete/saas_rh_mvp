@@ -4,8 +4,10 @@ import {
   currencyForCountryCode,
   ianaTimezoneForCountryCode,
   isCountryCode,
+  isPublicCountryCode,
   type CountryCode,
 } from '../../../lib/country/supported'
+import { isPayrollCountryEngineEnabled } from '../../../lib/features/payroll-country-flags'
 import { requireSuperAdmin } from '../../../lib/auth/api-auth-fixed'
 import { logger } from '../../../lib/logger'
 import { createSecureErrorResponse } from '../../../lib/security/error-handling'
@@ -127,6 +129,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // 2. Create company
     const rawCc = (companyData.country_code || 'HND').toUpperCase()
     const countryCode: CountryCode = isCountryCode(rawCc) ? rawCc : 'HND'
+    if (!isPublicCountryCode(countryCode) && !isPayrollCountryEngineEnabled(countryCode)) {
+      return res.status(400).json({
+        error: 'Country not enabled',
+        message: `Payroll for ${countryCode} is not enabled yet`
+      })
+    }
     const defaultTz = ianaTimezoneForCountryCode(countryCode)
 
     const { data: company, error: companyError } = await adminClient

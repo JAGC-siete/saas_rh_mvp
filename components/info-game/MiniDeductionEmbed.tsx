@@ -1,11 +1,11 @@
 import { useState } from 'react'
-import type { CountryCode } from '../../lib/country/supported'
+import type { PublicCountryCode } from '../../lib/country/supported'
 import { PUBLIC_CALCULATOR_CONFIGS } from '../../lib/public-calculator/config'
 import { Button } from '../ui/button'
 
 type Props = {
-  country: CountryCode
-  onCountryChange: (c: CountryCode) => void
+  country: PublicCountryCode
+  onCountryChange: (c: PublicCountryCode) => void
 }
 
 type CalcResult = {
@@ -13,7 +13,7 @@ type CalcResult = {
   grossSalary: number
 }
 
-function formatMoney(n: number, country: CountryCode): string {
+function formatMoney(n: number, country: PublicCountryCode): string {
   const currency = country === 'GTM' ? 'GTQ' : 'HNL'
   return new Intl.NumberFormat('es', { style: 'currency', currency, maximumFractionDigits: 2 }).format(n)
 }
@@ -53,7 +53,7 @@ export default function MiniDeductionEmbed({ country, onCountryChange }: Props) 
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap gap-2">
-        {(['HND', 'SLV', 'GTM'] as CountryCode[]).map((c) => (
+        {(['HND', 'SLV', 'GTM'] as PublicCountryCode[]).map((c) => (
           <button
             key={c}
             type="button"

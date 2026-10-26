@@ -24,6 +24,20 @@ export class StatutoryConfigInvalidError extends Error {
   }
 }
 
+/** País registrado en la app cuyo motor de nómina todavía no existe (p. ej. COL en fase 1). */
+export class PayrollEngineNotAvailableError extends Error {
+  readonly code = 'PAYROLL_ENGINE_NOT_AVAILABLE' as const
+
+  constructor(readonly countryCode: string) {
+    super(`El cálculo de nómina para ${countryCode} todavía no está disponible`)
+    this.name = 'PayrollEngineNotAvailableError'
+  }
+}
+
+export function isPayrollEngineNotAvailableError(e: unknown): e is PayrollEngineNotAvailableError {
+  return e instanceof PayrollEngineNotAvailableError
+}
+
 export function isStatutoryParamsMissingError(e: unknown): e is StatutoryParamsMissingError {
   return e instanceof StatutoryParamsMissingError
 }

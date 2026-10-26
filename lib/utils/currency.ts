@@ -27,7 +27,9 @@ export const formatCurrency = (value: number, options?: FormatCurrencyOptions): 
   }
 
   const currency = currencyOpt ?? 'HNL'
-  const locale = localeOpt ?? (currency === 'USD' ? 'es-SV' : currency === 'GTQ' ? 'es-GT' : 'es-HN')
+  const locale =
+    localeOpt ??
+    (currency === 'USD' ? 'es-SV' : currency === 'GTQ' ? 'es-GT' : currency === 'COP' ? 'es-CO' : 'es-HN')
 
   return new Intl.NumberFormat(locale, {
     style: 'currency',
