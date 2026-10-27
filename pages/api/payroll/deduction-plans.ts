@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { requireCompanyAccess } from '../../../lib/auth/api-auth-fixed'
+import { createAdminClient } from '../../../lib/supabase/server'
 import {
   canAccessDeduccionesModule,
   canCancelDeductionPlans,
@@ -28,11 +29,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })
     }
 
+    // employees RLS shows a manager only their own department, while
+    // can_manage_deducciones covers the whole company. Employee lookups use the
+    // service role: always scoped by company_id, never salary columns.
+    const adminClient = createAdminClient()
+
     switch (req.method) {
       case 'POST':
-        return handlePost(req, res, supabase, companyId)
+        return handlePost(req, res, supabase, adminClient, companyId)
       case 'GET':
-        return handleGet(req, res, supabase, companyId)
+        return handleGet(req, res, supabase, adminClient, companyId)
       case 'PATCH':
         if (!canCancelDeductionPlans(role, userProfile?.permissions)) {
           return res.status(403).json({
@@ -56,6 +62,7 @@ async function handlePost(
   req: NextApiRequest,
   res: NextApiResponse,
   supabase: any,
+  adminClient: any,
   companyId: string
 ) {
   const { employee_id, field_key, monto_total, plazos_totales, fecha_inicio, fecha_fin } = req.body || {}
@@ -80,7 +87,7 @@ async function handlePost(
   const endDate = fecha_fin ? new Date(fecha_fin).toISOString().split('T')[0] : null
 
   // Validar que el empleado pertenece a la empresa
-  const { data: emp, error: empError } = await supabase
+  const { data: emp, error: empError } = await adminClient
     .from('employees')
     .select('id, company_id')
     .eq('id', employee_id)
@@ -159,25 +166,27 @@ async function handleGet(
   req: NextApiRequest,
   res: NextApiResponse,
   supabase: any,
+  adminClient: any,
   companyId: string
 ) {
   const { employee_id } = req.query
 
   if (employee_id && typeof employee_id === 'string') {
-    return handleGetByEmployee(req, res, supabase, companyId, employee_id)
+    return handleGetByEmployee(req, res, supabase, adminClient, companyId, employee_id)
   }
 
-  return handleGetByCompany(req, res, supabase, companyId)
+  return handleGetByCompany(req, res, adminClient, companyId)
 }
 
 async function handleGetByEmployee(
   _req: NextApiRequest,
   res: NextApiResponse,
   supabase: any,
+  adminClient: any,
   companyId: string,
   employeeId: string
 ) {
-  const { data: emp } = await supabase
+  const { data: emp } = await adminClient
     .from('employees')
     .select('id, company_id')
     .eq('id', employeeId)
@@ -205,11 +214,11 @@ async function handleGetByEmployee(
 async function handleGetByCompany(
   req: NextApiRequest,
   res: NextApiResponse,
-  supabase: any,
+  adminClient: any,
   companyId: string
 ) {
   const includeInactive = req.query.include_inactive === 'true'
-  let query = supabase
+  let query = adminClient
     .from('employee_deduction_plans')
     .select(`
       *,
