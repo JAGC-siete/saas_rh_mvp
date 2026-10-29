@@ -23,7 +23,7 @@ setInterval(() => {
       otpStore.delete(email)
     }
   }
-}, 5 * 60 * 1000)
+}, 5 * 60 * 1000).unref() // cleanup alone must not keep the process (or a test run) alive
 
 export async function sendOtp(email: string, employeeId: string, employeeName: string) {
   try {

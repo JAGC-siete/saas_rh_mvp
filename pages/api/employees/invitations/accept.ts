@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { createClient, createAdminClient } from '../../../../lib/supabase/server'
 import { logger } from '../../../../lib/logger'
+import { EMPLOYEE_PORTAL_PERMISSIONS } from '../../../../lib/auth/employee-portal-session'
 
 interface AcceptInvitationRequest {
   token: string
@@ -152,27 +153,30 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
       .from('user_profiles')
       .insert({
         id: newUser.user.id,
-        email: invitation.email,
         role: 'employee',
         company_id: invitation.company_id,
         employee_id: invitation.employee_id,
-        permissions: {
-          dashboard: true,
-          employees: false,
-          departments: false,
-          attendance: true,
-          leave: true,
-          payroll: true,
-          reports: false,
-          gamification: false,
-          settings: false
-        }
+        permissions: EMPLOYEE_PORTAL_PERMISSIONS
       })
 
     if (profileError) {
-      logger.warn('Failed to create user profile from invitation', { 
-        userId: newUser.user.id, 
-        error: profileError 
+      logger.error('Failed to create user profile from invitation', {
+        userId: newUser.user.id,
+        error: profileError
+      })
+
+      // Without a profile the portal is unusable; drop the auth user so the same invitation can be retried.
+      const { error: deleteUserError } = await adminSupabase.auth.admin.deleteUser(newUser.user.id)
+      if (deleteUserError) {
+        logger.error('Failed to roll back auth user after profile error', {
+          userId: newUser.user.id,
+          error: deleteUserError.message
+        })
+      }
+
+      return res.status(500).json({
+        success: false,
+        error: 'No pudimos crear tu cuenta. Intenta de nuevo con el mismo enlace en unos minutos.'
       })
     }
 
