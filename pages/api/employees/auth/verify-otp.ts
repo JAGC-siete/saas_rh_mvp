@@ -4,6 +4,7 @@ import { logger } from '../../../../lib/logger'
 import { verifyOtp } from '../../../../lib/employee-otp'
 import { EMPLOYEE_OTP_VERIFY_NEUTRAL_ERROR } from '../../../../lib/auth/public-auth-messages'
 import { enforceAuthRateLimits } from '../../../../lib/security/rate-limiting'
+import { openEmployeePortalSession } from '../../../../lib/auth/employee-portal-session'
 
 interface VerifyOtpRequest {
   email: string
@@ -88,119 +89,29 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
       })
     }
 
-    // Buscar o crear usuario en auth.users
-    let authUserId: string | null = null
-    
-    // Crear usuario en auth.users usando Admin API
-    // Nota: Saltamos la verificación de usuarios existentes por problemas con la API de admin
-    // La verificación se hará en el momento de crear el usuario
-    const deterministic_password = `emp_${employee.id.toString().substring(0, 8)}_paragon`
-    
-    const { data: newUser, error: createUserError } = await adminSupabase.auth.admin.createUser({
-      email: email,
-      password: deterministic_password,
-      email_confirm: true,
-      user_metadata: {
-        employee_id: employee.id,
-        company_id: employee.company_id,
-        full_name: employee.name,
-        role: 'employee',
-        is_employee_portal: true
-      }
-    })
-    
-    if (createUserError || !newUser.user) {
-      logger.error('Failed to create auth user via OTP recovery', { 
-        email, 
-        error: createUserError,
-        employeeId: employee.id
-      })
-      
-      // Manejar errores específicos
-      if (createUserError?.message?.includes('already been registered')) {
-        // Usuario ya existe, intentar login directo
-        logger.info('User already exists, attempting direct login', { email })
-      } else {
-        return res.status(500).json({
-          success: false,
-          error: `Error creando usuario de autenticación: ${createUserError?.message || 'Error desconocido'}`
-        })
-      }
-    } else {
-      authUserId = newUser.user.id
-    }
+    const portal = await openEmployeePortalSession(adminSupabase, createClient(req, res), email, employee)
 
-    // Crear sesión con el cliente que maneja cookies
-    const supabase = createClient(req, res)
-    
-    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-      email: email,
-      password: deterministic_password
-    })
-
-    if (authError || !authData.user) {
-      logger.error('Failed to create session via OTP recovery', { 
-        email, 
-        error: authError?.message,
-        employeeId: employee.id
-      })
-      return res.status(500).json({
+    if (!portal.ok) {
+      return res.status(portal.status).json({
         success: false,
-        error: 'Error creando sesión de autenticación'
+        error: portal.error
       })
-    }
-
-    // Verificar si existe user_profile, si no, crearlo
-    const { data: existingProfile } = await adminSupabase
-      .from('user_profiles')
-      .select('id')
-      .eq('id', authUserId)
-      .single()
-    
-    if (!existingProfile) {
-      const { error: profileError } = await adminSupabase
-        .from('user_profiles')
-        .insert({
-          id: authUserId,
-          email: email,
-          role: 'employee',
-          company_id: employee.company_id,
-          employee_id: employee.id,
-          permissions: {
-            dashboard: true,
-            employees: false,
-            departments: false,
-            attendance: true,
-            leave: true,
-            payroll: true,
-            reports: false,
-            gamification: false,
-            settings: false
-          }
-        })
-      
-      if (profileError) {
-        logger.warn('Failed to create user profile via OTP recovery', { 
-          userId: authUserId, 
-          error: profileError 
-        })
-      }
     }
 
     logger.info('Employee login successful via OTP recovery', {
       email,
       employeeId: employee.id,
-      supabaseUserId: authData.user.id
+      supabaseUserId: portal.user.id
     })
 
     return res.status(200).json({
       success: true,
       message: 'Acceso recuperado exitosamente',
-      session: authData.session,
-      user: authData.user,
+      session: portal.session,
+      user: portal.user,
       sessionData: {
-        user: authData.user,
-        session: authData.session
+        user: portal.user,
+        session: portal.session
       }
     })
 

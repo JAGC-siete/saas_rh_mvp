@@ -3,6 +3,7 @@ import { createClient, createAdminClient } from '../../../../lib/supabase/server
 import { logger } from '../../../../lib/logger'
 import { sendOtp, verifyOtp } from '../../../../lib/employee-otp'
 import { createSessionOnLogin } from '../../../../lib/middleware/session-manager'
+import { openEmployeePortalSession } from '../../../../lib/auth/employee-portal-session'
 import {
   EMPLOYEE_OTP_SEND_NEUTRAL_MESSAGE,
   EMPLOYEE_OTP_VERIFY_NEUTRAL_ERROR
@@ -116,146 +117,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
       })
     }
 
-    // Buscar o crear usuario en auth.users
-    let authUserId: string | null = null
-    
-    // Primero intentar buscar si ya existe un usuario de Supabase Auth con este email
-    const { data: existingAuthUsers } = await adminSupabase.auth.admin.listUsers()
-    const existingAuthUser = existingAuthUsers?.users?.find((u: any) => u.email === email)
-    
-    if (existingAuthUser) {
-      authUserId = existingAuthUser.id
-      
-      // Actualizar user_metadata si no tiene employee_id
-      if (!existingAuthUser.user_metadata?.employee_id) {
-        await adminSupabase.auth.admin.updateUserById(authUserId, {
-          user_metadata: {
-            ...existingAuthUser.user_metadata,
-            employee_id: employee.id,
-            company_id: employee.company_id,
-            full_name: employee.name,
-            role: 'employee',
-            is_employee_portal: true
-          }
-        })
-      }
-      
-      // Verificar si existe user_profile, si no, crearlo
-      const { data: existingProfile } = await adminSupabase
-        .from('user_profiles')
-        .select('id')
-        .eq('id', authUserId)
-        .single()
-      
-      if (!existingProfile) {
-        const { error: profileError } = await adminSupabase
-          .from('user_profiles')
-          .insert({
-            id: authUserId,
-            email: email,
-            role: 'employee',
-            company_id: employee.company_id,
-            employee_id: employee.id,
-            permissions: {
-              dashboard: true,
-              employees: false,
-              departments: false,
-              attendance: true,
-              leave: true,
-              payroll: true,
-              reports: false,
-              gamification: false,
-              settings: false
-            }
-          })
-        
-        if (profileError) {
-          logger.warn('Failed to create user profile for existing user', { 
-            userId: authUserId, 
-            error: profileError 
-          })
-        }
-      }
-    } else {
-      // Crear usuario en auth.users usando Admin API
-      const deterministic_password = `emp_${employee.id.toString().substring(0, 8)}_paragon`
-      
-      const { data: newUser, error: createUserError } = await adminSupabase.auth.admin.createUser({
-        email: email,
-        password: deterministic_password,
-        email_confirm: true,
-        user_metadata: {
-          employee_id: employee.id,
-          company_id: employee.company_id,
-          full_name: employee.name,
-          role: 'employee',
-          is_employee_portal: true
-        }
-      })
-      
-      if (createUserError || !newUser.user) {
-        logger.error('Failed to create auth user', { 
-          email, 
-          error: createUserError,
-          employeeId: employee.id
-        })
-        return res.status(500).json({
-          success: false,
-          error: 'Error creando usuario de autenticación'
-        })
-      }
-      
-      authUserId = newUser.user.id
-      
-      // Crear entrada en user_profiles
-      const { error: profileError } = await adminSupabase
-        .from('user_profiles')
-        .insert({
-          id: authUserId,
-          email: email,
-          role: 'employee',
-          company_id: employee.company_id,
-          employee_id: employee.id,
-          permissions: {
-            dashboard: true,
-            employees: false,
-            departments: false,
-            attendance: true,
-            leave: true,
-            payroll: true,
-            reports: false,
-            gamification: false,
-            settings: false
-          }
-        })
-      
-      if (profileError) {
-        logger.warn('Failed to create user profile', { 
-          userId: authUserId, 
-          error: profileError 
-        })
-      }
-    }
-    
-    // Ahora crear sesión con el cliente que maneja cookies
-    const deterministic_password = `emp_${employee.id.toString().substring(0, 8)}_paragon`
-    
-    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-      email: email,
-      password: deterministic_password
-    })
+    const portal = await openEmployeePortalSession(adminSupabase, supabase, email, employee)
 
-    if (authError || !authData.user) {
-      logger.error('Failed to create Supabase session', { 
-        email, 
-        error: authError,
-        authUserId
-      })
-      return res.status(500).json({
+    if (!portal.ok) {
+      return res.status(portal.status).json({
         success: false,
-        error: 'Error creando sesión de autenticación'
+        error: portal.error
       })
     }
+
+    const authData = { user: portal.user, session: portal.session }
 
     logger.info('Employee login successful via OTP + Supabase Auth', {
       employeeId: employee.id,
