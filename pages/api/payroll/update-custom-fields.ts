@@ -10,6 +10,7 @@ import {
   buildCustomFieldsAdjustmentRows,
   isPayrollRunEditableForCustomFields,
 } from '../../../lib/payroll/custom-fields-eff-amounts'
+import { resolveManualIsrFromCustomField } from '../../../lib/payroll/statutory-reserved-custom-keys'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -86,6 +87,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const existingMetadata = existingLine.metadata || {}
     const mergedMetadata = { ...existingMetadata, ...metadata }
 
+    const { data: payrollConfig } = await supabase
+      .from('company_payroll_configs')
+      .select('custom_fields, metadata')
+      .eq('company_id', companyId)
+      .eq('is_active', true)
+      .maybeSingle()
+    const manualIsr = resolveManualIsrFromCustomField({
+      legalDeductions: payrollConfig?.metadata?.legal_deductions,
+      customFields: payrollConfig?.custom_fields,
+      metadata: mergedMetadata,
+    })
+    const newEffIsr = manualIsr ?? (Number(existingLine.eff_isr) || 0)
+
     const calcBruto = Number(existingLine.calc_bruto) || 0
     // Prior earnings from existing metadata (engine baseline as formula context).
     const priorCalc = await calculatePayroll(
@@ -112,7 +126,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       deduccionesAdicionales,
       effIhss: Number(existingLine.eff_ihss) || 0,
       effRap: Number(existingLine.eff_rap) || 0,
-      effIsr: Number(existingLine.eff_isr) || 0,
+      effIsr: newEffIsr,
     })
 
     const { error: updateError } = await supabase
@@ -122,6 +136,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         edited: true,
         eff_bruto: newEffBruto,
         eff_neto: newEffNeto,
+        ...(manualIsr != null ? { eff_isr: newEffIsr } : {}),
         updated_at: new Date().toISOString()
       })
       .eq('id', run_line_id)
@@ -159,7 +174,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       ingresos_adicionales: ingresosAdicionales,
       deducciones_adicionales: deduccionesAdicionales,
       eff_bruto: newEffBruto,
-      eff_neto: newEffNeto
+      eff_neto: newEffNeto,
+      eff_isr: newEffIsr
     })
 
   } catch (error: any) {

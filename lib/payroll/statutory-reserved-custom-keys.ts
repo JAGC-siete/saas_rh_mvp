@@ -30,3 +30,25 @@ export function resolveReservedCustomColumnAmount(
   const n = Number(raw)
   return Number.isFinite(n) ? n : 0
 }
+
+type CustomFieldDefLike = string | { category?: string } | null | undefined
+
+/**
+ * With legal ISR off, a custom deduction keyed `isr` is the company's manual withholding:
+ * it must land in eff_isr and reduce neto. Returns null when the line has no such value
+ * (legal ISR on, field not defined, or nothing entered) so callers keep their computed ISR.
+ */
+export function resolveManualIsrFromCustomField(input: {
+  legalDeductions?: { isr?: boolean } | null
+  customFields?: Record<string, CustomFieldDefLike> | null
+  metadata?: Record<string, unknown> | null
+}): number | null {
+  if (input.legalDeductions?.isr !== false) return null
+  const def = input.customFields?.isr
+  if (!def || typeof def === 'string' || def.category !== 'deductions') return null
+  const raw = input.metadata?.isr
+  if (raw === undefined || raw === null || raw === '') return null
+  const n = Number(raw)
+  if (!Number.isFinite(n) || n < 0) return null
+  return Math.round(n * 100) / 100
+}

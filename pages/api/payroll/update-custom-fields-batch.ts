@@ -10,6 +10,7 @@ import {
   buildCustomFieldsAdjustmentRows,
   isPayrollRunEditableForCustomFields,
 } from '../../../lib/payroll/custom-fields-eff-amounts'
+import { resolveManualIsrFromCustomField } from '../../../lib/payroll/statutory-reserved-custom-keys'
 
 interface BatchUpdate {
   run_line_id: string
@@ -157,6 +158,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })
     }
 
+    const { data: payrollConfig } = await supabase
+      .from('company_payroll_configs')
+      .select('custom_fields, metadata')
+      .eq('company_id', companyId)
+      .eq('is_active', true)
+      .maybeSingle()
+
     const results: BatchUpdateResult[] = []
     const updatePromises: Promise<BatchUpdateResult>[] = []
 
@@ -176,6 +184,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       
       const existingMetadata = existingLine.metadata || {}
       const mergedMetadata = { ...existingMetadata, ...metadata }
+      const manualIsr = resolveManualIsrFromCustomField({
+        legalDeductions: payrollConfig?.metadata?.legal_deductions,
+        customFields: payrollConfig?.custom_fields,
+        metadata: mergedMetadata,
+      })
+      const newEffIsr = manualIsr ?? (Number(existingLine.eff_isr) || 0)
 
       const calcBruto = Number(existingLine.calc_bruto) || 0
       const priorCalc = await calculatePayroll(
@@ -202,7 +216,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         deduccionesAdicionales,
         effIhss: Number(existingLine.eff_ihss) || 0,
         effRap: Number(existingLine.eff_rap) || 0,
-        effIsr: Number(existingLine.eff_isr) || 0,
+        effIsr: newEffIsr,
       })
 
       const updatePromise = (async (): Promise<BatchUpdateResult> => {
@@ -214,6 +228,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               edited: true,
               eff_bruto: newEffBruto,
               eff_neto: newEffNeto,
+              ...(manualIsr != null ? { eff_isr: newEffIsr } : {}),
               updated_at: new Date().toISOString()
             })
             .eq('id', update.run_line_id)

@@ -5,6 +5,7 @@ import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   isStatutoryReservedCustomKey,
+  resolveManualIsrFromCustomField,
   resolveReservedCustomColumnAmount,
 } from '../lib/payroll/statutory-reserved-custom-keys'
 import { buildCustomDeductionsList } from '../lib/payroll/custom-deductions-list'
@@ -137,5 +138,63 @@ describe('buildCustomDeductionsList statutory mirrors', () => {
     assert.equal(list.length, 1)
     assert.equal(list[0].name, 'ISR manual')
     assert.equal(list[0].amount, 200)
+  })
+})
+
+describe('resolveManualIsrFromCustomField', () => {
+  const customFields = {
+    isr: { label: 'Retención Asalariada', category: 'deductions' },
+    seguro_medico: { label: 'Seguro Médico', category: 'deductions' },
+  }
+
+  it('uses custom isr as the ISR withholding when legal ISR is off', () => {
+    assert.equal(
+      resolveManualIsrFromCustomField({
+        legalDeductions: { isr: false },
+        customFields,
+        metadata: { isr: 1940.32, seguro_medico: 633.71 },
+      }),
+      1940.32
+    )
+    assert.equal(
+      resolveManualIsrFromCustomField({
+        legalDeductions: { isr: false },
+        customFields,
+        metadata: { isr: '0' },
+      }),
+      0
+    )
+  })
+
+  it('keeps isr reserved as a mirror when legal ISR is on or unset', () => {
+    for (const legalDeductions of [{ isr: true }, {}, null]) {
+      assert.equal(
+        resolveManualIsrFromCustomField({ legalDeductions, customFields, metadata: { isr: 507.97 } }),
+        null
+      )
+    }
+  })
+
+  it('returns null when the field is not a deduction or has no value', () => {
+    assert.equal(
+      resolveManualIsrFromCustomField({
+        legalDeductions: { isr: false },
+        customFields: { seguro_medico: { category: 'deductions' } },
+        metadata: { isr: 100 },
+      }),
+      null
+    )
+    assert.equal(
+      resolveManualIsrFromCustomField({
+        legalDeductions: { isr: false },
+        customFields: { isr: { category: 'earnings' } },
+        metadata: { isr: 100 },
+      }),
+      null
+    )
+    assert.equal(
+      resolveManualIsrFromCustomField({ legalDeductions: { isr: false }, customFields, metadata: {} }),
+      null
+    )
   })
 })

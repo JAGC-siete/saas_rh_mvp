@@ -26,6 +26,7 @@ import {
 } from '../../../lib/payroll/overtime-pay'
 import { HONDURAS_LABOR_FACTOR } from '../../../lib/payroll/constants'
 import { calculatePayroll } from '../../../lib/payroll-client-specific'
+import { resolveManualIsrFromCustomField } from '../../../lib/payroll/statutory-reserved-custom-keys'
 import {
   foldCustomsIntoFixedRecalcAmounts,
   metadataWithoutPlanKeys,
@@ -206,7 +207,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const { data: payrollConfig, error: configError } = await supabase
       .from('company_payroll_configs')
-      .select('metadata, payment_frequency, quincena_config, calculation_mode')
+      .select('metadata, custom_fields, payment_frequency, quincena_config, calculation_mode')
       .eq('company_id', companyId)
       .eq('is_active', true)
       .maybeSingle()
@@ -408,9 +409,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const IHSS = round2(ded.IHSS)
     const RAP = round2(ded.RAP)
-    const ISR = round2(ded.ISR)
-    const totalDeductions = round2(ded.totalDeductions)
-    const netTotal = round2(ded.total)
+    const computedIsr = round2(ded.ISR)
+    const manualIsr = resolveManualIsrFromCustomField({
+      legalDeductions,
+      customFields: payrollConfig?.custom_fields,
+      metadata: line.metadata as Record<string, unknown> | null,
+    })
+    const ISR = manualIsr ?? computedIsr
+    const totalDeductions = round2(ded.totalDeductions + ISR - computedIsr)
+    const netTotal = round2(ded.total - (ISR - computedIsr))
     const gross = round2(totalEarnings)
 
     const planFieldKeys = new Set<string>()
