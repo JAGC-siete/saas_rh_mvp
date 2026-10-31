@@ -228,7 +228,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               edited: true,
               eff_bruto: newEffBruto,
               eff_neto: newEffNeto,
-              ...(manualIsr != null ? { eff_isr: newEffIsr } : {}),
+              // calc_isr too: apply_adjustment_update_eff rebuilds eff_isr from calc_isr on the audit insert below.
+              ...(manualIsr != null ? { eff_isr: newEffIsr, calc_isr: newEffIsr } : {}),
               updated_at: new Date().toISOString()
             })
             .eq('id', update.run_line_id)
