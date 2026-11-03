@@ -101,6 +101,7 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.1",
     "@eslint/js": "^9.31.0",
+    "@formatjs/icu-messageformat-parser": "3.5.22",
     "@next/bundle-analyzer": "^15.5.20",
     "@types/marked": "^5.0.2",
     "@types/react-big-calendar": "^1.16.3",

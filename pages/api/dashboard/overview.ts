@@ -351,6 +351,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           label: payrollRunLabel(payroll.unauthorized),
           status: payroll.unauthorized.status,
           payDate: payroll.nextPayment?.periodEnd ?? null,
+          period: {
+            year: payroll.unauthorized.year,
+            month: payroll.unauthorized.month,
+            quincena: payroll.unauthorized.quincena,
+          },
         }
       : null
 

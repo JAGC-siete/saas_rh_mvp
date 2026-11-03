@@ -1,19 +1,21 @@
 import type { DepartmentSummary } from '../../lib/dashboard/overview'
 import { EmptyState, Panel, SERIES } from './shared'
+import { useDashboardText } from './i18n'
 
 /** Debajo de este % la asistencia de hoy se marca para revisar. */
 const LOW_ATTENDANCE_PCT = 90
 
 export default function DepartmentBreakdown({ departments }: { departments: DepartmentSummary[] }) {
+  const { t } = useDashboardText()
   const max = Math.max(1, ...departments.map((d) => d.headcount))
   return (
     <Panel
-      title="Por departamento"
-      subtitle="Personas activas · asistencia de hoy"
-      action={{ label: 'Gestionar departamentos', href: '/app/departments' }}
+      title={t('departments.title')}
+      subtitle={t('departments.subtitle')}
+      action={{ label: t('departments.action'), href: '/app/departments' }}
     >
       {departments.length === 0 ? (
-        <EmptyState>No hay empleados activos asignados.</EmptyState>
+        <EmptyState>{t('departments.empty')}</EmptyState>
       ) : (
         <ul className="flex flex-col gap-2.5">
           {departments.map((d) => {
@@ -32,10 +34,10 @@ export default function DepartmentBreakdown({ departments }: { departments: Depa
                 </span>
                 <span className="text-right text-sm font-bold text-white tabular-nums">
                   {d.headcount}
-                  <span className="sr-only"> personas</span>
+                  <span className="sr-only">{t('departments.people')}</span>
                 </span>
                 <span className={`text-right text-xs font-semibold tabular-nums ${low ? 'text-orange-300' : 'text-slate-300'}`}>
-                  {d.attendancePct === null ? 'sin turno' : `${d.attendancePct} %${low ? ' ▼' : ''}`}
+                  {d.attendancePct === null ? t('departments.noShift') : `${d.attendancePct} %${low ? ' ▼' : ''}`}
                 </span>
               </li>
             )

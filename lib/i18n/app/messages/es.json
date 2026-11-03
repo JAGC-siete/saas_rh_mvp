@@ -507,5 +507,170 @@
       "statExpired": "Expiradas"
     },
     "certificateButton": "Constancia"
+  },
+  "dashboard": {
+    "greetingMorning": "Buenos días",
+    "greetingAfternoon": "Buenas tardes",
+    "greetingEvening": "Buenas noches",
+    "greetingWithName": "{greeting}, {name}",
+    "loadingAria": "Cargando dashboard",
+    "refreshAria": "Actualizar dashboard",
+    "generatePayroll": "Generar planilla",
+    "activeEmployees": "{count} empleados activos",
+    "teamPeople": "Tu equipo · {count} personas",
+    "scopeTeam": "tu equipo",
+    "scopeCompany": "toda la empresa",
+    "loadError": "No se pudo cargar el dashboard: {error}",
+    "loadErrorShort": "No se pudo cargar el dashboard",
+    "partialWarning": "Algunos bloques no se pudieron cargar ({blocks}). El resto está al día.",
+    "warningBlocks": {
+      "attendance_series": "serie de asistencia",
+      "attendance_today": "asistencia de hoy",
+      "open_punches": "marcajes sin salida",
+      "leave_requests": "permisos",
+      "corrections": "correcciones",
+      "payroll": "nómina",
+      "holidays": "feriados"
+    },
+    "relative": {
+      "today": "Hoy",
+      "yesterday": "Ayer",
+      "tomorrow": "Mañana",
+      "daysAgo": "Hace {count} días",
+      "inDays": "En {count} días"
+    },
+    "run": {
+      "half": "{half, select, 1 {1.ª} other {2.ª}} quincena {month} {year}",
+      "month": "{month} {year}"
+    },
+    "pending": {
+      "title": "Requiere tu atención",
+      "count": " · {count} pendientes",
+      "allClear": "Todo al día: no hay marcajes abiertos, permisos ni planillas esperando acción.",
+      "severity": {
+        "urgent": "Urgente",
+        "warning": "Pendiente",
+        "info": "Para revisar"
+      },
+      "openPunchesTitle": "{count, plural, one {# marcaje sin salida} other {# marcajes sin salida}}",
+      "openPunchesDetail": "Revisar en el cierre diario del {date}",
+      "openPunchesCta": "Ir al cierre diario",
+      "leaveTitle": "{count, plural, one {# permiso por aprobar} other {# permisos por aprobar}}",
+      "leaveDetail": "Solicitudes pendientes de respuesta",
+      "leaveOldest": "La más antigua: {when}",
+      "leaveCta": "Revisar solicitudes",
+      "runTitle": "Planilla {label}",
+      "runDetailDraft": "Borrador · falta autorizar",
+      "runDetailEdited": "Editada · falta autorizar",
+      "payOverdue": "Fecha de pago vencida",
+      "payToday": "Paga hoy",
+      "payInDays": "Paga en {count} días",
+      "runCta": "Revisar y autorizar",
+      "correctionsTitle": "{count, plural, one {# corrección de marcaje} other {# correcciones de marcaje}}",
+      "correctionsDetail": "Pendientes de revisión",
+      "correctionsCta": "Ver correcciones",
+      "terminationsTitle": "{count, plural, one {# baja programada} other {# bajas programadas}}",
+      "terminationsDetail": "Próximos 30 días",
+      "terminationsCta": "Ver empleados"
+    },
+    "kpi": {
+      "aria": "Indicadores de hoy",
+      "yesterday": "ayer",
+      "onDate": "el {date}",
+      "same": "= igual que {ref}",
+      "delta": "{arrow} {value} vs. {ref}",
+      "presentToday": "Presentes hoy",
+      "ofScheduled": "de {count}",
+      "noShifts": "Sin turnos hoy",
+      "absent": "Ausentes",
+      "late": "Tardanzas",
+      "avgLate": "prom. {minutes} min",
+      "rate7d": "Asistencia 7 días",
+      "sameWeek": "= igual que la semana anterior",
+      "deltaWeek": "{arrow} {value} pts vs. semana anterior",
+      "payrollCost": "Costo de nómina · {month}",
+      "deltaMonth": "{arrow} {value} % vs. mes anterior"
+    },
+    "attendance": {
+      "title": "Asistencia diaria",
+      "subtitle": "Últimos {count} días hábiles · {scope}",
+      "action": "Ver asistencia",
+      "empty": "Todavía no hay días con turnos programados en este periodo.",
+      "onTime": "A tiempo",
+      "late": "Tarde",
+      "absent": "Ausente",
+      "paidLeave": "Permiso pagado",
+      "scheduled": "{date} · {count} programados",
+      "date": "Fecha"
+    },
+    "cost": {
+      "title": "Costo de nómina",
+      "subtitle": "Últimos 6 meses · planillas autorizadas · bruto = neto + deducciones",
+      "action": "Ver reportes",
+      "empty": "Aún no hay planillas autorizadas en los últimos 6 meses.",
+      "net": "Neto",
+      "deductions": "Deducciones",
+      "gross": "Bruto",
+      "tooltip": "{month} · bruto {amount}",
+      "caption": "Costo de nómina por mes",
+      "month": "Mes"
+    },
+    "missing": {
+      "title": "Quién falta hoy",
+      "subtitle": "{count, plural, one {# persona ausente, tarde o con permiso} other {# personas ausentes, tarde o con permiso}}",
+      "action": "Ver lista completa",
+      "empty": "Todo el personal programado marcó a tiempo hoy.",
+      "absent": "Ausente",
+      "late": "Tarde",
+      "paidLeave": "Permiso",
+      "checkedIn": "entró {time}",
+      "leaveApproved": "permiso aprobado",
+      "noPunch": "sin marcaje",
+      "noDepartment": "Sin departamento"
+    },
+    "runs": {
+      "title": "Planillas",
+      "nextPayment": "Próximo pago: {date} · {when}",
+      "today": "hoy",
+      "inDays": "en {count} días",
+      "action": "Ver todas",
+      "empty": "Todavía no se ha generado ninguna planilla.",
+      "employees": "{count, plural, one {# empleado} other {# empleados}}",
+      "authorizedOn": " · autorizada {date}",
+      "steps": {
+        "draft": "Borrador",
+        "edited": "Editada",
+        "authorized": "Autorizada"
+      },
+      "stepAria": "Paso {step} de {total}: {label}",
+      "stepOf": " · paso {step} de {total}",
+      "cta": "Revisar y autorizar"
+    },
+    "calendar": {
+      "title": "Calendario RRHH",
+      "subtitle": "Próximos 60 días",
+      "empty": "Sin pagos, feriados ni aniversarios en los próximos 60 días.",
+      "kinds": {
+        "payment": "Pago",
+        "holiday": "Feriado",
+        "anniversary": "Aniversario",
+        "termination": "Baja"
+      },
+      "paymentTitle": "Pago de planilla",
+      "paymentSubtitle": "Periodo {start} al {end}",
+      "holiday": "Feriado",
+      "anniversaryTitle": "Aniversario laboral · {name}",
+      "anniversarySubtitle": "{count, plural, one {# año en la empresa} other {# años en la empresa}}",
+      "terminationTitle": "Baja programada · {name}",
+      "terminationSubtitle": "Fecha de terminación registrada"
+    },
+    "departments": {
+      "title": "Por departamento",
+      "subtitle": "Personas activas · asistencia de hoy",
+      "action": "Gestionar departamentos",
+      "empty": "No hay empleados activos asignados.",
+      "people": " personas",
+      "noShift": "sin turno"
+    }
   }
 }

@@ -507,5 +507,170 @@
       "statExpired": "Expired"
     },
     "certificateButton": "Certificate"
+  },
+  "dashboard": {
+    "greetingMorning": "Good morning",
+    "greetingAfternoon": "Good afternoon",
+    "greetingEvening": "Good evening",
+    "greetingWithName": "{greeting}, {name}",
+    "loadingAria": "Loading dashboard",
+    "refreshAria": "Refresh dashboard",
+    "generatePayroll": "Run payroll",
+    "activeEmployees": "{count} active employees",
+    "teamPeople": "Your team · {count} people",
+    "scopeTeam": "your team",
+    "scopeCompany": "whole company",
+    "loadError": "We couldn't load the dashboard: {error}",
+    "loadErrorShort": "We couldn't load the dashboard",
+    "partialWarning": "Some sections couldn't load ({blocks}). Everything else is up to date.",
+    "warningBlocks": {
+      "attendance_series": "attendance history",
+      "attendance_today": "today's attendance",
+      "open_punches": "open punches",
+      "leave_requests": "leave",
+      "corrections": "corrections",
+      "payroll": "payroll",
+      "holidays": "holidays"
+    },
+    "relative": {
+      "today": "Today",
+      "yesterday": "Yesterday",
+      "tomorrow": "Tomorrow",
+      "daysAgo": "{count} days ago",
+      "inDays": "In {count} days"
+    },
+    "run": {
+      "half": "{half, select, 1 {1st} other {2nd}} half of {month} {year}",
+      "month": "{month} {year}"
+    },
+    "pending": {
+      "title": "Needs your attention",
+      "count": " · {count} pending",
+      "allClear": "All caught up: no open punches, leave requests or payrolls waiting for action.",
+      "severity": {
+        "urgent": "Urgent",
+        "warning": "Pending",
+        "info": "To review"
+      },
+      "openPunchesTitle": "{count, plural, one {# punch without check-out} other {# punches without check-out}}",
+      "openPunchesDetail": "Review in the daily close for {date}",
+      "openPunchesCta": "Go to daily close",
+      "leaveTitle": "{count, plural, one {# leave request to approve} other {# leave requests to approve}}",
+      "leaveDetail": "Requests waiting for a response",
+      "leaveOldest": "Oldest: {when}",
+      "leaveCta": "Review requests",
+      "runTitle": "Payroll: {label}",
+      "runDetailDraft": "Draft · needs authorization",
+      "runDetailEdited": "Edited · needs authorization",
+      "payOverdue": "Pay date has passed",
+      "payToday": "Pays today",
+      "payInDays": "Pays in {count} days",
+      "runCta": "Review and authorize",
+      "correctionsTitle": "{count, plural, one {# punch correction} other {# punch corrections}}",
+      "correctionsDetail": "Waiting for review",
+      "correctionsCta": "View corrections",
+      "terminationsTitle": "{count, plural, one {# scheduled termination} other {# scheduled terminations}}",
+      "terminationsDetail": "Next 30 days",
+      "terminationsCta": "View employees"
+    },
+    "kpi": {
+      "aria": "Today's indicators",
+      "yesterday": "yesterday",
+      "onDate": "{date}",
+      "same": "= same as {ref}",
+      "delta": "{arrow} {value} vs. {ref}",
+      "presentToday": "Present today",
+      "ofScheduled": "of {count}",
+      "noShifts": "No shifts today",
+      "absent": "Absent",
+      "late": "Late arrivals",
+      "avgLate": "avg. {minutes} min",
+      "rate7d": "7-day attendance",
+      "sameWeek": "= same as last week",
+      "deltaWeek": "{arrow} {value} pts vs. last week",
+      "payrollCost": "Payroll cost · {month}",
+      "deltaMonth": "{arrow} {value} % vs. last month"
+    },
+    "attendance": {
+      "title": "Daily attendance",
+      "subtitle": "Last {count} working days · {scope}",
+      "action": "View attendance",
+      "empty": "No days with scheduled shifts in this period yet.",
+      "onTime": "On time",
+      "late": "Late",
+      "absent": "Absent",
+      "paidLeave": "Paid leave",
+      "scheduled": "{date} · {count} scheduled",
+      "date": "Date"
+    },
+    "cost": {
+      "title": "Payroll cost",
+      "subtitle": "Last 6 months · authorized payrolls · gross = net + deductions",
+      "action": "View reports",
+      "empty": "No authorized payrolls in the last 6 months yet.",
+      "net": "Net",
+      "deductions": "Deductions",
+      "gross": "Gross",
+      "tooltip": "{month} · gross {amount}",
+      "caption": "Payroll cost by month",
+      "month": "Month"
+    },
+    "missing": {
+      "title": "Who's out today",
+      "subtitle": "{count, plural, one {# person absent, late or on leave} other {# people absent, late or on leave}}",
+      "action": "View full list",
+      "empty": "Everyone scheduled checked in on time today.",
+      "absent": "Absent",
+      "late": "Late",
+      "paidLeave": "Leave",
+      "checkedIn": "in at {time}",
+      "leaveApproved": "approved leave",
+      "noPunch": "no punch",
+      "noDepartment": "No department"
+    },
+    "runs": {
+      "title": "Payrolls",
+      "nextPayment": "Next payment: {date} · {when}",
+      "today": "today",
+      "inDays": "in {count} days",
+      "action": "View all",
+      "empty": "No payroll has been generated yet.",
+      "employees": "{count, plural, one {# employee} other {# employees}}",
+      "authorizedOn": " · authorized {date}",
+      "steps": {
+        "draft": "Draft",
+        "edited": "Edited",
+        "authorized": "Authorized"
+      },
+      "stepAria": "Step {step} of {total}: {label}",
+      "stepOf": " · step {step} of {total}",
+      "cta": "Review and authorize"
+    },
+    "calendar": {
+      "title": "HR calendar",
+      "subtitle": "Next 60 days",
+      "empty": "No payments, holidays or anniversaries in the next 60 days.",
+      "kinds": {
+        "payment": "Payment",
+        "holiday": "Holiday",
+        "anniversary": "Anniversary",
+        "termination": "Termination"
+      },
+      "paymentTitle": "Payroll payment",
+      "paymentSubtitle": "Period {start} to {end}",
+      "holiday": "Holiday",
+      "anniversaryTitle": "Work anniversary · {name}",
+      "anniversarySubtitle": "{count, plural, one {# year with the company} other {# years with the company}}",
+      "terminationTitle": "Scheduled termination · {name}",
+      "terminationSubtitle": "Recorded termination date"
+    },
+    "departments": {
+      "title": "By department",
+      "subtitle": "Active people · today's attendance",
+      "action": "Manage departments",
+      "empty": "No active employees assigned.",
+      "people": " people",
+      "noShift": "no shift"
+    }
   }
 }

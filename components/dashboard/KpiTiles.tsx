@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { daysBetween, type CostPoint, type DashboardOverview } from '../../lib/dashboard/overview'
-import { SERIES, shortDate } from './shared'
+import { SERIES } from './shared'
+import { useDashboardText } from './i18n'
 
 type Tone = 'good' | 'bad' | 'neutral'
 
@@ -36,45 +37,45 @@ function Sparkline({ values, color }: { values: number[]; color: string }) {
   )
 }
 
-/** Diferencia contra la referencia; `lowerIsBetter` invierte el tono. */
-function countDelta(current: number, previous: number | undefined, suffix: string, lowerIsBetter = false) {
-  if (previous === undefined) return undefined
-  const diff = current - previous
-  if (diff === 0) return { text: `= igual que ${suffix}`, tone: 'neutral' as Tone }
-  const better = lowerIsBetter ? diff < 0 : diff > 0
-  return {
-    text: `${diff > 0 ? '▲' : '▼'} ${Math.abs(diff).toLocaleString('es-HN')} vs. ${suffix}`,
-    tone: (better ? 'good' : 'bad') as Tone,
-  }
-}
-
 function lastCostPoints(trend: CostPoint[] | null | undefined) {
   const withData = (trend ?? []).filter((p) => p.gross > 0)
   return { last: withData[withData.length - 1], prev: withData[withData.length - 2] }
 }
 
 export default function KpiTiles({ data, formatMoney }: { data: DashboardOverview; formatMoney: (n: number) => string }) {
+  const { t, date: shortDate, number } = useDashboardText()
+  /** Diferencia contra la referencia; `lowerIsBetter` invierte el tono. */
+  const countDelta = (current: number, previous: number | undefined, ref: string, lowerIsBetter = false) => {
+    if (previous === undefined) return undefined
+    const diff = current - previous
+    if (diff === 0) return { text: t('kpi.same', { ref }), tone: 'neutral' as Tone }
+    const better = lowerIsBetter ? diff < 0 : diff > 0
+    return {
+      text: t('kpi.delta', { arrow: diff > 0 ? '▲' : '▼', value: number(Math.abs(diff)), ref }),
+      tone: (better ? 'good' : 'bad') as Tone,
+    }
+  }
   const { today, yesterday, rate7d, rate7dPrev, avgLateMinutesToday, series } = data.attendance
   const recent = series.slice(-7)
   // Último día laborable previo: "ayer" o, tras un fin de semana/feriado, su fecha.
   const yesterdayLabel = yesterday
-    ? daysBetween(yesterday.date, data.today) === 1 ? 'ayer' : `el ${shortDate(yesterday.date)}`
+    ? daysBetween(yesterday.date, data.today) === 1 ? t('kpi.yesterday') : t('kpi.onDate', { date: shortDate(yesterday.date) })
     : ''
   const href = '/app/attendance/dashboard'
 
   const tiles: Tile[] = [
     {
-      label: 'Presentes hoy',
-      value: today ? today.present.toLocaleString('es-HN') : '—',
-      unit: today ? `de ${today.scheduled.toLocaleString('es-HN')}` : 'Sin turnos hoy',
+      label: t('kpi.presentToday'),
+      value: today ? number(today.present) : '—',
+      unit: today ? t('kpi.ofScheduled', { count: number(today.scheduled) }) : t('kpi.noShifts'),
       delta: today ? countDelta(today.present, yesterday?.present, yesterdayLabel) : undefined,
       spark: recent.map((d) => d.present),
       sparkColor: SERIES.onTime,
       href,
     },
     {
-      label: 'Ausentes',
-      value: today ? today.absent.toLocaleString('es-HN') : '—',
+      label: t('kpi.absent'),
+      value: today ? number(today.absent) : '—',
       unit: today && today.scheduled > 0 ? `${Math.round((today.absent / today.scheduled) * 100)} %` : undefined,
       delta: today ? countDelta(today.absent, yesterday?.absent, yesterdayLabel, true) : undefined,
       spark: recent.map((d) => d.absent),
@@ -82,25 +83,25 @@ export default function KpiTiles({ data, formatMoney }: { data: DashboardOvervie
       href,
     },
     {
-      label: 'Tardanzas',
-      value: today ? today.late.toLocaleString('es-HN') : '—',
-      unit: avgLateMinutesToday !== null ? `prom. ${avgLateMinutesToday} min` : undefined,
+      label: t('kpi.late'),
+      value: today ? number(today.late) : '—',
+      unit: avgLateMinutesToday !== null ? t('kpi.avgLate', { minutes: avgLateMinutesToday }) : undefined,
       delta: today ? countDelta(today.late, yesterday?.late, yesterdayLabel, true) : undefined,
       spark: recent.map((d) => d.late),
       sparkColor: SERIES.late,
       href,
     },
     {
-      label: 'Asistencia 7 días',
-      value: rate7d !== null ? rate7d.toLocaleString('es-HN', { maximumFractionDigits: 1 }) : '—',
+      label: t('kpi.rate7d'),
+      value: rate7d !== null ? number(rate7d, { maximumFractionDigits: 1 }) : '—',
       unit: rate7d !== null ? '%' : undefined,
       delta:
         rate7d !== null && rate7dPrev !== null
           ? (() => {
               const diff = Math.round((rate7d - rate7dPrev) * 10) / 10
-              if (diff === 0) return { text: '= igual que la semana anterior', tone: 'neutral' as Tone }
+              if (diff === 0) return { text: t('kpi.sameWeek'), tone: 'neutral' as Tone }
               return {
-                text: `${diff > 0 ? '▲' : '▼'} ${Math.abs(diff).toLocaleString('es-HN')} pts vs. semana anterior`,
+                text: t('kpi.deltaWeek', { arrow: diff > 0 ? '▲' : '▼', value: number(Math.abs(diff)) }),
                 tone: (diff > 0 ? 'good' : 'bad') as Tone,
               }
             })()
@@ -115,19 +116,19 @@ export default function KpiTiles({ data, formatMoney }: { data: DashboardOvervie
   if (last) {
     const pct = prev ? Math.round(((last.gross - prev.gross) / prev.gross) * 1000) / 10 : null
     tiles.push({
-      label: `Costo de nómina · ${shortDate(`${last.period}-01`, { month: 'long' })}`,
+      label: t('kpi.payrollCost', { month: shortDate(`${last.period}-01`, { month: 'long' }) }),
       value: formatMoney(last.gross),
       delta:
         pct === null
           ? undefined
-          : { text: `${pct > 0 ? '▲' : pct < 0 ? '▼' : '='} ${Math.abs(pct).toLocaleString('es-HN')} % vs. mes anterior`, tone: 'neutral' },
+          : { text: t('kpi.deltaMonth', { arrow: pct > 0 ? '▲' : pct < 0 ? '▼' : '=', value: number(Math.abs(pct)) }), tone: 'neutral' },
       // Sin sparkline: el monto completo necesita el ancho y la tendencia ya está en PayrollCostChart.
       href: '/app/payroll',
     })
   }
 
   return (
-    <section aria-label="Indicadores de hoy" className="grid gap-3 grid-cols-[repeat(auto-fit,minmax(200px,1fr))]">
+    <section aria-label={t('kpi.aria')} className="grid gap-3 grid-cols-[repeat(auto-fit,minmax(200px,1fr))]">
       {tiles.map((t) => (
         <Link
           key={t.label}

@@ -1,9 +1,7 @@
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import type { CostPoint } from '../../lib/dashboard/overview'
-import { AXIS_TEXT, ChartTooltipBox, EmptyState, GRID_LINE, LegendItem, Panel, SERIES, shortDate } from './shared'
-
-const monthLabel = (period: string) => shortDate(`${period}-01`, { month: 'short' })
-const compact = (n: number) => n.toLocaleString('es-HN', { notation: 'compact', maximumFractionDigits: 1 })
+import { AXIS_TEXT, ChartTooltipBox, EmptyState, GRID_LINE, LegendItem, Panel, SERIES } from './shared'
+import { useDashboardText } from './i18n'
 
 function CostTooltip({
   active,
@@ -14,35 +12,39 @@ function CostTooltip({
   payload?: Array<{ payload: CostPoint }>
   formatMoney: (n: number) => string
 }) {
+  const { t, date: shortDate } = useDashboardText()
   const p = active ? payload?.[0]?.payload : undefined
   if (!p) return null
   return (
     <ChartTooltipBox
-      title={`${shortDate(`${p.period}-01`, { month: 'long', year: 'numeric' })} · bruto ${formatMoney(p.gross)}`}
+      title={t('cost.tooltip', { month: shortDate(`${p.period}-01`, { month: 'long', year: 'numeric' }), amount: formatMoney(p.gross) })}
       rows={[
-        { color: SERIES.net, label: 'Neto', value: formatMoney(p.net) },
-        { color: SERIES.deductions, label: 'Deducciones', value: formatMoney(p.deductions) },
+        { color: SERIES.net, label: t('cost.net'), value: formatMoney(p.net) },
+        { color: SERIES.deductions, label: t('cost.deductions'), value: formatMoney(p.deductions) },
       ]}
     />
   )
 }
 
 export default function PayrollCostChart({ trend, formatMoney }: { trend: CostPoint[]; formatMoney: (n: number) => string }) {
+  const { t, date: shortDate, number } = useDashboardText()
   const hasData = trend.some((p) => p.gross > 0)
+  const monthLabel = (period: string) => shortDate(`${period}-01`, { month: 'short' })
+  const compact = (n: number) => number(n, { notation: 'compact', maximumFractionDigits: 1 })
 
   return (
     <Panel
-      title="Costo de nómina"
-      subtitle="Últimos 6 meses · planillas autorizadas · bruto = neto + deducciones"
-      action={{ label: 'Ver reportes', href: '/app/reports' }}
+      title={t('cost.title')}
+      subtitle={t('cost.subtitle')}
+      action={{ label: t('cost.action'), href: '/app/reports' }}
     >
       {!hasData ? (
-        <EmptyState>Aún no hay planillas autorizadas en los últimos 6 meses.</EmptyState>
+        <EmptyState>{t('cost.empty')}</EmptyState>
       ) : (
         <>
           <div className="flex flex-wrap gap-4">
-            <LegendItem color={SERIES.net} label="Neto" />
-            <LegendItem color={SERIES.deductions} label="Deducciones" />
+            <LegendItem color={SERIES.net} label={t('cost.net')} />
+            <LegendItem color={SERIES.deductions} label={t('cost.deductions')} />
           </div>
           <div className="h-[220px]" aria-hidden>
             <ResponsiveContainer width="100%" height="100%">
@@ -65,13 +67,13 @@ export default function PayrollCostChart({ trend, formatMoney }: { trend: CostPo
             </ResponsiveContainer>
           </div>
           <table className="sr-only">
-            <caption>Costo de nómina por mes</caption>
+            <caption>{t('cost.caption')}</caption>
             <thead>
               <tr>
-                <th>Mes</th>
-                <th>Bruto</th>
-                <th>Neto</th>
-                <th>Deducciones</th>
+                <th>{t('cost.month')}</th>
+                <th>{t('cost.gross')}</th>
+                <th>{t('cost.net')}</th>
+                <th>{t('cost.deductions')}</th>
               </tr>
             </thead>
             <tbody>

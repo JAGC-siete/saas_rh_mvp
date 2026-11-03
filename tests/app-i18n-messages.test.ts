@@ -1,5 +1,6 @@
 import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
+import { parse, TYPE, type MessageFormatElement } from '@formatjs/icu-messageformat-parser'
 import es from '../lib/i18n/app/messages/es.json'
 import en from '../lib/i18n/app/messages/en.json'
 
@@ -16,9 +17,25 @@ function leafKeys(obj: Record<string, unknown>, prefix = ''): Map<string, unknow
   return out
 }
 
+/** ICU argument names (`{name}`, `{count, plural, ...}`), walking into plural/select branches and rich tags. */
 function placeholders(message: string): string[] {
-  // `{name}` or `{count, plural, ...}`; words inside plural branches (`{Hace # minuto}`) are not arguments.
-  return [...message.matchAll(/\{(\w+)\s*(?=[,}])/g)].map((m) => m[1]).sort()
+  const names = new Set<string>()
+  const walk = (els: MessageFormatElement[]) => {
+    for (const el of els) {
+      if (el.type === TYPE.literal || el.type === TYPE.pound) continue
+      if (el.type === TYPE.tag) {
+        names.add(`<${el.value}>`)
+        walk(el.children)
+        continue
+      }
+      names.add(el.value)
+      if (el.type === TYPE.plural || el.type === TYPE.select) {
+        for (const opt of Object.values(el.options)) walk(opt.value)
+      }
+    }
+  }
+  walk(parse(message, { ignoreTag: false }))
+  return [...names].sort()
 }
 
 describe('app i18n messages', () => {

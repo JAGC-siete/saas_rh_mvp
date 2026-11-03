@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, Fragment } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
+import { intlLocale } from '../lib/i18n/app/locale'
 import { Button } from './ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
 import { Input } from './ui/input'
@@ -171,7 +172,7 @@ function employeeToPlanillaRow(emp: EmployeeShaped): PlanillaRowForGrouping {
 export default function EmployeeManager({ companyId: propCompanyId }: { companyId?: string }) {
   const t = useTranslations('employees')
   const tc = useTranslations('common')
-  const locale = useLocale()
+  const locale = intlLocale(useLocale())
   const fmtDate = (value?: string | null) => formatDateDisplay(value, locale, tc('notSpecifiedF'))
   const fmtDateTime = (value?: string | null) => formatDateTimeDisplay(value, locale, tc('notSpecified'))
   const sectionHeading = (sortBy: Exclude<EmployeeListSortBy, 'name'>, gkey: string) =>
