@@ -1,5 +1,6 @@
 import { AuthProvider } from '../lib/auth'
 import { NotificationProvider } from './NotificationProvider'
+import { AppLocaleProvider } from './AppLocaleProvider'
 import { ToastContainer } from '../lib/toast'
 import dynamic from 'next/dynamic'
 import type { ReactNode } from 'react'
@@ -22,19 +23,21 @@ export default function AppAuthenticatedProviders({
 }) {
   return (
     <AuthProvider>
-      <NotificationProvider>
-        {children}
-        {showSessionWarning && (
-          <SessionExpiryWarning
-            onExpiry={() => {
-              if (typeof window !== 'undefined') {
-                window.location.href = '/app/login'
-              }
-            }}
-          />
-        )}
-        <ToastContainer />
-      </NotificationProvider>
+      <AppLocaleProvider>
+        <NotificationProvider>
+          {children}
+          {showSessionWarning && (
+            <SessionExpiryWarning
+              onExpiry={() => {
+                if (typeof window !== 'undefined') {
+                  window.location.href = '/app/login'
+                }
+              }}
+            />
+          )}
+          <ToastContainer />
+        </NotificationProvider>
+      </AppLocaleProvider>
     </AuthProvider>
   )
 }

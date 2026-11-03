@@ -1,0 +1,15 @@
+{
+  "settings": {
+    "language": {
+      "title": "Language",
+      "description": "Choose the language you see the system in. Pay stubs and legal documents are always issued in Spanish.",
+      "label": "System language",
+      "options": {
+        "es": "Español",
+        "en": "English (beta)"
+      },
+      "saved": "Done, language updated.",
+      "saveError": "We couldn't change the language. Check your connection and try again."
+    }
+  }
+}
