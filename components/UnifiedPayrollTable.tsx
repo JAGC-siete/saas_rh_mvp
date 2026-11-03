@@ -2,19 +2,14 @@
 // Combines planilla and detalle data in a single expandable table
 
 import React, { useState, useMemo, useEffect } from 'react'
+import { useLocale, useTranslations } from 'next-intl'
+import { intlLocale } from '../lib/i18n/app/locale'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
 import { Button } from './ui/button'
 import { Icon, IconName } from './Icon'
 import { useCompanyMoney } from '../lib/hooks/useCompanyMoney'
 import { UnifiedRow, UnifiedResumen } from '../lib/payroll-unified'
-import {
-  isFrozenPayrollRunStatus,
-  PAYROLL_AUTHORIZE_CONFIRM_LABEL,
-  PAYROLL_AUTHORIZE_CONFIRM_MESSAGE,
-  PAYROLL_AUTHORIZE_CONFIRM_TITLE,
-  PAYROLL_FROZEN_RUN_MESSAGE,
-  PAYROLL_FROZEN_RUN_TITLE,
-} from '../lib/payroll/resolve-effective-pay-type'
+import { isFrozenPayrollRunStatus } from '../lib/payroll/resolve-effective-pay-type'
 import {
   resolveStatutoryDeductionColumns,
   type CustomFieldConfigEntry
@@ -127,6 +122,8 @@ export default function UnifiedPayrollTable({
   companyId,
   payrollApiConfig = null
 }: UnifiedPayrollTableProps) {
+  const tt = useTranslations('payroll.table')
+  const locale = intlLocale(useLocale())
   const { countryCode, format } = useCompanyMoney()
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set())
   const [currentPageFixed, setCurrentPageFixed] = useState(1)
@@ -361,7 +358,7 @@ export default function UnifiedPayrollTable({
     
     if (isAuthorized) {
       return {
-        text: 'Nómina Autorizada',
+        text: tt('authorized'),
         icon: 'check',
         className: 'bg-emerald-600 hover:bg-emerald-700 text-white cursor-default shadow-lg shadow-emerald-500/25 ring-2 ring-emerald-400/20',
         disabled: true,
@@ -372,7 +369,7 @@ export default function UnifiedPayrollTable({
     
     if (isAuthorizing) {
       return {
-        text: 'Autorizando...',
+        text: tt('authorizing'),
         icon: 'refresh',
         className: 'bg-green-600 hover:bg-green-700 text-white',
         disabled: true,
@@ -382,7 +379,7 @@ export default function UnifiedPayrollTable({
     }
     
     return {
-      text: 'Autorizar Nómina',
+      text: tt('authorize'),
       icon: 'check',
       className: 'bg-green-600 hover:bg-green-700 text-white transform hover:scale-105 transition-all duration-200 hover:shadow-lg hover:shadow-green-500/25',
       disabled: !canAuth,
@@ -403,25 +400,28 @@ export default function UnifiedPayrollTable({
     onAuthorize()
   }
 
-  const monthName = new Date(period.year, period.month - 1).toLocaleDateString('es-HN', { month: 'long' })
+  const monthName = new Date(period.year, period.month - 1).toLocaleDateString(locale, { month: 'long' })
   const periodLabel =
     paymentFrequency === 'monthly'
-      ? `${monthName} ${period.year} · Mensual`
+      ? tt('monthly', { month: monthName, year: period.year })
       : paymentFrequency === 'weekly'
-        ? `${monthName} ${period.year} · Semana ${period.quincena}`
-        : `${monthName} ${period.year} Q${period.quincena}`
+        ? tt('weekly', { month: monthName, year: period.year, n: period.quincena })
+        : tt('fortnight', { month: monthName, year: period.year, n: String(period.quincena) })
 
   return (
     <Card className="backdrop-blur-md bg-white/10 border border-white/20">
       <CardHeader>
         <CardTitle className="text-white text-xl font-semibold">
-          Nómina — Detalle por Empleado
+          {tt('title')}
         </CardTitle>
         <CardDescription className="text-gray-200 text-base">
-          {fixedRows.length} empleados fijos • {hourlyRows.length} empleados por hora • 
-          Total Bruto: {format(resumen.total_bruto)} •
-          Total Neto: {format(resumen.total_neto)} •
-          Período: {periodLabel}
+          {tt('description', {
+            fixed: fixedRows.length,
+            hourly: hourlyRows.length,
+            gross: format(resumen.total_bruto),
+            net: format(resumen.total_neto),
+            period: periodLabel,
+          })}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -430,8 +430,8 @@ export default function UnifiedPayrollTable({
             <div className="flex items-start gap-2">
               <Icon name="check" className="h-5 w-5 text-emerald-300 flex-shrink-0 mt-0.5" />
               <div>
-                <h4 className="font-semibold text-emerald-200">{PAYROLL_FROZEN_RUN_TITLE}</h4>
-                <p className="text-sm text-emerald-100/90 mt-1">{PAYROLL_FROZEN_RUN_MESSAGE}</p>
+                <h4 className="font-semibold text-emerald-200">{tt('frozenTitle')}</h4>
+                <p className="text-sm text-emerald-100/90 mt-1">{tt('frozenMessage')}</p>
               </div>
             </div>
           </div>
@@ -442,9 +442,9 @@ export default function UnifiedPayrollTable({
             <div className="flex items-start gap-2">
               <Icon name="alert" className="h-5 w-5 text-amber-400 flex-shrink-0 mt-0.5" />
               <div>
-                <h4 className="font-semibold text-amber-200">Marcas huérfanas (sin check-out)</h4>
+                <h4 className="font-semibold text-amber-200">{tt('orphanTitle')}</h4>
                 <p className="text-sm text-amber-100/90 mt-1">
-                  Los siguientes empleados tienen registros con entrada pero sin salida. Las horas de esos registros no se incluyeron en el cálculo (o se usó el valor por defecto configurado).
+                  {tt('orphanText')}
                 </p>
                 <ul className="mt-2 space-y-1 text-sm text-amber-100/90">
                   {incompleteRecordsAlert.map((a) => (
@@ -462,24 +462,24 @@ export default function UnifiedPayrollTable({
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           <div className="text-center p-4 bg-blue-500/30 rounded-lg border border-blue-500/20">
             <div className="text-2xl font-bold text-blue-200">{resumen.empleados}</div>
-            <div className="text-sm font-semibold text-blue-200">Empleados</div>
+            <div className="text-sm font-semibold text-blue-200">{tt('employees')}</div>
           </div>
           
           <div className="text-center p-4 bg-green-500/30 rounded-lg border border-green-500/20">
             <div className="text-2xl font-bold text-green-200">{format(resumen.total_bruto)}</div>
-            <div className="text-sm font-semibold text-green-200">Total Bruto</div>
+            <div className="text-sm font-semibold text-green-200">{tt('totalGross')}</div>
           </div>
           
           <div className="text-center p-4 bg-red-500/30 rounded-lg border border-red-500/20">
             <div className="text-2xl font-bold text-red-200">
               {format(Object.values(resumen.total_deducciones).reduce((a, b) => a + b, 0))}
             </div>
-            <div className="text-sm font-semibold text-red-200">Total Deducciones</div>
+            <div className="text-sm font-semibold text-red-200">{tt('totalDeductions')}</div>
           </div>
           
           <div className="text-center p-4 bg-purple-500/30 rounded-lg border border-purple-500/20">
             <div className="text-2xl font-bold text-purple-200">{format(resumen.total_neto)}</div>
-            <div className="text-sm font-semibold text-purple-200">Total Neto</div>
+            <div className="text-sm font-semibold text-purple-200">{tt('totalNet')}</div>
           </div>
         </div>
 
@@ -487,7 +487,7 @@ export default function UnifiedPayrollTable({
         <div className="flex flex-col sm:flex-row gap-4 mb-4">
           {/* Department Filter */}
           <div className="flex items-center gap-2">
-            <label className="text-sm font-medium text-white">Departamento:</label>
+            <label className="text-sm font-medium text-white">{tt('department')}</label>
             <select
               value={departmentFilter}
               onChange={(e) => {
@@ -497,7 +497,7 @@ export default function UnifiedPayrollTable({
               }}
               className="px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
             >
-              <option value="all" className="bg-gray-800">Todos</option>
+              <option value="all" className="bg-gray-800">{tt('all')}</option>
               {departments.map(dept => (
                 <option key={dept} value={dept} className="bg-gray-800">{dept}</option>
               ))}
@@ -506,12 +506,12 @@ export default function UnifiedPayrollTable({
 
           {/* Sort Controls */}
           <div className="flex items-center gap-2">
-            <label className="text-sm font-medium text-white">Ordenar por:</label>
+            <label className="text-sm font-medium text-white">{tt('sortBy')}</label>
             <button
               onClick={toggleSortBy}
               className="px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm hover:bg-white/20 transition-colors"
             >
-              {sortBy === 'name' ? 'Nombre' : 'Departamento'}
+              {sortBy === 'name' ? tt('sortName') : tt('sortDepartment')}
             </button>
             <button
               onClick={toggleSortOrder}
@@ -537,8 +537,8 @@ export default function UnifiedPayrollTable({
 
           {/* Results count */}
           <div className="flex items-center text-sm text-gray-300 sm:ml-auto">
-            {fixedRows.length} en detalle
-            {hourlyRows.length > 0 ? ` • ${hourlyRows.length} por hora exacta` : ''}
+            {tt('inDetail', { count: fixedRows.length })}
+            {hourlyRows.length > 0 ? tt('hourlyCount', { count: hourlyRows.length }) : ''}
           </div>
         </div>
 
@@ -612,7 +612,7 @@ export default function UnifiedPayrollTable({
         {/* Mensaje si no hay empleados */}
         {fixedRows.length === 0 && hourlyRows.length === 0 && (
           <div className="text-center py-8 text-gray-400">
-            No hay empleados para este período
+            {tt('noEmployees')}
           </div>
         )}
 
@@ -629,7 +629,7 @@ export default function UnifiedPayrollTable({
               className="flex items-center gap-2 bg-orange-600 hover:bg-orange-700 text-white transform hover:scale-105 transition-all duration-200 hover:shadow-lg hover:shadow-orange-500/25"
             >
               <Icon name="check" className="h-4 w-4" />
-              Consolidar Cambios
+              {tt('consolidate')}
             </Button>
           )}
 
@@ -656,10 +656,10 @@ export default function UnifiedPayrollTable({
             disabled={!runId || loading || !onOpenPlanillaPreview}
             variant="outline"
             className="flex items-center gap-2 bg-white/10 border-white/30 text-white hover:bg-white/20 disabled:opacity-50"
-            title="Revisar planilla en pantalla y descargar PDF"
+            title={tt('previewTitle')}
           >
             <Icon name="document" className="h-4 w-4" />
-            Vista previa planilla
+            {tt('preview')}
           </Button>
 
           {/* Send Email - Only enabled after PDF generation (tracked separately) */}
@@ -670,14 +670,14 @@ export default function UnifiedPayrollTable({
             className={`flex items-center gap-2 bg-white/10 border-white/30 text-white hover:bg-white/20 disabled:opacity-50 ${isBulkEmailBlocked && canSend ? 'border-amber-400/40' : ''}`}
             title={
               !canSend
-                ? 'Autorice y genere PDF primero'
+                ? tt('needAuthorize')
                 : isBulkEmailBlocked
-                  ? bulkEmailBlockedMessage || 'Función disponible en plan de pago'
-                  : 'Enviar recibos por email'
+                  ? bulkEmailBlockedMessage || tt('paidOnly')
+                  : tt('sendTitle')
             }
           >
             <Icon name="envelope" className="h-4 w-4" />
-            {isBulkEmailBlocked && canSend ? 'Enviar por Email (plan de pago)' : 'Enviar por Email'}
+            {isBulkEmailBlocked && canSend ? tt('sendPaid') : tt('send')}
           </Button>
         </div>
 
@@ -685,9 +685,9 @@ export default function UnifiedPayrollTable({
           isOpen={showAuthorizeConfirm}
           onClose={() => setShowAuthorizeConfirm(false)}
           onConfirm={confirmAuthorize}
-          title={PAYROLL_AUTHORIZE_CONFIRM_TITLE}
-          description={PAYROLL_AUTHORIZE_CONFIRM_MESSAGE}
-          confirmLabel={PAYROLL_AUTHORIZE_CONFIRM_LABEL}
+          title={tt('confirmTitle')}
+          description={tt('confirmMessage')}
+          confirmLabel={tt('confirmLabel')}
           type="warning"
           requireTypedConfirm={false}
           loading={loading && status === 'authorizing'}

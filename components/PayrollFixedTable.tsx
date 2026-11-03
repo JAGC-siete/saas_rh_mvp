@@ -1,4 +1,5 @@
 // Componente para mostrar tabla de empleados fijos (fixed)
+import { useTranslations } from 'next-intl'
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Info } from 'lucide-react'
@@ -21,9 +22,6 @@ import {
 } from '../lib/payroll/overtime-pay'
 import { HONDURAS_LABOR_FACTOR } from '../lib/payroll/constants'
 import { normalizePayrollDaysWorked } from '../lib/payroll/normalize-days-worked'
-
-const HORAS_EXTRA_AHC_INFO =
-  'Administrativo por día: HE por recargo (25% 5–7pm y 5–7am, 50% 7–10pm, 75% 10pm–5am, 100% feriados). Si empresa y empleado pagan HE, el monto entra al bruto (IHSS/RAP/ISR sobre salario base). Sin salida no hay HE. Editable en la corrida.'
 
 const emptyOtPercentInputs = (): Record<OvertimePercentGroupKey, string> => ({
   pct_25: '0',
@@ -97,6 +95,9 @@ export default function PayrollFixedTable({
   statutoryDeductions = { ihss: true, rap: true, isr: true },
   countryCode = null,
 }: PayrollFixedTableProps) {
+  const tr = useTranslations('payroll.rows')
+  const tf = useTranslations('payroll.fixed')
+  const tc = useTranslations('common')
   const money = (n: number) => formatCurrency(n, { countryCode })
   const labels = statutoryUiLabels(countryCode)
   const [daysModal, setDaysModal] = useState<{
@@ -196,12 +197,12 @@ export default function PayrollFixedTable({
   const openDaysModal = (row: UnifiedRow) => {
     const runLineId = row.line_id
     if (!runLineId) {
-      alert('No hay línea de corrida para este empleado. Genere vista previa primero.')
+      alert(tf('noRunLine'))
       return
     }
     setDaysModal({
       runLineId,
-      employeeName: row.name || 'Empleado',
+      employeeName: row.name || tr('employee'),
       currentDays: row.days_worked ?? 0
     })
     setDaysInput(String(row.days_worked ?? 0))
@@ -218,7 +219,7 @@ export default function PayrollFixedTable({
     if (!daysModal || !onAdjustFixedDays) return
     const n = normalizePayrollDaysWorked(daysInput)
     if (n == null) {
-      alert('Ingrese días ≥ 0 (admite decimales, p. ej. 14.5)')
+      alert(tf('daysInvalid'))
       return
     }
     setDaysSaving(true)
@@ -233,7 +234,7 @@ export default function PayrollFixedTable({
       setDaysReason('')
     } catch (e) {
       console.error(e)
-      alert(e instanceof Error ? e.message : 'Error al ajustar días')
+      alert(e instanceof Error ? e.message : tf('adjustDaysError'))
     } finally {
       setDaysSaving(false)
     }
@@ -242,7 +243,7 @@ export default function PayrollFixedTable({
   const openOtModal = (row: UnifiedRow) => {
     const runLineId = row.line_id
     if (!runLineId) {
-      alert('No hay línea de corrida para este empleado. Genere vista previa primero.')
+      alert(tf('noRunLine'))
       return
     }
     const meta = (row as { metadata?: Record<string, unknown> }).metadata
@@ -270,7 +271,7 @@ export default function PayrollFixedTable({
     const g = breakdownToPercentGroupValues(b)
     setOtModal({
       runLineId,
-      employeeName: row.name || 'Empleado',
+      employeeName: row.name || tr('employee'),
       baseSalary: row.base_salary || 0,
     })
     setOtBands({
@@ -297,7 +298,7 @@ export default function PayrollFixedTable({
       holiday_100: Number(otBands.holiday_100),
     })
     if (!Object.values(overtime).every((n) => Number.isFinite(n) && n >= 0)) {
-      alert('Ingrese horas ≥ 0 para cada recargo')
+      alert(tf('otInvalid'))
       return
     }
     setOtSaving(true)
@@ -310,7 +311,7 @@ export default function PayrollFixedTable({
       closeOtModal()
     } catch (e) {
       console.error(e)
-      alert(e instanceof Error ? e.message : 'Error al ajustar horas extras')
+      alert(e instanceof Error ? e.message : tf('adjustOtError'))
     } finally {
       setOtSaving(false)
     }
@@ -318,12 +319,12 @@ export default function PayrollFixedTable({
 
   const openStatutoryModal = (row: UnifiedRow) => {
     if (!row.line_id) {
-      alert('No hay línea de corrida para este empleado. Genere vista previa primero.')
+      alert(tf('noRunLine'))
       return
     }
     setStatutoryModal({
       runLineId: row.line_id,
-      employeeName: row.name || 'Empleado',
+      employeeName: row.name || tr('employee'),
     })
     setStatutoryIhss(String(Number(row.IHSS) || 0))
     setStatutoryRap(String(Number(row.RAP) || 0))
@@ -345,7 +346,7 @@ export default function PayrollFixedTable({
   const parseStatutoryInput = (raw: string, label: string): number | null => {
     const n = Number(String(raw).replace(',', '.').trim())
     if (!Number.isFinite(n) || n < 0) {
-      alert(`${label} debe ser un número ≥ 0`)
+      alert(tf('notNumber', { label }))
       return null
     }
     return Math.round(n * 100) / 100
@@ -355,7 +356,7 @@ export default function PayrollFixedTable({
     if (!statutoryModal || !onZeroStatutory) return
     const reason = statutoryReason.trim()
     if (reason.length < 3) {
-      alert('Indique un motivo (mín. 3 caracteres)')
+      alert(tf('reasonMin'))
       return
     }
     const ihss = parseStatutoryInput(statutoryIhss, labels.primarySocial)
@@ -369,7 +370,10 @@ export default function PayrollFixedTable({
     if (isr === null) return
     if (
       !confirm(
-        `¿Guardar retenciones de ley para ${statutoryModal.employeeName}? ${labels.primarySocial} ${ihss}${labels.secondarySocial !== '—' ? `, ${labels.secondarySocial} ${rap}` : ''}, ${labels.incomeTax} ${isr}. El bruto no cambia; el neto se recalcula.`
+        tf('confirmStatutory', {
+          name: statutoryModal.employeeName,
+          values: `${labels.primarySocial} ${ihss}${labels.secondarySocial !== '—' ? `, ${labels.secondarySocial} ${rap}` : ''}, ${labels.incomeTax} ${isr}`,
+        })
       )
     ) {
       return
@@ -386,7 +390,7 @@ export default function PayrollFixedTable({
       closeStatutoryModal()
     } catch (e) {
       console.error(e)
-      alert(e instanceof Error ? e.message : 'Error al editar retenciones de ley')
+      alert(e instanceof Error ? e.message : tf('statutoryError'))
     } finally {
       setStatutorySaving(false)
     }
@@ -402,32 +406,32 @@ export default function PayrollFixedTable({
   return (
     <div className="mb-8">
       <h3 className="text-lg font-semibold text-white mb-4 pb-2 border-b border-white/20">
-        Nómina — Detalle por Empleado
+        {tf('title')}
       </h3>
       <div className="mb-4 grid grid-cols-3 gap-4">
         <div className="text-center p-3 bg-blue-500/20 rounded-lg border border-blue-500/20">
           <div className="text-lg font-bold text-blue-200">{money(summary.totalBruto)}</div>
-          <div className="text-xs text-blue-200">Total Bruto</div>
+          <div className="text-xs text-blue-200">{tr('totalGross')}</div>
         </div>
         <div className="text-center p-3 bg-red-500/20 rounded-lg border border-red-500/20">
           <div className="text-lg font-bold text-red-200">{money(summary.totalDeducciones)}</div>
-          <div className="text-xs text-red-200">Total Deducciones</div>
+          <div className="text-xs text-red-200">{tr('totalDeductions')}</div>
         </div>
         <div className="text-center p-3 bg-green-500/20 rounded-lg border border-green-500/20">
           <div className="text-lg font-bold text-green-200">{money(summary.totalNeto)}</div>
-          <div className="text-xs text-green-200">Total Neto</div>
+          <div className="text-xs text-green-200">{tr('totalNet')}</div>
         </div>
       </div>
       <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-white/30">
           <thead className="bg-white/20">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Empleado</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Salario Base Mensual</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Días Trabajados</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">{tr('cols.employee')}</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">{tr('cols.baseSalary')}</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">{tr('cols.daysWorked')}</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider align-bottom">
                 <div className="inline-flex items-center gap-1">
-                  <span>Horas extra (AHC)</span>
+                  <span>{tr('cols.overtime')}</span>
                   <button
                     ref={ahcInfoBtnRef}
                     type="button"
@@ -437,16 +441,16 @@ export default function PayrollFixedTable({
                     }}
                     className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-white/25 bg-white/10 text-white hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-brand-400/80"
                     aria-expanded={ahcInfoOpen}
-                    aria-label="Información sobre horas extra AHC"
+                    aria-label={tf('ahcInfoAria')}
                   >
                     <Info className="h-3.5 w-3.5" aria-hidden />
                   </button>
                 </div>
               </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Salario Proporcional</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Deducciones</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Neto a Pagar</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Acciones</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">{tr('cols.proportional')}</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">{tr('cols.deductions')}</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">{tr('cols.net')}</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">{tr('cols.actions')}</th>
             </tr>
           </thead>
           <tbody className="bg-transparent divide-y divide-white/20">
@@ -472,11 +476,11 @@ export default function PayrollFixedTable({
                             typeof meta?.statutory_zeroed_reason === 'string'
                               ? meta.statutory_zeroed_reason
                               : statutoryFullyZeroed
-                                ? 'Retenciones de ley omitidas en esta corrida'
-                                : 'Retenciones de ley editadas en esta corrida'
+                                ? tf('statutoryZeroed')
+                                : tf('statutoryEdited')
                           }
                         >
-                          {statutoryFullyZeroed ? 'Retenciones omitidas' : 'Retenciones editadas'}
+                          {statutoryFullyZeroed ? tf('badgeZeroed') : tf('badgeEdited')}
                         </div>
                       ) : null}
                     </div>
@@ -501,12 +505,12 @@ export default function PayrollFixedTable({
                           className="h-8 gap-1.5 border-white/30 bg-white/10 px-2.5 text-xs text-white hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-50"
                           title={
                             canAdjustFixedDays
-                              ? 'Ajustar días del período y recalcular bruto, deducciones y neto'
-                              : `No se pueden editar días con la corrida en estado "${payrollRunStatus || 'actual'}". Debe estar en borrador o consolidada (sin autorizar).`
+                              ? tf('editDaysTitle')
+                              : tf('lockedDays', { status: payrollRunStatus || tf('currentStatus') })
                           }
                         >
                           <Icon name="edit" className="h-3.5 w-3.5 shrink-0" />
-                          Editar días
+                          {tf('editDays')}
                         </Button>
                       ) : null}
                     </div>
@@ -530,14 +534,14 @@ export default function PayrollFixedTable({
                           className="h-8 gap-1.5 border-white/30 bg-white/10 px-2.5 text-xs text-white hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-50"
                           title={
                             !companyPayOvertime
-                              ? 'La empresa tiene desactivado el pago de horas extras'
+                              ? tf('otDisabled')
                               : canAdjustFixedDays
-                                ? 'Ajustar franjas de HE y sumar al bruto'
-                                : `No se pueden editar HE con la corrida en estado "${payrollRunStatus || 'actual'}". Debe estar en borrador o consolidada (sin autorizar).`
+                                ? tf('editOtTitle')
+                                : tf('lockedOt', { status: payrollRunStatus || tf('currentStatus') })
                           }
                         >
                           <Icon name="edit" className="h-3.5 w-3.5 shrink-0" />
-                          Editar HE
+                          {tf('editOt')}
                         </Button>
                       ) : null}
                     </div>
@@ -565,10 +569,12 @@ export default function PayrollFixedTable({
                           onClick={() => openStatutoryModal(row)}
                           disabled={loading}
                           className="mt-1.5 h-7 border-amber-400/30 bg-amber-500/10 px-2 text-[10px] text-amber-100 hover:bg-amber-500/20"
-                          title={`Editar ${labels.primarySocial}/${labels.secondarySocial !== '—' ? `${labels.secondarySocial}/` : ''}${labels.incomeTax} en este período (valores ≥ 0)`}
+                          title={tf('editStatutoryTitle', {
+                            taxes: `${labels.primarySocial}/${labels.secondarySocial !== '—' ? `${labels.secondarySocial}/` : ''}${labels.incomeTax}`,
+                          })}
                         >
                           <Icon name="edit" className="mr-1 h-3 w-3" />
-                          Editar retenciones
+                          {tf('editStatutory')}
                         </Button>
                       ) : null}
                     </div>
@@ -584,8 +590,8 @@ export default function PayrollFixedTable({
                         onClick={() => onPreviewVoucher(row.line_id || row.employee_id)}
                         disabled={loading || !row.line_id}
                         className="bg-white/10 border-white/30 text-white hover:bg-white/20"
-                        title="Ver comprobante"
-                        aria-label={`Ver comprobante de ${row.name || 'empleado'}`}
+                        title={tr('viewVoucher')}
+                        aria-label={tr('viewVoucherOf', { name: row.name || tr('employee') })}
                       >
                         <Icon name="eye" className="h-4 w-4" />
                       </Button>
@@ -595,8 +601,8 @@ export default function PayrollFixedTable({
                         onClick={() => onGenerateVoucher(row.line_id || row.employee_id)}
                         disabled={loading || !row.line_id}
                         className="bg-white/10 border-white/30 text-white hover:bg-white/20"
-                        title="Descargar comprobante PDF"
-                        aria-label={`Descargar comprobante PDF de ${row.name || 'empleado'}`}
+                        title={tr('downloadVoucher')}
+                        aria-label={tr('downloadVoucherOf', { name: row.name || tr('employee') })}
                       >
                         <Icon name="download" className="h-4 w-4" />
                       </Button>
@@ -607,8 +613,8 @@ export default function PayrollFixedTable({
                           onClick={() => onEditCustomFields?.(row.line_id || row.employee_id, (row as any).metadata, row.base_salary || 0, row.employee_id)}
                           disabled={loading}
                           className="bg-white/10 border-white/30 text-white hover:bg-white/20"
-                          title="Editar campos personalizados"
-                          aria-label={`Editar campos personalizados de ${row.name || 'empleado'}`}
+                          title={tr('editCustom')}
+                          aria-label={tr('editCustomOf', { name: row.name || tr('employee') })}
                         >
                           <Icon name="edit" className="h-4 w-4" />
                         </Button>
@@ -627,12 +633,12 @@ export default function PayrollFixedTable({
                           size="sm"
                           disabled={loading}
                           className="bg-white/10 border-white/30 text-white hover:bg-white/20"
-                          title="Recalcular desde asistencia (quita ediciones manuales de esta línea)"
-                          aria-label={`Recalcular desde asistencia la línea de ${row.name || 'empleado'}`}
+                          title={tr('recalcLine')}
+                          aria-label={tr('recalcLineOf', { name: row.name || tr('employee') })}
                           onClick={async () => {
                             if (
                               !confirm(
-                                '¿Recalcular esta línea desde asistencia? Se perderán las ediciones manuales de este empleado (incl. el ajuste de retenciones de ley).'
+                                tr('confirmRecalcFixed')
                               )
                             ) {
                               return
@@ -640,7 +646,7 @@ export default function PayrollFixedTable({
                             try {
                               await onResetLineRecalc(row.line_id!)
                             } catch (e) {
-                              alert(e instanceof Error ? e.message : 'Error al recalcular')
+                              alert(e instanceof Error ? e.message : tr('recalcError'))
                             }
                           }}
                         >
@@ -655,7 +661,7 @@ export default function PayrollFixedTable({
             ) : (
               <tr>
                 <td colSpan={8} className="px-4 py-8 text-center text-gray-400">
-                  No hay empleados fijos para este período
+                  {tf('none')}
                 </td>
               </tr>
             )}
@@ -679,7 +685,7 @@ export default function PayrollFixedTable({
             }}
             className="rounded-lg border border-white/20 bg-gray-900/98 px-3 py-2.5 text-left text-[11px] font-normal leading-snug text-gray-200 shadow-xl"
           >
-            {HORAS_EXTRA_AHC_INFO}
+            {tf('ahcInfo')}
           </div>,
           document.body
         )}
@@ -687,18 +693,17 @@ export default function PayrollFixedTable({
       {daysModal && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true">
           <div className="w-full max-w-md rounded-lg border border-white/20 bg-gray-900 p-6 text-white shadow-xl">
-            <h3 className="text-lg font-semibold">Ajustar días trabajados</h3>
+            <h3 className="text-lg font-semibold">{tf('daysModalTitle')}</h3>
             <p className="mt-1 text-sm text-gray-300">{daysModal.employeeName}</p>
             <p className="mt-2 text-xs text-amber-200/90">
-              Se recalculan salario proporcional, horas extras (ajuste manual o cálculo de asistencia), deducciones de ley
-              (sobre salario base) y planes.
+              {tf('daysModalHint')}
             </p>
             <div className="mt-4 space-y-3">
               <div>
                 <label htmlFor="adj-days" className="block text-sm font-medium text-gray-200">
-                  Días trabajados (período)
+                  {tf('daysLabel')}
                 </label>
-                <p className="mt-0.5 text-xs text-gray-400">Admite medios días, p. ej. 14.5</p>
+                <p className="mt-0.5 text-xs text-gray-400">{tf('daysHint')}</p>
                 <Input
                   id="adj-days"
                   type="number"
@@ -711,7 +716,7 @@ export default function PayrollFixedTable({
               </div>
               <div>
                 <label htmlFor="adj-reason" className="block text-sm font-medium text-gray-200">
-                  Motivo (opcional)
+                  {tf('reasonOptional')}
                 </label>
                 <Textarea
                   id="adj-reason"
@@ -719,16 +724,16 @@ export default function PayrollFixedTable({
                   onChange={(e) => setDaysReason(e.target.value)}
                   rows={2}
                   className="mt-1 border-white/20 bg-white/10 text-white"
-                  placeholder="Ej. corrección de asistencia"
+                  placeholder={tf('daysReasonPlaceholder')}
                 />
               </div>
             </div>
             <div className="mt-6 flex justify-end gap-2">
               <Button type="button" variant="outline" onClick={closeDaysModal} disabled={daysSaving}>
-                Cancelar
+                {tc('cancel')}
               </Button>
               <Button type="button" onClick={submitDaysAdjust} disabled={daysSaving}>
-                {daysSaving ? 'Guardando…' : 'Recalcular y guardar'}
+                {daysSaving ? tf('saving') : tf('recalcSave')}
               </Button>
             </div>
           </div>
@@ -739,10 +744,10 @@ export default function PayrollFixedTable({
       {otModal && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true">
           <div className="w-full max-w-md rounded-lg border border-white/20 bg-gray-900 p-6 text-white shadow-xl max-h-[90vh] overflow-y-auto">
-            <h3 className="text-lg font-semibold">Ajustar horas extras</h3>
+            <h3 className="text-lg font-semibold">{tf('otModalTitle')}</h3>
             <p className="mt-1 text-sm text-gray-300">{otModal.employeeName}</p>
             <p className="mt-2 text-xs text-amber-200/90">
-              El monto se suma al bruto; IHSS/RAP/ISR no cambian de base.
+              {tf('otModalHint')}
             </p>
             {(() => {
               const overtime = percentGroupValuesToBreakdown({
@@ -755,7 +760,7 @@ export default function PayrollFixedTable({
               const pay = calculateOvertimePayFromAhc(overtime, rate)
               return (
                 <p className="mt-2 text-sm text-emerald-300">
-                  Vista previa HE: {money(pay)}
+                  {tf('otPreview', { amount: money(pay) })}
                 </p>
               )
             })()}
@@ -766,7 +771,7 @@ export default function PayrollFixedTable({
                     htmlFor={`ot-${group.key}`}
                     className="block text-sm font-medium text-gray-200"
                   >
-                    {group.label}
+                    {tf(`otGroups.${group.key}`)}
                   </label>
                   <Input
                     id={`ot-${group.key}`}
@@ -783,7 +788,7 @@ export default function PayrollFixedTable({
               ))}
               <div>
                 <label htmlFor="ot-reason" className="block text-sm font-medium text-gray-200">
-                  Motivo (opcional)
+                  {tf('reasonOptional')}
                 </label>
                 <Textarea
                   id="ot-reason"
@@ -791,16 +796,16 @@ export default function PayrollFixedTable({
                   onChange={(e) => setOtReason(e.target.value)}
                   rows={2}
                   className="mt-1 border-white/20 bg-white/10 text-white"
-                  placeholder="Ej. corrección AHC"
+                  placeholder={tf('otReasonPlaceholder')}
                 />
               </div>
             </div>
             <div className="mt-6 flex justify-end gap-2">
               <Button type="button" variant="outline" onClick={closeOtModal} disabled={otSaving}>
-                Cancelar
+                {tc('cancel')}
               </Button>
               <Button type="button" onClick={submitOtAdjust} disabled={otSaving}>
-                {otSaving ? 'Guardando…' : 'Recalcular y guardar'}
+                {otSaving ? tf('saving') : tf('recalcSave')}
               </Button>
             </div>
           </div>
@@ -811,11 +816,13 @@ export default function PayrollFixedTable({
       {statutoryModal && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true">
           <div className="w-full max-w-md rounded-lg border border-white/20 bg-gray-900 p-6 text-white shadow-xl">
-            <h3 className="text-lg font-semibold">Editar retenciones de ley</h3>
+            <h3 className="text-lg font-semibold">{tf('statutoryModalTitle')}</h3>
             <p className="mt-1 text-sm text-gray-300">{statutoryModal.employeeName}</p>
             <p className="mt-2 text-xs text-amber-200/90">
-              Ajuste {labels.primarySocial}{labels.secondarySocial !== '—' ? `, ${labels.secondarySocial}` : ''} e {labels.incomeTax} (≥ 0) en esta corrida. El bruto no cambia; el neto se
-              recalcula. Use 0 cuando esas retenciones se apliquen en finiquito u otro proceso.
+              {tf('statutoryModalHint', {
+                social: `${labels.primarySocial}${labels.secondarySocial !== '—' ? `, ${labels.secondarySocial}` : ''}`,
+                tax: labels.incomeTax,
+              })}
             </p>
             <div className={`mt-4 grid gap-3 ${statutoryDeductions.rap && labels.secondarySocial !== '—' ? 'grid-cols-3' : 'grid-cols-2'}`}>
               <div>
@@ -876,12 +883,12 @@ export default function PayrollFixedTable({
                   setStatutoryIsr('0')
                 }}
               >
-                Poner todo en 0
+                {tf('zeroAll')}
               </Button>
             </div>
             <div className="mt-4">
               <label htmlFor="statutory-reason" className="block text-sm font-medium text-gray-200">
-                Motivo (requerido)
+                {tf('reasonRequired')}
               </label>
               <Textarea
                 id="statutory-reason"
@@ -889,7 +896,7 @@ export default function PayrollFixedTable({
                 onChange={(e) => setStatutoryReason(e.target.value)}
                 rows={3}
                 className="mt-1 border-white/20 bg-white/10 text-white"
-                placeholder="Ej. Retenciones de ley se aplicarán en finiquito"
+                placeholder={tf('statutoryReasonPlaceholder')}
               />
             </div>
             <div className="mt-6 flex justify-end gap-2">
@@ -899,10 +906,10 @@ export default function PayrollFixedTable({
                 onClick={closeStatutoryModal}
                 disabled={statutorySaving}
               >
-                Cancelar
+                {tc('cancel')}
               </Button>
               <Button type="button" onClick={submitStatutoryOverride} disabled={statutorySaving}>
-                {statutorySaving ? 'Guardando…' : 'Guardar retenciones'}
+                {statutorySaving ? tf('saving') : tf('saveStatutory')}
               </Button>
             </div>
           </div>

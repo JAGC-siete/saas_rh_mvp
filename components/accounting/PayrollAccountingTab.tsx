@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react'
+import { useTranslations } from 'next-intl'
 import { useToast } from '../../lib/toast'
 import { Button } from '../ui/button'
 import { Card, CardContent } from '../ui/card'
@@ -26,6 +27,7 @@ export function PayrollAccountingTab({
   onGoToAuthorize
 }: PayrollAccountingTabProps) {
   const toast = useToast()
+  const ta = useTranslations('payroll.accounting')
   const [entries, setEntries] = useState<any[]>([])
   const [statutoryTrace, setStatutoryTrace] =
     useState<JournalStatutoryTraceBlock | null>(null)
@@ -72,9 +74,9 @@ export function PayrollAccountingTab({
       await onGenerate()
       await fetchEntries()
     } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Error generando asientos'
+      const msg = e instanceof Error ? e.message : ta('generateError')
       console.error('generate-journal-entries:', e)
-      toast.error('Asientos contables', msg, 8000)
+      toast.error(ta('entriesTitle'), msg, 8000)
     } finally {
       setGenerating(false)
     }
@@ -99,11 +101,11 @@ export function PayrollAccountingTab({
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) {
-        throw new Error(data.error || 'No se pudo enviar a Odoo')
+        throw new Error(data.error || ta('odooError'))
       }
-      toast.success('Odoo', `Asientos encolados: ${data.count ?? 0}`)
+      toast.success('Odoo', ta('odooQueued', { count: data.count ?? 0 }))
     } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Error enviando a Odoo'
+      const msg = e instanceof Error ? e.message : ta('odooSendError')
       toast.error('Odoo', msg, 8000)
     } finally {
       setPushingOdoo(false)
@@ -123,19 +125,17 @@ export function PayrollAccountingTab({
         <CardContent className="p-8 text-center">
           <CalculatorIcon className="h-12 w-12 text-amber-400/80 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-white mb-2">
-            Autorice la nómina primero
+            {ta('authorizeFirst')}
           </h3>
           <p className="text-white/70 max-w-md mx-auto">
-            La generación de asientos contables está disponible una vez que la
-            planilla haya sido autorizada. Autorice la nómina para habilitar esta
-            función.
+            {ta('authorizeFirstHint')}
           </p>
           {onGoToAuthorize && (
             <Button
               onClick={onGoToAuthorize}
               className="mt-6 bg-green-600 hover:bg-green-700 text-white"
             >
-              Ir a autorizar
+              {ta('goAuthorize')}
             </Button>
           )}
         </CardContent>
@@ -148,7 +148,7 @@ export function PayrollAccountingTab({
       <Card className="backdrop-blur-md bg-white/10 border border-white/20">
         <CardContent className="p-8 text-center">
           <p className="text-white/70">
-            Seleccione un período con planilla autorizada para generar asientos.
+            {ta('selectPeriod')}
           </p>
         </CardContent>
       </Card>
@@ -169,12 +169,10 @@ export function PayrollAccountingTab({
         <CardContent className="p-8 text-center">
           <CalculatorIcon className="h-12 w-12 text-brand-400/80 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-white mb-2">
-            Generar Asientos Contables
+            {ta('generateTitle')}
           </h3>
           <p className="text-white/70 max-w-md mx-auto mb-6">
-            Genere las partidas contables (Partida 1: Salarios y retenciones,
-            Partida 2: Aportaciones y provisiones) a partir de esta planilla
-            autorizada.
+            {ta('generateHint')}
           </p>
           <Button
             onClick={handleGenerate}
@@ -184,10 +182,10 @@ export function PayrollAccountingTab({
             {generating ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Generando...
+                {ta('generating')}
               </>
             ) : (
-              'Generar Asientos Contables'
+              ta('generateTitle')
             )}
           </Button>
         </CardContent>
@@ -207,7 +205,7 @@ export function PayrollAccountingTab({
             className="border-white/20 text-white hover:bg-white/10"
           >
             <DocumentArrowDownIcon className="h-4 w-4 mr-1" />
-            Exportar CSV
+            {ta('exportCsv')}
           </Button>
           <Button
             variant="outline"
@@ -216,7 +214,7 @@ export function PayrollAccountingTab({
             className="border-white/20 text-white hover:bg-white/10"
           >
             <DocumentArrowDownIcon className="h-4 w-4 mr-1" />
-            Exportar JSON
+            {ta('exportJson')}
           </Button>
           <Button
             size="sm"
@@ -227,10 +225,10 @@ export function PayrollAccountingTab({
             {pushingOdoo ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Enviando...
+                {ta('sending')}
               </>
             ) : (
-              'Enviar a Odoo'
+              ta('sendOdoo')
             )}
           </Button>
         </div>
