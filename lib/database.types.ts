@@ -2958,6 +2958,7 @@ export type Database = {
           is_active: boolean | null
           is_b2c: boolean
           last_login: string | null
+          locale: string
           permissions: Json | null
           role: string
           updated_at: string | null
@@ -2970,6 +2971,7 @@ export type Database = {
           is_active?: boolean | null
           is_b2c?: boolean
           last_login?: string | null
+          locale?: string
           permissions?: Json | null
           role?: string
           updated_at?: string | null
@@ -2982,6 +2984,7 @@ export type Database = {
           is_active?: boolean | null
           is_b2c?: boolean
           last_login?: string | null
+          locale?: string
           permissions?: Json | null
           role?: string
           updated_at?: string | null

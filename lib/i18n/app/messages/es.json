@@ -1,0 +1,15 @@
+{
+  "settings": {
+    "language": {
+      "title": "Idioma",
+      "description": "Elige en qué idioma ves el sistema. Los recibos de pago y documentos legales siempre salen en español.",
+      "label": "Idioma del sistema",
+      "options": {
+        "es": "Español",
+        "en": "English (beta)"
+      },
+      "saved": "Listo, cambiamos el idioma.",
+      "saveError": "No pudimos cambiar el idioma. Revisa tu conexión e inténtalo de nuevo."
+    }
+  }
+}

@@ -12,6 +12,7 @@ interface UserProfile {
   company_id: string | null
   employee_id?: string
   permissions?: Record<string, any>
+  locale?: string
 }
 
 interface AuthContextType {
@@ -327,6 +328,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         company_id: data.user.company_id,
         is_active: true,
         permissions: apiPermissions,
+        locale: apiProfile?.locale,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       }
