@@ -4,6 +4,7 @@
  */
 
 import React, { useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { useSessionExpiryMonitor } from './SessionExpiryWarning'
 import { SessionManager } from './SessionManager'
 import { 
@@ -17,6 +18,7 @@ interface SessionStatusIndicatorProps {
 }
 
 export function SessionStatusIndicator({ className = '' }: SessionStatusIndicatorProps) {
+  const t = useTranslations('session')
   const { minutesUntilExpiry } = useSessionExpiryMonitor()
   const [showSessionManager, setShowSessionManager] = useState(false)
 
@@ -28,8 +30,8 @@ export function SessionStatusIndicator({ className = '' }: SessionStatusIndicato
   }
 
   const getStatusText = () => {
-    if (!minutesUntilExpiry) return 'Activa'
-    if (minutesUntilExpiry <= 1) return 'Expirando'
+    if (!minutesUntilExpiry) return t('statusActive')
+    if (minutesUntilExpiry <= 1) return t('statusExpiring')
     return `${minutesUntilExpiry}m`
   }
 
@@ -38,7 +40,7 @@ export function SessionStatusIndicator({ className = '' }: SessionStatusIndicato
       <button
         onClick={() => setShowSessionManager(true)}
         className={`flex items-center space-x-2 px-3 py-1.5 rounded-md hover:bg-white/10 transition-colors ${className}`}
-        title="Ver sesiones activas"
+        title={t('viewSessions')}
       >
         <SignalIcon className={`h-4 w-4 ${getStatusColor()}`} />
         <span className="text-xs text-gray-300">

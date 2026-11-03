@@ -17,7 +17,8 @@ function leafKeys(obj: Record<string, unknown>, prefix = ''): Map<string, unknow
 }
 
 function placeholders(message: string): string[] {
-  return [...message.matchAll(/\{(\w+)/g)].map((m) => m[1]).sort()
+  // `{name}` or `{count, plural, ...}`; words inside plural branches (`{Hace # minuto}`) are not arguments.
+  return [...message.matchAll(/\{(\w+)\s*(?=[,}])/g)].map((m) => m[1]).sort()
 }
 
 describe('app i18n messages', () => {

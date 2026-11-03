@@ -5,6 +5,7 @@
  */
 
 import React, { useState, useEffect } from 'react'
+import { useTranslations } from 'next-intl'
 import { useActivityDetection } from '../lib/hooks/useActivityDetection'
 
 interface SessionExpiryWarningProps {
@@ -12,6 +13,7 @@ interface SessionExpiryWarningProps {
 }
 
 export function SessionExpiryWarning({ onExpiry }: SessionExpiryWarningProps) {
+  const t = useTranslations('session')
   const [showWarning, setShowWarning] = useState(false)
   const [minutesLeft, setMinutesLeft] = useState<number | null>(null)
   const [isDismissed, setIsDismissed] = useState(false)
@@ -145,15 +147,16 @@ export function SessionExpiryWarning({ onExpiry }: SessionExpiryWarningProps) {
         </div>
         <div className="ml-3 flex-1">
           <h3 className="text-sm font-semibold text-gray-900">
-            Sesión por expirar
+            {t('expiringTitle')}
           </h3>
           <p className="mt-1 text-sm text-gray-600">
             {minutesLeft !== null && minutesLeft > 0 ? (
-              <>
-                Tu sesión se cerrará por inactividad en <strong className="text-yellow-600">{minutesLeft} {minutesLeft === 1 ? 'minuto' : 'minutos'}</strong>.
-              </>
+              t.rich('expiringIn', {
+                minutes: minutesLeft,
+                strong: (chunks) => <strong className="text-yellow-600">{chunks}</strong>,
+              })
             ) : (
-              'Tu sesión está por expirar.'
+              t('expiringSoon')
             )}
           </p>
           
@@ -181,17 +184,17 @@ export function SessionExpiryWarning({ onExpiry }: SessionExpiryWarningProps) {
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                   </svg>
-                  <span>Actualizando...</span>
+                  <span>{t('updating')}</span>
                 </>
               ) : (
-                <span>Mantener sesión</span>
+                <span>{t('keep')}</span>
               )}
             </button>
             <button
               onClick={handleDismiss}
               className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
             >
-              Descartar
+              {t('dismiss')}
             </button>
           </div>
         </div>

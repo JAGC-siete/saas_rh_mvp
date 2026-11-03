@@ -1,4 +1,7 @@
 {
+  "common": {
+    "loading": "Cargando…"
+  },
   "settings": {
     "language": {
       "title": "Idioma",
@@ -10,6 +13,126 @@
       },
       "saved": "Listo, cambiamos el idioma.",
       "saveError": "No pudimos cambiar el idioma. Revisa tu conexión e inténtalo de nuevo."
+    }
+  },
+  "nav": {
+    "groups": {
+      "personas": "Personas",
+      "tiempo": "Tiempo",
+      "nomina": "Nómina",
+      "analisis": "Análisis"
+    },
+    "items": {
+      "inicio": "Inicio",
+      "empleados": "Empleados",
+      "departamentos": "Departamentos",
+      "evaluaciones": "Evaluaciones",
+      "puestos": "Descripciones de puesto",
+      "asistencia": "Asistencia",
+      "vacaciones": "Vacaciones y permisos",
+      "nomina": "Nómina",
+      "deducciones": "Deducciones",
+      "cesantias": "Cesantías",
+      "decimos": "13.º y 14.º salario",
+      "contabilidad": "Contabilidad",
+      "reportes": "Reportes",
+      "configuracion": "Configuración",
+      "soporte": "Soporte"
+    },
+    "withPending": "{label} ({count} pendientes)",
+    "sections": "Secciones",
+    "mainMenu": "Menú principal",
+    "openMenu": "Abrir menú",
+    "closeMenu": "Cerrar menú",
+    "collapseMenu": "Colapsar menú",
+    "pinMenu": "Fijar menú abierto",
+    "expandMenu": "Expandir menú",
+    "account": "Cuenta",
+    "accountOf": "Cuenta de {name}",
+    "signOut": "Cerrar sesión",
+    "defaultUser": "Usuario"
+  },
+  "roles": {
+    "super_admin": "Superadministrador",
+    "admin": "Administrador",
+    "company_admin": "Administrador de empresa",
+    "hr_manager": "Gerente de RRHH",
+    "manager": "Supervisor",
+    "employee": "Empleado"
+  },
+  "notifications": {
+    "title": "Notificaciones",
+    "withUnread": "Notificaciones ({count} sin leer)",
+    "center": "Centro de notificaciones",
+    "markAll": "Marcar todas",
+    "viewAll": "Ver todas",
+    "empty": "No hay notificaciones.",
+    "fallbackTitle": "Notificación"
+  },
+  "session": {
+    "statusActive": "Activa",
+    "statusExpiring": "Expirando",
+    "viewSessions": "Ver sesiones activas",
+    "expiringTitle": "Sesión por expirar",
+    "expiringIn": "Tu sesión se cerrará por inactividad en <strong>{minutes, plural, one {# minuto} other {# minutos}}</strong>.",
+    "expiringSoon": "Tu sesión está por expirar.",
+    "updating": "Actualizando...",
+    "keep": "Mantener sesión",
+    "dismiss": "Descartar",
+    "activeSessions": "Sesiones Activas",
+    "current": "Sesión actual",
+    "thisDevice": "Este dispositivo",
+    "lastActivity": "Última actividad: {when}",
+    "expiresIn": "Expira en: {minutes} minutos",
+    "others": "Otras sesiones ({count})",
+    "closing": "Cerrando...",
+    "closeAll": "Cerrar todas",
+    "close": "Cerrar",
+    "noOthers": "No hay otras sesiones activas",
+    "unknownDevice": "Dispositivo desconocido",
+    "created": "Creada: {when}",
+    "location": "Ubicación aproximada: {location}",
+    "confirmCloseAll": "¿Estás seguro de que deseas cerrar todas las demás sesiones?",
+    "revokeError": "Error al revocar la sesión",
+    "revokeAllError": "Error al revocar las sesiones",
+    "justNow": "Ahora mismo",
+    "minutesAgo": "{count, plural, one {Hace # minuto} other {Hace # minutos}}",
+    "hoursAgo": "{count, plural, one {Hace # hora} other {Hace # horas}}",
+    "daysAgo": "{count, plural, one {Hace # día} other {Hace # días}}"
+  },
+  "auth": {
+    "login": {
+      "pageTitle": "Iniciar Sesión - Humano SISU",
+      "metaDescription": "Accede a tu cuenta de Humano SISU",
+      "title": "Iniciar Sesión",
+      "email": "Correo Electrónico",
+      "password": "Contraseña",
+      "passwordPlaceholder": "Tu contraseña",
+      "submitting": "Iniciando sesión...",
+      "submit": "Iniciar Sesión",
+      "forgot": "¿Olvidaste tu contraseña?",
+      "signup": "¿No tenés cuenta? Creá una acá",
+      "secure": "Sesión segura. Podés desvincular el acceso cuando quieras.",
+      "error": "Error de autenticación",
+      "subtitle": "Accede a tu cuenta existente",
+      "authenticating": "Autenticando...",
+      "emailPlaceholder": "tu@empresa.com",
+      "logoAlt": "Humano SISU Logo"
+    },
+    "forgot": {
+      "pageTitle": "Recuperar contraseña - Humano SISU",
+      "invalidEmail": "Ingresá un correo válido.",
+      "tooMany": "Demasiados intentos. Probá más tarde.",
+      "failed": "No se pudo procesar la solicitud.",
+      "sent": "Si existe una cuenta con ese correo, recibirás un enlace para restablecer la contraseña.",
+      "network": "Error de conexión. Intentá de nuevo.",
+      "sending": "Enviando…",
+      "submit": "Enviar enlace",
+      "back": "Volver al inicio de sesión",
+      "title": "Recuperar contraseña",
+      "subtitle": "Te enviaremos un enlace si hay una cuenta asociada a ese correo.",
+      "email": "Correo",
+      "emailPlaceholder": "tu@empresa.com"
     }
   }
 }

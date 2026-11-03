@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import React, { useEffect, useRef, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { Bell } from 'lucide-react'
 import { cn } from '../../lib/utils'
 import { Badge } from './badge'
@@ -9,10 +10,13 @@ import { useNotificationContext } from '../NotificationProvider'
 
 const NotificationInbox = dynamic(() => import('./NotificationInbox'), {
   ssr: false,
-  loading: () => (
-    <div className="px-4 py-6 text-center text-sm text-gray-400">Cargando…</div>
-  ),
+  loading: () => <InboxLoading />,
 })
+
+function InboxLoading() {
+  const t = useTranslations('common')
+  return <div className="px-4 py-6 text-center text-sm text-gray-400">{t('loading')}</div>
+}
 
 export default function NotificationBell({
   className,
@@ -22,6 +26,7 @@ export default function NotificationBell({
   /** Posición del panel (p. ej. a la derecha del menú lateral en lugar de debajo). */
   panelClassName?: string
 }) {
+  const t = useTranslations('notifications')
   const { notifications, unreadCount, markAllAsRead } = useNotificationContext()
   const [open, setOpen] = useState(false)
   const panelRef = useRef<HTMLDivElement | null>(null)
@@ -40,7 +45,7 @@ export default function NotificationBell({
       <Button
         variant="ghost"
         size="icon"
-        aria-label={unreadCount > 0 ? `Notificaciones (${unreadCount} sin leer)` : 'Notificaciones'}
+        aria-label={unreadCount > 0 ? t('withUnread', { count: unreadCount }) : t('title')}
         aria-expanded={open}
         className="relative h-9 w-9 rounded-full hover:bg-white/10"
         onClick={() => setOpen((v) => !v)}
@@ -66,14 +71,14 @@ export default function NotificationBell({
           <div
             ref={panelRef}
             role="region"
-            aria-label="Centro de notificaciones"
+            aria-label={t('center')}
             className={cn(
               'absolute right-0 mt-2 z-50 w-[380px] max-w-[calc(100vw-24px)] rounded-xl border border-white/20 bg-black/80 backdrop-blur-xl shadow-2xl overflow-hidden',
               panelClassName
             )}
           >
             <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
-              <h3 className="font-semibold text-white">Notificaciones</h3>
+              <h3 className="font-semibold text-white">{t('title')}</h3>
               {unreadCount > 0 && (
                 <Button
                   variant="ghost"
@@ -84,7 +89,7 @@ export default function NotificationBell({
                     setOpen(false)
                   }}
                 >
-                  Marcar todas
+                  {t('markAll')}
                 </Button>
               )}
             </div>
@@ -96,7 +101,7 @@ export default function NotificationBell({
             <div className="border-t border-white/10 p-2 text-center">
               <Button variant="link" size="sm" asChild className="text-xs">
                 <Link href="/app/notifications" onClick={() => setOpen(false)}>
-                  Ver todas
+                  {t('viewAll')}
                 </Link>
               </Button>
             </div>

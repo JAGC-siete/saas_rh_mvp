@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/router'
 import { Bars3Icon } from '@heroicons/react/24/outline'
+import { useTranslations } from 'next-intl'
 import { useAuth } from '../lib/auth'
 import { useCompanyContext } from '../lib/useCompanyContext'
-import { companyRoleLabel } from '../lib/company/users'
 import { NAVIGATION, filterNavigation, findActiveItem, findGroupOf } from '../lib/navigation/sidebar'
 import AppMeshShell from './landing/AppMeshShell'
 import HelpButton from './support/HelpButton'
@@ -11,6 +11,7 @@ import NotificationBell from './ui/NotificationBell'
 import SidebarContent, { type SidebarAccount } from './layout/SidebarContent'
 import { useNavPermissions } from './layout/useNavPermissions'
 import { useNavBadges } from './layout/useNavBadges'
+import { useNavLabels } from './layout/useNavLabels'
 
 interface DashboardLayoutProps {
   children: React.ReactNode
@@ -66,6 +67,8 @@ function initialsOf(name: string) {
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const router = useRouter()
+  const t = useTranslations('nav')
+  const labels = useNavLabels()
   const { user, userProfile, logout } = useAuth()
   const { company } = useCompanyContext()
 
@@ -160,11 +163,11 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     router.push('/app/login')
   }
 
-  const displayName = userProfile?.name?.trim() || user?.email || 'Usuario'
+  const displayName = userProfile?.name?.trim() || user?.email || t('defaultUser')
   const account: SidebarAccount = {
     name: displayName,
     email: user?.email ?? null,
-    roleLabel: companyRoleLabel(userProfile?.role),
+    roleLabel: labels.role(userProfile?.role),
     companyName: company?.name ?? null,
     initials: initialsOf(displayName),
   }
@@ -179,7 +182,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           ref={menuButtonRef}
           type="button"
           onClick={() => setDrawerOpen(true)}
-          aria-label="Abrir menú"
+          aria-label={t('openMenu')}
           aria-expanded={drawerOpen}
           aria-controls="mobile-nav"
           className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-[#22304d] bg-[#121a2c] text-slate-200"
@@ -187,8 +190,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           <Bars3Icon className="h-5 w-5" aria-hidden />
         </button>
         <div className="flex min-w-0 flex-1 flex-col">
-          <span className="truncate text-[11px] text-slate-400">{activeGroup?.label ?? 'Humano SISU'}</span>
-          <span className="truncate text-base font-bold text-white">{active?.label ?? 'Humano SISU'}</span>
+          <span className="truncate text-[11px] text-slate-400">{activeGroup ? labels.group(activeGroup) : 'Humano SISU'}</span>
+          <span className="truncate text-base font-bold text-white">{active ? labels.item(active) : 'Humano SISU'}</span>
         </div>
         <NotificationBell panelClassName="right-0" />
       </header>
@@ -199,7 +202,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         style={{ width: collapsed ? RAIL_W : PANEL_W }}
       >
         <aside
-          aria-label="Menú principal"
+          aria-label={t('mainMenu')}
           onMouseEnter={() => collapsed && schedulePeek(true, PEEK_OPEN_MS)}
           onMouseLeave={() => collapsed && schedulePeek(false, PEEK_CLOSE_MS)}
           onFocus={() => collapsed && setPeek(true)}
@@ -225,7 +228,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         <div className="fixed inset-0 z-[60] lg:hidden">
           <button
             type="button"
-            aria-label="Cerrar menú"
+            aria-label={t('closeMenu')}
             tabIndex={-1}
             onClick={closeDrawer}
             className="absolute inset-0 h-full w-full bg-slate-950/70"
@@ -233,7 +236,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           <aside
             id="mobile-nav"
             ref={drawerRef}
-            aria-label="Menú principal"
+            aria-label={t('mainMenu')}
             className="absolute inset-y-0 left-0 w-[304px] max-w-[85vw] border-r border-[#1c2740] bg-[#0e1628] shadow-2xl"
           >
             <SidebarContent {...shared} variant="full" touch headerAction={{ kind: 'close', onClick: closeDrawer }} />

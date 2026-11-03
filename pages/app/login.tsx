@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useRouter } from 'next/router'
+import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import Head from 'next/head'
 import PublicPageShell from '../../components/landing/PublicPageShell'
@@ -17,6 +18,7 @@ export default function LoginExisting() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const router = useRouter()
+  const t = useTranslations('auth.login')
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -35,7 +37,7 @@ export default function LoginExisting() {
 
       if (!response.ok) {
         const errorData = await response.json()
-        throw new Error(errorData.error || 'Error de autenticación')
+        throw new Error(errorData.error || t('error'))
       }
 
       const data = await response.json()
@@ -79,7 +81,7 @@ export default function LoginExisting() {
         router.push('/app/dashboard')
       }
     } catch (err: any) {
-      setError(err.message || 'Error de autenticación')
+      setError(err.message || t('error'))
     } finally {
       setLoading(false)
     }
@@ -88,8 +90,8 @@ export default function LoginExisting() {
   return (
     <>
       <Head>
-        <title>Iniciar Sesión - Humano SISU</title>
-        <meta name="description" content="Accede a tu cuenta de Humano SISU" />
+        <title>{t('pageTitle')}</title>
+        <meta name="description" content={t('metaDescription')} />
       </Head>
 
       <PublicPageShell centered showFooter={false}>
@@ -99,17 +101,17 @@ export default function LoginExisting() {
               <div className="mx-auto h-40 w-40 bg-white/10 rounded-full flex items-center justify-center mb-6 shadow-xl border border-white/20 backdrop-blur-sm">
                 <Image
                   src="/logo-humano-sisu.png"
-                  alt="Humano SISU Logo"
+                  alt={t('logoAlt')}
                   width={96}
                   height={96}
                   className="rounded-lg"
                 />
               </div>
               <h1 className="text-3xl font-bold text-white mb-2">
-                Iniciar Sesión
+                {t('title')}
               </h1>
               <p className="text-brand-200/90">
-                Accede a tu cuenta existente
+                {t('subtitle')}
               </p>
             </div>
 
@@ -119,13 +121,13 @@ export default function LoginExisting() {
                 <form onSubmit={handleLogin} className="space-y-4">
                   <div>
                     <label className="text-sm font-medium text-brand-200/90 mb-2 block">
-                      Correo Electrónico
+                      {t('email')}
                     </label>
                     <Input
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="tu@empresa.com"
+                      placeholder={t('emailPlaceholder')}
                       required
                       disabled={loading}
                       className="input-glass h-12"
@@ -134,13 +136,13 @@ export default function LoginExisting() {
 
                   <div>
                     <label className="text-sm font-medium text-brand-200/90 mb-2 block">
-                      Contraseña
+                      {t('password')}
                     </label>
                     <Input
                       type="password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      placeholder="Tu contraseña"
+                      placeholder={t('passwordPlaceholder')}
                       required
                       disabled={loading}
                       className="input-glass h-12"
@@ -156,7 +158,7 @@ export default function LoginExisting() {
                   {loading && (
                     <div className="text-center">
                       <div className="inline-block animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                      <span className="ml-2 text-brand-200">Autenticando...</span>
+                      <span className="ml-2 text-brand-200">{t('authenticating')}</span>
                     </div>
                   )}
 
@@ -165,7 +167,7 @@ export default function LoginExisting() {
                     className="w-full h-12 bg-brand-900 hover:bg-brand-800 text-white"
                     disabled={loading || !email || !password}
                   >
-                    {loading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
+                    {loading ? t('submitting') : t('submit')}
                     <ArrowRight className="h-5 w-5 ml-2" />
                   </Button>
 
@@ -175,7 +177,7 @@ export default function LoginExisting() {
                         href="/app/forgot-password"
                         className="text-sm text-brand-300 hover:text-white transition-colors"
                       >
-                        ¿Olvidaste tu contraseña?
+                        {t('forgot')}
                       </Link>
                     </div>
                     <button 
@@ -183,7 +185,7 @@ export default function LoginExisting() {
                       onClick={() => window.location.href = '/activar'}
                       className="text-sm text-brand-300 hover:text-white transition-colors"
                     >
-                      ¿No tenés cuenta? Creá una acá
+                      {t('signup')}
                     </button>
                   </div>
                 </form>
@@ -193,7 +195,7 @@ export default function LoginExisting() {
             {/* Pie de confianza */}
             <div className="text-center mt-6">
               <p className="text-xs text-brand-200/60">
-                Sesión segura. Podés desvincular el acceso cuando quieras.
+                {t('secure')}
               </p>
             </div>
         </div>
