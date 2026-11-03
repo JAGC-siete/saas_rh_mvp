@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { Button } from './ui/button'
 import { Card, CardContent } from './ui/card'
 import type { EmployeeShaped } from '../lib/types/employee-shaped'
@@ -14,6 +15,8 @@ export default function WorkCertificateModal({
   onClose,
   employee
 }: WorkCertificateModalProps) {
+  const t = useTranslations('employees.certificate')
+  const tc = useTranslations('common')
   const [includeDeductions, setIncludeDeductions] = useState(true)
   const [format, setFormat] = useState<'pdf' | 'csv'>('pdf')
   const [generating, setGenerating] = useState(false)
@@ -42,7 +45,7 @@ export default function WorkCertificateModal({
       })
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Error desconocido' }))
+        const errorData = await response.json().catch(() => ({ error: t('unknownError') }))
         throw new Error(errorData.error || `Error ${response.status}`)
       }
 
@@ -75,7 +78,7 @@ export default function WorkCertificateModal({
       onClose()
     } catch (err) {
       console.error('Error generando constancia:', err)
-      setError(err instanceof Error ? err.message : 'Error al generar la constancia')
+      setError(err instanceof Error ? err.message : t('generateError'))
     } finally {
       setGenerating(false)
     }
@@ -87,7 +90,7 @@ export default function WorkCertificateModal({
         <CardContent className="p-6">
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-xl font-semibold text-white">
-              Generar Constancia Laboral
+              {t('title')}
             </h3>
             <Button
               onClick={onClose}
@@ -103,15 +106,15 @@ export default function WorkCertificateModal({
             <div className="space-y-6">
               {/* Información del empleado */}
               <div className="bg-white/5 rounded-lg p-4 border border-white/10">
-                <h4 className="text-sm font-medium text-gray-400 mb-2">Empleado</h4>
+                <h4 className="text-sm font-medium text-gray-400 mb-2">{t('employee')}</h4>
                 <p className="text-white font-medium">{employee.name}</p>
                 <p className="text-sm text-gray-400">
-                  {employee.employee_code && `Código: ${employee.employee_code} • `}
-                  DNI: {employee.dni}
+                  {employee.employee_code && t('code', { code: employee.employee_code })}
+                  {t('dni', { dni: employee.dni ?? '' })}
                 </p>
                 {employee.role && (
                   <p className="text-sm text-gray-400 mt-1">
-                    Cargo: {employee.role}
+                    {t('position', { position: employee.role })}
                   </p>
                 )}
               </div>
@@ -119,7 +122,7 @@ export default function WorkCertificateModal({
               {/* Opciones de formato */}
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-3">
-                  Formato del Documento
+                  {t('format')}
                 </label>
                 <div className="flex gap-3">
                   <button
@@ -133,7 +136,7 @@ export default function WorkCertificateModal({
                   >
                     <div className="font-medium">PDF</div>
                     <div className="text-xs mt-1 opacity-80">
-                      Formato profesional
+                      {t('pdfHint')}
                     </div>
                   </button>
                   <button
@@ -147,7 +150,7 @@ export default function WorkCertificateModal({
                   >
                     <div className="font-medium">CSV</div>
                     <div className="text-xs mt-1 opacity-80">
-                      Datos tabulares
+                      {t('csvHint')}
                     </div>
                   </button>
                 </div>
@@ -164,12 +167,14 @@ export default function WorkCertificateModal({
                   />
                   <div className="flex-1">
                     <div className="text-sm font-medium text-white">
-                      Incluir Deducciones
+                      {t('includeDeductions')}
                     </div>
                     <div className="text-xs text-gray-400 mt-1">
                       {includeDeductions
-                        ? 'La constancia incluirá la tabla de deducciones (IHSS/RAP) con el salario neto calculado.'
-                        : 'La constancia solo mostrará información básica del empleado sin desglose de deducciones.'}
+                        ? t('withDeductions')
+                        : t('withoutDeductions')}
+                      {' '}
+                      {t('legalNote')}
                     </div>
                   </div>
                 </label>
@@ -179,7 +184,7 @@ export default function WorkCertificateModal({
               {error && (
                 <div className="bg-red-500/20 border border-red-500/30 rounded-lg p-4">
                   <div className="text-sm text-red-400">
-                    <strong>Error:</strong> {error}
+                    <strong>{t('errorLabel')}</strong> {error}
                   </div>
                 </div>
               )}
@@ -192,7 +197,7 @@ export default function WorkCertificateModal({
                   className="flex-1 bg-white/5 border-white/20 text-white hover:bg-white/10"
                   disabled={generating}
                 >
-                  Cancelar
+                  {tc('cancel')}
                 </Button>
                 <Button
                   onClick={handleGenerate}
@@ -202,11 +207,11 @@ export default function WorkCertificateModal({
                   {generating ? (
                     <>
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Generando...
+                      {t('generating')}
                     </>
                   ) : (
                     <>
-                      📄 Generar {format.toUpperCase()}
+                      {t('generate', { format: format.toUpperCase() })}
                     </>
                   )}
                 </Button>
