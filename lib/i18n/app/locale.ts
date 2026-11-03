@@ -10,6 +10,11 @@ export const APP_ENGLISH_FEATURE = 'app_english'
 
 export const isAppLocale = isLandingLocale
 
+/** Locale for Intl/toLocale* calls: Spanish keeps the Honduran format the app always used (1,234.50). */
+export function intlLocale(locale: string): string {
+  return locale === 'es' ? 'es-HN' : locale
+}
+
 const CACHE_KEY = 'hs_app_locale'
 
 /** Last locale used on this browser, so a reload doesn't flash Spanish before the profile loads. */

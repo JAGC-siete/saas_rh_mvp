@@ -17,8 +17,12 @@ export const AXIS_TEXT = '#9fb0c8'
 export const GRID_LINE = 'rgba(255,255,255,0.08)'
 
 /** Fecha YYYY-MM-DD → "8 oct" sin desplazamiento de zona horaria. */
-export function shortDate(iso: string, opts: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short' }): string {
-  return new Date(`${iso.slice(0, 10)}T12:00:00Z`).toLocaleDateString('es-HN', { ...opts, timeZone: 'UTC' })
+export function shortDate(
+  iso: string,
+  opts: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short' },
+  locale = 'es-HN'
+): string {
+  return new Date(`${iso.slice(0, 10)}T12:00:00Z`).toLocaleDateString(locale, { ...opts, timeZone: 'UTC' })
 }
 
 interface PanelProps {

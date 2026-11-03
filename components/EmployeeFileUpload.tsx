@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback } from 'react'
+import { useTranslations } from 'next-intl'
 
 export type FileUploadType = 'profile_photo' | 'document'
 export type DocumentCategory = 'contrato' | 'identidad' | 'certificado' | 'diploma' | 'otro'
@@ -33,6 +34,7 @@ export default function EmployeeFileUpload({
   variant = 'full',
   label
 }: EmployeeFileUploadProps) {
+  const t = useTranslations('employees.upload')
   const isDark = variant === 'dark'
   const displayVariant = variant === 'compact' ? 'compact' : 'full'
   const [uploadStatus, setUploadStatus] = useState<UploadStatus>({
@@ -51,18 +53,16 @@ export default function EmployeeFileUpload({
 
   const finalAllowedTypes = allowedTypes || defaultAllowedTypes
   const finalMaxSizeMB = maxSizeMB || (fileType === 'profile_photo' ? 5 : 10)
+  const typeLabels = finalAllowedTypes
+    .map((type) => (type === 'image/jpeg' ? 'JPG' : type === 'image/png' ? 'PNG' : type === 'application/pdf' ? 'PDF' : type))
+    .join(', ')
 
   const validateFile = (file: File): { valid: boolean; error?: string } => {
     // Check file type
     if (!finalAllowedTypes.includes(file.type)) {
       return {
         valid: false,
-        error: `Tipo de archivo no válido. Tipos permitidos: ${finalAllowedTypes.map(t => {
-          if (t === 'image/jpeg') return 'JPG'
-          if (t === 'image/png') return 'PNG'
-          if (t === 'application/pdf') return 'PDF'
-          return t
-        }).join(', ')}`
+        error: t('invalidType', { types: typeLabels })
       }
     }
 
@@ -71,7 +71,7 @@ export default function EmployeeFileUpload({
     if (file.size > maxSizeBytes) {
       return {
         valid: false,
-        error: `El archivo es demasiado grande. El límite es ${finalMaxSizeMB}MB.`
+        error: t('tooLarge', { size: finalMaxSizeMB })
       }
     }
 
@@ -85,9 +85,9 @@ export default function EmployeeFileUpload({
       setUploadStatus({
         status: 'error',
         progress: 0,
-        message: validation.error || 'Archivo inválido'
+        message: validation.error || t('invalidFile')
       })
-      onUploadError?.(validation.error || 'Archivo inválido')
+      onUploadError?.(validation.error || t('invalidFile'))
       return
     }
 
@@ -105,7 +105,7 @@ export default function EmployeeFileUpload({
     setUploadStatus({
       status: 'requesting',
       progress: 10,
-      message: 'Solicitando permiso de carga...'
+      message: t('requesting')
     })
 
     try {
@@ -134,7 +134,7 @@ export default function EmployeeFileUpload({
       setUploadStatus({
         status: 'uploading',
         progress: 30,
-        message: 'Subiendo archivo...',
+        message: t('uploading'),
         fileId
       })
 
@@ -155,14 +155,14 @@ export default function EmployeeFileUpload({
       setUploadStatus({
         status: 'success',
         progress: 100,
-        message: 'Archivo subido exitosamente',
+        message: t('success'),
         fileId
       })
 
       onUploadComplete?.(fileId, storagePath)
 
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
+      const errorMessage = error instanceof Error ? error.message : t('unknownError')
       setUploadStatus({
         status: 'error',
         progress: 0,
@@ -170,7 +170,7 @@ export default function EmployeeFileUpload({
       })
       onUploadError?.(errorMessage)
     }
-    }, [employeeId, fileType, documentCategory, finalAllowedTypes, finalMaxSizeMB, onUploadComplete, onUploadError])
+    }, [employeeId, fileType, documentCategory, finalAllowedTypes, finalMaxSizeMB, onUploadComplete, onUploadError, t])
 
   const handleDrag = useCallback((e: React.DragEvent) => {
     e.preventDefault()
@@ -225,13 +225,13 @@ export default function EmployeeFileUpload({
           disabled={uploadStatus.status === 'uploading' || uploadStatus.status === 'requesting'}
           className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {uploadStatus.status === 'uploading' ? 'Subiendo...' : label || 'Subir archivo'}
+          {uploadStatus.status === 'uploading' ? t('uploadingShort') : label || t('upload')}
         </button>
         {uploadStatus.status === 'error' && (
           <span className="text-sm text-red-600">{uploadStatus.message}</span>
         )}
         {uploadStatus.status === 'success' && (
-          <span className="text-sm text-green-600">✓ Subido</span>
+          <span className="text-sm text-green-600">{t('uploaded')}</span>
         )}
       </div>
     )
@@ -275,15 +275,10 @@ export default function EmployeeFileUpload({
               />
             </svg>
             <p className={`mt-2 text-sm ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
-              <span className="font-semibold">Click para seleccionar</span> o arrastra y suelta
+              {t.rich('dropzone', { b: (chunks) => <span className="font-semibold">{chunks}</span> })}
             </p>
             <p className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-              {finalAllowedTypes.map(t => {
-                if (t === 'image/jpeg') return 'JPG'
-                if (t === 'image/png') return 'PNG'
-                if (t === 'application/pdf') return 'PDF'
-                return t
-              }).join(', ')} hasta {finalMaxSizeMB}MB
+              {t('limits', { types: typeLabels, size: finalMaxSizeMB })}
             </p>
           </>
         )}
@@ -331,7 +326,7 @@ export default function EmployeeFileUpload({
               }}
               className={`mt-2 text-xs ${isDark ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-800'}`}
             >
-              Subir otro archivo
+              {t('uploadAnother')}
             </button>
           </div>
         )}
@@ -359,7 +354,7 @@ export default function EmployeeFileUpload({
               }}
               className={`mt-2 text-xs ${isDark ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-800'}`}
             >
-              Intentar de nuevo
+              {t('tryAgain')}
             </button>
           </div>
         )}
@@ -367,10 +362,10 @@ export default function EmployeeFileUpload({
 
       {preview && fileType === 'profile_photo' && (
         <div className="mt-4">
-          <p className={`text-sm mb-2 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>Vista previa:</p>
+          <p className={`text-sm mb-2 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>{t('preview')}</p>
           <img
             src={preview}
-            alt="Vista previa"
+            alt={t('previewAlt')}
             className={`max-w-xs max-h-48 rounded-lg border ${isDark ? 'border-white/20' : 'border-gray-300'}`}
           />
         </div>

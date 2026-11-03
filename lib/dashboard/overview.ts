@@ -18,7 +18,17 @@ export interface PendingItem {
   when: string
   cta: string
   href: string
+  /** Raw values so the client can phrase title/when in the admin's language. */
+  data?: {
+    /** Signed days from today (negative = past), as in relativeDayLabel. */
+    days?: number | null
+    date?: string
+    runStatus?: string
+    period?: RunPeriod
+  }
 }
+
+export type RunPeriod = { year: number; month: number; quincena: number | null }
 
 export interface DayAttendance {
   date: string
@@ -78,6 +88,7 @@ export interface CalendarEvent {
   kind: 'payment' | 'holiday' | 'anniversary' | 'termination'
   title: string
   subtitle: string
+  data?: { name?: string | null; years?: number; periodStart?: string; periodEnd?: string }
 }
 
 export interface DashboardOverview {
@@ -460,6 +471,7 @@ export function buildCalendar(params: {
       kind: 'payment',
       title: 'Pago de planilla',
       subtitle: `Periodo ${params.nextPayment.periodStart} al ${params.nextPayment.periodEnd}`,
+      data: { periodStart: params.nextPayment.periodStart, periodEnd: params.nextPayment.periodEnd },
     })
   }
 
@@ -468,7 +480,7 @@ export function buildCalendar(params: {
     const d = String(h.date ?? '').slice(0, 10)
     if (!/^\d{4}-\d{2}-\d{2}$/.test(d) || !inWindow(d) || seenHoliday.has(d)) continue
     seenHoliday.add(d)
-    events.push({ date: d, kind: 'holiday', title: h.name?.trim() || 'Feriado', subtitle: 'Feriado' })
+    events.push({ date: d, kind: 'holiday', title: h.name?.trim() || 'Feriado', subtitle: 'Feriado', data: { name: h.name?.trim() || null } })
   }
 
   for (const e of params.employees ?? []) {
@@ -480,6 +492,7 @@ export function buildCalendar(params: {
           kind: 'anniversary',
           title: `Aniversario laboral · ${e.name}`,
           subtitle: a.years === 1 ? '1 año en la empresa' : `${a.years} años en la empresa`,
+          data: { name: e.name, years: a.years },
         })
       }
     }
@@ -489,6 +502,7 @@ export function buildCalendar(params: {
         kind: 'termination',
         title: `Baja programada · ${e.name}`,
         subtitle: 'Fecha de terminación registrada',
+        data: { name: e.name },
       })
     }
   }
@@ -506,7 +520,7 @@ export function buildPendingItems(params: {
   openPunches?: { date: string; count: number } | null
   leave?: { count: number; oldestCreatedAt: string | null } | null
   corrections?: number | null
-  unauthorizedRun?: { label: string; status: string; payDate: string | null } | null
+  unauthorizedRun?: { label: string; status: string; payDate: string | null; period?: RunPeriod } | null
   terminations?: { count: number; nextDate: string } | null
 }): PendingItem[] {
   const { today } = params
@@ -523,6 +537,7 @@ export function buildPendingItems(params: {
       when: relativeDayLabel(date, today),
       cta: 'Ir al cierre diario',
       href: `/app/attendance/dashboard?date=${date}`,
+      data: { date, days: -daysBetween(date, today) },
     })
   }
 
@@ -537,11 +552,12 @@ export function buildPendingItems(params: {
       when: oldestCreatedAt ? `La más antigua: ${relativeDayLabel(oldestCreatedAt.slice(0, 10), today).toLowerCase()}` : '',
       cta: 'Revisar solicitudes',
       href: '/app/leave',
+      data: { days: oldestCreatedAt ? -daysBetween(oldestCreatedAt.slice(0, 10), today) : null },
     })
   }
 
   if (params.unauthorizedRun) {
-    const { label, status, payDate } = params.unauthorizedRun
+    const { label, status, payDate, period } = params.unauthorizedRun
     const daysToPay = payDate ? daysBetween(today, payDate) : null
     items.push({
       id: 'payroll_run',
@@ -552,6 +568,7 @@ export function buildPendingItems(params: {
       when: daysToPay === null ? '' : daysToPay < 0 ? 'Fecha de pago vencida' : daysToPay === 0 ? 'Paga hoy' : `Paga en ${daysToPay} días`,
       cta: 'Revisar y autorizar',
       href: '/app/payroll',
+      data: { days: daysToPay, runStatus: status, period },
     })
   }
 
@@ -580,6 +597,7 @@ export function buildPendingItems(params: {
       when: relativeDayLabel(nextDate, today),
       cta: 'Ver empleados',
       href: '/app/employees',
+      data: { days: -daysBetween(nextDate, today) },
     })
   }
 

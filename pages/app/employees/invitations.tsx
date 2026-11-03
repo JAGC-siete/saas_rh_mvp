@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useFormatter, useTranslations } from 'next-intl'
 import { useAuth } from '../../../lib/auth'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../components/ui/card'
 import { Button } from '../../../components/ui/button'
@@ -26,6 +27,8 @@ interface Invitation {
 }
 
 export default function EmployeeInvitations() {
+  const t = useTranslations('employees.invitations')
+  const format = useFormatter()
   const { user } = useAuth()
   const [employees, setEmployees] = useState<Employee[]>([])
   const [invitations, setInvitations] = useState<Invitation[]>([])
@@ -48,11 +51,11 @@ export default function EmployeeInvitations() {
       if (response.ok) {
         setEmployees(data.employees || [])
       } else {
-        setError(data.error || 'Error cargando empleados')
+        setError(data.error || t('loadEmployeesError'))
       }
     } catch (error) {
       console.error('Error fetching employees:', error)
-      setError('Error de conexión')
+      setError(t('connectionError'))
     }
   }
 
@@ -64,11 +67,11 @@ export default function EmployeeInvitations() {
       if (response.ok) {
         setInvitations(data.invitations || [])
       } else {
-        setError(data.error || 'Error cargando invitaciones')
+        setError(data.error || t('loadInvitationsError'))
       }
     } catch (error) {
       console.error('Error fetching invitations:', error)
-      setError('Error de conexión')
+      setError(t('connectionError'))
     } finally {
       setLoading(false)
     }
@@ -96,13 +99,13 @@ export default function EmployeeInvitations() {
       if (response.ok) {
         // Recargar invitaciones
         await fetchInvitations()
-        alert(`Invitación enviada exitosamente a ${email}`)
+        alert(t('sent', { email }))
       } else {
-        setError(data.error || 'Error enviando invitación')
+        setError(data.error || t('sendError'))
       }
     } catch (error) {
       console.error('Error sending invitation:', error)
-      setError('Error de conexión')
+      setError(t('connectionError'))
     } finally {
       setSending(null)
     }
@@ -124,13 +127,10 @@ export default function EmployeeInvitations() {
   const getStatusText = (status: string) => {
     switch (status) {
       case 'pending':
-        return 'Pendiente'
       case 'accepted':
-        return 'Aceptada'
       case 'expired':
-        return 'Expirada'
       case 'cancelled':
-        return 'Cancelada'
+        return t(`status.${status}`)
       default:
         return status
     }
@@ -179,9 +179,9 @@ export default function EmployeeInvitations() {
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Gestión de Invitaciones</h1>
+          <h1 className="text-3xl font-bold text-gray-900">{t('title')}</h1>
           <p className="text-gray-600 mt-2">
-            Envíe invitaciones a empleados para acceder al portal
+            {t('subtitle')}
           </p>
         </div>
 
@@ -197,17 +197,17 @@ export default function EmployeeInvitations() {
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
                 <UserPlusIcon className="h-6 w-6" />
-                <span>Empleados sin Acceso</span>
+                <span>{t('withoutAccess')}</span>
               </CardTitle>
               <CardDescription>
-                {employeesWithoutInvitation.length} empleados pendientes de invitación
+                {t('pendingCount', { count: employeesWithoutInvitation.length })}
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4 max-h-96 overflow-y-auto">
                 {employeesWithoutInvitation.length === 0 ? (
                   <p className="text-gray-500 text-center py-8">
-                    Todos los empleados tienen invitaciones
+                    {t('allInvited')}
                   </p>
                 ) : (
                   employeesWithoutInvitation.map((employee) => (
@@ -225,7 +225,7 @@ export default function EmployeeInvitations() {
                         {sending === employee.id ? (
                           <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                         ) : (
-                          'Enviar Invitación'
+                          t('send')
                         )}
                       </Button>
                     </div>
@@ -240,17 +240,17 @@ export default function EmployeeInvitations() {
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
                 <ClockIcon className="h-6 w-6" />
-                <span>Invitaciones Enviadas</span>
+                <span>{t('sentTitle')}</span>
               </CardTitle>
               <CardDescription>
-                {invitations.length} invitaciones en total
+                {t('totalCount', { count: invitations.length })}
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4 max-h-96 overflow-y-auto">
                 {invitations.length === 0 ? (
                   <p className="text-gray-500 text-center py-8">
-                    No hay invitaciones enviadas
+                    {t('noneSent')}
                   </p>
                 ) : (
                   invitations.map((invitation) => (
@@ -263,11 +263,11 @@ export default function EmployeeInvitations() {
                       </div>
                       <p className="text-sm text-gray-600 mb-2">{invitation.email}</p>
                       <p className="text-xs text-gray-500">
-                        Enviada: {new Date(invitation.created_at).toLocaleDateString()}
+                        {t('sentOn', { date: format.dateTime(new Date(invitation.created_at), { dateStyle: 'medium' }) })}
                       </p>
                       {invitation.status === 'pending' && (
                         <p className="text-xs text-gray-500">
-                          Expira: {new Date(invitation.expires_at).toLocaleDateString()}
+                          {t('expiresOn', { date: format.dateTime(new Date(invitation.expires_at), { dateStyle: 'medium' }) })}
                         </p>
                       )}
                     </div>
@@ -284,7 +284,7 @@ export default function EmployeeInvitations() {
             <CardContent className="p-6">
               <div className="text-center">
                 <p className="text-2xl font-bold text-blue-600">{employees.length}</p>
-                <p className="text-sm text-gray-600">Total Empleados</p>
+                <p className="text-sm text-gray-600">{t('statTotal')}</p>
               </div>
             </CardContent>
           </Card>
@@ -295,7 +295,7 @@ export default function EmployeeInvitations() {
                 <p className="text-2xl font-bold text-yellow-600">
                   {invitations.filter(i => i.status === 'pending').length}
                 </p>
-                <p className="text-sm text-gray-600">Pendientes</p>
+                <p className="text-sm text-gray-600">{t('statPending')}</p>
               </div>
             </CardContent>
           </Card>
@@ -306,7 +306,7 @@ export default function EmployeeInvitations() {
                 <p className="text-2xl font-bold text-green-600">
                   {invitations.filter(i => i.status === 'accepted').length}
                 </p>
-                <p className="text-sm text-gray-600">Aceptadas</p>
+                <p className="text-sm text-gray-600">{t('statAccepted')}</p>
               </div>
             </CardContent>
           </Card>
@@ -317,7 +317,7 @@ export default function EmployeeInvitations() {
                 <p className="text-2xl font-bold text-red-600">
                   {invitations.filter(i => i.status === 'expired').length}
                 </p>
-                <p className="text-sm text-gray-600">Expiradas</p>
+                <p className="text-sm text-gray-600">{t('statExpired')}</p>
               </div>
             </CardContent>
           </Card>

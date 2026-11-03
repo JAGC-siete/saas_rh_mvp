@@ -1,6 +1,7 @@
 'use client'
 
 import { Download } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 import { Button } from './button'
 import { useCanExportReportsScope, type ExportPermissionScope } from '../../lib/hooks/useCanonicalPermissions'
 
@@ -45,6 +46,7 @@ export function ExportFormatButtons({
   bypassPermissionCheck = false,
   exportScope = 'full',
 }: ExportFormatButtonsProps) {
+  const tc = useTranslations('common')
   const canExport = useCanExportReportsScope(exportScope)
   const permissionBlocked = !bypassPermissionCheck && !canExport
   const baseClass = variant === 'primary'
@@ -59,7 +61,7 @@ export function ExportFormatButtons({
     }
   }
 
-  const blockedTitle = 'No tiene permisos para exportar reportes'
+  const blockedTitle = tc('noExportPermission')
 
   return (
     <div className="flex gap-2">

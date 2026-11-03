@@ -1,4 +1,5 @@
 import { memo } from 'react'
+import { useTranslations } from 'next-intl'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
@@ -53,6 +54,10 @@ function AddEmployeeForm({
   canEditSalary = true,
   autoGenerateEmployeeCode = false,
 }: AddEmployeeFormProps) {
+  const t = useTranslations('employees.form')
+  const te = useTranslations('employees')
+  const tc = useTranslations('common')
+  const bold = { b: (chunks: React.ReactNode) => <strong>{chunks}</strong> }
   // Helper to keep inputs controlled and avoid React warnings
   const v = (value: any) => (value ?? '')
 
@@ -67,10 +72,10 @@ function AddEmployeeForm({
 
   const defaultPayTypeLabel =
     companyCalculationMode === 'hourly'
-      ? 'Predeterminado de la empresa (Por hora)'
+      ? t('payTypeDefaultHourly')
       : companyCalculationMode === 'admin_floor'
-        ? 'Predeterminado de la empresa (Legacy — Admin con piso horario)'
-        : 'Predeterminado de la empresa (Administrativo)'
+        ? t('payTypeDefaultAdminFloor')
+        : t('payTypeDefaultFixed')
 
   const handleSubmit = (e: React.FormEvent) => {
     const payType = resolvedPayType
@@ -101,20 +106,20 @@ function AddEmployeeForm({
   return (
     <Card variant="liquid">
       <CardHeader>
-        <CardTitle className="text-white">{isEditing ? 'Editar Empleado' : 'Agregar Nuevo Empleado'}</CardTitle>
+        <CardTitle className="text-white">{isEditing ? t('titleEdit') : t('titleNew')}</CardTitle>
         <CardDescription className="text-gray-300">
-          {isEditing ? 'Modifique la información del empleado' : 'Complete toda la información del empleado'}
+          {isEditing ? t('descEdit') : t('descNew')}
         </CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6" aria-busy={loading}>
           {/* Información Básica */}
           <div>
-            <h3 className="text-lg font-medium text-white mb-4">Información Básica</h3>
+            <h3 className="text-lg font-medium text-white mb-4">{t('basicInfo')}</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-white mb-1" htmlFor="employee_code">
-                  Código de Empleado *
+                  {t('employeeCode')}
                 </label>
                 <Input
                   id="employee_code"
@@ -130,14 +135,14 @@ function AddEmployeeForm({
                 />
                 {autoGenerateEmployeeCode && !isEditing ? (
                   <p className="text-xs text-gray-400 mt-1">
-                    Se genera solo: inicial del nombre + últimos 5 dígitos del DNI (ej. J00731).
+                    {t('autoCodeHint')}
                   </p>
                 ) : null}
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-white mb-1" htmlFor="dni">
-                  DNI *
+                  {t('dni')}
                 </label>
                 <Input
                   id="dni"
@@ -155,7 +160,7 @@ function AddEmployeeForm({
 
               <div>
                 <label className="block text-sm font-medium text-white mb-1" htmlFor="name">
-                  Nombre Completo *
+                  {t('fullName')}
                 </label>
                 <Input
                   id="name"
@@ -172,7 +177,7 @@ function AddEmployeeForm({
 
               <div>
                 <label className="block text-sm font-medium text-white mb-1" htmlFor="email">
-                  Correo Electrónico
+                  {t('email')}
                 </label>
                 <Input
                   id="email"
@@ -189,7 +194,7 @@ function AddEmployeeForm({
 
               <div>
                 <label className="block text-sm font-medium text-white mb-1" htmlFor="phone">
-                  Teléfono
+                  {t('phone')}
                 </label>
                 <Input
                   id="phone"
@@ -206,7 +211,7 @@ function AddEmployeeForm({
 
               <div>
                 <label className="block text-sm font-medium text-white mb-1" htmlFor="role">
-                  Rol
+                  {t('role')}
                 </label>
                 <Input
                   id="role"
@@ -215,14 +220,14 @@ function AddEmployeeForm({
                   disabled={loading}
                   value={v(formData?.role)}
                   onChange={(e) => onFormChange('role', e.target.value)}
-                  placeholder="Desarrollador"
+                  placeholder={t('rolePlaceholder')}
                   className="bg-white/10 border-white/20 text-white placeholder-gray-400"
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-white mb-1" htmlFor="team">
-                  Equipo
+                  {t('team')}
                 </label>
                 <Input
                   id="team"
@@ -240,11 +245,11 @@ function AddEmployeeForm({
 
           {/* Información Laboral */}
           <div>
-            <h3 className="text-lg font-medium text-white mb-4">Información Laboral</h3>
+            <h3 className="text-lg font-medium text-white mb-4">{t('jobInfo')}</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-white mb-1" htmlFor="department_id">
-                  Departamento
+                  {t('department')}
                 </label>
                 <select
                   id="department_id"
@@ -255,7 +260,7 @@ function AddEmployeeForm({
                   className="w-full p-2 border border-white/20 rounded-md focus:ring-2 focus:ring-brand-500 focus:border-brand-500 bg-white/10 text-white"
                 >
                   <option value="" className="bg-brand-900 text-white">
-                    Seleccionar Departamento ({departments.length} disponibles)
+                    {t('selectDepartment', { count: departments.length })}
                   </option>
                   {departments.map((dept) => (
                     <option key={dept.id} value={dept.id} className="bg-brand-900 text-white">
@@ -267,7 +272,7 @@ function AddEmployeeForm({
 
               <div>
                 <label className="block text-sm font-medium text-white mb-1" htmlFor="work_schedule_id">
-                  Horario de Trabajo
+                  {t('schedule')}
                 </label>
                 <select
                   id="work_schedule_id"
@@ -278,7 +283,7 @@ function AddEmployeeForm({
                   className="w-full p-2 border border-white/20 rounded-md focus:ring-2 focus:ring-brand-500 focus:border-brand-500 bg-white/10 text-white"
                 >
                   <option value="" className="bg-brand-900 text-white">
-                    Seleccionar Horario ({workSchedules.length} disponibles)
+                    {t('selectSchedule', { count: workSchedules.length })}
                   </option>
                   {workSchedules.map((schedule) => (
                     <option key={schedule.id} value={schedule.id} className="bg-brand-900 text-white">
@@ -290,7 +295,7 @@ function AddEmployeeForm({
 
               <div>
                 <label className="block text-sm font-medium text-white mb-1" htmlFor="pay_type">
-                  Tipo de Pago *
+                  {t('payType')}
                 </label>
                 <select
                   id="pay_type"
@@ -305,32 +310,30 @@ function AddEmployeeForm({
                     {defaultPayTypeLabel}
                   </option>
                   <option value="fixed" className="bg-brand-900 text-white">
-                    Administrativo (por día de asistencia)
+                    {t('payTypeFixed')}
                   </option>
                   <option value="admin_floor" className="bg-brand-900 text-white">
-                    Legacy — Admin con piso horario
+                    {t('payTypeAdminFloor')}
                   </option>
                   <option value="hourly" className="bg-brand-900 text-white">
-                    Por hora
+                    {t('payTypeHourly')}
                   </option>
                 </select>
                 <p className="text-xs text-gray-400 mt-1">
-                  <strong>Predeterminado de la empresa:</strong> hereda el método por defecto de Nómina.
+                  {t.rich('payTypeHelpDefault', bold)}
                   <br />
-                  <strong>Administrativo:</strong> Salario mensual por día de asistencia. HE AHC
-                  (con recargos) entra al bruto si empresa y empleado pagan HE.
+                  {t.rich('payTypeHelpFixed', bold)}
                   <br />
-                  <strong>Legacy — Admin con piso horario:</strong> No usar en altas nuevas; preferir
-                  administrativo por día.
+                  {t.rich('payTypeHelpAdminFloor', bold)}
                   <br />
-                  <strong>Por hora:</strong> Ingresa el salario mensual equivalente. La tarifa por hora se calcula automáticamente (base ÷ 240).
+                  {t.rich('payTypeHelpHourly', bold)}
                 </p>
               </div>
 
               {resolvedPayType === 'fixed' && (
                 <div>
                   <label className="block text-sm font-medium text-white mb-1" htmlFor="attendance_required">
-                    Control de asistencia
+                    {t('attendanceControl')}
                   </label>
                   <select
                     id="attendance_required"
@@ -343,16 +346,16 @@ function AddEmployeeForm({
                     className="w-full p-2 border border-white/20 rounded-md focus:ring-2 focus:ring-brand-500 focus:border-brand-500 bg-white/10 text-white"
                   >
                     <option value="true" className="bg-brand-900 text-white">
-                      Requiere asistencia
+                      {t('attendanceRequired')}
                     </option>
                     <option value="false" className="bg-brand-900 text-white">
-                      Exento de asistencia
+                      {t('attendanceExempt')}
                     </option>
                   </select>
                   <p className="text-xs text-gray-400 mt-1">
-                    <strong>Requiere asistencia:</strong> la nómina cuenta días con check-in.
+                    {t.rich('attendanceHelpRequired', bold)}
                     <br />
-                    <strong>Exento:</strong> se paga el período completo sin marcas (directores, administrativos sin reloj).
+                    {t.rich('attendanceHelpExempt', bold)}
                   </p>
                 </div>
               )}
@@ -360,15 +363,15 @@ function AddEmployeeForm({
               {(resolvedPayType === 'hourly' || resolvedPayType === 'admin_floor') && (
                 <div className="md:col-span-2 text-xs text-gray-400">
                   {resolvedPayType === 'admin_floor'
-                    ? 'Admin con piso horario siempre requiere asistencia. Sin salida o con horas bajo el tope, se acredita el tope ordinario del día (parámetros de empresa).'
-                    : 'Empleados por hora siempre requieren control de asistencia. Sin marcas en el período aparecen con 0 horas en la nómina para que pueda ajustarlas manualmente.'}
+                    ? t('adminFloorNote')
+                    : t('hourlyNote')}
                 </div>
               )}
 
               {canEditSalary && (
               <div>
                 <label className="block text-sm font-medium text-white mb-1" htmlFor="base_salary">
-                  Salario Base Mensual (HNL) *
+                  {t('baseSalary')}
                 </label>
                 <Input
                   id="base_salary"
@@ -387,13 +390,13 @@ function AddEmployeeForm({
                 {resolvedPayType === 'hourly' || resolvedPayType === 'admin_floor' ? (
                   Number(formData?.base_salary) > 0 && (
                   <p className="text-sm text-blue-400 mt-1">
-                    Tarifa por hora: L. {(Number(formData?.base_salary) / HONDURAS_LABOR_FACTOR).toFixed(2)} (basado en 240h/mes)
+                    {t('hourlyRate', { rate: (Number(formData?.base_salary) / HONDURAS_LABOR_FACTOR).toFixed(2) })}
                   </p>
                   )
                 ) : null}
                 {(resolvedPayType === 'hourly' || resolvedPayType === 'admin_floor') && Number(formData?.base_salary) > 0 && Number(formData?.base_salary) < 2000 && (
                   <p className="text-sm text-amber-400 mt-1">
-                    Por favor ingresa el salario mensual equivalente. El sistema calculará la tarifa por hora automáticamente.
+                    {t('monthlyEquivalentWarning')}
                   </p>
                 )}
               </div>
@@ -401,7 +404,7 @@ function AddEmployeeForm({
 
               <div>
                 <label className="block text-sm font-medium text-white mb-1" htmlFor="payment_frequency">
-                  Frecuencia de Pago
+                  {t('paymentFrequency')}
                 </label>
                 <select
                   id="payment_frequency"
@@ -411,19 +414,19 @@ function AddEmployeeForm({
                   onChange={(e) => onFormChange('payment_frequency', e.target.value)}
                   className="w-full p-2 border border-white/20 rounded-md focus:ring-2 focus:ring-brand-500 focus:border-brand-500 bg-white/10 text-white"
                 >
-                  <option value="" className="bg-brand-900 text-white">Predeterminado empresa</option>
-                  <option value="quincenal" className="bg-brand-900 text-white">Quincenal</option>
-                  <option value="mensual" className="bg-brand-900 text-white">Mensual</option>
-                  <option value="semanal" className="bg-brand-900 text-white">Semanal</option>
+                  <option value="" className="bg-brand-900 text-white">{t('frequencyDefault')}</option>
+                  <option value="quincenal" className="bg-brand-900 text-white">{t('frequencyBiweekly')}</option>
+                  <option value="mensual" className="bg-brand-900 text-white">{t('frequencyMonthly')}</option>
+                  <option value="semanal" className="bg-brand-900 text-white">{t('frequencyWeekly')}</option>
                 </select>
                 <p className="text-xs text-gray-400 mt-1">
-                  Si está vacío, usa la configuración de la empresa (Capa 2).
+                  {t('frequencyHelp')}
                 </p>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-white mb-1" htmlFor="pay_overtime">
-                  Horas extras
+                  {t('overtime')}
                 </label>
                 <select
                   id="pay_overtime"
@@ -436,22 +439,22 @@ function AddEmployeeForm({
                   className="w-full p-2 border border-white/20 rounded-md focus:ring-2 focus:ring-brand-500 focus:border-brand-500 bg-white/10 text-white"
                 >
                   <option value="true" className="bg-brand-900 text-white">
-                    Sí
+                    {t('yes')}
                   </option>
                   <option value="false" className="bg-brand-900 text-white">
-                    No
+                    {t('no')}
                   </option>
                 </select>
                 <p className="text-xs text-gray-400 mt-1">
-                  <strong>Sí:</strong> elegible — si el parámetro de empresa &quot;Pagar horas extras&quot; está activo, las HE impactan el bruto (administrativos y por hora).
+                  {t.rich('overtimeHelpYes', bold)}
                   <br />
-                  <strong>No:</strong> las HE pueden registrarse en asistencia, pero no impactan el bruto de este empleado.
+                  {t.rich('overtimeHelpNo', bold)}
                 </p>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-white mb-1" htmlFor="hire_date">
-                  Fecha de Contratación
+                  {t('hireDate')}
                 </label>
                 <Input
                   id="hire_date"
@@ -466,7 +469,7 @@ function AddEmployeeForm({
 
               <div>
                 <label className="block text-sm font-medium text-white mb-1" htmlFor="termination_date">
-                  Fecha de Terminación
+                  {t('terminationDate')}
                 </label>
                 <Input
                   id="termination_date"
@@ -481,7 +484,7 @@ function AddEmployeeForm({
 
               <div>
                 <label className="block text-sm font-medium text-white mb-1" htmlFor="status">
-                  Estado
+                  {t('status')}
                 </label>
                 <select
                   id="status"
@@ -491,10 +494,10 @@ function AddEmployeeForm({
                   onChange={(e) => onFormChange('status', e.target.value)}
                   className="w-full p-2 border border-white/20 rounded-md focus:ring-2 focus:ring-brand-500 focus:border-brand-500 bg-white/10 text-white"
                 >
-                  <option value="active" className="bg-brand-900 text-white">Activo</option>
-                  <option value="inactive" className="bg-brand-900 text-white">Inactivo</option>
-                  <option value="terminated" className="bg-brand-900 text-white">Terminado</option>
-                  <option value="on_leave" className="bg-brand-900 text-white">En Permiso</option>
+                  <option value="active" className="bg-brand-900 text-white">{t('statusActive')}</option>
+                  <option value="inactive" className="bg-brand-900 text-white">{t('statusInactive')}</option>
+                  <option value="terminated" className="bg-brand-900 text-white">{t('statusTerminated')}</option>
+                  <option value="on_leave" className="bg-brand-900 text-white">{t('statusOnLeave')}</option>
                 </select>
               </div>
 
@@ -502,7 +505,7 @@ function AddEmployeeForm({
                 <>
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-white mb-1" htmlFor="termination_reason_code">
-                      Motivo de baja <span className="text-red-400">*</span>
+                      {t('terminationReason')} <span className="text-red-400">*</span>
                     </label>
                     <select
                       id="termination_reason_code"
@@ -513,19 +516,19 @@ function AddEmployeeForm({
                       className="w-full p-2 border border-white/20 rounded-md focus:ring-2 focus:ring-brand-500 focus:border-brand-500 bg-white/10 text-white"
                     >
                       <option value="" className="bg-brand-900 text-white">
-                        Seleccione un motivo…
+                        {t('selectReason')}
                       </option>
                       {TERMINATION_REASON_OPTIONS.map((opt) => (
                         <option key={opt.code} value={opt.code} className="bg-brand-900 text-white">
-                          {opt.label}
+                          {te(`terminationReasons.${opt.code}` as 'terminationReasons.otro')}
                         </option>
                       ))}
                     </select>
-                    <p className="text-xs text-gray-400 mt-1">Requerido si el estado no es Activo.</p>
+                    <p className="text-xs text-gray-400 mt-1">{t('reasonRequiredHint')}</p>
                   </div>
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-white mb-1" htmlFor="termination_reason_detail">
-                      Detalle del motivo (opcional)
+                      {t('reasonDetail')}
                     </label>
                     <Textarea
                       id="termination_reason_detail"
@@ -535,7 +538,7 @@ function AddEmployeeForm({
                       onChange={(e) => onFormChange('termination_reason_detail', e.target.value)}
                       maxLength={2000}
                       rows={3}
-                      placeholder="Referencias, acuerdos…"
+                      placeholder={t('reasonDetailPlaceholder')}
                       className="bg-white/10 border-white/20 text-white placeholder-gray-400"
                     />
                   </div>
@@ -546,11 +549,11 @@ function AddEmployeeForm({
 
           {/* Información Bancaria */}
           <div>
-            <h3 className="text-lg font-medium text-white mb-4">Información Bancaria</h3>
+            <h3 className="text-lg font-medium text-white mb-4">{t('bankInfo')}</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-white mb-1" htmlFor="bank_name">
-                  Nombre del Banco
+                  {t('bankName')}
                 </label>
                 <Input
                   id="bank_name"
@@ -566,7 +569,7 @@ function AddEmployeeForm({
 
               <div>
                 <label className="block text-sm font-medium text-white mb-1" htmlFor="bank_account">
-                  Cuenta Bancaria
+                  {t('bankAccount')}
                 </label>
                 <Input
                   id="bank_account"
@@ -584,11 +587,11 @@ function AddEmployeeForm({
 
           {/* Contacto de Emergencia */}
           <div>
-            <h3 className="text-lg font-medium text-white mb-4">Contacto de Emergencia</h3>
+            <h3 className="text-lg font-medium text-white mb-4">{t('emergencyContact')}</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-white mb-1" htmlFor="emergency_contact_name">
-                  Nombre del Contacto de Emergencia
+                  {t('emergencyName')}
                 </label>
                 <Input
                   id="emergency_contact_name"
@@ -604,7 +607,7 @@ function AddEmployeeForm({
 
               <div>
                 <label className="block text-sm font-medium text-white mb-1" htmlFor="emergency_contact_phone">
-                  Teléfono del Contacto de Emergencia
+                  {t('emergencyPhone')}
                 </label>
                 <Input
                   id="emergency_contact_phone"
@@ -623,11 +626,11 @@ function AddEmployeeForm({
 
           {/* Dirección */}
           <div>
-            <h3 className="text-lg font-medium text-white mb-4">Dirección</h3>
+            <h3 className="text-lg font-medium text-white mb-4">{t('address')}</h3>
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-white mb-1" htmlFor="address">
-                  Dirección Completa
+                  {t('fullAddress')}
                 </label>
                 <Textarea
                   id="address"
@@ -635,7 +638,7 @@ function AddEmployeeForm({
                   disabled={loading}
                   value={addressValue}
                   onChange={(e) => onFormChange('address', e.target.value)}
-                  placeholder="Calle Principal #123, Colonia Los Laureles, Tegucigalpa, Honduras"
+                  placeholder={t('addressPlaceholder')}
                   rows={3}
                   className="w-full p-2 border border-white/20 rounded-md focus:ring-2 focus:ring-brand-500 focus:border-brand-500 bg-white/10 text-white placeholder-gray-400"
                 />
@@ -646,11 +649,11 @@ function AddEmployeeForm({
           {/* Foto de Perfil - Solo disponible cuando se edita un empleado existente */}
           {employeeId && employeeId !== 'new' && (
             <div>
-              <h3 className="text-lg font-medium text-white mb-4">Foto de Perfil</h3>
+              <h3 className="text-lg font-medium text-white mb-4">{t('profilePhoto')}</h3>
               <p className="text-sm text-gray-400 mb-3">
                 {isEditing 
-                  ? 'Sube una nueva foto de perfil para reemplazar la actual'
-                  : 'La foto de perfil se puede agregar después de crear el empleado'}
+                  ? t('profilePhotoReplace')
+                  : t('profilePhotoLater')}
               </p>
               <EmployeeFileUpload
                 employeeId={employeeId}
@@ -664,17 +667,17 @@ function AddEmployeeForm({
                   onProfileImageError?.(error)
                 }}
                 variant="full"
-                label="Subir foto de perfil"
+                label={t('uploadProfilePhoto')}
               />
             </div>
           )}
 
           {/* Información Adicional */}
           <div>
-            <h3 className="text-lg font-medium text-white mb-4">Información Adicional</h3>
+            <h3 className="text-lg font-medium text-white mb-4">{t('additionalInfo')}</h3>
             <div>
               <label className="block text-sm font-medium text-white mb-1" htmlFor="metadata">
-                Metadatos (JSON)
+                {t('metadata')}
               </label>
               <Textarea
                 id="metadata"
@@ -692,9 +695,9 @@ function AddEmployeeForm({
                 className="w-full p-2 border border-white/20 rounded-md focus:ring-2 focus:ring-brand-500 focus:border-brand-500 bg-white/10 text-white placeholder-gray-400 font-mono text-sm"
               />
               <p className="text-xs text-gray-400 mt-1">
-                Información adicional en formato JSON. 
+                {t('metadataHelp')}
                 <br />
-                <strong>Tip:</strong> Usa JSON.stringify() y JSON.parse() para manejar objetos complejos.
+                {t.rich('metadataTip', bold)}
               </p>
             </div>
           </div>
@@ -704,14 +707,14 @@ function AddEmployeeForm({
             <Button type="submit" disabled={loading} className="flex-1 bg-brand-800 hover:bg-brand-700 text-white">
               {loading
                 ? isEditing
-                  ? 'Actualizando...'
-                  : 'Agregando...'
+                  ? t('updating')
+                  : t('adding')
                 : isEditing
-                ? 'Actualizar Empleado'
-                : 'Agregar Empleado'}
+                ? t('update')
+                : t('add')}
             </Button>
             <Button type="button" variant="outline" onClick={onCancel} disabled={loading} className="flex-1 border-white/20 text-white hover:bg-white/10">
-              Cancelar
+              {tc('cancel')}
             </Button>
           </div>
         </form>

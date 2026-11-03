@@ -1,4 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, Fragment } from 'react'
+import { useLocale, useTranslations } from 'next-intl'
+import { intlLocale } from '../lib/i18n/app/locale'
 import { Button } from './ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
 import { Input } from './ui/input'
@@ -71,33 +73,20 @@ const INITIAL_FORM_DATA = {
 }
 
 const EMPLOYEE_DETAIL_TABS = [
-  { id: 'personal', label: 'Información Personal' },
-  { id: 'contract', label: 'Información Contractual' },
-  { id: 'attendance', label: 'Asistencia' },
-  { id: 'discipline', label: 'Medidas Disciplinarias' },
-  { id: 'emergency', label: 'Contacto de Emergencia' },
-  { id: 'files', label: 'Archivos del Empleado' }
+  { id: 'personal' },
+  { id: 'contract' },
+  { id: 'attendance' },
+  { id: 'discipline' },
+  { id: 'emergency' },
+  { id: 'files' }
 ] as const
-const DOCUMENT_CATEGORY_LABELS: Record<string, string> = {
-  contrato: 'Contrato',
-  identidad: 'Identidad',
-  certificado: 'Certificado',
-  diploma: 'Diploma',
-  otro: 'Otro'
-}
-const ATTENDANCE_STATUS_LABEL: Record<'present' | 'absent' | 'late' | 'not_registered' | 'unknown', string> = {
-  present: 'Presente',
-  absent: 'Ausente',
-  late: 'Tardanza',
-  not_registered: 'No registrado',
-  unknown: 'No disponible'
-}
+const DOCUMENT_CATEGORIES = ['contrato', 'identidad', 'certificado', 'diploma', 'otro'] as const
 
-const formatDateDisplay = (value?: string | null) => {
-  if (!value) return 'No especificada'
+const formatDateDisplay = (value: string | null | undefined, locale: string, empty: string) => {
+  if (!value) return empty
   if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
     const d = parseDateOnlyAsHonduras(value)
-    return isNaN(d.getTime()) ? value : d.toLocaleDateString('es-HN', {
+    return isNaN(d.getTime()) ? value : d.toLocaleDateString(locale, {
       timeZone: HONDURAS_TIMEZONE,
       year: 'numeric',
       month: 'long',
@@ -108,20 +97,20 @@ const formatDateDisplay = (value?: string | null) => {
   if (Number.isNaN(date.getTime())) {
     return value
   }
-  return date.toLocaleDateString('es-HN', {
+  return date.toLocaleDateString(locale, {
     year: 'numeric',
     month: 'long',
     day: 'numeric'
   })
 }
 
-const formatDateTimeDisplay = (value?: string | null) => {
-  if (!value) return 'No especificado'
+const formatDateTimeDisplay = (value: string | null | undefined, locale: string, empty: string) => {
+  if (!value) return empty
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) {
     return value
   }
-  return date.toLocaleString('es-HN', {
+  return date.toLocaleString(locale, {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
@@ -146,12 +135,12 @@ const parseMaybeJsonObject = (value: unknown): Record<string, any> | null => {
   return null
 }
 
-const formatAddress = (address: EmployeeShaped['address']) => {
-  if (!address) return 'No especificada'
+const formatAddress = (address: EmployeeShaped['address'], empty: string) => {
+  if (!address) return empty
 
   if (typeof address === 'string') {
     const trimmed = address.trim()
-    if (!trimmed) return 'No especificada'
+    if (!trimmed) return empty
     // Legacy rows may still hold a JSON object string after migration edge-cases.
     const parsed = parseMaybeJsonObject(trimmed)
     if (parsed) {
@@ -163,7 +152,7 @@ const formatAddress = (address: EmployeeShaped['address']) => {
 
   if (typeof address === 'object') {
     const values = Object.values(address as Record<string, unknown>).filter(Boolean)
-    return values.length ? values.join(', ') : 'No especificada'
+    return values.length ? values.join(', ') : empty
   }
 
   return String(address)
@@ -180,18 +169,29 @@ function employeeToPlanillaRow(emp: EmployeeShaped): PlanillaRowForGrouping {
   }
 }
 
-function employeeSectionHeading(sortBy: Exclude<EmployeeListSortBy, 'name'>, gkey: string): string {
-  if (sortBy === 'department') return `Departamento: ${gkey}`
-  if (sortBy === 'team') return `Equipo: ${gkey}`
-  return `Posición: ${gkey}`
-}
-
 export default function EmployeeManager({ companyId: propCompanyId }: { companyId?: string }) {
+  const t = useTranslations('employees')
+  const tc = useTranslations('common')
+  const locale = intlLocale(useLocale())
+  const fmtDate = (value?: string | null) => formatDateDisplay(value, locale, tc('notSpecifiedF'))
+  const fmtDateTime = (value?: string | null) => formatDateTimeDisplay(value, locale, tc('notSpecified'))
+  const sectionHeading = (sortBy: Exclude<EmployeeListSortBy, 'name'>, gkey: string) =>
+    sortBy === 'department'
+      ? t('sectionDepartment', { name: gkey })
+      : sortBy === 'team'
+        ? t('sectionTeam', { name: gkey })
+        : t('sectionPosition', { name: gkey })
+  const docCategoryLabel = (cat: string) =>
+    (DOCUMENT_CATEGORIES as readonly string[]).includes(cat) ? t(`docCategories.${cat as (typeof DOCUMENT_CATEGORIES)[number]}`) : cat
+  const terminationReasonLabel = (code: string | null | undefined) => {
+    const known = TERMINATION_REASON_OPTIONS.some((o) => o.code === code?.trim())
+    return known ? t(`terminationReasons.${code!.trim()}` as 'terminationReasons.otro') : getTerminationReasonLabel(code)
+  }
   const { user, loading: sessionLoading, userProfile } = useAuth()
   const { companyId: contextCompanyId, loading: companyLoading } = useCompanyContext()
   const { format: formatMoney, mask: salaryMask } = useCompanyMoney()
   const formatCurrency = (value?: number | null) => {
-    if (value === null || value === undefined) return 'No especificado'
+    if (value === null || value === undefined) return tc('notSpecified')
     return formatMoney(value)
   }
   
@@ -266,17 +266,17 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
   const getErrorMessage = useCallback((error: unknown) => {
     if (error instanceof Error) {
       const message = error.message.toLowerCase()
-      if (message.includes('401')) return 'Sesión expirada. Por favor, inicia sesión nuevamente.'
-      if (message.includes('403')) return 'No tienes permisos para realizar esta operación.'
-      if (message.includes('404')) return 'No se encontró el empleado solicitado.'
-      if (message.includes('409')) return 'El código de empleado ya existe. Por favor, usa un código diferente.'
-      if (message.includes('missing required fields')) return 'Por favor, completa todos los campos requeridos: código, DNI, nombre y salario base.'
-      if (message.includes('500')) return 'Error del servidor. Por favor, intenta más tarde.'
-      if (message.includes('unauthorized')) return 'No autorizado. Por favor, inicia sesión nuevamente.'
+      if (message.includes('401')) return t('errors.sessionExpired')
+      if (message.includes('403')) return t('errors.forbidden')
+      if (message.includes('404')) return t('errors.notFound')
+      if (message.includes('409')) return t('errors.duplicateCode')
+      if (message.includes('missing required fields')) return t('errors.missingFields')
+      if (message.includes('500')) return t('errors.server')
+      if (message.includes('unauthorized')) return t('errors.unauthorized')
       return error.message
     }
-    return 'Error inesperado. Por favor, verifica tu conexión e intenta nuevamente.'
-  }, [])
+    return t('errors.unexpected')
+  }, [t])
 
   const handleProfileImageUploaded = useCallback((fileId: string, storagePath: string) => {
     setUploadedProfileImagePath(storagePath)
@@ -345,11 +345,11 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
       setDepartments(departmentsList)
     } catch (error) {
       console.error('💥 Error fetching departments:', error)
-      setDepartmentsError('Error al cargar departamentos')
+      setDepartmentsError(t('errors.loadDepartments'))
     } finally {
       setDepartmentsLoading(false)
     }
-  }, [])
+  }, [t])
 
   const fetchEmployeeFiles = useCallback(async (employeeId: string) => {
     setFilesLoading(true)
@@ -357,15 +357,15 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
     try {
       const res = await fetch(`/api/employees/files/${employeeId}`, { credentials: 'include' })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Error al cargar archivos')
+      if (!res.ok) throw new Error(data.error || t('errors.loadFiles'))
       setEmployeeFiles(data.files || [])
     } catch (err) {
-      setFilesError(err instanceof Error ? err.message : 'Error al cargar archivos')
+      setFilesError(err instanceof Error ? err.message : t('errors.loadFiles'))
       setEmployeeFiles([])
     } finally {
       setFilesLoading(false)
     }
-  }, [])
+  }, [t])
 
   const fetchWorkSchedules = useCallback(async () => {
     setSchedulesLoading(true)
@@ -397,11 +397,11 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
       setWorkSchedules(schedulesList)
     } catch (error) {
       console.error('💥 Error fetching work schedules:', error)
-      setSchedulesError('Error al cargar horarios')
+      setSchedulesError(t('errors.loadSchedules'))
     } finally {
       setSchedulesLoading(false)
     }
-  }, [])
+  }, [t])
 
   const resetForm = useCallback(() => {
     setFormData(INITIAL_FORM_DATA)
@@ -458,7 +458,7 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
         const trimmed = sanitizedFormData.base_salary.trim()
         const parsed = trimmed === '' ? NaN : Number.parseFloat(trimmed)
         if (Number.isNaN(parsed)) {
-          throw new Error('Salario base inválido. Por favor ingresa un número.')
+          throw new Error(t('errors.invalidSalary'))
         }
         sanitizedFormData.base_salary = parsed
       }
@@ -487,7 +487,7 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
       } else if (sanitizedFormData.status === 'inactive') {
         const trc = String(sanitizedFormData.termination_reason_code || '').trim()
         if (!trc) {
-          throw new Error('Seleccione el motivo de baja para empleados inactivos.')
+          throw new Error(t('errors.reasonRequiredInactive'))
         }
         sanitizedFormData.termination_reason_code = trc
         const trd = String(sanitizedFormData.termination_reason_detail || '').trim()
@@ -554,7 +554,7 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
             try {
               sanitizedFormData.metadata = JSON.parse(trimmed)
             } catch {
-              throw new Error('El campo Metadatos debe ser JSON válido.')
+              throw new Error(t('errors.invalidMetadata'))
             }
           }
         }
@@ -606,6 +606,7 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
     fetchEmployees,
     canEditSalary,
     companyCalculationMode,
+    t,
   ])
 
   const handleCancel = useCallback(() => {
@@ -706,7 +707,7 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
       })
 
       if (!response.ok) {
-        const error = await response.json().catch(() => ({ error: 'Error al exportar' }))
+        const error = await response.json().catch(() => ({ error: t('errors.export') }))
         throw new Error(error.error || `Error HTTP ${response.status}`)
       }
 
@@ -734,11 +735,11 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
       setExportFilters({ status: [], departmentIds: [], employeeIds: [] })
     } catch (error) {
       console.error('Error exporting employees:', error)
-      setEmployeesError(error instanceof Error ? error.message : 'Error al exportar empleados')
+      setEmployeesError(error instanceof Error ? error.message : t('errors.exportEmployees'))
     } finally {
       setIsExporting(false)
     }
-  }, [exportFormat, exportFilters])
+  }, [exportFormat, exportFilters, t])
 
   const loadProfileImageForHeader = useCallback(async (employeeId: string) => {
     try {
@@ -751,9 +752,9 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
       setSelectedEmployeeImageError(null)
     } catch (err) {
       console.error('Error loading employee profile image:', err)
-      setSelectedEmployeeImageError('No se pudo cargar la foto de perfil.')
+      setSelectedEmployeeImageError(t('errors.profilePhoto'))
     }
-  }, [])
+  }, [t])
 
   const handleViewDetails = useCallback(async (employee: EmployeeShaped) => {
     setSelectedEmployee(employee)
@@ -784,7 +785,7 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
 
     const reason = terminationReasonCode.trim()
     if (!reason) {
-      setEmployeesError('Seleccione el motivo de baja.')
+      setEmployeesError(t('errors.reasonRequired'))
       return
     }
 
@@ -827,7 +828,7 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
     } finally {
       setIsSubmitting(false)
     }
-  }, [employeeToDeactivate, fetchEmployees, terminationDate, terminationReasonCode, terminationReasonDetail])
+  }, [employeeToDeactivate, fetchEmployees, terminationDate, terminationReasonCode, terminationReasonDetail, t])
 
   const shouldFetch = useMemo(() => !!user?.id && !sessionLoading, [user?.id, sessionLoading])
   const selectedEmployeeMetadata = useMemo(() => {
@@ -897,10 +898,10 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
     const set = new Set<string>()
     for (const emp of employees) {
       const d = emp.departments?.name
-      set.add(d && String(d).trim() ? String(d).trim() : 'Sin Departamento')
+      set.add(d && String(d).trim() ? String(d).trim() : t('noDepartment'))
     }
     return [...set].sort((a, b) => a.localeCompare(b, 'es'))
-  }, [employees])
+  }, [employees, t])
 
   // Filter and sort employees
   const filteredAndSortedEmployees = useMemo(() => {
@@ -923,7 +924,7 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
       filtered = filtered.filter(emp => {
         const name = (emp.departments?.name && String(emp.departments.name).trim())
           ? String(emp.departments.name).trim()
-          : 'Sin Departamento'
+          : t('noDepartment')
         return name === departmentFilter
       })
     }
@@ -949,7 +950,7 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
     })
 
     return sorted
-  }, [employees, searchTerm, sortOrder, departmentFilter, sortBy])
+  }, [employees, searchTerm, sortOrder, departmentFilter, sortBy, t])
 
   // Paginate results
   const paginatedEmployees = useMemo(() => {
@@ -1011,16 +1012,16 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
       <div className="p-6">
         <Card variant="liquid">
           <CardHeader>
-            <CardTitle className="text-white">Empleados</CardTitle>
+            <CardTitle className="text-white">{t('title')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-400 mx-auto"></div>
               <p className="mt-2 text-gray-300">
-                {sessionLoading && "Verificando sesión..."}
-                {employeesLoading && "Cargando empleados..."}
-                {departmentsLoading && "Cargando departamentos..."}
-                {schedulesLoading && "Cargando horarios..."}
+                {sessionLoading && t('verifyingSession')}
+                {employeesLoading && t('loadingEmployees')}
+                {departmentsLoading && t('loadingDepartments')}
+                {schedulesLoading && t('loadingSchedules')}
               </p>
             </div>
           </CardContent>
@@ -1034,18 +1035,18 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
       <div className="p-6">
         <Card variant="liquid">
           <CardHeader>
-            <CardTitle className="text-white">Empleados</CardTitle>
+            <CardTitle className="text-white">{t('title')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               {employeesError && (
                 <div className="text-center">
                   <div className="text-red-400 mb-4">
-                    <h3 className="text-lg font-semibold">Error al cargar empleados</h3>
+                    <h3 className="text-lg font-semibold">{t('errors.loadEmployees')}</h3>
                     <p className="text-sm mt-2 text-gray-300">{employeesError}</p>
                   </div>
                   <Button onClick={fetchEmployees} variant="outline" className="mb-4 bg-white/5 border-white/20 text-white hover:bg-white/10">
-                    Reintentar cargar empleados
+                    {t('retryEmployees')}
                   </Button>
                 </div>
               )}
@@ -1053,11 +1054,11 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
               {departmentsError && (
                 <div className="text-center">
                   <div className="text-red-400 mb-4">
-                    <h3 className="text-lg font-semibold">Error al cargar departamentos</h3>
+                    <h3 className="text-lg font-semibold">{t('errors.loadDepartments')}</h3>
                     <p className="text-sm mt-2 text-gray-300">{departmentsError}</p>
                   </div>
                   <Button onClick={fetchDepartments} variant="outline" className="mb-4 bg-white/5 border-white/20 text-white hover:bg-white/10">
-                    Reintentar cargar departamentos
+                    {t('retryDepartments')}
                   </Button>
                 </div>
               )}
@@ -1065,11 +1066,11 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
               {schedulesError && (
                 <div className="text-center">
                   <div className="text-red-400 mb-4">
-                    <h3 className="text-lg font-semibold">Error al cargar horarios</h3>
+                    <h3 className="text-lg font-semibold">{t('errors.loadSchedules')}</h3>
                     <p className="text-sm mt-2 text-gray-300">{schedulesError}</p>
                   </div>
                   <Button onClick={fetchWorkSchedules} variant="outline" className="bg-white/5 border-white/20 text-white hover:bg-white/10">
-                    Reintentar cargar horarios
+                    {t('retrySchedules')}
                   </Button>
                 </div>
               )}
@@ -1096,10 +1097,12 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
               </div>
               <div className="flex-1">
                 <p className="text-sm font-medium text-blue-300">
-                  Editando empleado: <span className="text-white font-semibold">{editingEmployee.name}</span>
+                  {t.rich('editing', {
+                    name: () => <span className="text-white font-semibold">{editingEmployee.name}</span>,
+                  })}
                 </p>
                 <p className="text-xs text-blue-400/80 mt-1">
-                  {editingEmployee.employee_code || 'Sin código'} • {editingEmployee.dni}
+                  {editingEmployee.employee_code || tc('noCode')} • {editingEmployee.dni}
                 </p>
               </div>
               <Button
@@ -1107,7 +1110,7 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
                 variant="outline"
                 onClick={handleCancel}
                 className="bg-white/5 border-white/20 text-white hover:bg-white/10"
-                title="Cancelar edición"
+                title={t('cancelEdit')}
               >
                 ✕
               </Button>
@@ -1137,15 +1140,15 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
         <div className="space-y-4">
           <div className="flex justify-between items-center">
             <div>
-              <h2 className="text-xl font-semibold text-white">Empleados</h2>
-              <p className="text-gray-300">Administra la información de los empleados</p>
+              <h2 className="text-xl font-semibold text-white">{t('title')}</h2>
+              <p className="text-gray-300">{t('pageSubtitle')}</p>
             </div>
             <Button 
               onClick={() => setShowForm(true)}
               className="flex items-center space-x-2 bg-brand-600 hover:bg-brand-700"
             >
               <PlusIcon className="h-5 w-5" />
-              <span>Nuevo Empleado</span>
+              <span>{t('newEmployee')}</span>
             </Button>
           </div>
 
@@ -1156,7 +1159,7 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
                 <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                 <Input
                   type="text"
-                  placeholder="Buscar por nombre, código, DNI, email..."
+                  placeholder={t('searchPlaceholder')}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10 bg-white/10 border-white/20 text-white placeholder-gray-400"
@@ -1166,7 +1169,7 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
             <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 sm:items-center sm:flex-wrap">
               <div className="flex items-center gap-2 min-w-0">
                 <label htmlFor="employee-dept-filter" className="text-sm font-medium text-white shrink-0">
-                  Departamento:
+                  {t('departmentLabel')}
                 </label>
                 <select
                   id="employee-dept-filter"
@@ -1175,7 +1178,7 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
                   className="px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 min-w-0 flex-1 sm:flex-none sm:min-w-[11rem]"
                 >
                   <option value="all" className="bg-gray-800">
-                    Todos
+                    {t('all')}
                   </option>
                   {departmentFilterOptions.map((dept) => (
                     <option key={dept} value={dept} className="bg-gray-800">
@@ -1185,20 +1188,14 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
                 </select>
               </div>
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-sm font-medium text-white">Ordenar por:</span>
+                <span className="text-sm font-medium text-white">{t('sortBy')}</span>
                 <Button
                   type="button"
                   onClick={cycleSortBy}
                   variant="outline"
                   className="px-3 py-2 h-auto bg-white/10 border-white/20 text-white hover:bg-white/20 text-sm"
                 >
-                  {sortBy === 'name'
-                    ? 'Nombre'
-                    : sortBy === 'department'
-                      ? 'Departamento'
-                      : sortBy === 'team'
-                        ? 'Equipo'
-                        : 'Posición'}
+                  {t(`sort.${sortBy}`)}
                 </Button>
                 <Button
                   type="button"
@@ -1224,7 +1221,7 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
           {employeesError && (
             <div className="bg-red-500/20 border border-red-500/30 rounded-md p-4">
               <div className="text-red-400">
-                <h3 className="text-sm font-medium">Error al {editingEmployee ? 'actualizar' : 'crear'} empleado</h3>
+                <h3 className="text-sm font-medium">{editingEmployee ? t('errors.saveTitleUpdate') : t('errors.saveTitleCreate')}</h3>
                 <p className="text-sm mt-1 text-gray-300">{employeesError}</p>
               </div>
             </div>
@@ -1232,10 +1229,10 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
           {(departmentsError || schedulesError) && (
             <div className="bg-yellow-500/20 border border-yellow-500/30 rounded-md p-4">
               <div className="text-yellow-400">
-                <h3 className="text-sm font-medium">Advertencia</h3>
+                <h3 className="text-sm font-medium">{tc('warning')}</h3>
                 <div className="text-sm mt-1 text-gray-300">
-                  {departmentsError && <p>Error al cargar departamentos. <Button onClick={fetchDepartments} variant="link" className="text-yellow-400 underline p-0 h-auto">Reintentar</Button></p>}
-                  {schedulesError && <p>Error al cargar horarios. <Button onClick={fetchWorkSchedules} variant="link" className="text-yellow-400 underline p-0 h-auto">Reintentar</Button></p>}
+                  {departmentsError && <p>{t('errors.loadDepartmentsShort')} <Button onClick={fetchDepartments} variant="link" className="text-yellow-400 underline p-0 h-auto">{tc('retry')}</Button></p>}
+                  {schedulesError && <p>{t('errors.loadSchedulesShort')} <Button onClick={fetchWorkSchedules} variant="link" className="text-yellow-400 underline p-0 h-auto">{tc('retry')}</Button></p>}
                 </div>
               </div>
             </div>
@@ -1248,10 +1245,14 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
           <div className="flex items-center justify-between">
             <div>
               <CardTitle className="text-white">
-                Lista de Empleados ({filteredAndSortedEmployees.length}{searchTerm && ` de ${employees.length}`})
+                {searchTerm
+                  ? t('listTitleFiltered', { count: filteredAndSortedEmployees.length, total: employees.length })
+                  : t('listTitle', { count: filteredAndSortedEmployees.length })}
               </CardTitle>
               <CardDescription className="text-gray-300">
-                Empleados registrados en el sistema {totalPages > 1 && `- Página ${currentPage} de ${totalPages}`}
+                {totalPages > 1
+                  ? t('listDescriptionPaged', { page: currentPage, pages: totalPages })
+                  : t('listDescription')}
               </CardDescription>
             </div>
             <ExportFormatButtons
@@ -1265,7 +1266,7 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
         <CardContent>
           {filteredAndSortedEmployees.length === 0 ? (
             <div className="text-center py-8 text-gray-400">
-              {searchTerm ? 'No se encontraron empleados con ese criterio' : 'No se encontraron empleados'}
+              {searchTerm ? t('noResultsSearch') : t('noResults')}
             </div>
           ) : (
             <>
@@ -1292,7 +1293,7 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
                         className="pt-1 pb-0 text-sm font-semibold text-blue-200 border-b border-white/15"
                         role="presentation"
                       >
-                        {employeeSectionHeading(sortBy, gkey)}
+                        {sectionHeading(sortBy, gkey)}
                       </div>
                     )}
                   <div 
@@ -1309,7 +1310,7 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
                         <span className={`px-2 py-1 rounded text-xs font-medium ${
                           employee.status === 'active' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'
                         }`}>
-                          {employee.status === 'active' ? 'Activo' : 'Inactivo'}
+                          {employee.status === 'active' ? tc('active') : tc('inactive')}
                         </span>
                         {employee.attendance_status && (
                           <span className={`px-2 py-1 rounded text-xs font-medium ${
@@ -1318,22 +1319,22 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
                             employee.attendance_status === 'absent' ? 'bg-red-500/20 text-red-400' :
                             'bg-gray-500/20 text-gray-400'
                           }`}>
-                            {employee.attendance_status === 'present' ? 'Presente' :
-                             employee.attendance_status === 'late' ? 'Tardanza' :
-                             employee.attendance_status === 'absent' ? 'Ausente' : 'No registrado'}
+                            {employee.attendance_status === 'present' ? t('attendanceStatus.present') :
+                             employee.attendance_status === 'late' ? t('attendanceStatus.late') :
+                             employee.attendance_status === 'absent' ? t('attendanceStatus.absent') : t('attendanceStatus.not_registered')}
                           </span>
                         )}
                       </div>
                       
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-gray-300">
                         <div>
-                          <p><span className="font-medium text-gray-200">DNI:</span> {employee.dni}</p>
-                          <p><span className="font-medium text-gray-200">Código:</span> {employee.employee_code || 'Sin asignar'}</p>
-                          <p><span className="font-medium text-gray-200">Email:</span> {employee.email || 'No especificado'}</p>
+                          <p><span className="font-medium text-gray-200">{t('fields.dni')}</span> {employee.dni}</p>
+                          <p><span className="font-medium text-gray-200">{t('fields.code')}</span> {employee.employee_code || tc('unassigned')}</p>
+                          <p><span className="font-medium text-gray-200">{t('fields.email')}</span> {employee.email || tc('notSpecified')}</p>
                           <div className="flex items-center gap-2">
                             <p>
-                              <span className="font-medium text-gray-200">Teléfono:</span>{' '}
-                              {employee.phone || 'No especificado'}
+                              <span className="font-medium text-gray-200">{t('fields.phone')}</span>{' '}
+                              {employee.phone || tc('notSpecified')}
                             </p>
                             {canSendInstantMessage && whatsappLink && (
                               <Button
@@ -1346,11 +1347,11 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
                                   href={whatsappLink}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  aria-label={`Enviar mensaje de WhatsApp a ${employee.name}`}
+                                  aria-label={t('whatsappAria', { name: employee.name })}
                                 >
                                   <span className="flex items-center gap-1">
                                     <ChatBubbleBottomCenterTextIcon className="h-4 w-4" />
-                                    <span className="hidden sm:inline">Mensaje instantáneo</span>
+                                    <span className="hidden sm:inline">{t('instantMessage')}</span>
                                   </span>
                                 </a>
                               </Button>
@@ -1358,12 +1359,12 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
                           </div>
                         </div>
                         <div>
-                          <p><span className="font-medium text-gray-200">Posición:</span> {employee.role || 'No especificada'}</p>
-                          <p><span className="font-medium text-gray-200">Equipo:</span> {employee.team || 'Sin asignar'}</p>
-                          <p><span className="font-medium text-gray-200">Departamento:</span> {employee.departments?.name || 'Sin asignar'}</p>
-                          <p><span className="font-medium text-gray-200">Horario:</span> {employee.work_schedules?.name || 'Sin asignar'}</p>
+                          <p><span className="font-medium text-gray-200">{t('fields.position')}</span> {employee.role || tc('notSpecifiedF')}</p>
+                          <p><span className="font-medium text-gray-200">{t('fields.team')}</span> {employee.team || tc('unassigned')}</p>
+                          <p><span className="font-medium text-gray-200">{t('fields.department')}</span> {employee.departments?.name || tc('unassigned')}</p>
+                          <p><span className="font-medium text-gray-200">{t('fields.schedule')}</span> {employee.work_schedules?.name || tc('unassigned')}</p>
                           {employee.check_in_time && (
-                            <p><span className="font-medium text-gray-200">Entrada:</span> {formatTimeDisplay(employee.check_in_time)}</p>
+                            <p><span className="font-medium text-gray-200">{t('fields.checkIn')}</span> {formatTimeDisplay(employee.check_in_time)}</p>
                           )}
                         </div>
                       </div>
@@ -1372,8 +1373,8 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
                     <div className="flex flex-col items-end gap-2 ml-4">
                       {employee.employee_scores && (
                         <div className="text-right text-xs text-gray-400">
-                          <p>Puntos: {employee.employee_scores.total_points || 0}</p>
-                          <p>Semana: {employee.employee_scores.weekly_points || 0}</p>
+                          <p>{t('points', { count: employee.employee_scores.total_points || 0 })}</p>
+                          <p>{t('weekPoints', { count: employee.employee_scores.weekly_points || 0 })}</p>
                         </div>
                       )}
                       
@@ -1385,7 +1386,7 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
                           className="flex items-center gap-1 bg-blue-500/20 border-blue-500/30 text-blue-400 hover:bg-blue-500/30"
                         >
                           <EyeIcon className="h-4 w-4" />
-                          <span className="hidden sm:inline">Ver</span>
+                          <span className="hidden sm:inline">{tc('view')}</span>
                         </Button>
                         
                         <Button
@@ -1395,7 +1396,7 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
                           className="flex items-center gap-1 bg-emerald-500/20 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/30"
                         >
                           <DocumentTextIcon className="h-4 w-4" />
-                          <span className="hidden sm:inline">Constancia</span>
+                          <span className="hidden sm:inline">{t('certificateButton')}</span>
                         </Button>
                         
                         <Button
@@ -1403,7 +1404,7 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
                           variant="outline"
                           onClick={() => handleEdit(employee)}
                           className="flex items-center gap-1 bg-blue-500/20 border-blue-500/30 text-blue-400 hover:bg-blue-500/30 transition-all"
-                          title={`Editar ${employee.name}`}
+                          title={t('editTitle', { name: employee.name })}
                           disabled={employeesLoading}
                         >
                           {employeesLoading && editingEmployee?.id === employee.id ? (
@@ -1412,7 +1413,7 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
                             <PencilIcon className="h-4 w-4" />
                           )}
                           <span className="hidden sm:inline">
-                            {employeesLoading && editingEmployee?.id === employee.id ? 'Cargando...' : 'Editar'}
+                            {employeesLoading && editingEmployee?.id === employee.id ? tc('loadingDots') : tc('edit')}
                           </span>
                         </Button>
                         
@@ -1424,7 +1425,7 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
                             className="flex items-center gap-1 bg-red-500/20 border-red-500/30 text-red-400 hover:bg-red-500/30"
                           >
                             <TrashIcon className="h-4 w-4" />
-                            <span className="hidden sm:inline">Dar Baja</span>
+                            <span className="hidden sm:inline">{t('deactivate')}</span>
                           </Button>
                         )}
                       </div>
@@ -1440,7 +1441,11 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
             {totalPages > 1 && (
               <div className="flex items-center justify-between mt-6 pt-4 border-t border-white/10">
                 <div className="text-sm text-gray-400">
-                  Mostrando {(currentPage - 1) * itemsPerPage + 1} - {Math.min(currentPage * itemsPerPage, filteredAndSortedEmployees.length)} de {filteredAndSortedEmployees.length}
+                  {tc('showingRange', {
+                    from: (currentPage - 1) * itemsPerPage + 1,
+                    to: Math.min(currentPage * itemsPerPage, filteredAndSortedEmployees.length),
+                    total: filteredAndSortedEmployees.length,
+                  })}
                 </div>
                 <div className="flex items-center gap-2">
                   <Button
@@ -1451,7 +1456,7 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
                     className="bg-white/10 border-white/20 text-white hover:bg-white/20 disabled:opacity-50"
                   >
                     <ChevronLeftIcon className="h-4 w-4" />
-                    Anterior
+                    {tc('previous')}
                   </Button>
                   <div className="flex items-center gap-1">
                     {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
@@ -1490,7 +1495,7 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
                     size="sm"
                     className="bg-white/10 border-white/20 text-white hover:bg-white/20 disabled:opacity-50"
                   >
-                    Siguiente
+                    {tc('next')}
                     <ChevronRightIcon className="h-4 w-4" />
                   </Button>
                 </div>
@@ -1507,7 +1512,7 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
           <div className="bg-gray-900 border border-white/20 rounded-lg p-6 max-w-2xl w-full mx-4 backdrop-blur-sm max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-xl font-semibold text-white">
-                Detalles del Empleado
+                {t('details.title')}
               </h3>
               <Button
                 onClick={closeDetailsModal}
@@ -1527,7 +1532,7 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
                   ) : selectedEmployeeImageUrl ? (
                     <img
                       src={selectedEmployeeImageUrl}
-                      alt={`Foto de ${selectedEmployee.name}`}
+                      alt={t('details.photoAlt', { name: selectedEmployee.name })}
                       className="h-28 w-28 object-cover"
                     />
                   ) : (
@@ -1541,7 +1546,7 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
                 )}
                 <div>
                   <h4 className="text-lg font-medium text-white">{selectedEmployee.name}</h4>
-                  <p className="text-sm text-gray-400">{selectedEmployee.employee_code || 'Sin código'}</p>
+                  <p className="text-sm text-gray-400">{selectedEmployee.employee_code || tc('noCode')}</p>
                 </div>
                 <div className="flex flex-wrap justify-center gap-2">
                   <span
@@ -1551,7 +1556,7 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
                         : 'bg-red-500/20 text-red-400'
                     }`}
                   >
-                    {selectedEmployee.status === 'active' ? 'Activo' : 'Inactivo'}
+                    {selectedEmployee.status === 'active' ? tc('active') : tc('inactive')}
                   </span>
                   {selectedEmployee.attendance_status && (
                     <span
@@ -1565,12 +1570,12 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
                           : 'bg-gray-500/20 text-gray-400'
                       }`}
                     >
-                      {ATTENDANCE_STATUS_LABEL[selectedEmployee.attendance_status] ?? ATTENDANCE_STATUS_LABEL.unknown}
+                      {t(`attendanceStatus.${selectedEmployee.attendance_status ?? 'unknown'}`)}
                     </span>
                   )}
                   {selectedEmployee.employee_scores && (
                     <span className="px-2 py-1 rounded text-xs font-medium bg-blue-500/20 text-blue-300">
-                      Puntos {selectedEmployee.employee_scores.total_points ?? 0}
+                      {t('pointsBadge', { count: selectedEmployee.employee_scores.total_points ?? 0 })}
                     </span>
                   )}
                 </div>
@@ -1588,7 +1593,7 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
                         : 'bg-white/5 text-gray-300 hover:bg-white/10'
                     }`}
                   >
-                    {tab.label}
+                    {t(`tabs.${tab.id}`)}
                   </button>
                 ))}
               </div>
@@ -1598,33 +1603,33 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
                   <div className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div>
-                        <label className="text-sm font-medium text-gray-400">Nombre Completo</label>
+                        <label className="text-sm font-medium text-gray-400">{t('details.fullName')}</label>
                         <div className="text-white font-medium">{selectedEmployee.name}</div>
                       </div>
                       <div>
-                        <label className="text-sm font-medium text-gray-400">DNI</label>
+                        <label className="text-sm font-medium text-gray-400">{t('details.dni')}</label>
                         <div className="text-white font-medium">{selectedEmployee.dni}</div>
                       </div>
                       <div>
-                        <label className="text-sm font-medium text-gray-400">Email</label>
-                        <div className="text-white font-medium">{selectedEmployee.email || 'No especificado'}</div>
+                        <label className="text-sm font-medium text-gray-400">{t('details.email')}</label>
+                        <div className="text-white font-medium">{selectedEmployee.email || tc('notSpecified')}</div>
                       </div>
                       <div>
-                        <label className="text-sm font-medium text-gray-400">Teléfono</label>
-                        <div className="text-white font-medium">{selectedEmployee.phone || 'No especificado'}</div>
+                        <label className="text-sm font-medium text-gray-400">{t('details.phone')}</label>
+                        <div className="text-white font-medium">{selectedEmployee.phone || tc('notSpecified')}</div>
                       </div>
                       <div>
-                        <label className="text-sm font-medium text-gray-400">Equipo</label>
-                        <div className="text-white font-medium">{selectedEmployee.team || 'Sin asignar'}</div>
+                        <label className="text-sm font-medium text-gray-400">{t('details.team')}</label>
+                        <div className="text-white font-medium">{selectedEmployee.team || tc('unassigned')}</div>
                       </div>
                       <div className="md:col-span-2">
-                        <label className="text-sm font-medium text-gray-400">Dirección</label>
-                        <div className="text-white font-medium">{formatAddress(selectedEmployee.address)}</div>
+                        <label className="text-sm font-medium text-gray-400">{t('details.address')}</label>
+                        <div className="text-white font-medium">{formatAddress(selectedEmployee.address, tc('notSpecifiedF'))}</div>
                       </div>
                     </div>
                     {personalNotes && (
                       <div className="border border-white/10 rounded-lg p-4 bg-white/5">
-                        <h6 className="text-sm font-medium text-gray-300 mb-2">Notas personales</h6>
+                        <h6 className="text-sm font-medium text-gray-300 mb-2">{t('details.personalNotes')}</h6>
                         <p className="text-sm text-gray-200 leading-relaxed">{personalNotes}</p>
                       </div>
                     )}
@@ -1635,48 +1640,48 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
                   <div className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div>
-                        <label className="text-sm font-medium text-gray-400">Código de Empleado</label>
-                        <div className="text-white font-medium">{selectedEmployee.employee_code || 'Sin asignar'}</div>
+                        <label className="text-sm font-medium text-gray-400">{t('details.employeeCode')}</label>
+                        <div className="text-white font-medium">{selectedEmployee.employee_code || tc('unassigned')}</div>
                       </div>
                       <div>
-                        <label className="text-sm font-medium text-gray-400">Estado</label>
-                        <div className="text-white font-medium">{selectedEmployee.status === 'active' ? 'Activo' : 'Inactivo'}</div>
+                        <label className="text-sm font-medium text-gray-400">{t('details.status')}</label>
+                        <div className="text-white font-medium">{selectedEmployee.status === 'active' ? tc('active') : tc('inactive')}</div>
                       </div>
                       <div>
-                        <label className="text-sm font-medium text-gray-400">Departamento</label>
-                        <div className="text-white font-medium">{selectedEmployee.departments?.name || 'Sin asignar'}</div>
+                        <label className="text-sm font-medium text-gray-400">{t('details.department')}</label>
+                        <div className="text-white font-medium">{selectedEmployee.departments?.name || tc('unassigned')}</div>
                       </div>
                       <div>
-                        <label className="text-sm font-medium text-gray-400">Cargo/Posición</label>
-                        <div className="text-white font-medium">{selectedEmployee.role || 'No especificado'}</div>
+                        <label className="text-sm font-medium text-gray-400">{t('details.position')}</label>
+                        <div className="text-white font-medium">{selectedEmployee.role || tc('notSpecified')}</div>
                       </div>
                       <div>
-                        <label className="text-sm font-medium text-gray-400">Horario de Trabajo</label>
-                        <div className="text-white font-medium">{selectedEmployee.work_schedules?.name || 'Sin asignar'}</div>
+                        <label className="text-sm font-medium text-gray-400">{t('details.schedule')}</label>
+                        <div className="text-white font-medium">{selectedEmployee.work_schedules?.name || tc('unassigned')}</div>
                       </div>
                       <div>
-                        <label className="text-sm font-medium text-gray-400">Fecha de Contratación</label>
-                        <div className="text-white font-medium">{formatDateDisplay(selectedEmployee.hire_date)}</div>
+                        <label className="text-sm font-medium text-gray-400">{t('details.hireDate')}</label>
+                        <div className="text-white font-medium">{fmtDate(selectedEmployee.hire_date)}</div>
                       </div>
                       <div>
-                        <label className="text-sm font-medium text-gray-400">Fecha de Terminación</label>
+                        <label className="text-sm font-medium text-gray-400">{t('details.terminationDate')}</label>
                         <div className="text-white font-medium">
                           {selectedEmployee.status === 'inactive'
-                            ? formatDateDisplay(selectedEmployee.termination_date)
-                            : 'Contrato vigente'}
+                            ? fmtDate(selectedEmployee.termination_date)
+                            : t('details.contractActive')}
                         </div>
                       </div>
                       {selectedEmployee.status === 'inactive' && (
                         <>
                           <div>
-                            <label className="text-sm font-medium text-gray-400">Motivo de baja</label>
+                            <label className="text-sm font-medium text-gray-400">{t('details.terminationReason')}</label>
                             <div className="text-white font-medium">
-                              {getTerminationReasonLabel(selectedEmployee.termination_reason_code)}
+                              {terminationReasonLabel(selectedEmployee.termination_reason_code)}
                             </div>
                           </div>
                           {(selectedEmployee.termination_reason_detail || '').trim() ? (
                             <div className="md:col-span-2">
-                              <label className="text-sm font-medium text-gray-400">Detalle del motivo</label>
+                              <label className="text-sm font-medium text-gray-400">{t('details.terminationDetail')}</label>
                               <div className="text-white text-sm leading-relaxed whitespace-pre-wrap">
                                 {selectedEmployee.termination_reason_detail}
                               </div>
@@ -1685,7 +1690,7 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
                         </>
                       )}
                       <SensitiveField
-                        label="Salario Base"
+                        label={t('details.baseSalary')}
                         value={selectedEmployee.base_salary}
                         masked={isSalaryMasked(selectedEmployee) || !canViewSalary}
                         displayMode={salaryDisplayMode}
@@ -1693,17 +1698,17 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
                         mask={salaryMask}
                       />
                       <div>
-                        <label className="text-sm font-medium text-gray-400">Banco</label>
-                        <div className="text-white font-medium">{selectedEmployee.bank_name || 'No especificado'}</div>
+                        <label className="text-sm font-medium text-gray-400">{t('details.bank')}</label>
+                        <div className="text-white font-medium">{selectedEmployee.bank_name || tc('notSpecified')}</div>
                       </div>
                       <div>
-                        <label className="text-sm font-medium text-gray-400">Cuenta Bancaria</label>
-                        <div className="text-white font-medium">{selectedEmployee.bank_account || 'No especificada'}</div>
+                        <label className="text-sm font-medium text-gray-400">{t('details.bankAccount')}</label>
+                        <div className="text-white font-medium">{selectedEmployee.bank_account || tc('notSpecifiedF')}</div>
                       </div>
                     </div>
                     {contractNotes && (
                       <div className="border border-white/10 rounded-lg p-4 bg-white/5">
-                        <h6 className="text-sm font-medium text-gray-300 mb-2">Notas contractuales</h6>
+                        <h6 className="text-sm font-medium text-gray-300 mb-2">{t('details.contractNotes')}</h6>
                         <p className="text-sm text-gray-200 leading-relaxed">{contractNotes}</p>
                       </div>
                     )}
@@ -1714,27 +1719,25 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
                   <div className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                       <div>
-                        <label className="text-sm font-medium text-gray-400">Estado de Asistencia</label>
+                        <label className="text-sm font-medium text-gray-400">{t('details.attendanceStatus')}</label>
                         <div className="text-white font-medium">
-                          {selectedEmployee.attendance_status
-                            ? ATTENDANCE_STATUS_LABEL[selectedEmployee.attendance_status]
-                            : ATTENDANCE_STATUS_LABEL.unknown}
+                          {t(`attendanceStatus.${selectedEmployee.attendance_status || 'unknown'}`)}
                         </div>
                       </div>
                       <div>
-                        <label className="text-sm font-medium text-gray-400">Entrada más reciente</label>
+                        <label className="text-sm font-medium text-gray-400">{t('details.lastCheckIn')}</label>
                         <div className="text-white font-medium">
                           {selectedEmployee.check_in_time
                             ? formatTimeDisplay(selectedEmployee.check_in_time)
-                            : 'Sin registro'}
+                            : tc('noRecord')}
                         </div>
                       </div>
                       <div>
-                        <label className="text-sm font-medium text-gray-400">Salida más reciente</label>
+                        <label className="text-sm font-medium text-gray-400">{t('details.lastCheckOut')}</label>
                         <div className="text-white font-medium">
                           {selectedEmployee.check_out_time
                             ? formatTimeDisplay(selectedEmployee.check_out_time)
-                            : 'Sin registro'}
+                            : tc('noRecord')}
                         </div>
                       </div>
                     </div>
@@ -1746,38 +1749,38 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
                             className="border border-white/10 rounded-lg p-4 bg-white/5"
                           >
                             <div className="flex justify-between items-center mb-2">
-                              <h6 className="text-sm font-semibold text-white">Registro {index + 1}</h6>
+                              <h6 className="text-sm font-semibold text-white">{t('details.record', { number: index + 1 })}</h6>
                               <span className="text-xs text-gray-400">
-                                {record.status ? record.status : 'Sin estado'}
+                                {record.status ? record.status : t('details.noStatus')}
                               </span>
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-300">
                               <div>
-                                <span className="text-gray-400 block text-xs uppercase tracking-wider">Entrada</span>
+                                <span className="text-gray-400 block text-xs uppercase tracking-wider">{t('details.checkIn')}</span>
                                 <span className="text-white">
-                                  {record.check_in ? formatDateTimeDisplay(record.check_in) : 'Sin registro'}
+                                  {record.check_in ? fmtDateTime(record.check_in) : tc('noRecord')}
                                 </span>
                               </div>
                               {(record as any).lunch_start != null && (
                                 <div>
-                                  <span className="text-gray-400 block text-xs uppercase tracking-wider">Inicio almuerzo</span>
+                                  <span className="text-gray-400 block text-xs uppercase tracking-wider">{t('details.lunchStart')}</span>
                                   <span className="text-white">
-                                    {formatDateTimeDisplay((record as any).lunch_start)}
+                                    {fmtDateTime((record as any).lunch_start)}
                                   </span>
                                 </div>
                               )}
                               {(record as any).lunch_end != null && (
                                 <div>
-                                  <span className="text-gray-400 block text-xs uppercase tracking-wider">Fin almuerzo</span>
+                                  <span className="text-gray-400 block text-xs uppercase tracking-wider">{t('details.lunchEnd')}</span>
                                   <span className="text-white">
-                                    {formatDateTimeDisplay((record as any).lunch_end)}
+                                    {fmtDateTime((record as any).lunch_end)}
                                   </span>
                                 </div>
                               )}
                               <div>
-                                <span className="text-gray-400 block text-xs uppercase tracking-wider">Salida</span>
+                                <span className="text-gray-400 block text-xs uppercase tracking-wider">{t('details.checkOut')}</span>
                                 <span className="text-white">
-                                  {record.check_out ? formatDateTimeDisplay(record.check_out) : 'Sin registro'}
+                                  {record.check_out ? fmtDateTime(record.check_out) : tc('noRecord')}
                                 </span>
                               </div>
                             </div>
@@ -1786,12 +1789,12 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
                       </div>
                     ) : (
                       <p className="text-sm text-gray-300">
-                        No se han registrado asistencias recientes para este empleado.
+                        {t('details.noAttendance')}
                       </p>
                     )}
                     {attendanceInsights && (
                       <div className="border border-brand-500/30 rounded-lg p-4 bg-brand-500/10">
-                        <h6 className="text-sm font-medium text-brand-200 mb-2">Resumen de asistencia</h6>
+                        <h6 className="text-sm font-medium text-brand-200 mb-2">{t('details.attendanceSummary')}</h6>
                         {typeof attendanceInsights === 'string' ? (
                           <p className="text-sm text-brand-50">{attendanceInsights}</p>
                         ) : (
@@ -1819,7 +1822,7 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
                           actionObject?.type ||
                           actionObject?.motivo ||
                           actionObject?.reason ||
-                          `Medida ${index + 1}`
+                          t('details.measure', { number: index + 1 })
                         const actionDate =
                           actionObject?.date ||
                           actionObject?.fecha ||
@@ -1839,15 +1842,17 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
                             <div className="flex justify-between items-center">
                               <h6 className="text-sm font-semibold text-white">{title}</h6>
                               {actionDate && (
-                                <span className="text-xs text-gray-400">{formatDateDisplay(actionDate)}</span>
+                                <span className="text-xs text-gray-400">{fmtDate(actionDate)}</span>
                               )}
                             </div>
                             <p className="text-sm text-gray-200 leading-relaxed">
-                              {actionNotes || 'Sin detalles adicionales.'}
+                              {actionNotes || t('details.noDetails')}
                             </p>
                             {actionObject?.status && (
                               <p className="text-xs text-gray-400">
-                                Estado: <span className="text-white">{String(actionObject.status)}</span>
+                                {t.rich('details.measureStatus', {
+                                  value: () => <span className="text-white">{String(actionObject.status)}</span>,
+                                })}
                               </p>
                             )}
                           </div>
@@ -1855,12 +1860,12 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
                       })
                     ) : (
                       <p className="text-sm text-gray-300">
-                        No se registran medidas disciplinarias para este empleado.
+                        {t('details.noDiscipline')}
                       </p>
                     )}
                     {disciplinaryNotes && (
                       <div className="border border-red-500/30 rounded-lg p-4 bg-red-500/10">
-                        <h6 className="text-sm font-medium text-red-200 mb-2">Notas del historial disciplinario</h6>
+                        <h6 className="text-sm font-medium text-red-200 mb-2">{t('details.disciplineNotes')}</h6>
                         <p className="text-sm text-red-100 leading-relaxed">{disciplinaryNotes}</p>
                       </div>
                     )}
@@ -1871,33 +1876,33 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
                   <div className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div>
-                        <label className="text-sm font-medium text-gray-400">Nombre del contacto</label>
+                        <label className="text-sm font-medium text-gray-400">{t('details.contactName')}</label>
                         <div className="text-white font-medium">
-                          {selectedEmployee.emergency_contact_name || 'No especificado'}
+                          {selectedEmployee.emergency_contact_name || tc('notSpecified')}
                         </div>
                       </div>
                       <div>
-                        <label className="text-sm font-medium text-gray-400">Teléfono</label>
+                        <label className="text-sm font-medium text-gray-400">{t('details.phone')}</label>
                         <div className="text-white font-medium">
-                          {selectedEmployee.emergency_contact_phone || 'No especificado'}
+                          {selectedEmployee.emergency_contact_phone || tc('notSpecified')}
                         </div>
                       </div>
                       <div className="md:col-span-2">
-                        <label className="text-sm font-medium text-gray-400">Dirección del contacto</label>
+                        <label className="text-sm font-medium text-gray-400">{t('details.contactAddress')}</label>
                         <div className="text-white font-medium">
                           {emergencyContactMetadata && typeof emergencyContactMetadata === 'object'
                             ? Object.values(emergencyContactMetadata)
                                 .filter(Boolean)
-                                .join(', ') || 'No especificada'
+                                .join(', ') || tc('notSpecifiedF')
                             : typeof emergencyContactMetadata === 'string'
                             ? emergencyContactMetadata
-                            : 'No especificada'}
+                            : tc('notSpecifiedF')}
                         </div>
                       </div>
                     </div>
                     {emergencyContactMetadata && typeof emergencyContactMetadata === 'object' && (
                       <div className="border border-white/10 rounded-lg p-4 bg-white/5">
-                        <h6 className="text-sm font-medium text-gray-300 mb-2">Información adicional</h6>
+                        <h6 className="text-sm font-medium text-gray-300 mb-2">{t('details.additionalInfo')}</h6>
                         <ul className="text-sm text-gray-200 space-y-1">
                           {Object.entries(emergencyContactMetadata).map(([key, value]) => (
                             <li key={key} className="flex justify-between">
@@ -1916,7 +1921,7 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
                     {['super_admin', 'company_admin', 'hr_manager'].includes(userProfile?.role || '') && (
                       <>
                       <div>
-                        <h6 className="text-sm font-medium text-gray-300 mb-3">Foto de perfil</h6>
+                        <h6 className="text-sm font-medium text-gray-300 mb-3">{t('details.profilePhoto')}</h6>
                         <EmployeeFileUpload
                           employeeId={selectedEmployee.id}
                           fileType="profile_photo"
@@ -1931,17 +1936,17 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
                         />
                       </div>
                       <div>
-                        <h6 className="text-sm font-medium text-gray-300 mb-3">Subir documento</h6>
+                        <h6 className="text-sm font-medium text-gray-300 mb-3">{t('details.uploadDocument')}</h6>
                         <div className="mb-4">
-                          <label className="block text-xs text-gray-400 mb-1">Categoría</label>
+                          <label className="block text-xs text-gray-400 mb-1">{t('details.category')}</label>
                           <select
                             value={documentCategoryForUpload}
                             onChange={(e) => setDocumentCategoryForUpload(e.target.value as typeof documentCategoryForUpload)}
                             className="w-full max-w-xs px-3 py-2 bg-white/5 border border-white/10 rounded-md text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                           >
-                            {(['contrato', 'identidad', 'certificado', 'diploma', 'otro'] as const).map((cat) => (
+                            {DOCUMENT_CATEGORIES.map((cat) => (
                               <option key={cat} value={cat} className="bg-gray-800 text-white">
-                                {DOCUMENT_CATEGORY_LABELS[cat]}
+                                {t(`docCategories.${cat}`)}
                               </option>
                             ))}
                           </select>
@@ -1958,13 +1963,13 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
                       </>
                     )}
                     <div>
-                      <h6 className="text-sm font-medium text-gray-300 mb-3">Archivos del empleado</h6>
+                      <h6 className="text-sm font-medium text-gray-300 mb-3">{t('details.files')}</h6>
                       {filesLoading ? (
-                        <p className="text-sm text-gray-400">Cargando archivos...</p>
+                        <p className="text-sm text-gray-400">{t('details.loadingFiles')}</p>
                       ) : filesError ? (
                         <p className="text-sm text-red-400">{filesError}</p>
                       ) : employeeFiles.length === 0 ? (
-                        <p className="text-sm text-gray-400">No hay archivos cargados.</p>
+                        <p className="text-sm text-gray-400">{t('details.noFiles')}</p>
                       ) : (
                         <div className="space-y-2">
                           {employeeFiles.map((file) => (
@@ -1976,8 +1981,8 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
                                 <p className="text-sm font-medium text-white truncate">{file.file_name}</p>
                                 <p className="text-xs text-gray-400">
                                   {file.file_type === 'document' && file.document_category
-                                    ? DOCUMENT_CATEGORY_LABELS[file.document_category] || file.document_category
-                                    : 'Foto de perfil'}
+                                    ? docCategoryLabel(file.document_category)
+                                    : t('details.profilePhoto')}
                                   {' · '}
                                   {(file.file_size_bytes / 1024).toFixed(1)} KB
                                 </p>
@@ -1989,7 +1994,7 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="p-2 rounded-md bg-white/5 text-gray-300 hover:bg-white/10 hover:text-white transition"
-                                    title="Descargar"
+                                    title={tc('download')}
                                   >
                                     <Download className="h-4 w-4" />
                                   </a>
@@ -1998,21 +2003,21 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
                                   <button
                                     type="button"
                                     onClick={async () => {
-                                      if (!confirm('¿Eliminar este archivo?')) return
+                                      if (!confirm(t('details.confirmDeleteFile'))) return
                                       try {
                                         const res = await fetch(`/api/employees/files/delete/${file.id}`, {
                                           method: 'DELETE',
                                           credentials: 'include'
                                         })
                                         const data = await res.json()
-                                        if (!res.ok) throw new Error(data.error || 'Error al eliminar')
+                                        if (!res.ok) throw new Error(data.error || t('errors.deleteFile'))
                                         selectedEmployee?.id && fetchEmployeeFiles(selectedEmployee.id)
                                       } catch (err) {
-                                        setFilesError(err instanceof Error ? err.message : 'Error al eliminar')
+                                        setFilesError(err instanceof Error ? err.message : t('errors.deleteFile'))
                                       }
                                     }}
                                     className="p-2 rounded-md bg-white/5 text-gray-300 hover:bg-red-500/20 hover:text-red-400 transition"
-                                    title="Eliminar"
+                                    title={tc('delete')}
                                   >
                                     <TrashIcon className="h-4 w-4" />
                                   </button>
@@ -2034,7 +2039,7 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
                 className="flex-1 bg-white/5 border-white/20 text-white hover:bg-white/10"
                 variant="outline"
               >
-                Cerrar
+                {tc('close')}
               </Button>
               <Button
                 onClick={() => {
@@ -2046,7 +2051,7 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
                 className="flex-1 bg-blue-600 hover:bg-blue-700 flex items-center gap-2"
               >
                 <DocumentTextIcon className="h-4 w-4" />
-                Generar Constancia
+                {t('details.generateCertificate')}
               </Button>
               <Button
                 onClick={() => {
@@ -2056,7 +2061,7 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
                 }}
                 className="flex-1 bg-brand-600 hover:bg-brand-700"
               >
-                Editar Empleado
+                {t('details.editEmployee')}
               </Button>
             </div>
           </div>
@@ -2068,17 +2073,18 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-gray-900 border border-white/20 rounded-lg p-6 max-w-md w-full mx-4 backdrop-blur-sm">
             <h3 className="text-lg font-semibold text-white mb-4">
-              Confirmar Baja de Empleado
+              {t('deactivateModal.title')}
             </h3>
             <p className="text-gray-300 mb-4">
-              ¿Estás seguro de que quieres dar de baja a <strong className="text-white">{employeeToDeactivate.name}</strong>?
-              Esta acción cambiará su estado a "Inactivo".
+              {t.rich('deactivateModal.question', {
+                name: () => <strong className="text-white">{employeeToDeactivate.name}</strong>,
+              })}
             </p>
             
             {/* Campo de fecha de terminación */}
             <div className="mb-6">
               <label htmlFor="termination-date" className="block text-sm font-medium text-gray-300 mb-2">
-                Fecha de Terminación
+                {t('deactivateModal.terminationDate')}
               </label>
               <input
                 type="date"
@@ -2086,16 +2092,16 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
                 value={terminationDate}
                 onChange={(e) => setTerminationDate(e.target.value)}
                 className="w-full px-3 py-2 bg-gray-800 border border-white/20 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-transparent"
-                placeholder="Selecciona la fecha de terminación"
+                placeholder={t('deactivateModal.datePlaceholder')}
               />
               <p className="text-xs text-gray-400 mt-1">
-                Deja vacío para usar la fecha actual
+                {t('deactivateModal.dateHint')}
               </p>
             </div>
 
             <div className="mb-4">
               <label htmlFor="termination-reason" className="block text-sm font-medium text-gray-300 mb-2">
-                Motivo de baja <span className="text-red-400">*</span>
+                {t('deactivateModal.reason')} <span className="text-red-400">*</span>
               </label>
               <select
                 id="termination-reason"
@@ -2103,10 +2109,10 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
                 onChange={(e) => setTerminationReasonCode(e.target.value)}
                 className="w-full px-3 py-2 bg-gray-800 border border-white/20 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-transparent"
               >
-                <option value="">Seleccione un motivo…</option>
+                <option value="">{t('deactivateModal.reasonPlaceholder')}</option>
                 {TERMINATION_REASON_OPTIONS.map((opt) => (
                   <option key={opt.code} value={opt.code}>
-                    {opt.label}
+                    {terminationReasonLabel(opt.code)}
                   </option>
                 ))}
               </select>
@@ -2114,7 +2120,7 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
 
             <div className="mb-6">
               <label htmlFor="termination-reason-detail" className="block text-sm font-medium text-gray-300 mb-2">
-                Detalle (opcional)
+                {t('deactivateModal.detail')}
               </label>
               <textarea
                 id="termination-reason-detail"
@@ -2122,10 +2128,10 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
                 onChange={(e) => setTerminationReasonDetail(e.target.value)}
                 rows={3}
                 maxLength={2000}
-                placeholder="Referencias, acuerdos, número de acta…"
+                placeholder={t('deactivateModal.detailPlaceholder')}
                 className="w-full px-3 py-2 bg-gray-800 border border-white/20 rounded-md text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-transparent resize-y min-h-[4.5rem]"
               />
-              <p className="text-xs text-gray-400 mt-1">Máximo 2000 caracteres</p>
+              <p className="text-xs text-gray-400 mt-1">{t('deactivateModal.maxChars')}</p>
             </div>
             
             <div className="flex gap-3">
@@ -2135,7 +2141,7 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
                 variant="destructive"
                 className="flex-1 bg-red-500/20 border-red-500/30 text-red-400 hover:bg-red-500/30"
               >
-                {isSubmitting ? 'Procesando...' : 'Confirmar Baja'}
+                {isSubmitting ? tc('processing') : t('deactivateModal.confirm')}
               </Button>
               <Button
                 onClick={() => {
@@ -2149,7 +2155,7 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
                 variant="outline"
                 className="flex-1 bg-white/5 border-white/20 text-white hover:bg-white/10"
               >
-                Cancelar
+                {tc('cancel')}
               </Button>
             </div>
           </div>
@@ -2172,7 +2178,7 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
           <div className="bg-gray-900 border border-white/20 rounded-lg p-6 max-w-2xl w-full mx-4 backdrop-blur-sm max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-xl font-semibold text-white">
-                Opciones de Exportación - {exportFormat?.toUpperCase()}
+                {t('exportModal.title', { format: exportFormat?.toUpperCase() ?? '' })}
               </h3>
               <Button
                 onClick={() => {
@@ -2193,16 +2199,16 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
               {/* Resumen de filtros */}
               {(exportFilters.status.length > 0 || exportFilters.departmentIds.length > 0 || exportFilters.employeeIds.length > 0) && (
                 <div className="bg-brand-500/20 border border-brand-500/30 rounded-lg p-4">
-                  <p className="text-sm font-medium text-brand-300 mb-2">Filtros aplicados:</p>
+                  <p className="text-sm font-medium text-brand-300 mb-2">{t('exportModal.applied')}</p>
                   <div className="text-xs text-brand-200 space-y-1">
                     {exportFilters.status.length > 0 && (
-                      <p>• Estados: {exportFilters.status.map(s => s === 'active' ? 'Activos' : s === 'inactive' ? 'Inactivos' : 'Terminados').join(', ')}</p>
+                      <p>{t('exportModal.statuses', { list: exportFilters.status.map(s => t(`exportModal.statusOptions.${s as 'active' | 'inactive' | 'terminated'}`)).join(', ') })}</p>
                     )}
                     {exportFilters.departmentIds.length > 0 && (
-                      <p>• Departamentos: {exportFilters.departmentIds.length} seleccionado(s)</p>
+                      <p>{t('exportModal.departmentsSelected', { count: exportFilters.departmentIds.length })}</p>
                     )}
                     {exportFilters.employeeIds.length > 0 && (
-                      <p>• Empleados: {exportFilters.employeeIds.length} seleccionado(s)</p>
+                      <p>{t('exportModal.employeesSelected', { count: exportFilters.employeeIds.length })}</p>
                     )}
                   </div>
                 </div>
@@ -2211,10 +2217,10 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
               {/* Filtro por Estado */}
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-3">
-                  Estado de Empleados
+                  {t('exportModal.statusLabel')}
                 </label>
                 <div className="space-y-2">
-                  {['active', 'inactive', 'terminated'].map((status) => (
+                  {(['active', 'inactive', 'terminated'] as const).map((status) => (
                     <label key={status} className="flex items-center gap-2 cursor-pointer">
                       <input
                         type="checkbox"
@@ -2236,23 +2242,23 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
                         disabled={isExporting}
                       />
                       <span className="text-white">
-                        {status === 'active' ? 'Activos' : status === 'inactive' ? 'Inactivos' : 'Terminados'}
+                        {t(`exportModal.statusOptions.${status}`)}
                       </span>
                     </label>
                   ))}
                 </div>
                 <p className="text-xs text-gray-400 mt-2">
-                  Si no seleccionas ningún estado, se exportarán todos los empleados
+                  {t('exportModal.statusHint')}
                 </p>
               </div>
 
               {/* Filtro por Departamentos */}
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-3">
-                  Departamentos
+                  {t('exportModal.departments')}
                 </label>
                 {departments.length === 0 ? (
-                  <p className="text-sm text-gray-400">No hay departamentos disponibles</p>
+                  <p className="text-sm text-gray-400">{t('exportModal.noDepartments')}</p>
                 ) : (
                   <div className="max-h-48 overflow-y-auto space-y-2 border border-white/10 rounded-lg p-3 bg-white/5">
                     {departments.map((dept) => (
@@ -2282,17 +2288,17 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
                   </div>
                 )}
                 <p className="text-xs text-gray-400 mt-2">
-                  Si no seleccionas ningún departamento, se exportarán empleados de todos los departamentos
+                  {t('exportModal.departmentsHint')}
                 </p>
               </div>
 
               {/* Filtro por Empleados Específicos */}
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-3">
-                  Empleados Específicos
+                  {t('exportModal.specific')}
                 </label>
                 {employees.length === 0 ? (
-                  <p className="text-sm text-gray-400">No hay empleados disponibles</p>
+                  <p className="text-sm text-gray-400">{t('exportModal.noEmployees')}</p>
                 ) : (
                   <div className="max-h-48 overflow-y-auto space-y-2 border border-white/10 rounded-lg p-3 bg-white/5">
                     {employees.map((emp) => (
@@ -2324,7 +2330,7 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
                   </div>
                 )}
                 <p className="text-xs text-gray-400 mt-2">
-                  Si no seleccionas ningún empleado, se exportarán todos los empleados que cumplan los otros filtros
+                  {t('exportModal.specificHint')}
                 </p>
               </div>
             </div>
@@ -2340,7 +2346,7 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
                 className="flex-1 bg-white/5 border-white/20 text-white hover:bg-white/10"
                 disabled={isExporting}
               >
-                Cancelar
+                {tc('cancel')}
               </Button>
               <Button
                 onClick={handleExportConfirm}
@@ -2350,12 +2356,12 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
                 {isExporting ? (
                   <>
                     <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-                    Exportando...
+                    {tc('exporting')}
                   </>
                 ) : (
                   <>
                     <Download className="h-4 w-4 mr-2" />
-                    Exportar
+                    {tc('export')}
                   </>
                 )}
               </Button>
