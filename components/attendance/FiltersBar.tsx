@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useTranslations } from 'next-intl'
 import { ChevronDownIcon, FunnelIcon, XMarkIcon } from '@heroicons/react/24/outline'
 
 interface Employee {
@@ -29,25 +30,21 @@ interface FiltersBarProps {
   onRangeChange?: (from: string, to: string) => void
 }
 
-const presets = [
-  { label: 'Hoy', value: 'today' },
-  { label: 'Esta semana', value: 'week' },
-  { label: 'Esta quincena', value: 'fortnight' },
-  { label: 'Este mes', value: 'month' },
-  { label: 'Este año', value: 'year' },
-]
+const presets = ['today', 'week', 'fortnight', 'month', 'year'] as const
+type PresetValue = (typeof presets)[number]
+const isPreset = (v: string): v is PresetValue => (presets as readonly string[]).includes(v)
 
 const MAX_RANGE_DAYS = 366
 
-function getRangeError(from?: string, to?: string): string | null {
+function getRangeError(from?: string, to?: string): 'fromAfterTo' | 'maxRange' | null {
   if (!from || !to) return null
   const fromDate = from.slice(0, 10)
   const toDate = to.slice(0, 10)
-  if (fromDate > toDate) return "La fecha 'Desde' debe ser anterior a 'Hasta'"
+  if (fromDate > toDate) return 'fromAfterTo'
   const fromMs = new Date(fromDate).getTime()
   const toMs = new Date(toDate).getTime()
   const diffDays = Math.ceil((toMs - fromMs) / (24 * 60 * 60 * 1000))
-  if (diffDays > MAX_RANGE_DAYS) return 'El rango máximo es 1 año'
+  if (diffDays > MAX_RANGE_DAYS) return 'maxRange'
   return null
 }
 
@@ -65,6 +62,8 @@ export default function FiltersBar({
   to,
   onRangeChange
 }: FiltersBarProps) {
+  const ta = useTranslations('attendance.filters')
+  const tc = useTranslations('common')
   const [employees, setEmployees] = useState<Employee[]>([])
   const [loadingEmployees, setLoadingEmployees] = useState(false)
   const [roles, setRoles] = useState<string[]>([])
@@ -156,10 +155,11 @@ export default function FiltersBar({
   const hasActiveFilters = selectedEmployeeId || selectedRole || selectedDepartmentId
   const activeFilterCount = [selectedEmployeeId, selectedRole, selectedDepartmentId].filter(Boolean).length
   const presetSummary =
-    preset === 'custom' ? 'Rango personalizado' : presets.find((p) => p.value === preset)?.label ?? 'Hoy'
+    preset === 'custom' ? ta('custom') : ta(`presets.${isPreset(preset) ? preset : 'today'}`)
   // En teléfono los filtros arrancan plegados para que las cifras queden en la primera pantalla.
   const [mobileOpen, setMobileOpen] = useState(false)
-  const rangeError = preset === 'custom' ? getRangeError(from, to) : null
+  const rangeErrorKey = preset === 'custom' ? getRangeError(from, to) : null
+  const rangeError = rangeErrorKey ? ta(rangeErrorKey) : null
 
   return (
     <div className="bg-white/5 rounded-xl p-4 border border-white/10 backdrop-blur-sm">
@@ -173,7 +173,7 @@ export default function FiltersBar({
           className="flex min-w-0 flex-1 items-center gap-2 text-left sm:pointer-events-none"
         >
           <FunnelIcon className="h-5 w-5 shrink-0 text-gray-400" aria-hidden />
-          <h3 className="text-sm font-semibold text-white">Filtros</h3>
+          <h3 className="text-sm font-semibold text-white">{ta('title')}</h3>
           <span className="truncate text-sm text-gray-400 sm:hidden">
             · {presetSummary}
             {activeFilterCount > 0 ? ` · ${activeFilterCount} ${activeFilterCount === 1 ? 'filtro' : 'filtros'}` : ''}
@@ -189,7 +189,7 @@ export default function FiltersBar({
             className="flex items-center gap-1 px-2 py-1 text-xs text-gray-400 hover:text-white transition-colors rounded hover:bg-white/10"
           >
             <XMarkIcon className="h-4 w-4" />
-            Limpiar
+            {ta('clear')}
           </button>
         )}
       </div>
@@ -199,7 +199,7 @@ export default function FiltersBar({
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
           {/* Presets */}
           <div>
-            <label className="block text-xs font-medium text-gray-400 mb-2">Período</label>
+            <label className="block text-xs font-medium text-gray-400 mb-2">{ta('period')}</label>
             <div className="relative">
               <select
                 value={preset}
@@ -208,12 +208,12 @@ export default function FiltersBar({
                 className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm font-medium cursor-pointer hover:bg-white/15 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 appearance-none pr-8"
               >
                 {presets.map((p) => (
-                  <option key={p.value} value={p.value} className="bg-gray-800">
-                    {p.label}
+                  <option key={p} value={p} className="bg-gray-800">
+                    {ta(`presets.${p}`)}
                   </option>
                 ))}
                 <option value="custom" className="bg-gray-800">
-                  Rango personalizado
+                  {ta('custom')}
                 </option>
               </select>
               <ChevronDownIcon className="absolute right-2 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
@@ -223,7 +223,7 @@ export default function FiltersBar({
           {/* Employee Filter */}
           {onEmployeeChange && (
             <div>
-              <label className="block text-xs font-medium text-gray-400 mb-2">Empleado</label>
+              <label className="block text-xs font-medium text-gray-400 mb-2">{ta('employee')}</label>
               <div className="relative">
                 <select
                   value={selectedEmployeeId}
@@ -232,7 +232,7 @@ export default function FiltersBar({
                   className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm font-medium cursor-pointer hover:bg-white/15 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 appearance-none pr-8 disabled:opacity-50"
                 >
                   <option value="" className="bg-gray-800">
-                    Todos los empleados
+                    {ta('allEmployees')}
                   </option>
                   {employees.map((employee) => (
                     <option key={employee.id} value={employee.id} className="bg-gray-800">
@@ -243,7 +243,7 @@ export default function FiltersBar({
                 <ChevronDownIcon className="absolute right-2 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
               </div>
               {loadingEmployees && (
-                <div className="text-xs text-gray-500 mt-1">Cargando...</div>
+                <div className="text-xs text-gray-500 mt-1">{tc('loadingDots')}</div>
               )}
             </div>
           )}
@@ -251,7 +251,7 @@ export default function FiltersBar({
           {/* Team/Role Filter - filtra por employees.role */}
           {onRoleChange && (
             <div>
-              <label className="block text-xs font-medium text-gray-400 mb-2">Equipo</label>
+              <label className="block text-xs font-medium text-gray-400 mb-2">{ta('team')}</label>
               <div className="relative">
                 <select
                   value={selectedRole}
@@ -260,7 +260,7 @@ export default function FiltersBar({
                   className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm font-medium cursor-pointer hover:bg-white/15 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 appearance-none pr-8 disabled:opacity-50"
                 >
                   <option value="" className="bg-gray-800">
-                    Todos los equipos
+                    {ta('allTeams')}
                   </option>
                   {roles.map(role => (
                     <option key={role} value={role} className="bg-gray-800">{role}</option>
@@ -269,7 +269,7 @@ export default function FiltersBar({
                 <ChevronDownIcon className="absolute right-2 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
               </div>
               {loadingRoles && (
-                <div className="text-xs text-gray-500 mt-1">Cargando...</div>
+                <div className="text-xs text-gray-500 mt-1">{tc('loadingDots')}</div>
               )}
             </div>
           )}
@@ -277,7 +277,7 @@ export default function FiltersBar({
           {/* Department Filter */}
           {onDepartmentChange && (
             <div>
-              <label className="block text-xs font-medium text-gray-400 mb-2">Departamento</label>
+              <label className="block text-xs font-medium text-gray-400 mb-2">{ta('department')}</label>
               <div className="relative">
                 <select
                   value={selectedDepartmentId}
@@ -286,7 +286,7 @@ export default function FiltersBar({
                   className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm font-medium cursor-pointer hover:bg-white/15 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 appearance-none pr-8 disabled:opacity-50"
                 >
                   <option value="" className="bg-gray-800">
-                    Todos los departamentos
+                    {ta('allDepartments')}
                   </option>
                   {departments.map((dept) => (
                     <option key={dept.id} value={dept.id} className="bg-gray-800">{dept.name}</option>
@@ -295,7 +295,7 @@ export default function FiltersBar({
                 <ChevronDownIcon className="absolute right-2 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
               </div>
               {loadingDepartments && (
-                <div className="text-xs text-gray-500 mt-1">Cargando...</div>
+                <div className="text-xs text-gray-500 mt-1">{tc('loadingDots')}</div>
               )}
             </div>
           )}
@@ -305,7 +305,7 @@ export default function FiltersBar({
         {preset === 'custom' && (
           <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
             <div>
-              <label className="block text-xs font-medium text-gray-400 mb-2">Desde</label>
+              <label className="block text-xs font-medium text-gray-400 mb-2">{ta('from')}</label>
               <input
                 type="date"
                 value={(from || '').slice(0, 10)}
@@ -314,7 +314,7 @@ export default function FiltersBar({
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-400 mb-2">Hasta</label>
+              <label className="block text-xs font-medium text-gray-400 mb-2">{ta('to')}</label>
               <input
                 type="date"
                 value={(to || '').slice(0, 10)}
@@ -337,12 +337,12 @@ export default function FiltersBar({
           <div className="flex flex-wrap gap-2">
             {selectedEmployeeId && (
               <span className="inline-flex items-center gap-1 px-2 py-1 bg-brand-500/20 text-brand-300 text-xs rounded-full">
-                {employees.find((e) => e.id === selectedEmployeeId)?.name ?? 'Empleado seleccionado'}
+                {employees.find((e) => e.id === selectedEmployeeId)?.name ?? ta('selectedEmployee')}
                 <button
                   type="button"
                   onClick={() => handleEmployeeChange('')}
                   className="hover:text-brand-100"
-                  aria-label="Quitar filtro de empleado"
+                  aria-label={ta('removeEmployee')}
                 >
                   <XMarkIcon className="h-3 w-3" />
                 </button>

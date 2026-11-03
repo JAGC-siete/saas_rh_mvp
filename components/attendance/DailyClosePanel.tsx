@@ -1,3 +1,5 @@
+import { useTranslations } from 'next-intl'
+import { PUNCH_ANOMALY_TYPES } from '../../lib/attendance/punch-mapping'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/router'
 import { createPortal } from 'react-dom'
@@ -83,6 +85,12 @@ export default function DailyClosePanel({
   onAfterFinalize,
   onAfterRecordPatch,
 }: DailyClosePanelProps) {
+  const td = useTranslations('attendance.dailyClose')
+  const ta = useTranslations('attendance')
+  const tc = useTranslations('common')
+  const knownAnomalies = new Set<string>(Object.values(PUNCH_ANOMALY_TYPES))
+  const anomalyLabel = (type: string) =>
+    knownAnomalies.has(type) ? ta(`anomalies.${type as (typeof PUNCH_ANOMALY_TYPES)[keyof typeof PUNCH_ANOMALY_TYPES]}`) : type
   const router = useRouter()
   const { userProfile } = useAuth()
   const { companyId: ctxCompanyId, loading: ctxLoading } = useCompanyContext()
@@ -204,7 +212,7 @@ export default function DailyClosePanel({
       setData(json as DailyClosePayload)
     } catch (e) {
       setData(null)
-      setMessage({ type: 'err', text: e instanceof Error ? e.message : 'Error al cargar' })
+      setMessage({ type: 'err', text: e instanceof Error ? e.message : td('loadError') })
     } finally {
       setLoading(false)
     }
@@ -262,11 +270,11 @@ export default function DailyClosePanel({
 
   const applyBulk = async () => {
     if (selectedRecordIds.length === 0) {
-      setMessage({ type: 'err', text: 'Seleccione al menos un registro.' })
+      setMessage({ type: 'err', text: td('selectOne') })
       return
     }
     if (!bulkCheckOut.trim() && !bulkLunchStart.trim() && !bulkLunchEnd.trim()) {
-      setMessage({ type: 'err', text: 'Indique al menos una hora para aplicar.' })
+      setMessage({ type: 'err', text: td('needTime') })
       return
     }
     setActionLoading('bulk')
@@ -292,10 +300,10 @@ export default function DailyClosePanel({
       })
       const json = await res.json()
       if (!res.ok) throw new Error(json.error || json.message || `HTTP ${res.status}`)
-      setMessage({ type: 'ok', text: `Cambios aplicados: ${json.updated ?? 0}` })
+      setMessage({ type: 'ok', text: td('applied', { count: json.updated ?? 0 }) })
       await fetchReport()
     } catch (e) {
-      setMessage({ type: 'err', text: e instanceof Error ? e.message : 'Error al aplicar cambios' })
+      setMessage({ type: 'err', text: e instanceof Error ? e.message : td('applyError') })
     } finally {
       setActionLoading(null)
     }
@@ -303,7 +311,7 @@ export default function DailyClosePanel({
 
   const recalcSelected = async () => {
     if (selectedRecordIds.length === 0) {
-      setMessage({ type: 'err', text: 'Seleccione al menos un registro.' })
+      setMessage({ type: 'err', text: td('selectOne') })
       return
     }
     setActionLoading('recalc')
@@ -317,10 +325,10 @@ export default function DailyClosePanel({
       })
       const json = await res.json()
       if (!res.ok) throw new Error(json.error || json.message || `HTTP ${res.status}`)
-      setMessage({ type: 'ok', text: `Horas recalculadas en ${json.calculated ?? 0} registros.` })
+      setMessage({ type: 'ok', text: td('recalculated', { count: json.calculated ?? 0 }) })
       await fetchReport()
     } catch (e) {
-      setMessage({ type: 'err', text: e instanceof Error ? e.message : 'Error al recalcular' })
+      setMessage({ type: 'err', text: e instanceof Error ? e.message : td('recalcError') })
     } finally {
       setActionLoading(null)
     }
@@ -328,12 +336,12 @@ export default function DailyClosePanel({
 
   const finalizeSelected = async () => {
     if (selectedRecordIds.length === 0) {
-      setMessage({ type: 'err', text: 'Seleccione al menos un registro.' })
+      setMessage({ type: 'err', text: td('selectOne') })
       return
     }
     if (
       !confirm(
-        `Finalizar ${selectedRecordIds.length} registros: marcar como cerrados y recalcular horas. ¿Continuar?`
+        td('confirmFinalizeSelected', { count: selectedRecordIds.length })
       )
     ) {
       return
@@ -351,12 +359,12 @@ export default function DailyClosePanel({
       if (!res.ok) throw new Error(json.error || json.message || `HTTP ${res.status}`)
       setMessage({
         type: 'ok',
-        text: `Finalizado: ${json.finalized ?? 0} registros; horas calculadas en ${json.calculated_hours_rows ?? 0} filas.`,
+        text: td('finalized', { count: json.finalized ?? 0, rows: json.calculated_hours_rows ?? 0 }),
       })
       await fetchReport()
       onAfterFinalize?.()
     } catch (e) {
-      setMessage({ type: 'err', text: e instanceof Error ? e.message : 'Error al finalizar' })
+      setMessage({ type: 'err', text: e instanceof Error ? e.message : td('finalizeError') })
     } finally {
       setActionLoading(null)
     }
@@ -376,12 +384,16 @@ export default function DailyClosePanel({
       if (!res.ok) throw new Error(json.error || json.message || `HTTP ${res.status}`)
       setMessage({
         type: 'ok',
-        text: `Consolidación: ${json.result?.processed ?? 0} procesados, ${json.result?.anomalies ?? 0} anomalías, ${json.result?.skipped_locked ?? 0} omitidos (bloqueados).`,
+        text: td('consolidated', {
+          processed: json.result?.processed ?? 0,
+          anomalies: json.result?.anomalies ?? 0,
+          skipped: json.result?.skipped_locked ?? 0,
+        }),
       })
       await fetchReport()
       onAfterConsolidate?.()
     } catch (e) {
-      setMessage({ type: 'err', text: e instanceof Error ? e.message : 'Error al ejecutar' })
+      setMessage({ type: 'err', text: e instanceof Error ? e.message : td('runError') })
     } finally {
       setActionLoading(null)
     }
@@ -390,7 +402,7 @@ export default function DailyClosePanel({
   const finalizeClose = async () => {
     if (
       !confirm(
-        'Finalizar cierre: marcar registros del día como cerrados y recalcular horas (requiere entrada y salida donde aplique). ¿Continuar?'
+        td('confirmFinalizeDay')
       )
     ) {
       return
@@ -408,12 +420,12 @@ export default function DailyClosePanel({
       if (!res.ok) throw new Error(json.error || json.message || `HTTP ${res.status}`)
       setMessage({
         type: 'ok',
-        text: `Finalizado: ${json.finalized ?? 0} registros; horas calculadas en ${json.calculated_hours_rows ?? 0} filas.`,
+        text: td('finalized', { count: json.finalized ?? 0, rows: json.calculated_hours_rows ?? 0 }),
       })
       await fetchReport()
       onAfterFinalize?.()
     } catch (e) {
-      setMessage({ type: 'err', text: e instanceof Error ? e.message : 'Error al finalizar' })
+      setMessage({ type: 'err', text: e instanceof Error ? e.message : td('finalizeError') })
     } finally {
       setActionLoading(null)
     }
@@ -437,12 +449,12 @@ export default function DailyClosePanel({
 
   const submitEdit = async () => {
     if (!editItem?.record) {
-      setEditError('No hay registro consolidado para este empleado. Ejecute consolidación primero.')
+      setEditError(td('noRecordToEdit'))
       return
     }
     const rid = (editItem.record as { id?: string }).id
     if (!rid) {
-      setEditError('Registro sin id.')
+      setEditError(td('recordNoId'))
       return
     }
     setActionLoading('patch')
@@ -465,13 +477,13 @@ export default function DailyClosePanel({
       })
       const json = await res.json()
       if (!res.ok) throw new Error(json.error || json.message || `HTTP ${res.status}`)
-      setMessage({ type: 'ok', text: 'Registro actualizado.' })
+      setMessage({ type: 'ok', text: td('recordUpdated') })
       setEditOpen(false)
       setEditItem(null)
       await fetchReport()
       onAfterRecordPatch?.()
     } catch (e) {
-      setEditError(e instanceof Error ? e.message : 'Error al guardar')
+      setEditError(e instanceof Error ? e.message : td('saveError'))
     } finally {
       setActionLoading(null)
     }
@@ -481,18 +493,18 @@ export default function DailyClosePanel({
     variant === 'page' ? (
       <div className="space-y-4 border-b border-white/10 pb-5">
         <div>
-          <h1 className="text-2xl font-bold text-white">Cierre del día</h1>
+          <h1 className="text-2xl font-bold text-white">{td('title')}</h1>
           <p className="text-gray-400 text-sm mt-1">
-            Revisa las marcas del reloj, corrige lo que falte y cierra el día para calcular horas normales y extras.
+            {td('pageSubtitle')}
           </p>
         </div>
         <AttendanceSectionNav />
       </div>
     ) : (
       <div>
-        <h2 className="text-lg font-semibold text-white">Cierre del día</h2>
+        <h2 className="text-lg font-semibold text-white">{td('title')}</h2>
         <p className="text-gray-400 text-sm mt-1">
-          Consolidación, edición de registros y finalización para la fecha seleccionada (horas incluidas).
+          {td('embeddedSubtitle')}
         </p>
       </div>
     )
@@ -519,11 +531,11 @@ export default function DailyClosePanel({
         {isSuper && (
           <Card variant="liquid" className="border border-amber-500/20">
             <CardContent className="pt-4">
-              <label className="block text-sm text-gray-300 mb-1">Empresa (super_admin)</label>
+              <label className="block text-sm text-gray-300 mb-1">{td('companySuper')}</label>
               <Input
                 value={superCompanyId}
                 onChange={(e) => setSuperCompanyId(e.target.value)}
-                placeholder="UUID de company_id"
+                placeholder={td('companyPlaceholder')}
                 className="bg-white/5 border-white/20 text-white max-w-xl"
               />
             </CardContent>
@@ -532,11 +544,11 @@ export default function DailyClosePanel({
 
         <Card variant="liquid" className="border border-white/10">
           <CardHeader className="pb-2">
-            <CardTitle className="text-lg text-white">Fecha y acciones</CardTitle>
+            <CardTitle className="text-lg text-white">{td('dateAndActions')}</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-wrap items-end gap-4">
             <div>
-              <label className="block text-xs text-gray-400 mb-1">Fecha</label>
+              <label className="block text-xs text-gray-400 mb-1">{td('date')}</label>
               <Input
                 type="date"
                 value={date}
@@ -545,23 +557,23 @@ export default function DailyClosePanel({
               />
             </div>
             <div className="min-w-[220px]">
-              <label className="block text-xs text-gray-400 mb-1">Buscar (nombre / código)</label>
+              <label className="block text-xs text-gray-400 mb-1">{td('search')}</label>
               <Input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Ej. Juan / EMP-01"
+                placeholder={td('searchPlaceholder')}
                 className="bg-white/5 border-white/20 text-white"
               />
             </div>
             <div>
-              <label className="block text-xs text-gray-400 mb-1">Departamento</label>
+              <label className="block text-xs text-gray-400 mb-1">{td('department')}</label>
               <select
                 value={departmentId}
                 onChange={(e) => setDepartmentId(e.target.value)}
                 className="h-10 px-3 bg-white/5 border border-white/20 rounded-md text-white text-sm"
               >
                 <option value="" className="bg-gray-900">
-                  Todos
+                  {td('all')}
                 </option>
                 {departments.map((d) => (
                   <option key={d.id} value={d.id} className="bg-gray-900">
@@ -571,14 +583,14 @@ export default function DailyClosePanel({
               </select>
             </div>
             <div>
-              <label className="block text-xs text-gray-400 mb-1">Equipo</label>
+              <label className="block text-xs text-gray-400 mb-1">{td('team')}</label>
               <select
                 value={team}
                 onChange={(e) => setTeam(e.target.value)}
                 className="h-10 px-3 bg-white/5 border border-white/20 rounded-md text-white text-sm"
               >
                 <option value="" className="bg-gray-900">
-                  Todos
+                  {td('all')}
                 </option>
                 {teams.map((t) => (
                   <option key={t} value={t} className="bg-gray-900">
@@ -588,16 +600,16 @@ export default function DailyClosePanel({
               </select>
             </div>
             <div>
-              <label className="block text-xs text-gray-400 mb-1">Rol</label>
+              <label className="block text-xs text-gray-400 mb-1">{td('role')}</label>
               <Input
                 value={roleFilter}
                 onChange={(e) => setRoleFilter(e.target.value)}
-                placeholder="Ej. Supervisor"
+                placeholder={td('rolePlaceholder')}
                 className="bg-white/5 border-white/20 text-white w-40"
               />
             </div>
             <div>
-              <label className="block text-xs text-gray-400 mb-1">Orden</label>
+              <label className="block text-xs text-gray-400 mb-1">{td('order')}</label>
               <select
                 value={sort}
                 onChange={(e) => setSort(e.target.value as any)}
@@ -617,7 +629,7 @@ export default function DailyClosePanel({
                 checked={onlyWithEvents}
                 onChange={(e) => setOnlyWithEvents(e.target.checked)}
               />
-              Solo con marcas
+              {td('onlyWithPunches')}
             </label>
             <Button
               type="button"
@@ -626,7 +638,7 @@ export default function DailyClosePanel({
               disabled={!canLoad || loading || !!actionLoading}
               onClick={() => void fetchReport()}
             >
-              Actualizar vista
+              {td('refresh')}
             </Button>
             <Button
               type="button"
@@ -634,7 +646,7 @@ export default function DailyClosePanel({
               disabled={!canLoad || loading || !!actionLoading}
               onClick={() => void runClose()}
             >
-              {actionLoading === 'run' ? 'Consolidando…' : 'Consolidar marcas'}
+              {actionLoading === 'run' ? td('consolidating') : td('consolidate')}
             </Button>
             <Button
               type="button"
@@ -643,7 +655,7 @@ export default function DailyClosePanel({
               disabled={!canLoad || loading || !!actionLoading}
               onClick={() => void finalizeClose()}
             >
-              {actionLoading === 'finalize' ? 'Finalizando…' : 'Finalizar día'}
+              {actionLoading === 'finalize' ? td('finalizing') : td('finalizeDay')}
             </Button>
           </CardContent>
         </Card>
@@ -662,7 +674,7 @@ export default function DailyClosePanel({
 
         {!canLoad && !ctxLoading && (
           <p className="text-amber-200 text-sm">
-            {isSuper ? 'Indique el UUID de la empresa para cargar el cierre.' : 'No hay empresa en contexto.'}
+            {isSuper ? td('needCompanySuper') : td('noCompany')}
           </p>
         )}
 
@@ -671,15 +683,15 @@ export default function DailyClosePanel({
             {selectedRecordIds.length > 0 && (
               <Card variant="liquid" className="border border-white/10">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-base text-white">Acciones múltiples</CardTitle>
+                  <CardTitle className="text-base text-white">{td('bulkTitle')}</CardTitle>
                 </CardHeader>
                 <CardContent className="flex flex-wrap items-end gap-3">
                   <div className="text-sm text-gray-300">
                     Seleccionados: <span className="font-semibold text-white">{selectedRecordIds.length}</span>
-                    <p className="text-xs text-gray-500 mt-0.5">Los campos vacíos no se modifican.</p>
+                    <p className="text-xs text-gray-500 mt-0.5">{td('bulkHint')}</p>
                   </div>
                   <div className="min-w-[220px]">
-                    <label className="block text-xs text-gray-400 mb-1">Salida (aplicar)</label>
+                    <label className="block text-xs text-gray-400 mb-1">{td('checkOutApply')}</label>
                     <Input
                       type="datetime-local"
                       value={bulkCheckOut}
@@ -688,7 +700,7 @@ export default function DailyClosePanel({
                     />
                   </div>
                   <div className="min-w-[220px]">
-                    <label className="block text-xs text-gray-400 mb-1">Inicio almuerzo</label>
+                    <label className="block text-xs text-gray-400 mb-1">{td('lunchStart')}</label>
                     <Input
                       type="datetime-local"
                       value={bulkLunchStart}
@@ -697,7 +709,7 @@ export default function DailyClosePanel({
                     />
                   </div>
                   <div className="min-w-[220px]">
-                    <label className="block text-xs text-gray-400 mb-1">Fin almuerzo</label>
+                    <label className="block text-xs text-gray-400 mb-1">{td('lunchEnd')}</label>
                     <Input
                       type="datetime-local"
                       value={bulkLunchEnd}
@@ -711,7 +723,7 @@ export default function DailyClosePanel({
                     disabled={!!actionLoading}
                     onClick={() => void applyBulk()}
                   >
-                    {actionLoading === 'bulk' ? 'Aplicando…' : 'Aplicar cambios'}
+                    {actionLoading === 'bulk' ? td('applying') : td('apply')}
                   </Button>
                   <Button
                     type="button"
@@ -720,7 +732,7 @@ export default function DailyClosePanel({
                     disabled={!!actionLoading}
                     onClick={() => void recalcSelected()}
                   >
-                    {actionLoading === 'recalc' ? 'Recalculando…' : 'Recalcular horas'}
+                    {actionLoading === 'recalc' ? td('recalculating') : td('recalc')}
                   </Button>
                   <Button
                     type="button"
@@ -729,7 +741,7 @@ export default function DailyClosePanel({
                     disabled={!!actionLoading}
                     onClick={() => void finalizeSelected()}
                   >
-                    {actionLoading === 'finalize_selected' ? 'Finalizando…' : 'Finalizar seleccionados'}
+                    {actionLoading === 'finalize_selected' ? td('finalizing') : td('finalizeSelected')}
                   </Button>
                   <Button
                     type="button"
@@ -738,7 +750,7 @@ export default function DailyClosePanel({
                     disabled={!!actionLoading}
                     onClick={() => setSelectedIds({})}
                   >
-                    Limpiar selección
+                    {td('clearSelection')}
                   </Button>
                 </CardContent>
               </Card>
@@ -746,21 +758,25 @@ export default function DailyClosePanel({
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <SummaryTile
-                label="Modalidad de marcas"
-                value={BIOMETRIC_MODE_LABELS[data.meta.biometric_mode] ?? data.meta.biometric_mode}
+                label={td('punchMode')}
+                value={
+                  data.meta.biometric_mode in BIOMETRIC_MODE_LABELS
+                    ? td(`biometricModes.${data.meta.biometric_mode as keyof typeof BIOMETRIC_MODE_LABELS}`)
+                    : data.meta.biometric_mode
+                }
                 sub={data.meta.timezone}
               />
-              <SummaryTile label="Empleados activos" value={String(data.summary.total_employees)} />
-              <SummaryTile label="Con marcas hoy" value={String(data.summary.total_with_events)} />
+              <SummaryTile label={td('activeEmployees')} value={String(data.summary.total_employees)} />
+              <SummaryTile label={td('withPunchesToday')} value={String(data.summary.total_with_events)} />
               <SummaryTile
-                label="Anomalías / Finalizados"
+                label={td('anomaliesFinalized')}
                 value={`${data.summary.total_anomalies} / ${data.summary.total_finalized}`}
               />
             </div>
 
             <Card variant="liquid" className="border border-white/10 overflow-x-auto">
               <CardHeader>
-                <CardTitle className="text-base text-white">Detalle por empleado</CardTitle>
+                <CardTitle className="text-base text-white">{td('detailTitle')}</CardTitle>
               </CardHeader>
               <CardContent className="p-0">
                 <table className="w-full text-sm text-left min-w-[720px]">
@@ -769,18 +785,18 @@ export default function DailyClosePanel({
                       <th className="p-3">
                         <input
                           type="checkbox"
-                          aria-label="Seleccionar todos"
+                          aria-label={td('selectAll')}
                           onChange={(e) => toggleAllVisible(e.target.checked)}
                         />
                       </th>
-                      <th className="p-3">Empleado</th>
-                      <th className="p-3">Estado</th>
-                      <th className="p-3">Horas</th>
-                      <th className="p-3">Extra</th>
-                      <th className="p-3">Anomalías</th>
-                      <th className="p-3">Marcas</th>
-                      <th className="p-3">Registro</th>
-                      <th className="p-3 w-28">Acciones</th>
+                      <th className="p-3">{td('cols.employee')}</th>
+                      <th className="p-3">{td('cols.status')}</th>
+                      <th className="p-3">{td('cols.hours')}</th>
+                      <th className="p-3">{td('cols.overtime')}</th>
+                      <th className="p-3">{td('cols.anomalies')}</th>
+                      <th className="p-3">{td('cols.punches')}</th>
+                      <th className="p-3">{td('cols.record')}</th>
+                      <th className="p-3 w-28">{td('cols.actions')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -790,18 +806,18 @@ export default function DailyClosePanel({
                           {wizardStep !== 3 && data.items.length > 0 ? (
                             <>
                               {wizardStep === 1
-                                ? 'No hay anomalías para revisar.'
-                                : 'No hay registros consolidados para ajustar.'}{' '}
+                                ? td('noAnomalies')
+                                : td('noConsolidated')}{' '}
                               <button
                                 type="button"
                                 className="text-brand-400 hover:text-brand-300 underline-offset-2 hover:underline"
                                 onClick={() => setWizardStep(3)}
                               >
-                                Ver los {data.items.length} registros del día
+                                {td('seeAll', { count: data.items.length })}
                               </button>
                             </>
                           ) : (
-                            'No hay registros para la fecha y filtros seleccionados.'
+                            td('noRecords')
                           )}
                         </td>
                       </tr>
@@ -822,7 +838,7 @@ export default function DailyClosePanel({
                                 type="checkbox"
                                 checked={!!selectedIds[rec.id]}
                                 onChange={(e) => toggleOne(rec.id!, e.target.checked)}
-                                aria-label="Seleccionar"
+                                aria-label={td('select')}
                               />
                             ) : (
                               <span className="text-gray-600">—</span>
@@ -847,12 +863,12 @@ export default function DailyClosePanel({
                               }
                             >
                               {f.close_state === 'finalized'
-                                ? 'Finalizado'
+                                ? td('rowStatus.finalized')
                                 : row.in_progress
-                                  ? 'En curso'
+                                  ? td('rowStatus.inProgress')
                                   : row.bucket === 'anomaly'
-                                  ? 'Revisar'
-                                  : 'OK'}
+                                  ? td('rowStatus.review')
+                                  : td('rowStatus.ok')}
                             </span>
                           </td>
                           <td className="p-3 text-gray-200 tabular-nums">
@@ -866,7 +882,7 @@ export default function DailyClosePanel({
                               : '—'}
                           </td>
                           <td className="p-3 text-gray-300 text-xs max-w-[200px]">
-                            {row.anomaly_types.length ? row.anomaly_types.join(', ') : '—'}
+                            {row.anomaly_types.length ? row.anomaly_types.map(anomalyLabel).join(', ') : '—'}
                           </td>
                           <td className="p-3 text-gray-400 text-xs">
                             {row.events.length === 0 ? (
@@ -885,12 +901,12 @@ export default function DailyClosePanel({
                           <td className="p-3 text-xs text-gray-300">
                             {rec ? (
                               <div className="space-y-0.5">
-                                <div>Entrada: {rec.check_in ? formatDateTimeForHonduras(rec.check_in) : '—'}</div>
-                                <div>Salida: {rec.check_out ? formatDateTimeForHonduras(rec.check_out) : '—'}</div>
+                                <div>{td('recordCheckIn', { time: rec.check_in ? formatDateTimeForHonduras(rec.check_in) : '—' })}</div>
+                                <div>{td('recordCheckOut', { time: rec.check_out ? formatDateTimeForHonduras(rec.check_out) : '—' })}</div>
                                 <div className="text-gray-500">{rec.status ?? ''}</div>
                               </div>
                             ) : (
-                              'Sin registro'
+                              td('noRecord')
                             )}
                           </td>
                           <td className="p-3">
@@ -902,7 +918,7 @@ export default function DailyClosePanel({
                               disabled={!!actionLoading}
                               onClick={() => openEdit(row)}
                             >
-                              Editar
+                              {td('edit')}
                             </Button>
                           </td>
                         </tr>
@@ -915,7 +931,7 @@ export default function DailyClosePanel({
           </>
         )}
 
-        {loading && <p className="text-gray-400 text-sm">Cargando…</p>}
+        {loading && <p className="text-gray-400 text-sm">{tc('loading')}</p>}
       </div>
 
       {typeof document !== 'undefined' &&
@@ -936,17 +952,16 @@ export default function DailyClosePanel({
             onClick={(e) => e.stopPropagation()}
           >
             <h3 id="daily-close-edit-title" className="text-lg font-semibold text-white mb-4">
-              Ajustar registro — {editItem.employee.name}
+              {td('editTitle', { name: editItem.employee.name })}
             </h3>
             <p className="text-xs text-amber-200/90 mb-4">
-              Corrige horarios antes de finalizar si necesitas horas calculadas. Se marca como excepción de administrador.
-              Horas en zona Honduras.
+              {td('editHint')}
             </p>
             <div className="space-y-3">
-              <Field label="Entrada" value={editCheckIn} onChange={setEditCheckIn} />
-              <Field label="Salida" value={editCheckOut} onChange={setEditCheckOut} />
-              <Field label="Inicio almuerzo" value={editLunchStart} onChange={setEditLunchStart} />
-              <Field label="Fin almuerzo" value={editLunchEnd} onChange={setEditLunchEnd} />
+              <Field label={td('checkIn')} value={editCheckIn} onChange={setEditCheckIn} />
+              <Field label={td('checkOut')} value={editCheckOut} onChange={setEditCheckOut} />
+              <Field label={td('lunchStart')} value={editLunchStart} onChange={setEditLunchStart} />
+              <Field label={td('lunchEnd')} value={editLunchEnd} onChange={setEditLunchEnd} />
             </div>
             {editError && (
               <div
@@ -958,7 +973,7 @@ export default function DailyClosePanel({
             )}
             <div className="flex justify-end gap-2 mt-6">
               <Button type="button" variant="ghost" className="text-gray-300" onClick={closeEdit}>
-                Cancelar
+                {tc('cancel')}
               </Button>
               <Button
                 type="button"
@@ -966,7 +981,7 @@ export default function DailyClosePanel({
                 disabled={actionLoading === 'patch'}
                 onClick={() => void submitEdit()}
               >
-                {actionLoading === 'patch' ? 'Guardando…' : 'Guardar'}
+                {actionLoading === 'patch' ? td('saving') : td('save')}
               </Button>
             </div>
           </div>

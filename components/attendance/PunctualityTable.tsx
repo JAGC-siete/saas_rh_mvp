@@ -1,4 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card'
+import { useTranslations } from 'next-intl'
 import { formatTimeDisplay } from '../../lib/timezone'
 
 interface Row {
@@ -17,8 +18,9 @@ interface PunctualityTableProps {
 }
 
 export default function PunctualityTable({ data, type, title, onSelect }: PunctualityTableProps) {
+  const ta = useTranslations('attendance.punctuality')
   // Usar título personalizado o generar uno por defecto
-  const displayTitle = title || (type === 'early' ? 'Tempranos hoy' : 'Tarde hoy')
+  const displayTitle = title || (type === 'early' ? ta('earlyToday') : ta('lateToday'))
   
   return (
     <Card variant="liquid">
@@ -27,10 +29,10 @@ export default function PunctualityTable({ data, type, title, onSelect }: Punctu
       <table className="w-full text-sm text-left">
         <thead className="text-gray-300">
           <tr>
-            <th className="py-1">Empleado</th>
-            <th className="py-1">Equipo</th>
-            <th className="py-1">Entrada</th>
-            <th className="py-1">Δ min</th>
+            <th className="py-1">{ta('employee')}</th>
+            <th className="py-1">{ta('team')}</th>
+            <th className="py-1">{ta('checkIn')}</th>
+            <th className="py-1">{ta('delta')}</th>
           </tr>
         </thead>
         <tbody className="text-gray-100">
@@ -44,7 +46,7 @@ export default function PunctualityTable({ data, type, title, onSelect }: Punctu
           ))}
           {data.length === 0 && (
             <tr>
-              <td colSpan={4} className="text-center py-4 text-gray-400">Sin datos</td>
+              <td colSpan={4} className="text-center py-4 text-gray-400">{ta('noData')}</td>
             </tr>
           )}
         </tbody>

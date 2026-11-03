@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { motion, AnimatePresence } from 'framer-motion'
 import AbsenceTable from './AbsenceTable'
 import ArrivalTable from './ArrivalTable'
@@ -34,6 +35,7 @@ export default function AttendanceTablesSection({
   kpiFilter = 'all',
   onKpiFilterChange,
 }: AttendanceTablesSectionProps) {
+  const ta = useTranslations('attendance')
   const showAbsenceDates = preset !== 'today'
   const mappedTab = kpiFilterToTab(kpiFilter)
   const [tab, setTab] = useState<AttendanceListTab>(mappedTab ?? 'presentes')
@@ -46,11 +48,11 @@ export default function AttendanceTablesSection({
   const presentCount = early.length + late.length
 
   const tabs: { id: AttendanceListTab; label: string; count: number }[] = [
-    { id: 'presentes', label: 'Presentes', count: presentCount },
-    { id: 'ausentes', label: 'Ausentes', count: absent.length },
-    { id: 'tarde', label: 'Tarde', count: lateOnly.length },
-    { id: 'temprano', label: 'Temprano', count: early.length },
-    { id: 'outside', label: 'Fuera de horario', count: outsideSchedule.length },
+    { id: 'presentes', label: ta('tabs.presentes'), count: presentCount },
+    { id: 'ausentes', label: ta('tabs.ausentes'), count: absent.length },
+    { id: 'tarde', label: ta('tabs.tarde'), count: lateOnly.length },
+    { id: 'temprano', label: ta('tabs.temprano'), count: early.length },
+    { id: 'outside', label: ta('tabs.outside'), count: outsideSchedule.length },
   ]
 
   const selectTab = (next: AttendanceListTab) => {
@@ -69,7 +71,7 @@ export default function AttendanceTablesSection({
       <div
         className="flex flex-wrap gap-1 p-2 border-b border-white/10"
         role="tablist"
-        aria-label="Listas de asistencia"
+        aria-label={ta('listsAria')}
       >
         {tabs.map((t) => (
           <button
@@ -117,7 +119,7 @@ export default function AttendanceTablesSection({
                 <ArrivalTable
                   earlyData={[]}
                   lateData={lateOnly}
-                  title={`Tarde ${presetLabel}`}
+                  title={ta('tableTitles.late', { preset: presetLabel })}
                   onSelect={onSelectEmployee}
                   externalSeverityFilter="late"
                 />
@@ -128,7 +130,7 @@ export default function AttendanceTablesSection({
                 <ArrivalTable
                   earlyData={early}
                   lateData={late}
-                  title={`Presentes ${presetLabel}`}
+                  title={ta('tableTitles.present', { preset: presetLabel })}
                   onSelect={onSelectEmployee}
                   externalSeverityFilter="all"
                 />
@@ -138,7 +140,7 @@ export default function AttendanceTablesSection({
               <div id="attendance-panel-ausentes" role="tabpanel" aria-labelledby="attendance-tab-ausentes">
                 <AbsenceTable
                   data={absent}
-                  title={`Ausentes ${presetLabel}`}
+                  title={ta('tableTitles.absent', { preset: presetLabel })}
                   onSelect={onSelectEmployee}
                   showDate={showAbsenceDates}
                 />
@@ -148,7 +150,7 @@ export default function AttendanceTablesSection({
               <div id="attendance-panel-outside" role="tabpanel" aria-labelledby="attendance-tab-outside">
                 <OutsideScheduleTable
                   data={outsideSchedule}
-                  title={`Marcaron fuera de horario ${presetLabel}`}
+                  title={ta('tableTitles.outside', { preset: presetLabel })}
                   onSelect={onSelectEmployee}
                 />
               </div>

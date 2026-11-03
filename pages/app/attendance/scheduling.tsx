@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import ProtectedRoute from '../../../components/ProtectedRoute'
 import DashboardLayout from '../../../components/DashboardLayout'
 import { Card } from '../../../components/ui/card'
@@ -32,15 +33,8 @@ type AssignmentRow = {
   schedules?: { id: string; name: string } | null
 }
 
-const WEEKDAY_BUTTONS: [number, string][] = [
-  [0, 'Dom'],
-  [1, 'Lun'],
-  [2, 'Mar'],
-  [3, 'Mié'],
-  [4, 'Jue'],
-  [5, 'Vie'],
-  [6, 'Sáb'],
-]
+/** Index = JS weekday (0 = Sunday), as stored in repeat_weekdays. */
+const WEEKDAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const
 
 function deptName(emp: EmployeeRow): string {
   const d = emp.departments
@@ -49,13 +43,15 @@ function deptName(emp: EmployeeRow): string {
   return d.name ?? '—'
 }
 
-function formatWeekdays(days: number[] | null): string {
-  if (!days || days.length === 0) return 'Todos'
-  const labels = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
-  return days.map((d) => labels[d] ?? String(d)).join(', ')
-}
-
 export default function AttendanceSchedulingPage() {
+  const ts = useTranslations('attendance.scheduling')
+  const tc = useTranslations('common')
+  const tw = useTranslations('attendance.drawer.weekdays')
+  const WEEKDAY_BUTTONS = WEEKDAY_KEYS.map((k, i) => [i, tw(k)] as [number, string])
+  const formatWeekdays = (days: number[] | null): string => {
+    if (!days || days.length === 0) return ts('allWeekdays')
+    return days.map((d) => (WEEKDAY_KEYS[d] ? tw(WEEKDAY_KEYS[d]) : String(d))).join(', ')
+  }
   const { addNotification } = useNotificationContext()
 
   const [employees, setEmployees] = useState<EmployeeRow[]>([])
@@ -158,8 +154,8 @@ export default function AttendanceSchedulingPage() {
     if (!workScheduleId || !validFrom || !validTo || selectedIds.length === 0) {
       addNotification({
         type: 'error',
-        title: 'Turnos',
-        message: 'Complete empleado(s), horario y rango de fechas.',
+        title: ts('title'),
+        message: ts('needFields'),
       })
       return
     }
@@ -191,15 +187,15 @@ export default function AttendanceSchedulingPage() {
       const trimmed = json.trimmed ?? 0
       addNotification({
         type: 'success',
-        title: 'Turnos',
-        message: `Asignaciones creadas: ${json.inserted ?? 0}${trimmed ? ` · ${trimmed} conflicto(s) recortados` : ''}`,
+        title: ts('title'),
+        message: `${ts('created', { count: json.inserted ?? 0 })}${trimmed ? ts('trimmed', { count: trimmed }) : ''}`,
       })
       void loadAssignments()
     } catch (e) {
       addNotification({
         type: 'error',
-        title: 'Turnos',
-        message: e instanceof Error ? e.message : 'Error al guardar',
+        title: ts('title'),
+        message: e instanceof Error ? e.message : ts('saveError'),
       })
     } finally {
       setSaving(false)
@@ -207,17 +203,17 @@ export default function AttendanceSchedulingPage() {
   }
 
   const deleteAssignment = async (id: string) => {
-    if (!confirm('¿Eliminar esta asignación por rango de fechas?')) return
+    if (!confirm(ts('confirmDelete'))) return
     const res = await fetch(`/api/attendance/schedule-assignments/${id}`, {
       method: 'DELETE',
       credentials: 'include',
     })
     const json = await res.json().catch(() => ({}))
     if (!res.ok) {
-      addNotification({ type: 'error', title: 'Turnos', message: json.error || 'No se pudo eliminar' })
+      addNotification({ type: 'error', title: ts('title'), message: json.error || ts('deleteError') })
       return
     }
-    addNotification({ type: 'success', title: 'Turnos', message: 'Asignación eliminada' })
+    addNotification({ type: 'success', title: ts('title'), message: ts('deleted') })
     void loadAssignments()
   }
 
@@ -241,15 +237,15 @@ export default function AttendanceSchedulingPage() {
         }),
       })
       const json = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(json.error || 'Error al actualizar')
-      addNotification({ type: 'success', title: 'Turnos', message: 'Asignación actualizada' })
+      if (!res.ok) throw new Error(json.error || ts('updateError'))
+      addNotification({ type: 'success', title: ts('title'), message: ts('updated') })
       setEditingAssignment(null)
       void loadAssignments()
     } catch (e) {
       addNotification({
         type: 'error',
-        title: 'Turnos',
-        message: e instanceof Error ? e.message : 'Error al actualizar',
+        title: ts('title'),
+        message: e instanceof Error ? e.message : ts('updateError'),
       })
     } finally {
       setSaving(false)
@@ -262,25 +258,25 @@ export default function AttendanceSchedulingPage() {
         <div className="max-w-6xl mx-auto px-4 py-8 space-y-6">
           <AttendanceSectionNav />
           <div>
-            <h1 className="text-2xl font-bold text-white">Asignación de turnos</h1>
+            <h1 className="text-2xl font-bold text-white">{ts('pageTitle')}</h1>
             <p className="text-sm text-gray-400 mt-1">
-              Asigne plantillas de horario por rango de fechas. Los conflictos se recortan automáticamente.
+              {ts('subtitle')}
             </p>
           </div>
 
           <Card variant="liquid" className="border border-white/10">
             <div className="p-5 space-y-4">
-              <h2 className="text-lg font-semibold text-white">Nueva asignación</h2>
+              <h2 className="text-lg font-semibold text-white">{ts('newAssignment')}</h2>
 
               <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                 <label className="text-sm text-gray-300">
-                  Horario
+                  {ts('schedule')}
                   <select
                     className="mt-1 w-full bg-gray-900/60 border border-white/10 rounded-lg px-3 py-2 text-white"
                     value={workScheduleId}
                     onChange={(e) => setWorkScheduleId(e.target.value)}
                   >
-                    <option value="">Seleccione…</option>
+                    <option value="">{ts('select')}</option>
                     {schedules.map((s) => (
                       <option key={s.id} value={s.id}>
                         {s.name}
@@ -289,7 +285,7 @@ export default function AttendanceSchedulingPage() {
                   </select>
                 </label>
                 <label className="text-sm text-gray-300">
-                  Desde
+                  {ts('from')}
                   <input
                     className="mt-1 w-full bg-gray-900/60 border border-white/10 rounded-lg px-3 py-2 text-white"
                     type="date"
@@ -298,7 +294,7 @@ export default function AttendanceSchedulingPage() {
                   />
                 </label>
                 <label className="text-sm text-gray-300">
-                  Hasta
+                  {ts('to')}
                   <input
                     className="mt-1 w-full bg-gray-900/60 border border-white/10 rounded-lg px-3 py-2 text-white"
                     type="date"
@@ -308,7 +304,7 @@ export default function AttendanceSchedulingPage() {
                 </label>
                 <label className="text-sm text-gray-300 flex items-end gap-2 pb-2">
                   <input type="checkbox" checked={repeatWeekly} onChange={(e) => setRepeatWeekly(e.target.checked)} />
-                  <span>Repetir semanal</span>
+                  <span>{ts('repeatWeekly')}</span>
                 </label>
               </div>
 
@@ -332,7 +328,7 @@ export default function AttendanceSchedulingPage() {
               <div className="rounded-xl border border-white/10 bg-white/5 p-4 space-y-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="text-sm text-gray-200 font-medium">
-                    Empleados ({selectedIds.length} seleccionados · {filteredEmployees.length} visibles)
+                    {ts('employeesCount', { selected: selectedIds.length, visible: filteredEmployees.length })}
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <button
@@ -340,14 +336,14 @@ export default function AttendanceSchedulingPage() {
                       onClick={selectAllVisible}
                       className="px-3 py-1.5 rounded-lg text-xs bg-white/10 text-white hover:bg-white/15"
                     >
-                      Seleccionar todos
+                      {ts('selectAll')}
                     </button>
                     <button
                       type="button"
                       onClick={clearAllSelection}
                       className="px-3 py-1.5 rounded-lg text-xs bg-white/5 text-gray-300 hover:bg-white/10"
                     >
-                      Limpiar
+                      {ts('clear')}
                     </button>
                     {departmentFilter && (
                       <button
@@ -355,20 +351,20 @@ export default function AttendanceSchedulingPage() {
                         onClick={selectAllInDepartment}
                         className="px-3 py-1.5 rounded-lg text-xs bg-brand-600/80 text-white hover:bg-brand-600"
                       >
-                        Todo el departamento
+                        {ts('wholeDepartment')}
                       </button>
                     )}
                   </div>
                 </div>
 
                 <label className="text-sm text-gray-300 block max-w-xs">
-                  Filtrar por departamento
+                  {ts('filterDepartment')}
                   <select
                     className="mt-1 w-full bg-gray-900/60 border border-white/10 rounded-lg px-3 py-2 text-white"
                     value={departmentFilter}
                     onChange={(e) => setDepartmentFilter(e.target.value)}
                   >
-                    <option value="">Todos los departamentos</option>
+                    <option value="">{ts('allDepartments')}</option>
                     {departments.map((d) => (
                       <option key={d.id} value={d.id}>
                         {d.name}
@@ -393,7 +389,7 @@ export default function AttendanceSchedulingPage() {
                     </label>
                   ))}
                   {filteredEmployees.length === 0 && (
-                    <p className="text-sm text-gray-500 italic">No hay empleados en este filtro.</p>
+                    <p className="text-sm text-gray-500 italic">{ts('noEmployees')}</p>
                   )}
                 </div>
               </div>
@@ -405,7 +401,7 @@ export default function AttendanceSchedulingPage() {
                   disabled={saving}
                   className="px-4 py-2 rounded-lg bg-brand-600 text-white font-medium hover:bg-brand-700 disabled:opacity-50"
                 >
-                  {saving ? 'Guardando…' : 'Crear asignación'}
+                  {saving ? ts('saving') : ts('create')}
                 </button>
               </div>
             </div>
@@ -414,10 +410,10 @@ export default function AttendanceSchedulingPage() {
           <Card variant="liquid" className="border border-white/10">
             <div className="p-5 space-y-4">
               <div className="flex flex-wrap items-end justify-between gap-3">
-                <h2 className="text-lg font-semibold text-white">Libro de asignaciones</h2>
+                <h2 className="text-lg font-semibold text-white">{ts('ledger')}</h2>
                 <div className="flex flex-wrap gap-2 items-end">
                   <label className="text-xs text-gray-400">
-                    Desde
+                    {ts('from')}
                     <input
                       type="date"
                       value={ledgerFilterFrom}
@@ -426,7 +422,7 @@ export default function AttendanceSchedulingPage() {
                     />
                   </label>
                   <label className="text-xs text-gray-400">
-                    Hasta
+                    {ts('to')}
                     <input
                       type="date"
                       value={ledgerFilterTo}
@@ -439,7 +435,7 @@ export default function AttendanceSchedulingPage() {
                     onClick={() => void loadAssignments()}
                     className="px-3 py-2 rounded-lg text-sm bg-white/10 text-white hover:bg-white/15"
                   >
-                    {ledgerLoading ? 'Cargando…' : 'Filtrar'}
+                    {ledgerLoading ? ts('loading') : ts('filter')}
                   </button>
                 </div>
               </div>
@@ -448,12 +444,12 @@ export default function AttendanceSchedulingPage() {
                 <table className="min-w-full text-sm">
                   <thead className="bg-white/5 text-gray-300">
                     <tr>
-                      <th className="text-left px-3 py-2 font-medium">Empleado</th>
-                      <th className="text-left px-3 py-2 font-medium">Horario</th>
-                      <th className="text-left px-3 py-2 font-medium">Desde</th>
-                      <th className="text-left px-3 py-2 font-medium">Hasta</th>
-                      <th className="text-left px-3 py-2 font-medium">Repetición</th>
-                      <th className="text-right px-3 py-2 font-medium">Acciones</th>
+                      <th className="text-left px-3 py-2 font-medium">{ts('cols.employee')}</th>
+                      <th className="text-left px-3 py-2 font-medium">{ts('cols.schedule')}</th>
+                      <th className="text-left px-3 py-2 font-medium">{ts('cols.from')}</th>
+                      <th className="text-left px-3 py-2 font-medium">{ts('cols.to')}</th>
+                      <th className="text-left px-3 py-2 font-medium">{ts('cols.repeat')}</th>
+                      <th className="text-right px-3 py-2 font-medium">{ts('cols.actions')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -470,7 +466,7 @@ export default function AttendanceSchedulingPage() {
                           <td className="px-3 py-2">{a.valid_from}</td>
                           <td className="px-3 py-2">{a.valid_to}</td>
                           <td className="px-3 py-2">
-                            {a.repeat_weekly ? formatWeekdays(a.repeat_weekdays) : 'Todos los días'}
+                            {a.repeat_weekly ? formatWeekdays(a.repeat_weekdays) : ts('everyDay')}
                           </td>
                           <td className="px-3 py-2 text-right space-x-2 whitespace-nowrap">
                             <button
@@ -478,14 +474,14 @@ export default function AttendanceSchedulingPage() {
                               onClick={() => setEditingAssignment({ ...a })}
                               className="text-brand-300 hover:text-brand-200"
                             >
-                              Editar
+                              {ts('edit')}
                             </button>
                             <button
                               type="button"
                               onClick={() => void deleteAssignment(a.id)}
                               className="text-red-400 hover:text-red-300"
                             >
-                              Eliminar
+                              {ts('delete')}
                             </button>
                           </td>
                         </tr>
@@ -494,7 +490,7 @@ export default function AttendanceSchedulingPage() {
                     {!ledgerLoading && assignments.length === 0 && (
                       <tr>
                         <td colSpan={6} className="px-3 py-6 text-center text-gray-500 italic">
-                          Sin asignaciones en este rango.
+                          {ts('none')}
                         </td>
                       </tr>
                     )}
@@ -507,9 +503,9 @@ export default function AttendanceSchedulingPage() {
           {editingAssignment && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
               <Card variant="liquid" className="w-full max-w-md border border-white/15 p-5 space-y-4">
-                <h3 className="text-lg font-semibold text-white">Editar asignación</h3>
+                <h3 className="text-lg font-semibold text-white">{ts('editTitle')}</h3>
                 <label className="text-sm text-gray-300 block">
-                  Horario
+                  {ts('schedule')}
                   <select
                     className="mt-1 w-full bg-gray-900/60 border border-white/10 rounded-lg px-3 py-2 text-white"
                     value={editingAssignment.work_schedule_id}
@@ -526,7 +522,7 @@ export default function AttendanceSchedulingPage() {
                 </label>
                 <div className="grid grid-cols-2 gap-3">
                   <label className="text-sm text-gray-300">
-                    Desde
+                    {ts('from')}
                     <input
                       type="date"
                       className="mt-1 w-full bg-gray-900/60 border border-white/10 rounded-lg px-3 py-2 text-white"
@@ -537,7 +533,7 @@ export default function AttendanceSchedulingPage() {
                     />
                   </label>
                   <label className="text-sm text-gray-300">
-                    Hasta
+                    {ts('to')}
                     <input
                       type="date"
                       className="mt-1 w-full bg-gray-900/60 border border-white/10 rounded-lg px-3 py-2 text-white"
@@ -556,7 +552,7 @@ export default function AttendanceSchedulingPage() {
                       setEditingAssignment({ ...editingAssignment, repeat_weekly: e.target.checked })
                     }
                   />
-                  Repetir semanal
+                  {ts('repeatWeekly')}
                 </label>
                 <div className="flex justify-end gap-2">
                   <button
@@ -564,7 +560,7 @@ export default function AttendanceSchedulingPage() {
                     onClick={() => setEditingAssignment(null)}
                     className="px-3 py-2 rounded-lg text-sm bg-white/10 text-gray-200"
                   >
-                    Cancelar
+                    {tc('cancel')}
                   </button>
                   <button
                     type="button"
@@ -572,7 +568,7 @@ export default function AttendanceSchedulingPage() {
                     disabled={saving}
                     className="px-3 py-2 rounded-lg text-sm bg-brand-600 text-white disabled:opacity-50"
                   >
-                    {saving ? 'Guardando…' : 'Guardar'}
+                    {saving ? ts('saving') : ts('save')}
                   </button>
                 </div>
               </Card>
