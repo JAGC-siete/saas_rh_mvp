@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { useEffect, useRef, useState, type ComponentType, type SVGProps } from 'react'
+import { useTranslations } from 'next-intl'
 import {
   ArrowRightOnRectangleIcon,
   BanknotesIcon,
@@ -26,6 +27,7 @@ import {
 import NotificationBell from '../ui/NotificationBell'
 import { SessionStatusIndicator } from '../SessionStatusIndicator'
 import type { NavIconKey, NavItem, NavStructure } from '../../lib/navigation/sidebar'
+import { useNavLabels } from './useNavLabels'
 
 type Icon = ComponentType<SVGProps<SVGSVGElement>>
 
@@ -104,14 +106,17 @@ function NavLink({
   variant: 'full' | 'rail'
   touch?: boolean
 }) {
+  const t = useTranslations('nav')
+  const labels = useNavLabels()
   const Icon = ICONS[item.icon]
-  const label = badge > 0 ? `${item.label} (${badge} pendientes)` : item.label
+  const itemLabel = labels.item(item)
+  const label = badge > 0 ? t('withPending', { label: itemLabel, count: badge }) : itemLabel
   if (variant === 'rail') {
     return (
       <Link
         href={item.href}
         aria-label={label}
-        title={item.label}
+        title={itemLabel}
         aria-current={active ? 'page' : undefined}
         className={`relative flex h-10 w-10 items-center justify-center rounded-lg transition-colors ${
           active ? 'bg-brand-900 text-white' : 'text-slate-400 hover:bg-white/10 hover:text-white'
@@ -132,7 +137,7 @@ function NavLink({
       }`}
     >
       <Icon className={`h-5 w-5 shrink-0 ${active ? 'text-brand-200' : 'text-slate-400'}`} aria-hidden />
-      <span className="min-w-0 flex-1 truncate">{item.label}</span>
+      <span className="min-w-0 flex-1 truncate">{itemLabel}</span>
       <Badge count={badge} />
     </Link>
   )
@@ -147,6 +152,7 @@ function AccountMenu({
   onSignOut: () => void
   variant: 'full' | 'rail'
 }) {
+  const t = useTranslations('nav')
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement | null>(null)
 
@@ -176,7 +182,7 @@ function AccountMenu({
           onClick={() => setOpen((v) => !v)}
           aria-haspopup="menu"
           aria-expanded={open}
-          aria-label={`Cuenta de ${account.name}`}
+          aria-label={t('accountOf', { name: account.name })}
           title={`${account.name} · ${subtitle}`}
           className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-900 text-xs font-bold text-white"
         >
@@ -204,7 +210,7 @@ function AccountMenu({
       {open && (
         <div
           role="menu"
-          aria-label="Cuenta"
+          aria-label={t('account')}
           className={`absolute z-50 flex flex-col gap-0.5 rounded-xl border border-white/10 bg-slate-900 p-1.5 shadow-2xl ${
             variant === 'rail' ? 'bottom-0 left-full ml-2 w-64' : 'bottom-full left-0 right-0 mb-2'
           }`}
@@ -221,7 +227,7 @@ function AccountMenu({
             className="flex min-h-[44px] items-center gap-2.5 rounded-lg px-3 text-left text-sm text-red-300 hover:bg-red-500/10"
           >
             <ArrowRightOnRectangleIcon className="h-4 w-4" aria-hidden />
-            Cerrar sesión
+            {t('signOut')}
           </button>
         </div>
       )}
@@ -242,10 +248,12 @@ export default function SidebarContent({
   notificationPanelClassName,
   touch,
 }: SidebarContentProps) {
+  const t = useTranslations('nav')
+  const labels = useNavLabels()
   const HeaderIcon =
     headerAction.kind === 'close' ? XMarkIcon : headerAction.kind === 'collapse' ? ChevronDoubleLeftIcon : ChevronDoubleRightIcon
   const headerLabel =
-    headerAction.kind === 'close' ? 'Cerrar menú' : headerAction.kind === 'collapse' ? 'Colapsar menú' : 'Fijar menú abierto'
+    headerAction.kind === 'close' ? t('closeMenu') : headerAction.kind === 'collapse' ? t('collapseMenu') : t('pinMenu')
 
   if (variant === 'rail') {
     const items = [...nav.top, ...nav.groups.flatMap((g) => g.items)]
@@ -255,15 +263,15 @@ export default function SidebarContent({
           <button
             type="button"
             onClick={headerAction.onClick}
-            aria-label="Expandir menú"
+            aria-label={t('expandMenu')}
             aria-expanded={false}
-            title="Expandir menú"
+            title={t('expandMenu')}
             className="flex h-10 w-10 items-center justify-center rounded-lg border border-[#22304d] bg-[#121a2c] text-slate-300 hover:text-white"
           >
             <ChevronDoubleRightIcon className="h-4 w-4" aria-hidden />
           </button>
         </div>
-        <nav aria-label="Secciones" className="flex min-h-0 w-full flex-1 flex-col items-center gap-1 overflow-y-auto py-2.5">
+        <nav aria-label={t('sections')} className="flex min-h-0 w-full flex-1 flex-col items-center gap-1 overflow-y-auto py-2.5">
           {items.map((item) => (
             <NavLink key={item.id} item={item} active={item.id === activeId} badge={badges[item.id] ?? 0} variant="rail" />
           ))}
@@ -303,7 +311,7 @@ export default function SidebarContent({
         </button>
       </div>
 
-      <nav aria-label="Secciones" className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto px-2 pb-3 pt-2.5">
+      <nav aria-label={t('sections')} className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto px-2 pb-3 pt-2.5">
         {nav.top.map((item) => (
           <NavLink key={item.id} item={item} active={item.id === activeId} badge={badges[item.id] ?? 0} variant="full" touch={touch} />
         ))}
@@ -323,7 +331,7 @@ export default function SidebarContent({
                   hasActive && !open ? 'text-brand-200' : 'text-slate-400'
                 }`}
               >
-                <span className="flex-1">{group.label}</span>
+                <span className="flex-1">{labels.group(group)}</span>
                 {!open && pending > 0 && <Badge count={pending} />}
                 <ChevronDownIcon className={`h-3.5 w-3.5 transition-transform ${open ? '' : '-rotate-90'}`} aria-hidden />
               </button>

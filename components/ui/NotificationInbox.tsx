@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import React, { useMemo } from 'react'
+import { useFormatter, useTranslations } from 'next-intl'
 import { Check, CheckCircle2, AlertTriangle, Eye, Info, X, XCircle } from 'lucide-react'
 import { cn } from '../../lib/utils'
 import { Button } from './button'
@@ -44,6 +45,8 @@ export default function NotificationInbox({
   onClose?: () => void
 }) {
   const { markAsRead } = useNotificationContext()
+  const t = useTranslations('notifications')
+  const format = useFormatter()
 
   const items = useMemo(() => {
     const sorted = [...notifications].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
@@ -53,7 +56,7 @@ export default function NotificationInbox({
   if (items.length === 0) {
     return (
       <div className="p-6 text-center text-sm text-gray-400">
-        No hay notificaciones.
+        {t('empty')}
       </div>
     )
   }
@@ -78,7 +81,7 @@ export default function NotificationInbox({
                 <div className="flex items-start justify-between gap-3">
                   <p className="text-sm font-semibold text-white truncate">{n.title}</p>
                   <p className="text-[11px] text-gray-400 shrink-0">
-                    {n.createdAt.toLocaleTimeString('es-HN', { hour: '2-digit', minute: '2-digit' })}
+                    {format.dateTime(n.createdAt, { hour: '2-digit', minute: '2-digit' })}
                   </p>
                 </div>
                 <p className="mt-0.5 text-sm text-gray-300 line-clamp-2">{n.message}</p>

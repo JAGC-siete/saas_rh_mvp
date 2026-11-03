@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react'
+import { useTranslations } from 'next-intl'
 import { useAuth } from '../lib/auth'
 import { 
   ComputerDesktopIcon, 
@@ -33,6 +34,7 @@ interface SessionManagerProps {
 }
 
 export function SessionManager({ onClose, show = true }: SessionManagerProps) {
+  const t = useTranslations('session')
   const { user } = useAuth()
   const [sessions, setSessions] = useState<Session[]>([])
   const [loading, setLoading] = useState(true)
@@ -79,14 +81,14 @@ export function SessionManager({ onClose, show = true }: SessionManagerProps) {
       await fetchSessions()
     } catch (error) {
       console.error('Error revoking session:', error)
-      alert('Error al revocar la sesión')
+      alert(t('revokeError'))
     } finally {
       setRevoking(null)
     }
   }
 
   const revokeAllSessions = async () => {
-    if (!confirm('¿Estás seguro de que deseas cerrar todas las demás sesiones?')) {
+    if (!confirm(t('confirmCloseAll'))) {
       return
     }
 
@@ -104,7 +106,7 @@ export function SessionManager({ onClose, show = true }: SessionManagerProps) {
       await fetchSessions()
     } catch (error) {
       console.error('Error revoking all sessions:', error)
-      alert('Error al revocar las sesiones')
+      alert(t('revokeAllError'))
     } finally {
       setRevoking(null)
     }
@@ -130,10 +132,10 @@ export function SessionManager({ onClose, show = true }: SessionManagerProps) {
     const diffHours = Math.floor(diffMs / 3600000)
     const diffDays = Math.floor(diffMs / 86400000)
 
-    if (diffMins < 1) return 'Ahora mismo'
-    if (diffMins < 60) return `Hace ${diffMins} ${diffMins === 1 ? 'minuto' : 'minutos'}`
-    if (diffHours < 24) return `Hace ${diffHours} ${diffHours === 1 ? 'hora' : 'horas'}`
-    return `Hace ${diffDays} ${diffDays === 1 ? 'día' : 'días'}`
+    if (diffMins < 1) return t('justNow')
+    if (diffMins < 60) return t('minutesAgo', { count: diffMins })
+    if (diffHours < 24) return t('hoursAgo', { count: diffHours })
+    return t('daysAgo', { count: diffDays })
   }
 
   const getMinutesUntilExpiry = (expiryDate: string) => {
@@ -152,7 +154,7 @@ export function SessionManager({ onClose, show = true }: SessionManagerProps) {
     <div className="bg-white rounded-lg shadow-lg p-6 max-w-2xl w-full">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-semibold text-gray-900">
-          Sesiones Activas
+          {t('activeSessions')}
         </h2>
         {onClose && (
           <button
@@ -176,7 +178,7 @@ export function SessionManager({ onClose, show = true }: SessionManagerProps) {
           {/* Sesión actual */}
           {sessions.find(s => s.is_current) && (
             <div className="mb-6">
-              <h3 className="text-sm font-medium text-gray-700 mb-3">Sesión actual</h3>
+              <h3 className="text-sm font-medium text-gray-700 mb-3">{t('current')}</h3>
               <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                 <div className="flex items-start justify-between">
                   <div className="flex items-start space-x-3">
@@ -189,15 +191,15 @@ export function SessionManager({ onClose, show = true }: SessionManagerProps) {
                     <div>
                       <div className="flex items-center space-x-2">
                         <p className="text-sm font-medium text-gray-900">
-                          Este dispositivo
+                          {t('thisDevice')}
                         </p>
                         <CheckCircleIcon className="h-4 w-4 text-green-600" />
                       </div>
                       <p className="text-xs text-gray-500 mt-1">
-                        Última actividad: {formatDate(sessions.find(s => s.is_current)?.last_activity || '')}
+                        {t('lastActivity', { when: formatDate(sessions.find(s => s.is_current)?.last_activity || '') })}
                       </p>
                       <p className="text-xs text-gray-500">
-                        Expira en: {getMinutesUntilExpiry(sessions.find(s => s.is_current)?.idle_timeout_at || '')} minutos
+                        {t('expiresIn', { minutes: getMinutesUntilExpiry(sessions.find(s => s.is_current)?.idle_timeout_at || '') })}
                       </p>
                     </div>
                   </div>
@@ -210,7 +212,7 @@ export function SessionManager({ onClose, show = true }: SessionManagerProps) {
           <div>
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-medium text-gray-700">
-                Otras sesiones ({otherSessions.length})
+                {t('others', { count: otherSessions.length })}
               </h3>
               {otherSessions.length > 0 && (
                 <button
@@ -218,14 +220,14 @@ export function SessionManager({ onClose, show = true }: SessionManagerProps) {
                   disabled={revoking === 'all'}
                   className="text-sm text-red-600 hover:text-red-700 font-medium disabled:opacity-50"
                 >
-                  {revoking === 'all' ? 'Cerrando...' : 'Cerrar todas'}
+                  {revoking === 'all' ? t('closing') : t('closeAll')}
                 </button>
               )}
             </div>
 
             {otherSessions.length === 0 ? (
               <p className="text-sm text-gray-500 py-4 text-center">
-                No hay otras sesiones activas
+                {t('noOthers')}
               </p>
             ) : (
               <div className="space-y-3">
@@ -241,17 +243,17 @@ export function SessionManager({ onClose, show = true }: SessionManagerProps) {
                         </div>
                         <div className="flex-1">
                           <p className="text-sm font-medium text-gray-900">
-                            {session.device_id || 'Dispositivo desconocido'}
+                            {session.device_id || t('unknownDevice')}
                           </p>
                           <p className="text-xs text-gray-500 mt-1">
-                            Última actividad: {formatDate(session.last_activity)}
+                            {t('lastActivity', { when: formatDate(session.last_activity) })}
                           </p>
                           <p className="text-xs text-gray-500">
-                            Creada: {formatDate(session.created_at)}
+                            {t('created', { when: formatDate(session.created_at) })}
                           </p>
                           {session.metadata?.location && (
                             <p className="text-xs text-gray-500">
-                              Ubicación aproximada: {session.metadata.location}
+                              {t('location', { location: session.metadata.location })}
                             </p>
                           )}
                         </div>
@@ -261,7 +263,7 @@ export function SessionManager({ onClose, show = true }: SessionManagerProps) {
                         disabled={revoking === session.id}
                         className="ml-4 text-red-600 hover:text-red-700 text-sm font-medium disabled:opacity-50 transition-colors"
                       >
-                        {revoking === session.id ? 'Cerrando...' : 'Cerrar'}
+                        {revoking === session.id ? t('closing') : t('close')}
                       </button>
                     </div>
                   </div>

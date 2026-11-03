@@ -1,4 +1,7 @@
 {
+  "common": {
+    "loading": "Loading…"
+  },
   "settings": {
     "language": {
       "title": "Language",
@@ -10,6 +13,126 @@
       },
       "saved": "Done, language updated.",
       "saveError": "We couldn't change the language. Check your connection and try again."
+    }
+  },
+  "nav": {
+    "groups": {
+      "personas": "People",
+      "tiempo": "Time",
+      "nomina": "Payroll",
+      "analisis": "Analytics"
+    },
+    "items": {
+      "inicio": "Home",
+      "empleados": "Employees",
+      "departamentos": "Departments",
+      "evaluaciones": "Performance reviews",
+      "puestos": "Job descriptions",
+      "asistencia": "Attendance",
+      "vacaciones": "Vacation and leave",
+      "nomina": "Payroll",
+      "deducciones": "Deductions",
+      "cesantias": "Severance",
+      "decimos": "13th and 14th-month pay",
+      "contabilidad": "Accounting",
+      "reportes": "Reports",
+      "configuracion": "Settings",
+      "soporte": "Support"
+    },
+    "withPending": "{label} ({count} pending)",
+    "sections": "Sections",
+    "mainMenu": "Main menu",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu",
+    "collapseMenu": "Collapse menu",
+    "pinMenu": "Keep menu open",
+    "expandMenu": "Expand menu",
+    "account": "Account",
+    "accountOf": "{name}'s account",
+    "signOut": "Sign out",
+    "defaultUser": "User"
+  },
+  "roles": {
+    "super_admin": "Super admin",
+    "admin": "Admin",
+    "company_admin": "Company admin",
+    "hr_manager": "HR manager",
+    "manager": "Supervisor",
+    "employee": "Employee"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "withUnread": "Notifications ({count} unread)",
+    "center": "Notification center",
+    "markAll": "Mark all as read",
+    "viewAll": "View all",
+    "empty": "No notifications.",
+    "fallbackTitle": "Notification"
+  },
+  "session": {
+    "statusActive": "Active",
+    "statusExpiring": "Expiring",
+    "viewSessions": "View active sessions",
+    "expiringTitle": "Session about to expire",
+    "expiringIn": "Your session will close due to inactivity in <strong>{minutes, plural, one {# minute} other {# minutes}}</strong>.",
+    "expiringSoon": "Your session is about to expire.",
+    "updating": "Updating...",
+    "keep": "Stay signed in",
+    "dismiss": "Dismiss",
+    "activeSessions": "Active sessions",
+    "current": "Current session",
+    "thisDevice": "This device",
+    "lastActivity": "Last activity: {when}",
+    "expiresIn": "Expires in: {minutes} minutes",
+    "others": "Other sessions ({count})",
+    "closing": "Signing out...",
+    "closeAll": "Sign out all",
+    "close": "Sign out",
+    "noOthers": "No other active sessions",
+    "unknownDevice": "Unknown device",
+    "created": "Started: {when}",
+    "location": "Approximate location: {location}",
+    "confirmCloseAll": "Are you sure you want to sign out of all other sessions?",
+    "revokeError": "We couldn't sign out that session",
+    "revokeAllError": "We couldn't sign out the other sessions",
+    "justNow": "Just now",
+    "minutesAgo": "{count, plural, one {# minute ago} other {# minutes ago}}",
+    "hoursAgo": "{count, plural, one {# hour ago} other {# hours ago}}",
+    "daysAgo": "{count, plural, one {# day ago} other {# days ago}}"
+  },
+  "auth": {
+    "login": {
+      "pageTitle": "Sign in - Humano SISU",
+      "metaDescription": "Sign in to your Humano SISU account",
+      "title": "Sign in",
+      "email": "Email",
+      "password": "Password",
+      "passwordPlaceholder": "Your password",
+      "submitting": "Signing in...",
+      "submit": "Sign in",
+      "forgot": "Forgot your password?",
+      "signup": "Don't have an account? Create one here",
+      "secure": "Secure session. You can revoke access anytime.",
+      "error": "We couldn't sign you in",
+      "subtitle": "Sign in to your existing account",
+      "authenticating": "Signing in...",
+      "emailPlaceholder": "you@company.com",
+      "logoAlt": "Humano SISU logo"
+    },
+    "forgot": {
+      "pageTitle": "Reset password - Humano SISU",
+      "invalidEmail": "Enter a valid email.",
+      "tooMany": "Too many attempts. Try again later.",
+      "failed": "We couldn't process the request.",
+      "sent": "If an account exists for that email, you'll get a link to reset your password.",
+      "network": "Connection error. Try again.",
+      "sending": "Sending…",
+      "submit": "Send link",
+      "back": "Back to sign in",
+      "title": "Reset your password",
+      "subtitle": "We'll send you a link if there's an account with that email.",
+      "email": "Email",
+      "emailPlaceholder": "you@company.com"
     }
   }
 }
