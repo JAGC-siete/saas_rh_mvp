@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react'
+import { useTranslations } from 'next-intl'
 import dynamic from 'next/dynamic'
 import { useRouter } from 'next/router'
 import { useLeave } from '../lib/hooks/useLeave'
@@ -32,14 +33,10 @@ const LeaveCalendar = dynamic(() => import('./leave/LeaveCalendar'), {
 
 type LeaveView = 'dashboard' | 'calendar' | 'list' | 'form'
 
-const VIEW_LABELS: Record<LeaveView, string> = {
-  dashboard: 'Resumen',
-  calendar: 'Calendario',
-  list: 'Listado',
-  form: 'Nueva solicitud',
-}
+const VIEWS: LeaveView[] = ['dashboard', 'calendar', 'list', 'form']
 
 export default function LeaveManager() {
+  const tm = useTranslations('leave.manager')
   const { addNotification } = useNotificationContext()
   const router = useRouter()
   const { userProfile } = useAuth()
@@ -105,11 +102,11 @@ export default function LeaveManager() {
       try {
         const res = await fetch(`/api/leave/${requestId}?attendance_summary=1`)
         const json = await res.json()
-        if (!res.ok) throw new Error(json.message || json.error || 'Error al cargar resumen')
+        if (!res.ok) throw new Error(json.message || json.error || tm('summaryError'))
         setSummaryData(json.data as LeaveAttendanceSummaryPayload)
       } catch (e) {
-        const msg = e instanceof Error ? e.message : 'Error al cargar resumen'
-        addNotification({ type: 'error', title: 'Asistencia', message: msg })
+        const msg = e instanceof Error ? e.message : tm('summaryError')
+        addNotification({ type: 'error', title: tm('attendanceTitle'), message: msg })
         setSummaryExpandedId(null)
         setSummaryData(null)
       } finally {
@@ -133,13 +130,13 @@ export default function LeaveManager() {
         attachment: attachment || undefined,
       })
       await fetchLeaveRequests()
-      addNotification({ type: 'success', title: 'Permiso', message: 'Solicitud registrada correctamente.' })
+      addNotification({ type: 'success', title: tm('leaveTitle'), message: tm('created') })
       goView('list')
     } catch (e) {
       addNotification({
         type: 'error',
-        title: 'Permiso',
-        message: e instanceof Error ? e.message : 'No se pudo registrar la solicitud.',
+        title: tm('leaveTitle'),
+        message: e instanceof Error ? e.message : tm('createError'),
       })
       throw e
     }
@@ -149,7 +146,7 @@ export default function LeaveManager() {
     return (
       <div className="flex flex-col justify-center items-center gap-3 py-16" role="status" aria-live="polite">
         <div className="h-10 w-10 animate-spin rounded-full border-2 border-white/20 border-t-brand-500" aria-hidden />
-        <p className="text-sm text-gray-400">Cargando solicitudes…</p>
+        <p className="text-sm text-gray-400">{tm('loading')}</p>
       </div>
     )
   }
@@ -158,10 +155,10 @@ export default function LeaveManager() {
     <div className="space-y-6 w-full">
       <div
         role="tablist"
-        aria-label="Vistas del módulo de permisos"
+        aria-label={tm('viewsAria')}
         className="flex flex-wrap gap-2 border-b border-white/10 pb-4"
       >
-        {(Object.keys(VIEW_LABELS) as LeaveView[]).map((v) => (
+        {VIEWS.map((v) => (
           <Button
             key={v}
             type="button"
@@ -174,7 +171,7 @@ export default function LeaveManager() {
             )}
             onClick={() => goView(v)}
           >
-            {VIEW_LABELS[v]}
+            {tm(`views.${v}`)}
           </Button>
         ))}
       </div>

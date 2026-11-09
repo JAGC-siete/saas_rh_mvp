@@ -1,7 +1,9 @@
 import React, { useCallback, useMemo, useState } from 'react'
+import { useLocale } from 'next-intl'
 import { Calendar, dateFnsLocalizer, Views, type View } from 'react-big-calendar'
 import { format, getDay, startOfWeek as dfStartOfWeek } from 'date-fns'
-import { es } from 'date-fns/locale'
+import { enUS, es } from 'date-fns/locale'
+import { useLeaveText } from './useLeaveText'
 import type { LeaveRequest, LeaveType } from '../../lib/types/leave'
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card'
 import { Button } from '../ui/button'
@@ -10,7 +12,6 @@ import {
   displayEmployeeName,
   getLeaveTypeName,
   parseLocalDateYmd,
-  statusLabelEs,
 } from './leaveUtils'
 import 'react-big-calendar/lib/css/react-big-calendar.css'
 
@@ -19,7 +20,7 @@ const localizer = dateFnsLocalizer({
   startOfWeek: (d: Date, options?: { locale?: typeof es }) =>
     dfStartOfWeek(d, { weekStartsOn: 1, locale: options?.locale ?? es }),
   getDay,
-  locales: { es },
+  locales: { es, en: enUS },
 })
 
 export type CalendarLeaveEvent = {
@@ -31,17 +32,21 @@ export type CalendarLeaveEvent = {
   resource: LeaveRequest
 }
 
-function requestsToEvents(requests: LeaveRequest[], leaveTypes: LeaveType[]): CalendarLeaveEvent[] {
+function requestsToEvents(
+  requests: LeaveRequest[],
+  leaveTypes: LeaveType[],
+  labels: { typeName: (r: LeaveRequest, types: LeaveType[]) => string; statusLetter: (status: string) => string }
+): CalendarLeaveEvent[] {
   return requests.map((r) => {
     const start = parseLocalDateYmd(r.start_date)
     const last = parseLocalDateYmd(r.end_date)
     const endExclusive = new Date(last.getFullYear(), last.getMonth(), last.getDate() + 1)
     const name = displayEmployeeName(r)
-    const typeName = getLeaveTypeName(r, leaveTypes)
-    const st = r.status === 'pending' ? 'P' : r.status === 'approved' ? 'A' : 'R'
+    const leaveTypeName = labels.typeName(r, leaveTypes)
+    const st = labels.statusLetter(r.status)
     return {
       id: r.id,
-      title: `[${st}] ${name} · ${typeName}`,
+      title: `[${st}] ${name} · ${leaveTypeName}`,
       start,
       end: endExclusive,
       allDay: true,
@@ -65,6 +70,8 @@ export default function LeaveCalendar({
   onFilterTextChange,
   className,
 }: LeaveCalendarProps) {
+  const { t, status, typeName } = useLeaveText()
+  const locale = useLocale()
   const [view, setView] = useState<View>(Views.MONTH)
   const [date, setDate] = useState(new Date())
 
@@ -79,7 +86,17 @@ export default function LeaveCalendar({
     })
   }, [leaveRequests, leaveTypes, filterText])
 
-  const events = useMemo(() => requestsToEvents(filtered, leaveTypes), [filtered, leaveTypes])
+  const statusLetter = (s: string) =>
+    s === 'pending'
+      ? t('calendar.statusLetter.pending')
+      : s === 'approved'
+        ? t('calendar.statusLetter.approved')
+        : t('calendar.statusLetter.rejected')
+  const events = useMemo(
+    () => requestsToEvents(filtered, leaveTypes, { typeName, statusLetter }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- labels only change with the locale (t)
+    [filtered, leaveTypes, t]
+  )
 
   const eventPropGetter = useCallback((event: CalendarLeaveEvent) => {
     const r = event.resource
@@ -103,7 +120,7 @@ export default function LeaveCalendar({
       event: ({ event }: { event: CalendarLeaveEvent }) => {
         const r = event.resource
         return (
-          <span title={`${displayEmployeeName(r)} · ${getLeaveTypeName(r, leaveTypes)} · ${statusLabelEs(r.status)}`}>
+          <span title={`${displayEmployeeName(r)} · ${typeName(r, leaveTypes)} · ${status(r.status)}`}>
             {event.title}
           </span>
         )
@@ -123,7 +140,7 @@ export default function LeaveCalendar({
             className={view !== Views.MONTH ? 'bg-white/5 border-white/10 text-gray-300' : ''}
             onClick={() => setView(Views.MONTH)}
           >
-            Mes
+            {t('calendar.month')}
           </Button>
           <Button
             type="button"
@@ -132,19 +149,19 @@ export default function LeaveCalendar({
             className={view !== Views.WEEK ? 'bg-white/5 border-white/10 text-gray-300' : ''}
             onClick={() => setView(Views.WEEK)}
           >
-            Semana
+            {t('calendar.week')}
           </Button>
         </div>
         <div className="flex flex-col gap-1 min-w-[12rem] flex-1 max-w-md">
           <label htmlFor="leave-cal-filter" className="text-xs text-gray-400">
-            Filtrar por empleado o tipo
+            {t('calendar.filter')}
           </label>
           <input
             id="leave-cal-filter"
             type="search"
             value={filterText}
             onChange={(e) => onFilterTextChange(e.target.value)}
-            placeholder="Nombre, DNI o tipo…"
+            placeholder={t('calendar.filterPlaceholder')}
             className="w-full px-3 py-2 rounded-lg border border-white/20 bg-white/10 text-white text-sm placeholder:text-gray-500"
           />
         </div>
@@ -152,15 +169,26 @@ export default function LeaveCalendar({
 
       <Card variant="liquid" className="border-white/10 overflow-hidden">
         <CardHeader className="pb-2 border-b border-white/10">
-          <CardTitle className="text-white text-base">Quién está fuera</CardTitle>
+          <CardTitle className="text-white text-base">{t('calendar.whoIsOut')}</CardTitle>
           <p className="text-xs text-gray-400 font-normal">
-            Leyenda: P pendiente · A aprobado · R rechazado. Color según tipo de permiso.
+            {t('calendar.legend')}
           </p>
         </CardHeader>
         <CardContent className="p-2 md:p-4 leave-rbc-wrap">
           <div className="h-[560px] text-gray-900 dark:text-gray-100 leave-rbc-inner">
             <Calendar
-              culture="es"
+              culture={locale === 'en' ? 'en' : 'es'}
+              messages={{
+                today: t('calendar.messages.today'),
+                previous: t('calendar.messages.previous'),
+                next: t('calendar.messages.next'),
+                month: t('calendar.messages.month'),
+                week: t('calendar.messages.week'),
+                day: t('calendar.messages.day'),
+                agenda: t('calendar.messages.agenda'),
+                noEventsInRange: t('calendar.messages.noEventsInRange'),
+                showMore: (count: number) => t('calendar.messages.showMore', { count }),
+              }}
               localizer={localizer}
               events={events}
               startAccessor="start"

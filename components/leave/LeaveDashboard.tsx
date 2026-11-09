@@ -1,3 +1,4 @@
+import { useTranslations } from 'next-intl'
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import {
   ResponsiveContainer,
@@ -53,6 +54,7 @@ export default function LeaveDashboard({
   leaveTypes,
   className,
 }: LeaveDashboardProps) {
+  const td = useTranslations('leave.dashboard')
   const { addNotification } = useNotificationContext()
   const [range, setRange] = useState<LeaveDashboardRange>('30d')
   const now = useMemo(() => new Date(), [])
@@ -85,8 +87,8 @@ export default function LeaveDashboard({
     if (pending > 0 && pending !== last) {
       addNotification({
         type: 'warning',
-        title: 'Permisos pendientes',
-        message: `Hay ${pending} solicitud${pending === 1 ? '' : 'es'} esperando aprobación.`,
+        title: td('pendingTitle'),
+        message: td('pendingMessage', { count: pending }),
         duration: 8000,
       })
       lastNotifiedPendingRef.current = pending
@@ -94,7 +96,7 @@ export default function LeaveDashboard({
     if (pending === 0) {
       lastNotifiedPendingRef.current = 0
     }
-  }, [kpis.pending, addNotification])
+  }, [kpis.pending, addNotification, td])
 
   const byType = useMemo(() => {
     const map = new Map<string, { name: string; value: number; color: string }>()
@@ -102,7 +104,7 @@ export default function LeaveDashboard({
       const name =
         r.leave_type?.name ||
         leaveTypes.find((t) => t.id === r.leave_type_id)?.name ||
-        'Otro'
+        td('other')
       const color =
         r.leave_type?.color ||
         leaveTypes.find((t) => t.id === r.leave_type_id)?.color ||
@@ -112,7 +114,7 @@ export default function LeaveDashboard({
       map.set(r.leave_type_id, prev)
     }
     return Array.from(map.values()).sort((a, b) => b.value - a.value)
-  }, [filtered, leaveTypes])
+  }, [filtered, leaveTypes, td])
 
   const byWeek = useMemo(() => {
     const buckets = new Map<string, number>()
@@ -136,18 +138,18 @@ export default function LeaveDashboard({
   }, [filtered])
 
   const rangeLabel =
-    range === '30d' ? 'Últimos 30 días' : range === '90d' ? 'Últimos 90 días' : 'Todo el historial'
+    range === '30d' ? td('last30') : range === '90d' ? td('last90') : td('allHistory')
 
   return (
     <div className={cn('space-y-4', className)}>
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h3 className="text-lg font-semibold text-white">Resumen</h3>
-        <div className="flex flex-wrap gap-2" role="group" aria-label="Rango de fechas">
+        <h3 className="text-lg font-semibold text-white">{td('title')}</h3>
+        <div className="flex flex-wrap gap-2" role="group" aria-label={td('rangeAria')}>
           {(
             [
-              ['30d', '30 días'],
-              ['90d', '90 días'],
-              ['all', 'Todo'],
+              ['30d', td('range30')],
+              ['90d', td('range90')],
+              ['all', td('rangeAll')],
             ] as const
           ).map(([key, label]) => (
             <Button
@@ -168,11 +170,11 @@ export default function LeaveDashboard({
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <KpiCard label="Pendientes" value={kpis.pending} accent="amber" badge={kpis.pending > 0 ? kpis.pending : undefined} />
-        <KpiCard label="Aprobadas" value={kpis.approved} accent="emerald" />
-        <KpiCard label="Rechazadas" value={kpis.rejected} accent="rose" />
+        <KpiCard label={td('pending')} value={kpis.pending} accent="amber" badge={kpis.pending > 0 ? kpis.pending : undefined} />
+        <KpiCard label={td('approved')} value={kpis.approved} accent="emerald" />
+        <KpiCard label={td('rejected')} value={kpis.rejected} accent="rose" />
         <KpiCard
-          label="Días aprobados"
+          label={td('approvedDays')}
           value={kpis.daysApproved % 1 === 0 ? String(kpis.daysApproved) : kpis.daysApproved.toFixed(1)}
           sub={rangeLabel}
           accent="sky"
@@ -182,12 +184,12 @@ export default function LeaveDashboard({
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card variant="liquid" className="border-white/10">
           <CardHeader className="pb-2">
-            <CardTitle className="text-white text-base">Por tipo de permiso</CardTitle>
+            <CardTitle className="text-white text-base">{td('byType')}</CardTitle>
             <p className="text-xs text-gray-400 font-normal">Cantidad de solicitudes · {rangeLabel}</p>
           </CardHeader>
           <CardContent className="h-[260px]">
             {byType.length === 0 ? (
-              <EmptyChart message="Sin solicitudes en el rango" />
+              <EmptyChart message={td('noRequests')} />
             ) : (
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -208,7 +210,7 @@ export default function LeaveDashboard({
                   <Tooltip
                     formatter={(value) => [
                       typeof value === 'number' ? value : Number(value) || 0,
-                      'Solicitudes',
+                      td('requests'),
                     ]}
                     contentStyle={{
                       backgroundColor: '#1e293b',
@@ -225,12 +227,12 @@ export default function LeaveDashboard({
 
         <Card variant="liquid" className="border-white/10">
           <CardHeader className="pb-2">
-            <CardTitle className="text-white text-base">Solicitudes por semana</CardTitle>
-            <p className="text-xs text-gray-400 font-normal">Alta según fecha de creación · últimas barras</p>
+            <CardTitle className="text-white text-base">{td('perWeek')}</CardTitle>
+            <p className="text-xs text-gray-400 font-normal">{td('perWeekHint')}</p>
           </CardHeader>
           <CardContent className="h-[260px]">
             {byWeek.length === 0 ? (
-              <EmptyChart message="Sin datos para graficar" />
+              <EmptyChart message={td('noChartData')} />
             ) : (
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={byWeek} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
@@ -240,7 +242,7 @@ export default function LeaveDashboard({
                   <Tooltip
                     formatter={(value) => [
                       typeof value === 'number' ? value : Number(value) || 0,
-                      'Solicitudes',
+                      td('requests'),
                     ]}
                     contentStyle={{
                       backgroundColor: '#1e293b',
