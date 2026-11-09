@@ -1,3 +1,4 @@
+import { useTranslations } from 'next-intl'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { createPortal } from 'react-dom'
@@ -88,6 +89,8 @@ export default function EmployeeDrawer({
   stats,
   schedule,
 }: EmployeeDrawerProps) {
+  const ta = useTranslations('attendance.drawer')
+  const tc = useTranslations('common')
   const [historyTab, setHistoryTab] = useState<'consolidated' | 'device'>('consolidated')
   const dialogRef = useDialogFocus<HTMLElement>(open, onClose)
 
@@ -123,7 +126,7 @@ export default function EmployeeDrawer({
             tabIndex={-1}
             role="dialog"
             aria-modal="true"
-            aria-label={`Detalle de ${name}`}
+            aria-label={ta('aria', { name })}
             initial={{ x: '100%' }}
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
@@ -136,14 +139,14 @@ export default function EmployeeDrawer({
                 <div>
                   <h2 className="text-2xl font-bold text-white mb-1">{name}</h2>
                   {employeeData?.employee_code && (
-                    <p className="text-sm text-gray-400">Código: {employeeData.employee_code}</p>
+                    <p className="text-sm text-gray-400">{ta('code', { code: employeeData.employee_code })}</p>
                   )}
                 </div>
                 <button
                   type="button"
                   onClick={onClose}
                   className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
-                  aria-label="Cerrar"
+                  aria-label={tc('close')}
                 >
                   <XMarkIcon className="h-6 w-6" />
                 </button>
@@ -152,7 +155,7 @@ export default function EmployeeDrawer({
 
             {loading ? (
               <div className="flex-1 p-6 space-y-4" aria-busy="true" aria-live="polite">
-                <span className="sr-only">Cargando detalle…</span>
+                <span className="sr-only">{ta('loading')}</span>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {Array.from({ length: 4 }).map((_, i) => (
                     <div key={i} className="h-[74px] rounded-xl bg-white/5 border border-white/10 animate-pulse" />
@@ -169,7 +172,7 @@ export default function EmployeeDrawer({
                     <div className="flex items-center gap-3">
                       <BriefcaseIcon className="h-5 w-5 text-blue-400" />
                       <div>
-                        <p className="text-xs text-gray-500">Departamento</p>
+                        <p className="text-xs text-gray-500">{ta('department')}</p>
                         <p className="text-white font-medium text-sm">{department.name}</p>
                       </div>
                     </div>
@@ -180,7 +183,7 @@ export default function EmployeeDrawer({
                     <div className="flex items-center gap-3">
                       <IdentificationIcon className="h-5 w-5 text-purple-400" />
                       <div>
-                        <p className="text-xs text-gray-500">Rol</p>
+                        <p className="text-xs text-gray-500">{ta('role')}</p>
                         <p className="text-white font-medium text-sm">{employeeData.role}</p>
                       </div>
                     </div>
@@ -191,7 +194,7 @@ export default function EmployeeDrawer({
                     <div className="flex items-center gap-3">
                       <ClockIcon className="h-5 w-5 text-emerald-400" />
                       <div>
-                        <p className="text-xs text-gray-500">Horario esperado</p>
+                        <p className="text-xs text-gray-500">{ta('expectedSchedule')}</p>
                         <p className="text-white font-medium text-sm">{shortTime(schedule.expectedCheckIn)}</p>
                       </div>
                     </div>
@@ -202,9 +205,9 @@ export default function EmployeeDrawer({
                     <div className="flex items-center gap-3">
                       <ChartBarIcon className="h-5 w-5 text-amber-400" />
                       <div>
-                        <p className="text-xs text-gray-500">Asistencia últimos 30 días</p>
+                        <p className="text-xs text-gray-500">{ta('attendance30')}</p>
                         <p className="text-white font-medium text-sm">
-                          {stats.attendanceAverage} · {stats.presentDays}/{stats.totalDays} días
+                          {ta('days', { avg: stats.attendanceAverage, present: stats.presentDays, total: stats.totalDays })}
                         </p>
                       </div>
                     </div>
@@ -216,17 +219,17 @@ export default function EmployeeDrawer({
                 <div className="bg-white/5 rounded-xl p-4 border border-white/10 text-sm">
                   <h3 className="text-white font-medium mb-2 flex items-center gap-2">
                     <ClockIcon className="h-4 w-4 text-emerald-400" />
-                    Horario semanal
+                    {ta('weekly')}
                   </h3>
                   <div className="grid grid-cols-1 gap-1 text-gray-400">
                     {[
-                      ['Lun', workSchedule.monday_start, workSchedule.monday_end],
-                      ['Mar', workSchedule.tuesday_start, workSchedule.tuesday_end],
-                      ['Mié', workSchedule.wednesday_start, workSchedule.wednesday_end],
-                      ['Jue', workSchedule.thursday_start, workSchedule.thursday_end],
-                      ['Vie', workSchedule.friday_start, workSchedule.friday_end],
-                      ['Sáb', workSchedule.saturday_start, workSchedule.saturday_end],
-                      ['Dom', workSchedule.sunday_start, workSchedule.sunday_end],
+                      [ta('weekdays.mon'), workSchedule.monday_start, workSchedule.monday_end],
+                      [ta('weekdays.tue'), workSchedule.tuesday_start, workSchedule.tuesday_end],
+                      [ta('weekdays.wed'), workSchedule.wednesday_start, workSchedule.wednesday_end],
+                      [ta('weekdays.thu'), workSchedule.thursday_start, workSchedule.thursday_end],
+                      [ta('weekdays.fri'), workSchedule.friday_start, workSchedule.friday_end],
+                      [ta('weekdays.sat'), workSchedule.saturday_start, workSchedule.saturday_end],
+                      [ta('weekdays.sun'), workSchedule.sunday_start, workSchedule.sunday_end],
                     ]
                       .filter(([, s]) => s)
                       .map(([day, start, end]) => (
@@ -246,7 +249,7 @@ export default function EmployeeDrawer({
                 <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
                   <h3 className="text-base font-semibold text-white flex items-center gap-2">
                     <CalendarDaysIcon className="h-5 w-5 text-gray-400" />
-                    Historial{periodLabel ? ` ${periodLabel}` : ''}
+                    {periodLabel ? ta('historyPeriod', { period: periodLabel }) : ta('history')}
                   </h3>
                   {rawPunches.length > 0 && (
                     <div className="flex rounded-lg border border-white/10 overflow-hidden text-xs">
@@ -257,7 +260,7 @@ export default function EmployeeDrawer({
                           historyTab === 'consolidated' ? 'bg-brand-600 text-white' : 'text-gray-400 hover:bg-white/5'
                         }`}
                       >
-                        Consolidado
+                        {ta('consolidated')}
                       </button>
                       <button
                         type="button"
@@ -266,7 +269,7 @@ export default function EmployeeDrawer({
                           historyTab === 'device' ? 'bg-brand-600 text-white' : 'text-gray-400 hover:bg-white/5'
                         }`}
                       >
-                        Reloj ({rawPunches.length})
+                        {ta('device', { count: rawPunches.length })}
                       </button>
                     </div>
                   )}
@@ -279,14 +282,14 @@ export default function EmployeeDrawer({
                       <div key={p.id} className="relative flex gap-4">
                         <div className="absolute -left-6 top-1 w-3 h-3 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.5)] ring-4 ring-gray-900" />
                         <div className="flex-1 pb-2">
-                          <p className="text-white text-sm font-medium">Marca biométrica</p>
+                          <p className="text-white text-sm font-medium">{ta('biometricPunch')}</p>
                           <p className="text-xs text-gray-400">{formatDateTimeForHonduras(p.ts_utc)}</p>
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : events.length === 0 ? (
-                  <p className="text-gray-500 text-sm text-center py-8">Sin registros en este período</p>
+                  <p className="text-gray-500 text-sm text-center py-8">{ta('noRecords')}</p>
                 ) : (
                   <div className="relative pl-6 space-y-1">
                     <div className="absolute left-[11px] top-3 bottom-3 w-px bg-gradient-to-b from-brand-500/40 via-white/10 to-transparent" aria-hidden />
@@ -350,14 +353,14 @@ export default function EmployeeDrawer({
                   className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-brand-600/90 hover:bg-brand-500 text-white text-sm font-medium transition-colors"
                 >
                   <PencilSquareIcon className="h-4 w-4" />
-                  Corregir
+                  {ta('correct')}
                 </Link>
                 <Link
                   href="/app/attendance/daily-close"
                   className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-white/10 hover:bg-white/15 text-white text-sm font-medium border border-white/15 transition-colors"
                 >
                   <ClockIcon className="h-4 w-4" />
-                  Cierre del día
+                  {ta('dailyClose')}
                 </Link>
               </div>
             </div>

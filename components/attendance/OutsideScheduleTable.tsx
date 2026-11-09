@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { motion, AnimatePresence, LayoutGroup } from 'framer-motion'
 import { formatTimeDisplay } from '../../lib/timezone'
 import { ClockIcon, ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline'
@@ -33,18 +34,20 @@ function timeOrDash(value: string | null | undefined): string {
   return formatTimeDisplay(value)
 }
 
-function gapLabel(flags?: AttendanceListFlags): string {
-  if (flags?.horario_no_detectado) return 'Horario no detectado'
-  if (flags?.gap_minutos != null) return `${flags.gap_minutos} min del horario`
-  return flags?.razon ?? 'Fuera de horario'
-}
-
 export default function OutsideScheduleTable({
   data,
   title,
   onSelect,
   pageSize = 10,
 }: OutsideScheduleTableProps) {
+  const ta = useTranslations('attendance')
+  const tc = useTranslations('common')
+  // `razon` comes from the server as free text and is shown as is.
+  const gapLabel = (flags?: AttendanceListFlags): string => {
+    if (flags?.horario_no_detectado) return ta('outside.undetected')
+    if (flags?.gap_minutos != null) return ta('outside.gap', { minutes: flags.gap_minutos })
+    return flags?.razon ?? ta('outside.default')
+  }
   const [page, setPage] = useState(1)
   const [expandedId, setExpandedId] = useState<string | null>(null)
 
@@ -61,7 +64,7 @@ export default function OutsideScheduleTable({
       {data.length === 0 ? (
         <div className="text-center py-12">
           <ClockIcon className="h-10 w-10 mx-auto text-gray-600 mb-3" aria-hidden />
-          <p className="text-gray-400 text-sm">Nadie marcó fuera de horario</p>
+          <p className="text-gray-400 text-sm">{ta('outside.nobody')}</p>
         </div>
       ) : (
         <LayoutGroup>
@@ -128,7 +131,7 @@ export default function OutsideScheduleTable({
                               }}
                               className="p-1.5 rounded-lg hover:bg-white/10 text-gray-500 hover:text-white transition-colors"
                               aria-expanded={isExpanded}
-                              title={isExpanded ? 'Ocultar detalle' : 'Ver detalle'}
+                              title={isExpanded ? ta('outside.hideDetail') : ta('outside.showDetail')}
                             >
                               {isExpanded ? (
                                 <ChevronUpIcon className="h-4 w-4" />
@@ -149,20 +152,20 @@ export default function OutsideScheduleTable({
                             >
                               <div className="mt-3 pt-3 border-t border-white/5 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
                                 <div className="flex justify-between gap-2">
-                                  <span className="text-gray-500">Entrada</span>
+                                  <span className="text-gray-500">{ta('checkIn')}</span>
                                   <span className="text-gray-200">{timeOrDash(checkIn)}</span>
                                 </div>
                                 <div className="flex justify-between gap-2">
-                                  <span className="text-gray-500">Salida</span>
+                                  <span className="text-gray-500">{ta('checkOut')}</span>
                                   <span className="text-gray-200">{timeOrDash(row.check_out)}</span>
                                 </div>
                                 <div className="flex justify-between gap-2 col-span-2">
-                                  <span className="text-gray-500">Desviación</span>
+                                  <span className="text-gray-500">{ta('deviation')}</span>
                                   <span className={textClass}>{detail}</span>
                                 </div>
                                 {row.date && (
                                   <div className="flex justify-between gap-2 col-span-2">
-                                    <span className="text-gray-500">Fecha</span>
+                                    <span className="text-gray-500">{ta('date')}</span>
                                     <span className="text-gray-200">{row.date}</span>
                                   </div>
                                 )}
@@ -183,7 +186,7 @@ export default function OutsideScheduleTable({
       {data.length > pageSize && (
         <div className="flex items-center justify-between pt-2">
           <span className="text-xs text-gray-500">
-            Página {page} de {totalPages}
+            {ta('pageRange', { page, pages: totalPages })}
           </span>
           <div className="flex gap-2">
             <button
@@ -192,7 +195,7 @@ export default function OutsideScheduleTable({
               disabled={page <= 1}
               className="px-3 py-1 rounded-lg bg-white/5 text-xs text-gray-300 hover:bg-white/10 disabled:opacity-40"
             >
-              Anterior
+              {tc('previous')}
             </button>
             <button
               type="button"
@@ -200,7 +203,7 @@ export default function OutsideScheduleTable({
               disabled={page >= totalPages}
               className="px-3 py-1 rounded-lg bg-white/5 text-xs text-gray-300 hover:bg-white/10 disabled:opacity-40"
             >
-              Siguiente
+              {tc('next')}
             </button>
           </div>
         </div>

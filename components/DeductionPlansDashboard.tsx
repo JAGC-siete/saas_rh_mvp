@@ -1,6 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useLocale, useTranslations } from 'next-intl'
+import { intlLocale } from '../lib/i18n/app/locale'
 import { ChevronDown, ChevronUp } from 'lucide-react'
 import { formatDateOnlyForHonduras } from '../lib/timezone'
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
@@ -30,6 +32,8 @@ interface DeductionPlansDashboardProps {
 }
 
 export default function DeductionPlansDashboard({ companyId, className = '' }: DeductionPlansDashboardProps) {
+  const tp = useTranslations('payroll.plans')
+  const locale = intlLocale(useLocale())
   const { format } = useCompanyMoney()
   const [plans, setPlans] = useState<DeductionPlan[]>([])
   const [loading, setLoading] = useState(true)
@@ -41,7 +45,7 @@ export default function DeductionPlansDashboard({ companyId, className = '' }: D
       try {
         setLoading(true)
         const res = await fetch(`/api/payroll/deduction-plans?company_id=${encodeURIComponent(companyId)}`)
-        if (!res.ok) throw new Error('Error cargando planes')
+        if (!res.ok) throw new Error(tp('loadError'))
         const data = await res.json()
         setPlans(data.plans || [])
       } catch {
@@ -54,7 +58,7 @@ export default function DeductionPlansDashboard({ companyId, className = '' }: D
   }, [companyId])
 
   const formatCurrency = (n: number) => format(n)
-  const formatDate = (d: string | null) => d ? (/^\d{4}-\d{2}-\d{2}$/.test(d) ? formatDateOnlyForHonduras(d) : new Date(d).toLocaleDateString('es-HN')) : '-'
+  const formatDate = (d: string | null) => d ? (/^\d{4}-\d{2}-\d{2}$/.test(d) ? formatDateOnlyForHonduras(d) : new Date(d).toLocaleDateString(locale)) : '-'
 
   const formatFieldKey = (key: string) => {
     return key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
@@ -85,7 +89,7 @@ export default function DeductionPlansDashboard({ companyId, className = '' }: D
         <div className="flex items-center justify-between">
           <CardTitle className="text-xl font-semibold text-white flex items-center gap-2">
             <Icon name="chart" className="h-5 w-5 text-blue-300" />
-            Planes de deducción activos ({plans.length})
+            {tp('title', { count: plans.length })}
           </CardTitle>
           {expanded ? (
             <ChevronUp className="h-5 w-5 text-gray-400" />
@@ -100,12 +104,12 @@ export default function DeductionPlansDashboard({ companyId, className = '' }: D
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-white/20 text-left text-gray-300 bg-white/5">
-                  <th className="pb-3 pt-2 px-4 font-semibold text-white/90">Empleado</th>
-                  <th className="pb-3 pt-2 px-4 font-semibold text-white/90">Campo</th>
-                  <th className="pb-3 pt-2 px-4 text-right font-semibold text-white/90">Monto total</th>
-                  <th className="pb-3 pt-2 px-4 text-center font-semibold text-white/90">Plazos</th>
-                  <th className="pb-3 pt-2 px-4 text-right font-semibold text-white/90">Pendiente</th>
-                  <th className="pb-3 pt-2 px-4 font-semibold text-white/90">Inicio</th>
+                  <th className="pb-3 pt-2 px-4 font-semibold text-white/90">{tp('cols.employee')}</th>
+                  <th className="pb-3 pt-2 px-4 font-semibold text-white/90">{tp('cols.field')}</th>
+                  <th className="pb-3 pt-2 px-4 text-right font-semibold text-white/90">{tp('cols.total')}</th>
+                  <th className="pb-3 pt-2 px-4 text-center font-semibold text-white/90">{tp('cols.installments')}</th>
+                  <th className="pb-3 pt-2 px-4 text-right font-semibold text-white/90">{tp('cols.pending')}</th>
+                  <th className="pb-3 pt-2 px-4 font-semibold text-white/90">{tp('cols.start')}</th>
                 </tr>
               </thead>
               <tbody>

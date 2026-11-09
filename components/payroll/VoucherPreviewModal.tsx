@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react'
+import { useTranslations } from 'next-intl'
 import { useCompanyMoney } from '../../lib/hooks/useCompanyMoney'
 import type { VoucherPreviewData } from '../../lib/payroll/voucher-preview'
 import { Button } from '../ui/button'
@@ -69,6 +70,8 @@ export default function VoucherPreviewModal({
   onClose,
   onDownload,
 }: VoucherPreviewModalProps) {
+  const tv = useTranslations('payroll.preview')
+  const tc = useTranslations('common')
   const { format } = useCompanyMoney()
   useEffect(() => {
     if (!open) return
@@ -97,11 +100,11 @@ export default function VoucherPreviewModal({
         <div className="relative shrink-0 border-b border-brand-500/30 bg-gradient-to-r from-brand-900 via-brand-800 to-indigo-900 px-6 py-5">
           <div className="absolute inset-x-0 bottom-0 h-1 bg-gradient-to-r from-brand-500 to-sky-400" />
           {loading ? (
-            <p className="text-white/80 text-sm">Cargando comprobante…</p>
+            <p className="text-white/80 text-sm">{tv('loadingVoucher')}</p>
           ) : data ? (
             <>
               <p className="text-xs font-semibold uppercase tracking-widest text-brand-200/90">
-                Recibo de nómina
+                {tv('voucherKicker')}
               </p>
               <h2 id="voucher-preview-title" className="mt-1 text-xl font-bold text-white">
                 {data.companyName}
@@ -110,14 +113,14 @@ export default function VoucherPreviewModal({
             </>
           ) : (
             <h2 id="voucher-preview-title" className="text-lg font-semibold text-white">
-              Comprobante de pago
+              {tv('voucherTitle')}
             </h2>
           )}
           <button
             type="button"
             onClick={onClose}
             className="absolute right-4 top-4 rounded-lg p-1.5 text-white/70 hover:bg-white/10 hover:text-white"
-            aria-label="Cerrar"
+            aria-label={tc('close')}
           >
             <Icon name="close" className="h-5 w-5" />
           </button>
@@ -217,8 +220,9 @@ export default function VoucherPreviewModal({
         </div>
 
         <div className="shrink-0 flex flex-wrap items-center justify-end gap-2 border-t border-white/10 bg-slate-900/80 px-6 py-4">
+          <p className="mr-auto text-xs text-gray-400">{tv('docLanguage')}</p>
           <Button type="button" variant="outline" onClick={onClose} className="border-white/20 text-white">
-            Cerrar
+            {tc('close')}
           </Button>
           <Button
             type="button"
@@ -227,7 +231,7 @@ export default function VoucherPreviewModal({
             className="bg-brand-600 hover:bg-brand-700"
           >
             <Icon name="download" className="h-4 w-4 mr-2" />
-            {downloading ? 'Descargando…' : 'Descargar PDF'}
+            {downloading ? tv('downloading') : tv('download')}
           </Button>
         </div>
       </div>

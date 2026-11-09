@@ -1,5 +1,6 @@
 import React, { useMemo, useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
+import { useLeaveText } from './useLeaveText'
 import type {
   LeaveAttendanceSummaryPayload,
   LeaveRequest,
@@ -13,11 +14,8 @@ import {
   attendanceDashboardHref,
   displayEmployeeDni,
   displayEmployeeName,
-  formatDuration,
   getLeaveTypeName,
   getStatusColorClass,
-  statusLabelEs,
-  summaryLabelEs,
 } from './leaveUtils'
 import { cn } from '../../lib/utils'
 
@@ -49,6 +47,7 @@ export default function LeaveRequestsTable({
   summaryData,
   summaryLoading,
 }: LeaveRequestsTableProps) {
+  const { t, status, summary, duration, typeName } = useLeaveText()
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all')
   const [typeFilter, setTypeFilter] = useState<string>('all')
   const [dateFrom, setDateFrom] = useState('')
@@ -169,7 +168,7 @@ export default function LeaveRequestsTable({
             onClick={() => updateLeaveRequest(request.id, { status: 'approved' })}
             className="text-emerald-300 hover:bg-emerald-500/15 hover:text-emerald-200"
           >
-            Aprobar
+            {t('table.approve')}
           </Button>
           <Button
             type="button"
@@ -179,7 +178,7 @@ export default function LeaveRequestsTable({
             onClick={() => updateLeaveRequest(request.id, { status: 'rejected' })}
             className="text-rose-300 hover:bg-rose-500/15 hover:text-rose-200"
           >
-            Rechazar
+            {t('table.reject')}
           </Button>
         </>
       )}
@@ -191,7 +190,7 @@ export default function LeaveRequestsTable({
         onClick={() => deleteLeaveRequest(request.id)}
         className="text-gray-400 hover:bg-white/10 hover:text-rose-300"
       >
-        Eliminar
+        {t('table.delete')}
       </Button>
     </div>
   )
@@ -201,11 +200,11 @@ export default function LeaveRequestsTable({
     return (
       <tr>
         <td colSpan={8} className="px-6 py-4 bg-black/25 border-t border-white/10">
-          {summaryLoading && <p className="text-sm text-gray-300">Cargando asistencia en el rango del permiso…</p>}
+          {summaryLoading && <p className="text-sm text-gray-300">{t('table.loadingSummary')}</p>}
           {!summaryLoading && summaryData && (
             <div className="flex flex-wrap gap-2">
               {summaryData.days.length === 0 ? (
-                <span className="text-gray-400 text-sm">Sin fechas en el rango.</span>
+                <span className="text-gray-400 text-sm">{t('table.noDates')}</span>
               ) : (
                 summaryData.days.map((d) => (
                   <span
@@ -220,7 +219,7 @@ export default function LeaveRequestsTable({
                     title={d.record_status || undefined}
                   >
                     <span className="font-mono">{d.date}</span>
-                    <span>{summaryLabelEs(d.summary)}</span>
+                    <span>{summary(d.summary)}</span>
                   </span>
                 ))
               )}
@@ -237,14 +236,14 @@ export default function LeaveRequestsTable({
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div>
             <CardTitle className="text-white text-lg font-semibold tracking-tight inline-flex items-center gap-2">
-              Solicitudes
+              {t('table.title')}
               {pendingCount > 0 && (
                 <span className="text-xs font-normal rounded-full bg-amber-500/20 text-amber-100 px-2 py-0.5 border border-amber-400/30">
-                  {pendingCount} pendiente{pendingCount !== 1 ? 's' : ''}
+                  {t('table.pendingBadge', { count: pendingCount })}
                 </span>
               )}
             </CardTitle>
-            <p className="text-xs text-gray-400 mt-1 font-normal">Aprobación, rechazo y vínculo con asistencia por fila.</p>
+            <p className="text-xs text-gray-400 mt-1 font-normal">{t('table.subtitle')}</p>
           </div>
           <label className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer select-none">
             <input
@@ -258,7 +257,7 @@ export default function LeaveRequestsTable({
               }}
               className="rounded border-white/30 bg-white/10"
             />
-            Solo pendientes (bandeja)
+            {t('table.pendingOnly')}
           </label>
         </div>
 
@@ -267,7 +266,7 @@ export default function LeaveRequestsTable({
             type="search"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar empleado o DNI…"
+            placeholder={t('table.searchPlaceholder')}
             className="px-3 py-2 rounded-lg border border-white/15 bg-white/5 text-sm text-white placeholder:text-gray-500 min-w-0"
           />
           <select
@@ -281,17 +280,17 @@ export default function LeaveRequestsTable({
             disabled={pendingOnly}
             className="px-3 py-2 rounded-lg border border-white/15 bg-white/5 text-sm text-white disabled:opacity-50"
           >
-            <option value="all">Estado: todos</option>
-            <option value="pending">Pendiente</option>
-            <option value="approved">Aprobado</option>
-            <option value="rejected">Rechazado</option>
+            <option value="all">{t('table.statusAll')}</option>
+            <option value="pending">{t('status.pending')}</option>
+            <option value="approved">{t('status.approved')}</option>
+            <option value="rejected">{t('status.rejected')}</option>
           </select>
           <select
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value)}
             className="px-3 py-2 rounded-lg border border-white/15 bg-white/5 text-sm text-white"
           >
-            <option value="all">Tipo: todos</option>
+            <option value="all">{t('table.typeAll')}</option>
             {leaveTypes.map((t) => (
               <option key={t.id} value={t.id}>
                 {t.name}
@@ -303,14 +302,14 @@ export default function LeaveRequestsTable({
             value={dateFrom}
             onChange={(e) => setDateFrom(e.target.value)}
             className="px-3 py-2 rounded-lg border border-white/15 bg-white/5 text-sm text-white"
-            aria-label="Desde fecha inicio"
+            aria-label={t('table.fromAria')}
           />
           <input
             type="date"
             value={dateTo}
             onChange={(e) => setDateTo(e.target.value)}
             className="px-3 py-2 rounded-lg border border-white/15 bg-white/5 text-sm text-white"
-            aria-label="Hasta fecha fin"
+            aria-label={t('table.toAria')}
           />
           <Button
             type="button"
@@ -326,7 +325,7 @@ export default function LeaveRequestsTable({
               setPendingOnly(false)
             }}
           >
-            Limpiar filtros
+            {t('table.clearFilters')}
           </Button>
         </div>
       </CardHeader>
@@ -336,14 +335,14 @@ export default function LeaveRequestsTable({
           <table className="min-w-full divide-y divide-gray-300/30">
             <thead className="bg-white/10 backdrop-blur-sm">
               <tr>
-                <th className="px-6 py-3 text-left">{thBtn('employee', 'Empleado')}</th>
-                <th className="px-6 py-3 text-left">{thBtn('type', 'Tipo')}</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase">Duración</th>
-                <th className="px-6 py-3 text-left">{thBtn('start', 'Fechas')}</th>
-                <th className="px-6 py-3 text-left">{thBtn('status', 'Estado')}</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase">Archivo</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase">Asistencia</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase">Acciones</th>
+                <th className="px-6 py-3 text-left">{thBtn('employee', t('table.cols.employee'))}</th>
+                <th className="px-6 py-3 text-left">{thBtn('type', t('table.cols.type'))}</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase">{t('table.cols.duration')}</th>
+                <th className="px-6 py-3 text-left">{thBtn('start', t('table.cols.dates'))}</th>
+                <th className="px-6 py-3 text-left">{thBtn('status', t('table.cols.status'))}</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase">{t('table.cols.file')}</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase">{t('table.cols.attendance')}</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase">{t('table.cols.actions')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-300/30">
@@ -355,19 +354,19 @@ export default function LeaveRequestsTable({
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-400/20 text-blue-200 border border-blue-400/30">
-                        {getLeaveTypeName(request, leaveTypes)}
+                        {typeName(request, leaveTypes)}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-white">{formatDuration(request)}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-white">{duration(request)}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
-                      <div>Inicio: {formatDateForHonduras(request.start_date)}</div>
-                      <div>Fin: {formatDateForHonduras(request.end_date)}</div>
+                      <div>{t('table.start', { date: formatDateForHonduras(request.start_date) })}</div>
+                      <div>{t('table.end', { date: formatDateForHonduras(request.end_date) })}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
                         className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColorClass(request.status)}`}
                       >
-                        {statusLabelEs(request.status)}
+                        {status(request.status)}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
@@ -378,10 +377,10 @@ export default function LeaveRequestsTable({
                           rel="noopener noreferrer"
                           className="text-brand-400 font-medium hover:text-brand-300 underline-offset-2 hover:underline"
                         >
-                          Ver archivo
+                          {t('table.viewFile')}
                         </a>
                       ) : (
-                        <span className="text-gray-400">Sin archivo</span>
+                        <span className="text-gray-400">{t('table.noFile')}</span>
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
@@ -391,7 +390,7 @@ export default function LeaveRequestsTable({
                             href={attendanceDashboardHref(request)}
                             className="text-brand-400 font-medium hover:text-brand-300 underline-offset-2 hover:underline"
                           >
-                            Ver en dashboard
+                            {t('table.viewDashboard')}
                           </Link>
                         )}
                         <Button
@@ -400,7 +399,7 @@ export default function LeaveRequestsTable({
                           onClick={() => onAttendanceSummary(request.id)}
                           className="h-auto min-h-0 justify-start p-0 text-sm font-normal"
                         >
-                          {summaryExpandedId === request.id ? 'Ocultar resumen' : 'Resumen días'}
+                          {summaryExpandedId === request.id ? t('table.hideSummary') : t('table.summaryDays')}
                         </Button>
                       </div>
                     </td>
@@ -422,14 +421,14 @@ export default function LeaveRequestsTable({
                 <span
                   className={`shrink-0 self-start inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColorClass(request.status)}`}
                 >
-                  {statusLabelEs(request.status)}
+                  {status(request.status)}
                 </span>
               </div>
               <p className="text-sm text-white">
-                <span className="text-gray-400">Tipo:</span> {getLeaveTypeName(request, leaveTypes)}
+                <span className="text-gray-400">{t('table.typeLabel')}</span> {typeName(request, leaveTypes)}
               </p>
               <p className="text-sm text-white">
-                <span className="text-gray-400">Duración:</span> {formatDuration(request)}
+                <span className="text-gray-400">{t('table.durationLabel')}</span> {duration(request)}
               </p>
               <p className="text-xs text-gray-300">
                 {formatDateForHonduras(request.start_date)} → {formatDateForHonduras(request.end_date)}
@@ -442,21 +441,21 @@ export default function LeaveRequestsTable({
                     rel="noopener noreferrer"
                     className="text-sm text-brand-400 font-medium"
                   >
-                    Ver archivo
+                    {t('table.viewFile')}
                   </a>
                 ) : null}
                 {(request.employee_id || request.employee?.id) && (
                   <Link href={attendanceDashboardHref(request)} className="text-sm text-brand-400 font-medium">
-                    Asistencia
+                    {t('table.attendance')}
                   </Link>
                 )}
                 <Button type="button" variant="link" size="sm" className="text-sm h-auto p-0" onClick={() => onAttendanceSummary(request.id)}>
-                  {summaryExpandedId === request.id ? 'Ocultar resumen' : 'Resumen días'}
+                  {summaryExpandedId === request.id ? t('table.hideSummary') : t('table.summaryDays')}
                 </Button>
               </div>
               {summaryExpandedId === request.id && (
                 <div className="border-t border-white/10 pt-2">
-                  {summaryLoading && <p className="text-xs text-gray-400">Cargando…</p>}
+                  {summaryLoading && <p className="text-xs text-gray-400">{t('table.loading')}</p>}
                   {!summaryLoading && summaryData && (
                     <div className="flex flex-wrap gap-1">
                       {summaryData.days.map((d) => (
@@ -469,7 +468,7 @@ export default function LeaveRequestsTable({
                             d.summary === 'sin_datos' && 'bg-gray-500/15 border-gray-400/30'
                           )}
                         >
-                          {d.date} {summaryLabelEs(d.summary)}
+                          {d.date} {summary(d.summary)}
                         </span>
                       ))}
                     </div>
@@ -483,8 +482,8 @@ export default function LeaveRequestsTable({
 
         {filtered.length === 0 && (
           <div className="text-center py-8">
-            <div className="text-gray-300 text-lg font-medium">No hay solicitudes que coincidan</div>
-            <div className="text-gray-400 text-sm mt-2">Ajuste filtros o cree una nueva solicitud.</div>
+            <div className="text-gray-300 text-lg font-medium">{t('table.noMatches')}</div>
+            <div className="text-gray-400 text-sm mt-2">{t('table.noMatchesHint')}</div>
           </div>
         )}
       </CardContent>

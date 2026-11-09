@@ -1,3 +1,5 @@
+import { useLocale, useTranslations } from 'next-intl'
+import { intlLocale } from '../../lib/i18n/app/locale'
 import { ArrowPathIcon, ArrowTrendingUpIcon } from '@heroicons/react/24/outline'
 import {
   ResponsiveContainer,
@@ -32,6 +34,7 @@ function GlassTooltip({
   payload?: Array<{ value?: number; dataKey?: string; color?: string }>
   label?: string
 }) {
+  const ta = useTranslations('attendance.charts')
   if (!active || !payload?.length) return null
   const attendance = payload.find((p) => p.dataKey === 'attendanceRate')
   const punctuality = payload.find((p) => p.dataKey === 'punctualityRate')
@@ -41,12 +44,12 @@ function GlassTooltip({
       <p className="text-gray-400 text-xs mb-2">{label}</p>
       {attendance != null && (
         <p className="text-emerald-300 font-medium tabular-nums">
-          Asistencia: {Number(attendance.value).toFixed(1)}%
+          {ta('attendanceValue', { value: Number(attendance.value).toFixed(1) })}
         </p>
       )}
       {punctuality != null && (
         <p className="text-brand-300 font-medium tabular-nums mt-0.5">
-          Puntualidad: {Number(punctuality.value).toFixed(1)}%
+          {ta('punctualityValue', { value: Number(punctuality.value).toFixed(1) })}
         </p>
       )}
     </div>
@@ -59,10 +62,13 @@ export default function TrendsChart({
   error = null,
   onRetry,
 }: TrendsChartProps) {
+  const ta = useTranslations('attendance.charts')
+  const tc = useTranslations('common')
+  const locale = intlLocale(useLocale())
   const chartData = trends.map((t) => {
     const dayTotal = t.present + t.late + t.absent
     return {
-      date: parseDateOnlyAsHonduras(t.date).toLocaleDateString('es-HN', {
+      date: parseDateOnlyAsHonduras(t.date).toLocaleDateString(locale, {
         timeZone: HONDURAS_TIMEZONE,
         month: 'short',
         day: 'numeric',
@@ -75,7 +81,7 @@ export default function TrendsChart({
   if (loading) {
     return (
       <div className="h-[260px] rounded-xl animate-pulse flex items-center justify-center">
-        <div className="text-gray-500 text-sm">Cargando tendencias...</div>
+        <div className="text-gray-500 text-sm">{ta('loadingTrends')}</div>
       </div>
     )
   }
@@ -91,7 +97,7 @@ export default function TrendsChart({
             className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white/10 text-sm text-white hover:bg-white/15 border border-white/20"
           >
             <ArrowPathIcon className="h-4 w-4" aria-hidden />
-            Reintentar
+            {tc('retry')}
           </button>
         )}
       </div>
@@ -103,7 +109,7 @@ export default function TrendsChart({
       <div className="h-[260px] flex items-center justify-center">
         <div className="text-center px-4">
           <ArrowTrendingUpIcon className="h-10 w-10 mx-auto text-gray-600 mb-3" aria-hidden />
-          <div className="text-gray-400 text-sm font-medium">Sin datos de tendencias</div>
+          <div className="text-gray-400 text-sm font-medium">{ta('noTrends')}</div>
         </div>
       </div>
     )
@@ -148,11 +154,11 @@ export default function TrendsChart({
       <div className="flex justify-center gap-6 mt-2 text-xs text-gray-500">
         <span className="flex items-center gap-1.5">
           <span className="w-3 h-0.5 bg-emerald-400 rounded-full shadow-[0_0_6px_rgba(52,211,153,0.6)]" />
-          Asistencia
+          {ta('attendance')}
         </span>
         <span className="flex items-center gap-1.5">
           <span className="w-3 h-0.5 bg-brand-400 rounded-full shadow-[0_0_6px_rgba(96,165,250,0.5)]" />
-          Puntualidad
+          {ta('punctuality')}
         </span>
       </div>
     </div>

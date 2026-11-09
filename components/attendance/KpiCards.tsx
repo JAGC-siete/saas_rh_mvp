@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion'
+import { useTranslations } from 'next-intl'
 import {
   CheckCircleIcon,
   XCircleIcon,
@@ -31,6 +32,7 @@ export default function KpiCards({
   activeFilter = 'all',
   onFilterChange,
 }: KpiCardsProps) {
+  const ta = useTranslations('attendance.kpi')
   const items: {
     id: KpiFilter
     label: string
@@ -44,7 +46,7 @@ export default function KpiCards({
   }[] = [
     {
       id: 'presentes',
-      label: 'Presentes',
+      label: ta('present'),
       value: presentes,
       color: 'text-emerald-400',
       bgColor: 'bg-emerald-500/10',
@@ -54,7 +56,7 @@ export default function KpiCards({
     },
     {
       id: 'ausentes',
-      label: 'Ausentes',
+      label: ta('absent'),
       value: ausentes,
       color: 'text-red-400',
       bgColor: 'bg-red-500/10',
@@ -64,7 +66,7 @@ export default function KpiCards({
     },
     {
       id: 'tarde',
-      label: 'Tarde',
+      label: ta('late'),
       value: tarde,
       color: 'text-amber-400',
       bgColor: 'bg-amber-500/10',
@@ -74,7 +76,7 @@ export default function KpiCards({
     },
     {
       id: 'temprano',
-      label: 'Temprano',
+      label: ta('early'),
       value: temprano,
       color: 'text-blue-400',
       bgColor: 'bg-blue-500/10',
@@ -85,7 +87,7 @@ export default function KpiCards({
     ...(permisosPagados > 0
       ? [{
           id: 'all' as KpiFilter,
-          label: 'Permiso pagado',
+          label: ta('paidLeave'),
           value: permisosPagados,
           color: 'text-violet-400',
           bgColor: 'bg-violet-500/10',
@@ -152,7 +154,7 @@ export default function KpiCards({
                   <k.Icon className={`h-7 w-7 ${k.color}`} aria-hidden />
                   {isActive && (
                     <span className="text-[10px] uppercase tracking-wider text-brand-300 font-semibold">
-                      Filtro
+                      {ta('filter')}
                     </span>
                   )}
                 </div>

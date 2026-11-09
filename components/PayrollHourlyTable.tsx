@@ -1,5 +1,6 @@
 // Componente para mostrar tabla de empleados por hora (hourly)
 import React from 'react'
+import { useTranslations } from 'next-intl'
 import { formatCurrency } from '../lib/utils/currency'
 import { statutoryUiLabels } from '../lib/country/display-money'
 import { UnifiedRow } from '../lib/payroll-unified'
@@ -34,6 +35,8 @@ export default function PayrollHourlyTable({
   statutoryDeductions = { ihss: true, rap: true, isr: true },
   countryCode = null,
 }: PayrollHourlyTableProps) {
+  const tr = useTranslations('payroll.rows')
+  const th = useTranslations('payroll.hourly')
   const money = (n: number) => formatCurrency(n, { countryCode })
   const labels = statutoryUiLabels(countryCode)
   const summary = rows.reduce((acc, r) => {
@@ -47,39 +50,39 @@ export default function PayrollHourlyTable({
   return (
     <div className="mb-8">
       <h3 className="text-lg font-semibold text-white mb-4 pb-2 border-b border-white/20">
-        Nómina — Detalle por Empleado (por hora exacta)
+        {th('title')}
       </h3>
       <div className="mb-4 grid grid-cols-4 gap-4">
         <div className="text-center p-3 bg-blue-500/20 rounded-lg border border-blue-500/20">
           <div className="text-lg font-bold text-blue-200">{money(summary.totalBruto)}</div>
-          <div className="text-xs text-blue-200">Total Bruto</div>
+          <div className="text-xs text-blue-200">{tr('totalGross')}</div>
         </div>
         <div className="text-center p-3 bg-red-500/20 rounded-lg border border-red-500/20">
           <div className="text-lg font-bold text-red-200">{money(summary.totalDeducciones)}</div>
-          <div className="text-xs text-red-200">Total Deducciones</div>
+          <div className="text-xs text-red-200">{tr('totalDeductions')}</div>
         </div>
         <div className="text-center p-3 bg-green-500/20 rounded-lg border border-green-500/20">
           <div className="text-lg font-bold text-green-200">{money(summary.totalNeto)}</div>
-          <div className="text-xs text-green-200">Total Neto</div>
+          <div className="text-xs text-green-200">{tr('totalNet')}</div>
         </div>
         <div className="text-center p-3 bg-purple-500/20 rounded-lg border border-purple-500/20">
           <div className="text-lg font-bold text-purple-200">{summary.totalHoras.toFixed(2)}h</div>
-          <div className="text-xs text-purple-200">Total Horas</div>
+          <div className="text-xs text-purple-200">{tr('totalHours')}</div>
         </div>
       </div>
       <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-white/30">
           <thead className="bg-white/20">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Empleado</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Días Trabajados</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Total Horas Trabajadas</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Horas extra (AHC)</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Tarifa por Hora</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Salario Bruto</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Deducciones</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Neto a Pagar</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Acciones</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">{tr('cols.employee')}</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">{tr('cols.daysWorked')}</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">{tr('cols.totalHours')}</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">{tr('cols.overtime')}</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">{tr('cols.hourlyRate')}</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">{tr('cols.gross')}</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">{tr('cols.deductions')}</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">{tr('cols.net')}</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">{tr('cols.actions')}</th>
             </tr>
           </thead>
           <tbody className="bg-transparent divide-y divide-white/20">
@@ -136,8 +139,8 @@ export default function PayrollHourlyTable({
                           onClick={() => onPreviewVoucher(row.line_id || row.employee_id)}
                           disabled={loading || !row.line_id}
                           className="bg-white/10 border-white/30 text-white hover:bg-white/20"
-                          title="Ver comprobante"
-                          aria-label={`Ver comprobante de ${row.name || 'empleado'}`}
+                          title={tr('viewVoucher')}
+                          aria-label={tr('viewVoucherOf', { name: row.name || tr('employee') })}
                         >
                           <Icon name="eye" className="h-4 w-4" />
                         </Button>
@@ -147,8 +150,8 @@ export default function PayrollHourlyTable({
                           onClick={() => onGenerateVoucher(row.line_id || row.employee_id)}
                           disabled={loading || !row.line_id}
                           className="bg-white/10 border-white/30 text-white hover:bg-white/20"
-                          title="Descargar comprobante PDF"
-                          aria-label={`Descargar comprobante PDF de ${row.name || 'empleado'}`}
+                          title={tr('downloadVoucher')}
+                          aria-label={tr('downloadVoucherOf', { name: row.name || tr('employee') })}
                         >
                           <Icon name="download" className="h-4 w-4" />
                         </Button>
@@ -159,8 +162,8 @@ export default function PayrollHourlyTable({
                             onClick={() => onEditCustomFields?.(row.line_id || row.employee_id, (row as any).metadata, row.base_salary || 0, row.employee_id)}
                             disabled={loading}
                             className="bg-white/10 border-white/30 text-white hover:bg-white/20"
-                            title="Editar campos personalizados"
-                            aria-label={`Editar campos personalizados de ${row.name || 'empleado'}`}
+                            title={tr('editCustom')}
+                            aria-label={tr('editCustomOf', { name: row.name || tr('employee') })}
                           >
                             <Icon name="edit" className="h-4 w-4" />
                           </Button>
@@ -171,12 +174,12 @@ export default function PayrollHourlyTable({
                             size="sm"
                             disabled={loading}
                             className="bg-white/10 border-white/30 text-white hover:bg-white/20"
-                            title="Recalcular desde asistencia (quita ediciones manuales de esta línea)"
-                            aria-label={`Recalcular desde asistencia la línea de ${row.name || 'empleado'}`}
+                            title={tr('recalcLine')}
+                            aria-label={tr('recalcLineOf', { name: row.name || tr('employee') })}
                             onClick={async () => {
                               if (
                                 !confirm(
-                                  '¿Recalcular esta línea desde asistencia? Se perderán las ediciones manuales de este empleado.'
+                                  tr('confirmRecalcHourly')
                                 )
                               ) {
                                 return
@@ -184,7 +187,7 @@ export default function PayrollHourlyTable({
                               try {
                                 await onResetLineRecalc(row.line_id!)
                               } catch (e) {
-                                alert(e instanceof Error ? e.message : 'Error al recalcular')
+                                alert(e instanceof Error ? e.message : tr('recalcError'))
                               }
                             }}
                           >
@@ -199,7 +202,7 @@ export default function PayrollHourlyTable({
             ) : (
               <tr>
                 <td colSpan={9} className="px-4 py-8 text-center text-gray-400">
-                  No hay empleados por hora para este período
+                  {th('none')}
                 </td>
               </tr>
             )}

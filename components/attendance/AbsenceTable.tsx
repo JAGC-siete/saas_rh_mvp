@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { motion, AnimatePresence, LayoutGroup } from 'framer-motion'
 import { formatDateOnlyForHonduras, formatTimeDisplay, getTodayInHonduras } from '../../lib/timezone'
 import { UserCircleIcon } from '@heroicons/react/24/outline'
@@ -40,6 +41,8 @@ export default function AbsenceTable({
   pageSize = 10,
   showDate = false,
 }: AbsenceTableProps) {
+  const ta = useTranslations('attendance')
+  const tc = useTranslations('common')
   const [page, setPage] = useState(1)
   const today = getTodayInHonduras()
   const totalPages = Math.max(1, Math.ceil(data.length / pageSize))
@@ -61,7 +64,7 @@ export default function AbsenceTable({
       <h3 className="text-base font-semibold text-white">{title}</h3>
 
       {data.length === 0 ? (
-        <div className="text-center py-12 text-gray-400 text-sm">No hay ausentes</div>
+        <div className="text-center py-12 text-gray-400 text-sm">{ta('noAbsent')}</div>
       ) : (
         <LayoutGroup>
           <motion.div layout className="space-y-1.5">
@@ -115,7 +118,7 @@ export default function AbsenceTable({
                             isFuture ? 'text-amber-400/90' : 'text-rose-400'
                           }`}
                         >
-                          {isFuture ? 'Pendiente' : 'Ausente'}
+                          {isFuture ? ta('pending') : ta('absent')}
                         </span>
                       )}
                     </div>
@@ -130,7 +133,7 @@ export default function AbsenceTable({
       {data.length > pageSize && (
         <div className="flex items-center justify-between pt-2">
           <span className="text-xs text-gray-500">
-            Página {page} de {totalPages}
+            {ta('pageRange', { page, pages: totalPages })}
           </span>
           <div className="flex gap-2">
             <button
@@ -139,7 +142,7 @@ export default function AbsenceTable({
               disabled={page <= 1}
               className="px-3 py-1 rounded-lg bg-white/5 text-xs text-gray-300 hover:bg-white/10 disabled:opacity-40"
             >
-              Anterior
+              {tc('previous')}
             </button>
             <button
               type="button"
@@ -147,7 +150,7 @@ export default function AbsenceTable({
               disabled={page >= totalPages}
               className="px-3 py-1 rounded-lg bg-white/5 text-xs text-gray-300 hover:bg-white/10 disabled:opacity-40"
             >
-              Siguiente
+              {tc('next')}
             </button>
           </div>
         </div>

@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { useLocale, useTranslations } from 'next-intl'
+import { intlLocale } from '../../lib/i18n/app/locale'
 import { AdjustmentsHorizontalIcon } from '@heroicons/react/24/outline'
 import FiltersBar from './FiltersBar'
 import { ExportFormatButtons } from '../ui/ExportFormatButtons'
@@ -49,6 +51,9 @@ export default function HeaderBar({
   to,
   onRangeChange
 }: HeaderBarProps) {
+  const ta = useTranslations('attendance.header')
+  const tc = useTranslations('common')
+  const locale = intlLocale(useLocale())
   const [exportingFormat, setExportingFormat] = useState<string | null>(null)
   const [columnsOpen, setColumnsOpen] = useState(false)
   const availableColumns = getStandardColumns('attendance')
@@ -69,13 +74,13 @@ export default function HeaderBar({
     const diffMs = now.getTime() - lastUpdated.getTime()
     const diffMins = Math.floor(diffMs / 60000)
     
-    if (diffMins < 1) return 'Actualizado ahora'
-    if (diffMins < 60) return `Actualizado hace ${diffMins} min`
+    if (diffMins < 1) return ta('updatedNow')
+    if (diffMins < 60) return ta('updatedMinutes', { count: diffMins })
     
     const diffHours = Math.floor(diffMins / 60)
-    if (diffHours < 24) return `Actualizado hace ${diffHours}h`
+    if (diffHours < 24) return ta('updatedHours', { count: diffHours })
     
-    return `Actualizado ${lastUpdated.toLocaleDateString('es-HN')}`
+    return ta('updatedOn', { date: lastUpdated.toLocaleDateString(locale) })
   }
 
   return (
@@ -95,9 +100,9 @@ export default function HeaderBar({
               onClick={() => onRecalculateNow()}
               disabled={recalcLoading}
               className="px-3 py-2 rounded-lg text-sm font-medium bg-white/10 hover:bg-white/15 text-white disabled:opacity-50 disabled:cursor-not-allowed"
-              title="Vuelve a calcular las horas de hoy con las marcas más recientes"
+              title={ta('recalcTitle')}
             >
-              {recalcLoading ? 'Recalculando…' : 'Recalcular ahora'}
+              {recalcLoading ? ta('recalculating') : ta('recalc')}
             </button>
           )}
 
@@ -112,29 +117,28 @@ export default function HeaderBar({
               >
                 <span className="inline-flex items-center gap-1.5">
                   <AdjustmentsHorizontalIcon className="h-4 w-4" aria-hidden />
-                  Opciones de exportación
+                  {ta('exportOptions')}
                 </span>
               </button>
               {columnsOpen && (
                 <div className="absolute right-0 mt-2 w-72 rounded-xl border border-white/10 bg-gray-950/95 backdrop-blur p-3 shadow-xl z-50">
                   <div className="flex items-center justify-between gap-2 mb-2">
-                    <span className="text-xs font-semibold text-gray-200">Opciones de exportación</span>
+                    <span className="text-xs font-semibold text-gray-200">{ta('exportOptions')}</span>
                     <button
                       type="button"
                       className="text-xs text-gray-400 hover:text-white"
                       onClick={() => setColumnsOpen(false)}
                     >
-                      Cerrar
+                      {tc('close')}
                     </button>
                   </div>
 
                   <p className="text-xs text-gray-400 mb-3 leading-snug">
-                    El archivo incluye los registros ya cerrados. Las marcas del reloj sin cerrar se revisan en
-                    Cierre del día.
+                    {ta('exportNote')}
                   </p>
 
                   <div className="flex items-center gap-2 mb-3">
-                    <span className="text-xs text-gray-400">Hora:</span>
+                    <span className="text-xs text-gray-400">{ta('time')}</span>
                     <button
                       type="button"
                       className={`px-2 py-1 rounded-md text-xs ${exportTimeFormat === '24h' ? 'bg-white/15 text-white' : 'bg-white/5 text-gray-300 hover:bg-white/10'}`}
@@ -151,7 +155,7 @@ export default function HeaderBar({
                     </button>
                   </div>
 
-                  <p className="text-xs text-gray-400 mb-2">Columnas:</p>
+                  <p className="text-xs text-gray-400 mb-2">{ta('columns')}</p>
                   <div className="max-h-64 overflow-auto pr-1 space-y-2">
                     {availableColumns.map((c) => {
                       const checked = exportColumnIds.includes(c.id)
@@ -179,17 +183,17 @@ export default function HeaderBar({
                       type="button"
                       className="text-xs text-gray-300 hover:text-white"
                       onClick={() => onExportColumnIdsChange?.([])}
-                      title="Usar columnas por defecto configuradas"
+                      title={ta('resetTitle')}
                     >
-                      Restablecer
+                      {ta('reset')}
                     </button>
                     <button
                       type="button"
                       className="text-xs text-gray-300 hover:text-white"
                       onClick={() => onExportColumnIdsChange?.(availableColumns.map((x) => x.id))}
-                      title="Seleccionar todas las columnas estándar"
+                      title={ta('allTitle')}
                     >
-                      Todas
+                      {ta('all')}
                     </button>
                   </div>
                 </div>

@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react'
+import { useTranslations } from 'next-intl'
 import { Card, CardContent } from './ui/card'
 import { Button } from './ui/button'
 import { Icon } from './Icon'
@@ -22,6 +23,8 @@ interface ModalState {
 }
 
 export default function PayrollManagerNew({ companyId: propCompanyId }: { companyId?: string }) {
+  const tp = useTranslations('payroll.manager')
+  const tc = useTranslations('common')
   // Use the new unified payroll manager
   const payroll = usePayrollManager()
   const { format } = useCompanyMoney()
@@ -77,7 +80,7 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
   // Handle filter changes - now unified (memoized to prevent re-renders)
   const handleFilterChange = useCallback(async (key: string, value: unknown) => {
     await payroll.updateFilter(key as keyof typeof payroll.filters, value)
-  }, [payroll])
+  }, [payroll, tp])
 
   const handleGenerateJournalEntries = useCallback(async () => {
     if (!payroll.runId || !payroll.companyId) return
@@ -92,7 +95,7 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
       const msg =
         (data as { error?: string; message?: string }).error ||
         (data as { message?: string }).message ||
-        'Error generando asientos'
+        tp('journalError')
       throw new Error(msg)
     }
   }, [payroll.runId, payroll.companyId])
@@ -106,24 +109,24 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
       // Error handling is done in the hook
       console.error('Error in handlePreview:', error)
     }
-  }, [payroll])
+  }, [payroll, tp])
 
   const handleRecalculateMissingAhc = useCallback(async () => {
     try {
       const r = await payroll.recalculateMissingAhc()
-      alert(`Recalculo completado.\n\nPendientes: ${r.missing}\nCalculados: ${r.calculated}`)
+      alert(tp('recalcDone', { missing: r.missing, calculated: r.calculated }))
       await payroll.loadUnifiedData()
       await payroll.loadAhcPreflight()
     } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Error desconocido'
-      alert(`Error recalculando horas pendientes: ${msg}`)
+      const msg = e instanceof Error ? e.message : tp('unknownError')
+      alert(tp('recalcError', { message: msg }))
     }
-  }, [payroll])
+  }, [payroll, tp])
 
   // Marca la corrida como revisada (los campos personalizados ya se guardan al cerrar el modal)
   const handlePreAuthorize = useCallback(async () => {
     if (!payroll.runId) {
-      alert('No hay corrida de nómina activa')
+      alert(tp('noActiveRun'))
       return
     }
 
@@ -137,25 +140,25 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
 
       if (!response.ok) {
         const error = await response.json()
-        throw new Error(error.error || 'Error al consolidar nómina')
+        throw new Error(error.error || tp('consolidateError'))
       }
 
       const data = await response.json()
       await payroll.loadUnifiedData()
 
       alert(
-        `Nómina consolidada exitosamente\n\n` +
-          `Líneas editadas: ${data.summary.edited_lines}\n` +
-          `Con campos personalizados: ${data.summary.lines_with_metadata}\n` +
-          `Total Neto: L. ${data.summary.total_neto.toFixed(2)}\n\n` +
-          `Ya puede autorizar la nómina`
+        tp('consolidated', {
+          edited: data.summary.edited_lines,
+          custom: data.summary.lines_with_metadata,
+          net: data.summary.total_neto.toFixed(2),
+        })
       )
     } catch (error: unknown) {
       console.error('Error consolidando:', error)
-      const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
-      alert('Error al consolidar: ' + errorMessage)
+      const errorMessage = error instanceof Error ? error.message : tp('unknownError')
+      alert(tp('consolidateFailed', { message: errorMessage }))
     }
-  }, [payroll])
+  }, [payroll, tp])
 
   // Handle edit custom fields (memoized)
   const handleEditCustomFields = useCallback((lineId: string, metadata: Record<string, unknown> | null, baseSalary: number, employeeId?: string) => {
@@ -179,7 +182,7 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) {
-        throw new Error(data.message || data.error || 'Error al ajustar días')
+        throw new Error(data.message || data.error || tp('adjustDaysError'))
       }
       await payroll.loadUnifiedData()
     },
@@ -207,7 +210,7 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) {
-        throw new Error(data.message || data.error || 'Error al ajustar horas extras')
+        throw new Error(data.message || data.error || tp('adjustOvertimeError'))
       }
       await payroll.loadUnifiedData()
     },
@@ -240,7 +243,7 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) {
-        throw new Error(data.message || data.error || 'Error al preparar recálculo')
+        throw new Error(data.message || data.error || tp('prepareRecalcError'))
       }
       await payroll.generatePreview()
     },
@@ -263,7 +266,7 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) {
-        throw new Error(data.message || data.error || 'Error al editar retenciones de ley')
+        throw new Error(data.message || data.error || tp('statutoryEditError'))
       }
       await payroll.loadUnifiedData()
     },
@@ -273,11 +276,11 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
   // Persist custom fields immediately when saving the modal
   const handleSaveCustomFields = useCallback(async (metadata: Record<string, unknown>) => {
     if (!modalState) {
-      throw new Error('No hay estado de modal activo')
+      throw new Error(tp('noModal'))
     }
 
     if (!payroll.unifiedData) {
-      throw new Error('No hay datos de planilla cargados')
+      throw new Error(tp('noPayrollData'))
     }
 
     const row = payroll.unifiedData.rows.find(
@@ -285,7 +288,7 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
     )
 
     if (!row?.line_id) {
-      throw new Error('Línea de planilla no encontrada. Genere preview primero.')
+      throw new Error(tp('lineNotFound'))
     }
 
     const custom_fields = normalizeCustomFields(metadata)
@@ -305,7 +308,7 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
       const details = Array.isArray(data.details)
         ? data.details.map((d: unknown) => String(d)).join('\n')
         : ''
-      throw new Error(data.error || data.message || details || 'Error guardando campos personalizados')
+      throw new Error(data.error || data.message || details || tp('customFieldsError'))
     }
 
     await payroll.loadUnifiedData()
@@ -320,8 +323,8 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
         <Card className="backdrop-blur-md bg-blue-500/20 border border-blue-500/30">
           <CardContent className="p-6 text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-400 mx-auto mb-4"></div>
-            <h2 className="text-xl font-semibold text-blue-300 mb-2">Cargando...</h2>
-            <p className="text-blue-200">Obteniendo información de la empresa...</p>
+            <h2 className="text-xl font-semibold text-blue-300 mb-2">{tp('loading')}</h2>
+            <p className="text-blue-200">{tp('loadingCompany')}</p>
           </CardContent>
         </Card>
       </div>
@@ -335,8 +338,8 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
         <Card className="backdrop-blur-md bg-red-500/20 border border-red-500/30">
           <CardContent className="p-6 text-center">
             <Icon name="alert" className="h-12 w-12 text-red-400 mx-auto mb-4" />
-            <h2 className="text-xl font-semibold text-red-300 mb-2">Sin Empresa Asignada</h2>
-            <p className="text-red-200">No se encontró una empresa asociada a tu cuenta. Contacta al administrador.</p>
+            <h2 className="text-xl font-semibold text-red-300 mb-2">{tp('noCompany')}</h2>
+            <p className="text-red-200">{tp('noCompanyHint')}</p>
           </CardContent>
         </Card>
       </div>
@@ -363,14 +366,14 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
         variants[status as keyof typeof variants] || variants.idle
       }`}>
         {isSavedDraft && <Icon name="check" className="h-4 w-4" />}
-        {status === 'idle' ? 'Inactivo' :
-         status === 'previewing' ? 'Generando vista previa' :
-         status === 'draft' ? (isSavedDraft ? 'Borrador guardado' : 'Borrador') :
-         status === 'edited' ? (isSavedDraft ? 'Editado · guardado' : 'Editado') :
-         status === 'authorizing' ? 'Autorizando' :
-         status === 'authorized' ? 'Autorizado' :
-         status === 'distributed' ? 'Distribuido' :
-         status === 'error' ? 'Error' : status}
+        {status === 'idle' ? tp('status.idle') :
+         status === 'previewing' ? tp('status.previewing') :
+         status === 'draft' ? (isSavedDraft ? tp('status.draftSaved') : tp('status.draft')) :
+         status === 'edited' ? (isSavedDraft ? tp('status.editedSaved') : tp('status.edited')) :
+         status === 'authorizing' ? tp('status.authorizing') :
+         status === 'authorized' ? tp('status.authorized') :
+         status === 'distributed' ? tp('status.distributed') :
+         status === 'error' ? tp('status.error') : status}
       </span>
     )
   }
@@ -380,8 +383,8 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">Gestión de Nómina</h1>
-          <p className="text-gray-300">Sistema de nómina unificado con auditoría y versionado</p>
+          <h1 className="text-2xl font-bold text-white">{tp('title')}</h1>
+          <p className="text-gray-300">{tp('subtitle')}</p>
         </div>
         
         <div className="flex items-center gap-2">
@@ -399,7 +402,7 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
           <CardContent className="pt-6">
             <div className="flex items-center gap-2 text-red-300">
               <Icon name="alert" className="h-5 w-5" />
-              <span className="font-medium">Error:</span>
+              <span className="font-medium">{tp('errorLabel')}</span>
               <span>{payroll.error}</span>
             </div>
             <div className="flex gap-2 mt-2">
@@ -408,7 +411,7 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
                 size="sm"
                 onClick={payroll.clearError}
               >
-                Cerrar
+                {tc('close')}
               </Button>
             </div>
           </CardContent>
@@ -422,7 +425,7 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-semibold text-gray-200">Empleados Activos</p>
+                <p className="text-sm font-semibold text-gray-200">{tp('activeEmployees')}</p>
                 <p className="text-2xl font-bold text-white">
                   {payroll.loading ? (
                     <div className="animate-pulse bg-white/20 h-8 w-16 rounded"></div>
@@ -443,7 +446,7 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-semibold text-gray-200">Total Salario Quincenal</p>
+                <p className="text-sm font-semibold text-gray-200">{tp('totalGross')}</p>
                 <p className="text-2xl font-bold text-white">
                   {payroll.loading ? (
                     <div className="animate-pulse bg-white/20 h-8 w-16 rounded"></div>
@@ -464,7 +467,7 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-semibold text-gray-200">Total Deducciones</p>
+                <p className="text-sm font-semibold text-gray-200">{tp('totalDeductions')}</p>
                 <p className="text-2xl font-bold text-white">
                   {payroll.loading ? (
                     <div className="animate-pulse bg-white/20 h-8 w-16 rounded"></div>
@@ -485,7 +488,7 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-semibold text-gray-200">Total Salario Neto</p>
+                <p className="text-sm font-semibold text-gray-200">{tp('totalNet')}</p>
                 <p className="text-2xl font-bold text-white">
                   {payroll.loading ? (
                     <div className="animate-pulse bg-white/20 h-8 w-16 rounded"></div>
@@ -549,13 +552,13 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
                   }`}
                 >
                   {payroll.ahcPreflightError
-                    ? 'Error al verificar'
+                    ? tp('ahcError')
                     : payroll.ahcPreflight?.status === 'GREEN'
-                      ? 'Horas calculadas'
-                      : 'Faltan horas por calcular'}
+                      ? tp('ahcOk')
+                      : tp('ahcMissing')}
                 </span>
                 <span className="text-sm text-gray-200 font-medium">
-                  Horas desde asistencia (incluye extras para nómina)
+                  {tp('ahcTitle')}
                 </span>
               </div>
               {payroll.ahcPreflightError ? (
@@ -563,10 +566,12 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
               ) : payroll.ahcPreflight ? (
                 <>
                   <p className="text-xs text-gray-300">
-                    Marcas completas (entrada/salida):{' '}
-                    <span className="font-semibold">{payroll.ahcPreflight.completeRecords}</span> · Ya calculadas:{' '}
-                    <span className="font-semibold">{payroll.ahcPreflight.ahcRecords}</span> · Por calcular:{' '}
-                    <span className="font-semibold">{payroll.ahcPreflight.missingAHC}</span>
+                    {tp.rich('ahcSummary', {
+                      complete: payroll.ahcPreflight.completeRecords,
+                      done: payroll.ahcPreflight.ahcRecords,
+                      missing: payroll.ahcPreflight.missingAHC,
+                      b: (chunks) => <span className="font-semibold">{chunks}</span>,
+                    })}
                   </p>
                   {payroll.ahcPreflight.recommendedAction && (
                     <p className="text-xs text-gray-400">{payroll.ahcPreflight.recommendedAction}</p>
@@ -582,7 +587,7 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
                 disabled={payroll.ahcPreflightLoading || payroll.loading}
                 onClick={() => payroll.loadAhcPreflight()}
               >
-                {payroll.ahcPreflightLoading ? 'Verificando…' : 'Actualizar estado'}
+                {payroll.ahcPreflightLoading ? tp('verifying') : tp('refreshStatus')}
               </Button>
               {payroll.ahcPreflight && payroll.ahcPreflight.missingAHC > 0 && (
                 <Button
@@ -591,7 +596,7 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
                   disabled={payroll.loading}
                   onClick={() => void handleRecalculateMissingAhc()}
                 >
-                  Recalcular pendientes
+                  {tp('recalcMissing')}
                 </Button>
               )}
             </div>
@@ -612,7 +617,7 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
                 : 'text-white/70 hover:text-white hover:bg-white/10'
             }
           >
-            Planilla
+            {tp('tabPayroll')}
           </Button>
           <Button
             variant={activeTab === 'contabilidad' ? 'default' : 'ghost'}
@@ -624,7 +629,7 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
                 : 'text-white/70 hover:text-white hover:bg-white/10'
             }
           >
-            Partida Contable
+            {tp('tabJournal')}
           </Button>
         </div>
       )}
@@ -697,8 +702,8 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
         <Card variant="liquid" className="backdrop-blur-md bg-white/10 border border-white/20">
           <CardContent className="p-6 text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-400 mx-auto mb-4"></div>
-            <h2 className="text-xl font-semibold text-blue-300 mb-2">Cargando Datos</h2>
-            <p className="text-blue-200">Obteniendo información de nómina...</p>
+            <h2 className="text-xl font-semibold text-blue-300 mb-2">{tp('loadingData')}</h2>
+            <p className="text-blue-200">{tp('loadingPayroll')}</p>
           </CardContent>
         </Card>
       )}
@@ -708,14 +713,14 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
         <Card variant="liquid" className="backdrop-blur-md bg-white/10 border border-white/20">
           <CardContent className="p-6 text-center">
             <Icon name="alert" className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h2 className="text-xl font-semibold text-gray-300 mb-2">Sin Datos</h2>
-            <p className="text-gray-400">No hay datos de nómina para el período seleccionado</p>
+            <h2 className="text-xl font-semibold text-gray-300 mb-2">{tp('noData')}</h2>
+            <p className="text-gray-400">{tp('noDataHint')}</p>
             <Button 
               onClick={handlePreview}
               className="mt-4"
               disabled={!payroll.canPreview}
             >
-              Generar vista previa
+              {tp('generatePreview')}
             </Button>
           </CardContent>
         </Card>

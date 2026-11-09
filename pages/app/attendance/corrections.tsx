@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import ProtectedRoute from '../../../components/ProtectedRoute'
 import DashboardLayout from '../../../components/DashboardLayout'
 import { Card } from '../../../components/ui/card'
@@ -46,6 +47,8 @@ function composeFormMarks(date: string, times: {
 }
 
 export default function AttendanceCorrectionsPage() {
+  const tr = useTranslations('attendance.corrections')
+  const tc = useTranslations('common')
   const { userProfile } = useAuth()
   const { addNotification } = useNotificationContext()
 
@@ -94,7 +97,7 @@ export default function AttendanceCorrectionsPage() {
       if (!res.ok) throw new Error(json.error || json.message || `HTTP ${res.status}`)
       setRows(Array.isArray(json.data) ? json.data : [])
     } catch (e) {
-      addNotification({ type: 'error', title: 'Correcciones', message: e instanceof Error ? e.message : 'Error al cargar' })
+      addNotification({ type: 'error', title: tr('title'), message: e instanceof Error ? e.message : tr('loadError') })
       setRows([])
     } finally {
       setLoading(false)
@@ -115,12 +118,12 @@ export default function AttendanceCorrectionsPage() {
     const marks = composeFormMarks(date, { checkIn, checkOut, lunchStart, lunchEnd })
     const dateErr = getCorrectionDateAnchorError({ date, ...marks })
     if (dateErr) {
-      addNotification({ type: 'error', title: 'Correcciones', message: dateErr })
+      addNotification({ type: 'error', title: tr('title'), message: dateErr })
       return
     }
     const marksErr = getAttendanceMarksValidationError(marks)
     if (marksErr) {
-      addNotification({ type: 'error', title: 'Correcciones', message: marksErr })
+      addNotification({ type: 'error', title: tr('title'), message: marksErr })
       return
     }
 
@@ -145,7 +148,7 @@ export default function AttendanceCorrectionsPage() {
       const json = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(json.error || json.message || `HTTP ${res.status}`)
 
-      addNotification({ type: 'success', title: 'Correcciones', message: 'Solicitud enviada.' })
+      addNotification({ type: 'success', title: tr('title'), message: tr('sent') })
       setReason('')
       setCheckIn('')
       setCheckOut('')
@@ -154,7 +157,7 @@ export default function AttendanceCorrectionsPage() {
       setStatus('pending')
       await load()
     } catch (e) {
-      addNotification({ type: 'error', title: 'Correcciones', message: e instanceof Error ? e.message : 'Error al enviar' })
+      addNotification({ type: 'error', title: tr('title'), message: e instanceof Error ? e.message : tr('sendError') })
     } finally {
       setCreating(false)
     }
@@ -171,12 +174,12 @@ export default function AttendanceCorrectionsPage() {
       })
       const json = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(json.error || json.message || `HTTP ${res.status}`)
-      addNotification({ type: 'success', title: 'Correcciones', message: action === 'approve' ? 'Aprobada.' : 'Rechazada.' })
+      addNotification({ type: 'success', title: tr('title'), message: action === 'approve' ? tr('approved') : tr('rejected') })
       setRejectingId(null)
       setRejectNote('')
       await load()
     } catch (e) {
-      addNotification({ type: 'error', title: 'Correcciones', message: e instanceof Error ? e.message : 'Error al procesar' })
+      addNotification({ type: 'error', title: tr('title'), message: e instanceof Error ? e.message : tr('processError') })
     }
   }
 
@@ -186,38 +189,38 @@ export default function AttendanceCorrectionsPage() {
         <div className="max-w-6xl mx-auto px-4 py-8 space-y-6">
           <AttendanceSectionNav />
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <h1 className="text-2xl font-bold text-white">Correcciones de asistencia</h1>
+            <h1 className="text-2xl font-bold text-white">{tr('pageTitle')}</h1>
             <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={() => setStatus('pending')}
                 className={`px-3 py-2 rounded-lg text-sm ${status === 'pending' ? 'bg-white/15 text-white' : 'bg-white/5 text-gray-300 hover:bg-white/10'}`}
               >
-                Pendientes
+                {tr('pending')}
               </button>
               <button
                 type="button"
                 onClick={() => setStatus('approved')}
                 className={`px-3 py-2 rounded-lg text-sm ${status === 'approved' ? 'bg-white/15 text-white' : 'bg-white/5 text-gray-300 hover:bg-white/10'}`}
               >
-                Aprobadas
+                {tr('approvedTab')}
               </button>
               <button
                 type="button"
                 onClick={() => setStatus('rejected')}
                 className={`px-3 py-2 rounded-lg text-sm ${status === 'rejected' ? 'bg-white/15 text-white' : 'bg-white/5 text-gray-300 hover:bg-white/10'}`}
               >
-                Rechazadas
+                {tr('rejectedTab')}
               </button>
             </div>
           </div>
 
           <Card variant="liquid" className="border border-white/10">
             <div className="p-5 space-y-4">
-              <h2 className="text-lg font-semibold text-white">Nueva solicitud</h2>
+              <h2 className="text-lg font-semibold text-white">{tr('newRequest')}</h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <label className="text-sm text-gray-300">
-                  Fecha
+                  {tr('date')}
                   <input
                     className="mt-1 w-full bg-gray-900/60 border border-white/10 rounded-lg px-3 py-2 text-white"
                     type="date"
@@ -228,13 +231,13 @@ export default function AttendanceCorrectionsPage() {
 
                 {!isEmployee && (
                   <label className="text-sm text-gray-300">
-                    Empleado
+                    {tr('employee')}
                     <select
                       className="mt-1 w-full bg-gray-900/60 border border-white/10 rounded-lg px-3 py-2 text-white"
                       value={employeeId}
                       onChange={(e) => setEmployeeId(e.target.value)}
                     >
-                      <option value="">Seleccione…</option>
+                      <option value="">{tr('select')}</option>
                       {employees.map((e) => (
                         <option key={e.id} value={e.id}>
                           {(e.employee_code ? `${e.employee_code} — ` : '') + e.name}
@@ -245,19 +248,19 @@ export default function AttendanceCorrectionsPage() {
                 )}
 
                 <label className="text-sm text-gray-300 md:col-span-2">
-                  Motivo
+                  {tr('reason')}
                   <input
                     className="mt-1 w-full bg-gray-900/60 border border-white/10 rounded-lg px-3 py-2 text-white"
                     value={reason}
                     onChange={(e) => setReason(e.target.value)}
-                    placeholder="Ej. Olvidé marcar salida, el reloj falló, etc."
+                    placeholder={tr('reasonPlaceholder')}
                   />
                 </label>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                 <label className="text-sm text-gray-300">
-                  Entrada (propuesta)
+                  {tr('checkIn')}
                   <input
                     className="mt-1 w-full bg-gray-900/60 border border-white/10 rounded-lg px-3 py-2 text-white"
                     type="time"
@@ -266,7 +269,7 @@ export default function AttendanceCorrectionsPage() {
                   />
                 </label>
                 <label className="text-sm text-gray-300">
-                  Salida (propuesta)
+                  {tr('checkOut')}
                   <input
                     className="mt-1 w-full bg-gray-900/60 border border-white/10 rounded-lg px-3 py-2 text-white"
                     type="time"
@@ -275,7 +278,7 @@ export default function AttendanceCorrectionsPage() {
                   />
                 </label>
                 <label className="text-sm text-gray-300">
-                  Inicio almuerzo (opcional)
+                  {tr('lunchStart')}
                   <input
                     className="mt-1 w-full bg-gray-900/60 border border-white/10 rounded-lg px-3 py-2 text-white"
                     type="time"
@@ -284,7 +287,7 @@ export default function AttendanceCorrectionsPage() {
                   />
                 </label>
                 <label className="text-sm text-gray-300">
-                  Fin almuerzo (opcional)
+                  {tr('lunchEnd')}
                   <input
                     className="mt-1 w-full bg-gray-900/60 border border-white/10 rounded-lg px-3 py-2 text-white"
                     type="time"
@@ -295,13 +298,13 @@ export default function AttendanceCorrectionsPage() {
               </div>
 
               <p className="text-xs text-gray-400">
-                Las horas se aplican al día de Fecha (Honduras). Si la salida es antes que la entrada, se guarda al día siguiente (turno noche). Si hay almuerzo: Entrada &lt; Inicio almuerzo &lt; Fin almuerzo &lt; Salida.
+                {tr('hint')}
               </p>
 
               <div className="flex flex-wrap items-center justify-end gap-3">
                 {!creating && (!canCreate || !reason.trim()) && (
                   <span className="text-xs text-gray-400">
-                    {!canCreate ? 'Seleccione un empleado.' : 'Indique el motivo.'}
+                    {!canCreate ? tr('needEmployee') : tr('needReason')}
                   </span>
                 )}
                 <button
@@ -310,7 +313,7 @@ export default function AttendanceCorrectionsPage() {
                   disabled={!reason.trim() || creating || !canCreate}
                   className="px-4 py-2 rounded-lg bg-brand-600 text-white font-medium hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {creating ? 'Enviando…' : 'Enviar solicitud'}
+                  {creating ? tr('sending') : tr('send')}
                 </button>
               </div>
             </div>
@@ -319,13 +322,13 @@ export default function AttendanceCorrectionsPage() {
           <Card variant="liquid" className="border border-white/10">
             <div className="p-5">
               <h2 className="text-lg font-semibold text-white mb-3">
-                {status === 'pending' ? 'Pendientes' : status === 'approved' ? 'Aprobadas' : 'Rechazadas'}
+                {status === 'pending' ? tr('pending') : status === 'approved' ? tr('approvedTab') : tr('rejectedTab')}
               </h2>
 
               {loading ? (
-                <p className="text-gray-300">Cargando…</p>
+                <p className="text-gray-300">{tr('loading')}</p>
               ) : rows.length === 0 ? (
-                <p className="text-gray-400">Sin solicitudes.</p>
+                <p className="text-gray-400">{tr('none')}</p>
               ) : (
                 <div className="space-y-3">
                   {rows.map((r) => {
@@ -344,19 +347,19 @@ export default function AttendanceCorrectionsPage() {
                           </div>
                           <div className="text-sm text-gray-300 mt-1">{r.reason}</div>
                           <div className="text-xs text-gray-400 mt-2 flex flex-wrap gap-2">
-                            <span>Entrada: {formatCorrectionMarkDisplay(r.proposed_check_in, r.date)}</span>
-                            <span>Salida: {formatCorrectionMarkDisplay(r.proposed_check_out, r.date)}</span>
+                            <span>{tr('markCheckIn', { time: formatCorrectionMarkDisplay(r.proposed_check_in, r.date) })}</span>
+                            <span>{tr('markCheckOut', { time: formatCorrectionMarkDisplay(r.proposed_check_out, r.date) })}</span>
                             {r.proposed_lunch_start && (
-                              <span>Almuerzo ini: {formatCorrectionMarkDisplay(r.proposed_lunch_start, r.date)}</span>
+                              <span>{tr('markLunchStart', { time: formatCorrectionMarkDisplay(r.proposed_lunch_start, r.date) })}</span>
                             )}
                             {r.proposed_lunch_end && (
-                              <span>Almuerzo fin: {formatCorrectionMarkDisplay(r.proposed_lunch_end, r.date)}</span>
+                              <span>{tr('markLunchEnd', { time: formatCorrectionMarkDisplay(r.proposed_lunch_end, r.date) })}</span>
                             )}
                           </div>
                           {marksWarning && status === 'pending' && (
                             <div className="text-xs text-amber-300 mt-2">{marksWarning}</div>
                           )}
-                          {r.reviewer_note && <div className="text-xs text-gray-400 mt-2">Nota: {r.reviewer_note}</div>}
+                          {r.reviewer_note && <div className="text-xs text-gray-400 mt-2">{tr('note', { note: r.reviewer_note })}</div>}
                         </div>
 
                         {status === 'pending' && isAdmin && (
@@ -369,7 +372,7 @@ export default function AttendanceCorrectionsPage() {
                               }}
                               className="px-3 py-2 rounded-lg text-sm bg-white/5 hover:bg-white/10 text-gray-200"
                             >
-                              Rechazar
+                              {tr('reject')}
                             </button>
                             <button
                               type="button"
@@ -378,7 +381,7 @@ export default function AttendanceCorrectionsPage() {
                               disabled={!!marksWarning}
                               className="px-3 py-2 rounded-lg text-sm bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                              Aprobar y aplicar
+                              {tr('approve')}
                             </button>
                           </div>
                         )}
@@ -386,24 +389,24 @@ export default function AttendanceCorrectionsPage() {
                       {rejectingId === r.id && (
                         <div className="mt-3 pt-3 border-t border-white/10 space-y-2">
                           <label className="block text-sm text-gray-300">
-                            Motivo del rechazo
+                            {tr('rejectReason')}
                             <textarea
                               autoFocus
                               rows={2}
                               className="mt-1 w-full bg-gray-900/60 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
                               value={rejectNote}
                               onChange={(e) => setRejectNote(e.target.value)}
-                              placeholder="Ej. La marca del reloj confirma la hora original."
+                              placeholder={tr('rejectPlaceholder')}
                             />
                           </label>
-                          <p className="text-xs text-gray-400">El empleado verá este motivo.</p>
+                          <p className="text-xs text-gray-400">{tr('rejectHint')}</p>
                           <div className="flex justify-end gap-2">
                             <button
                               type="button"
                               onClick={() => setRejectingId(null)}
                               className="px-3 py-2 rounded-lg text-sm text-gray-300 hover:bg-white/10"
                             >
-                              Cancelar
+                              {tc('cancel')}
                             </button>
                             <button
                               type="button"
@@ -411,7 +414,7 @@ export default function AttendanceCorrectionsPage() {
                               disabled={!rejectNote.trim()}
                               className="px-3 py-2 rounded-lg text-sm bg-red-600 hover:bg-red-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                              Confirmar rechazo
+                              {tr('confirmReject')}
                             </button>
                           </div>
                         </div>

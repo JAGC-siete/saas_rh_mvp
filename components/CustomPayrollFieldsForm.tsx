@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react'
+import { useTranslations } from 'next-intl'
 import { Button } from './ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
 import { formatCurrency } from '../lib/utils/currency'
@@ -35,7 +36,8 @@ function renderFieldInput(
   customFields: Record<string, string>,
   isEarnings: boolean,
   baseSalaryProp: number,
-  countryCode?: string | null
+  countryCode: string | null | undefined,
+  labels: { result: string; readOnly: string }
 ) {
   const label = customFields[fieldName] || fieldDef?.label || fieldName
   const hasFormula = fieldDef?.formula && typeof fieldDef.formula === 'string'
@@ -71,11 +73,11 @@ function renderFieldInput(
           ))}
         </div>
         <div className="flex items-center gap-2 text-sm">
-          <span className="text-gray-400">Resultado:</span>
+          <span className="text-gray-400">{labels.result}</span>
           <span className={`font-mono font-medium ${isEarnings ? 'text-green-300' : 'text-red-300'}`}>
             {formatCurrency(result, { countryCode })}
           </span>
-          <span className="text-gray-500 text-xs">(solo lectura)</span>
+          <span className="text-gray-500 text-xs">{labels.readOnly}</span>
         </div>
       </div>
     )
@@ -107,6 +109,9 @@ export default function CustomPayrollFieldsForm({
   onSave,
   onCancel
 }: CustomPayrollFieldsFormProps) {
+  const tf = useTranslations('payroll.custom')
+  const tc = useTranslations('common')
+  const fieldLabels = { result: tf('result'), readOnly: tf('readOnly') }
   const { countryCode, format } = useCompanyMoney()
   const [formData, setFormData] = useState<Record<string, unknown>>({})
   const [saving, setSaving] = useState(false)
@@ -268,7 +273,7 @@ export default function CustomPayrollFieldsForm({
       })
       if (!res.ok) {
         const err = await res.json()
-        alert(err.message || err.error || 'Error creando plan')
+        alert(err.message || err.error || tf('createPlanError'))
         return
       }
       const plan = await res.json()
@@ -286,7 +291,7 @@ export default function CustomPayrollFieldsForm({
       setCreatePlanModal(null)
     } catch (e) {
       console.error(e)
-      alert('Error creando plan')
+      alert(tf('createPlanError'))
     }
   }
 
@@ -338,7 +343,7 @@ export default function CustomPayrollFieldsForm({
     return (
       <Card className="backdrop-blur-md bg-white/10 border border-white/20">
         <CardContent className="p-6 text-center">
-          <p className="text-gray-400">Cargando configuración...</p>
+          <p className="text-gray-400">{tf('loadingConfig')}</p>
         </CardContent>
       </Card>
     )
@@ -348,7 +353,7 @@ export default function CustomPayrollFieldsForm({
     return (
       <Card className="backdrop-blur-md bg-white/10 border border-white/20">
         <CardContent className="p-6 text-center">
-          <p className="text-gray-400">No hay campos personalizados configurados para esta empresa</p>
+          <p className="text-gray-400">{tf('noFields')}</p>
         </CardContent>
       </Card>
     )
@@ -394,7 +399,7 @@ export default function CustomPayrollFieldsForm({
     <Card className="backdrop-blur-md bg-white/10 border border-white/20">
       <CardHeader className="border-b border-white/10">
         <CardTitle className="text-white text-xl font-bold">
-          Campos Personalizados - {config?.companyName || 'Sin Configurar'}
+          {tf('title', { company: config?.companyName || tf('notConfigured') })}
         </CardTitle>
       </CardHeader>
       <CardContent className="pt-6">
@@ -402,16 +407,16 @@ export default function CustomPayrollFieldsForm({
           <div>
             <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
               <span className="w-2 h-2 rounded-full bg-green-400 mr-2"></span>
-              Ingresos Adicionales
+              {tf('earnings')}
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {earningsFields.map((fieldName) =>
-                renderFieldInput(fieldName, config.custom_fields[fieldName], formData, handleInputChange, customFields, true, baseSalary, countryCode)
+                renderFieldInput(fieldName, config.custom_fields[fieldName], formData, handleInputChange, customFields, true, baseSalary, countryCode, fieldLabels)
               )}
             </div>
             <div className="mt-4 p-3 bg-green-500/10 border border-green-500/30 rounded-lg">
               <div className="flex justify-between text-sm">
-                <span className="text-white font-medium">Total Ingresos Adicionales:</span>
+                <span className="text-white font-medium">{tf('totalEarnings')}</span>
                 <span className="text-green-300 font-bold">{format(totalIngresos)}</span>
               </div>
             </div>
@@ -420,7 +425,7 @@ export default function CustomPayrollFieldsForm({
           <div>
             <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
               <span className="w-2 h-2 rounded-full bg-red-400 mr-2"></span>
-              Deducciones Adicionales
+              {tf('deductions')}
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {deductionsFields.map((fieldName) => {
@@ -432,16 +437,19 @@ export default function CustomPayrollFieldsForm({
 
                 return (
                   <div key={fieldName} className="space-y-2">
-                    {renderFieldInput(fieldName, fieldDef, formData, handleInputChange, customFields, false, baseSalary, countryCode)}
+                    {renderFieldInput(fieldName, fieldDef, formData, handleInputChange, customFields, false, baseSalary, countryCode, fieldLabels)}
                     {hasTrackPlazos && (
                       <div className="mt-2 p-2 bg-white/5 rounded-lg border border-white/10 space-y-2">
                         {fieldPlans.map((plan) => (
                           <div key={plan.id} className="text-sm text-gray-300">
                             <span className="flex items-center gap-1">
                               <Calendar className="h-3.5 w-3.5" />
-                              {plan.plazos_aplicados}/{plan.plazos_totales} aplicadas,{' '}
-                              {plan.plazos_totales - plan.plazos_aplicados} restantes ·{' '}
-                              {format(plan.monto_por_plazo)}/plazo
+                              {tf('planProgress', {
+                                applied: plan.plazos_aplicados,
+                                total: plan.plazos_totales,
+                                left: plan.plazos_totales - plan.plazos_aplicados,
+                                amount: format(plan.monto_por_plazo),
+                              })}
                             </span>
                           </div>
                         ))}
@@ -453,7 +461,7 @@ export default function CustomPayrollFieldsForm({
                           onClick={() => setCreatePlanModal({ fieldKey: fieldName, montoTotal: '', plazosTotales: '' })}
                         >
                           <Plus className="h-3 w-3 mr-1" />
-                          {fieldPlans.length > 0 ? 'Agregar otro plan' : 'Crear plan'}
+                          {fieldPlans.length > 0 ? tf('addPlan') : tf('createPlan')}
                         </Button>
                       </div>
                     )}
@@ -463,7 +471,7 @@ export default function CustomPayrollFieldsForm({
             </div>
             <div className="mt-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
               <div className="flex justify-between text-sm">
-                <span className="text-white font-medium">Total Deducciones Adicionales:</span>
+                <span className="text-white font-medium">{tf('totalDeductions')}</span>
                 <span className="text-red-300 font-bold">{format(totalDeducciones)}</span>
               </div>
             </div>
@@ -471,7 +479,7 @@ export default function CustomPayrollFieldsForm({
 
           <div className="p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
             <div className="flex justify-between text-sm">
-              <span className="text-white font-medium">Impacto Neto:</span>
+              <span className="text-white font-medium">{tf('netImpact')}</span>
               <span className={`font-bold ${totalIngresos - totalDeducciones >= 0 ? 'text-green-300' : 'text-red-300'}`}>
                 {format(totalIngresos - totalDeducciones)}
               </span>
@@ -480,16 +488,16 @@ export default function CustomPayrollFieldsForm({
 
           <div className="flex justify-end gap-3 pt-6 border-t border-white/10">
             <Button type="button" onClick={onCancel} variant="outline" className="bg-white/10 border-white/30 text-white hover:bg-white/20">
-              Cancelar
+              {tc('cancel')}
             </Button>
             <Button type="submit" disabled={saving} className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white disabled:opacity-50">
               {saving ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  Guardando...
+                  {tf('saving')}
                 </>
               ) : (
-                'Guardar Campos Personalizados'
+                tf('save')
               )}
             </Button>
           </div>
@@ -499,11 +507,11 @@ export default function CustomPayrollFieldsForm({
       {createPlanModal && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
           <div className="bg-slate-800 rounded-xl p-6 max-w-sm w-full border border-white/20">
-            <h4 className="text-white font-semibold mb-4">Crear plan de deducción</h4>
+            <h4 className="text-white font-semibold mb-4">{tf('planModalTitle')}</h4>
             <p className="text-gray-400 text-sm mb-4">{customFields[createPlanModal.fieldKey] || createPlanModal.fieldKey}</p>
             <div className="space-y-3">
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Monto total</label>
+                <label className="block text-sm text-gray-400 mb-1">{tf('totalAmount')}</label>
                 <input
                   type="number"
                   step="0.01"
@@ -514,7 +522,7 @@ export default function CustomPayrollFieldsForm({
                 />
               </div>
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Plazos totales</label>
+                <label className="block text-sm text-gray-400 mb-1">{tf('installments')}</label>
                 <input
                   type="number"
                   min="1"
@@ -527,10 +535,10 @@ export default function CustomPayrollFieldsForm({
             </div>
             <div className="flex justify-end gap-2 mt-6">
               <Button type="button" variant="outline" onClick={() => setCreatePlanModal(null)} className="text-white border-white/30">
-                Cancelar
+                {tc('cancel')}
               </Button>
               <Button onClick={handleCreatePlan} className="bg-blue-600 hover:bg-blue-700 text-white">
-                Crear
+                {tf('create')}
               </Button>
             </div>
           </div>

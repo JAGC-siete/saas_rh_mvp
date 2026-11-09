@@ -5,6 +5,8 @@
 
 import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
+import esMessages from '../lib/i18n/app/messages/es.json'
+import enMessages from '../lib/i18n/app/messages/en.json'
 import { calculatePeriodBaseSalary } from '../lib/payroll/calculate-period-base-salary'
 import { HONDURAS_LABOR_FACTOR } from '../lib/payroll/constants'
 import { calculateOvertimePayFromAhc } from '../lib/payroll/overtime-pay'
@@ -169,6 +171,19 @@ describe('draft regenerates; authorized does not', () => {
     assert.match(PAYROLL_AUTHORIZE_CONFIRM_MESSAGE, /autorizar esta nómina/i)
     assert.match(PAYROLL_AUTHORIZE_CONFIRM_MESSAGE, /montos quedan fijos/i)
     assert.doesNotMatch(PAYROLL_AUTHORIZE_CONFIRM_MESSAGE, /reversible/i)
+  })
+
+  it('payroll table shows the same Spanish copy as the constants, and English keeps the meaning', () => {
+    const es = esMessages.payroll.table
+    assert.equal(es.frozenTitle, PAYROLL_FROZEN_RUN_TITLE)
+    assert.equal(es.frozenMessage, PAYROLL_FROZEN_RUN_MESSAGE)
+    assert.equal(es.confirmTitle, PAYROLL_AUTHORIZE_CONFIRM_TITLE)
+    assert.equal(es.confirmMessage, PAYROLL_AUTHORIZE_CONFIRM_MESSAGE)
+    assert.equal(es.confirmLabel, PAYROLL_AUTHORIZE_CONFIRM_LABEL)
+    const en = enMessages.payroll.table
+    assert.match(en.confirmMessage, /become final/i)
+    assert.doesNotMatch(en.confirmMessage, /reversible/i)
+    assert.match(en.frozenMessage, /download/i)
   })
 
   it('frozen display uses stamped salary when live drifted', () => {

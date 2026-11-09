@@ -1,13 +1,12 @@
 import { motion } from 'framer-motion'
+import { useTranslations } from 'next-intl'
+import { PUNCH_ANOMALY_TYPES } from '../../lib/attendance/punch-mapping'
 import type { DailyCloseItem } from './DailyClosePanel'
 
 export type DailyCloseWizardStep = 1 | 2 | 3
 
-const STEPS: { step: DailyCloseWizardStep; label: string; description: string }[] = [
-  { step: 1, label: 'Anomalías', description: 'Revisar casos críticos' },
-  { step: 2, label: 'Ajustes', description: 'Corregir horarios' },
-  { step: 3, label: 'Finalización', description: 'Cerrar el día' },
-]
+const STEPS: DailyCloseWizardStep[] = [1, 2, 3]
+const KNOWN_ANOMALIES = new Set<string>(Object.values(PUNCH_ANOMALY_TYPES))
 
 interface DailyCloseWizardProps {
   step: DailyCloseWizardStep
@@ -61,6 +60,9 @@ export default function DailyCloseWizard({
   focusItems,
   onFocusEdit,
 }: DailyCloseWizardProps) {
+  const ta = useTranslations('attendance')
+  const anomalyLabel = (type: string) =>
+    KNOWN_ANOMALIES.has(type) ? ta(`anomalies.${type as (typeof PUNCH_ANOMALY_TYPES)[keyof typeof PUNCH_ANOMALY_TYPES]}`) : type
   const progressPct =
     totalAnomalies > 0 ? Math.min(100, (resolvedAnomalies / totalAnomalies) * 100) : 100
 
@@ -70,27 +72,27 @@ export default function DailyCloseWizard({
         <div className="flex items-center gap-4">
           <RadialProgress pct={progressPct} />
           <div>
-            <p className="text-sm font-semibold text-white">Progreso del cierre</p>
+            <p className="text-sm font-semibold text-white">{ta('wizard.progress')}</p>
             <p className="text-xs text-gray-400">
               {totalAnomalies === 0
-                ? 'Sin anomalías para revisar'
-                : `${resolvedAnomalies} de ${totalAnomalies} anomalías resueltas`}
+                ? ta('wizard.noAnomalies')
+                : ta('wizard.resolved', { resolved: resolvedAnomalies, total: totalAnomalies })}
             </p>
           </div>
         </div>
         <div className="flex gap-1 p-1 rounded-xl bg-black/20">
           {STEPS.map((s) => (
             <button
-              key={s.step}
+              key={s}
               type="button"
-              onClick={() => onStepChange(s.step)}
+              onClick={() => onStepChange(s)}
               className={`px-3 py-2 rounded-lg text-xs font-medium transition-all ${
-                step === s.step
+                step === s
                   ? 'bg-brand-600 text-white shadow-md shadow-brand-600/30'
                   : 'text-gray-400 hover:text-white hover:bg-white/5'
               }`}
             >
-              {s.step}. {s.label}
+              {s}. {ta(`wizard.steps.${s}`)}
             </button>
           ))}
         </div>
@@ -110,7 +112,7 @@ export default function DailyCloseWizard({
               <div>
                 <p className="text-white font-medium text-sm">{item.employee.name}</p>
                 <p className="text-xs text-amber-200/80 mt-1 line-clamp-2">
-                  {item.anomaly_types.join(' · ') || 'Anomalía detectada'}
+                  {item.anomaly_types.map(anomalyLabel).join(' · ') || ta('wizard.anomalyDetected')}
                 </p>
               </div>
               <button
@@ -118,7 +120,7 @@ export default function DailyCloseWizard({
                 onClick={() => onFocusEdit(item)}
                 className="text-xs font-semibold text-amber-200 hover:text-white bg-amber-500/15 hover:bg-amber-500/25 rounded-lg py-2 transition-colors"
               >
-                Corregir →
+                {ta('wizard.fix')}
               </button>
             </div>
           ))}
@@ -127,7 +129,7 @@ export default function DailyCloseWizard({
 
       {step === 3 && (
         <div className="px-4 py-3 text-xs text-emerald-200/90 bg-emerald-500/5 border-t border-emerald-500/15">
-          Paso final: verifique los registros y use «Finalizar día» cuando todo esté listo.
+          {ta('wizard.finalHint')}
         </div>
       )}
     </div>

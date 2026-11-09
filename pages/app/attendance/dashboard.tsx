@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from 'react'
+import { useTranslations } from 'next-intl'
 import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
@@ -18,9 +19,11 @@ import KpiCards from '../../../components/attendance/KpiCards'
 import AttendanceTablesSection from '../../../components/attendance/AttendanceTablesSection'
 import type { TrendData } from '../../../components/attendance/TrendsChart'
 
-const chartFallback = (
-  <div className="h-64 flex items-center justify-center text-gray-400 text-sm">Cargando gráfico…</div>
-)
+function ChartFallback() {
+  const ta = useTranslations('attendance.page')
+  return <div className="h-64 flex items-center justify-center text-gray-400 text-sm">{ta('loadingChart')}</div>
+}
+const chartFallback = <ChartFallback />
 
 const TrendsChart = dynamic(() => import('../../../components/attendance/TrendsChart'), {
   ssr: false,
@@ -57,45 +60,22 @@ function formatShortDate(value?: string): string {
   return `${d}/${m}/${y}`
 }
 
-function getPresetLabel(preset: string, from?: string, to?: string) {
-  switch (preset) {
-    case 'today':
-      return 'de Hoy'
-    case 'week':
-      return 'de esta Semana'
-    case 'fortnight':
-      return 'de esta Quincena'
-    case 'month':
-      return 'de este Mes'
-    case 'year':
-      return 'del Año'
-    case 'custom': {
-      const f = formatShortDate(from)
-      const t = formatShortDate(to)
-      return f && t ? `del ${f} al ${t}` : 'del rango seleccionado'
-    }
-    default:
-      return 'de Hoy'
+type PageT = ReturnType<typeof useTranslations<'attendance.page'>>
+const PRESETS = ['today', 'week', 'fortnight', 'month', 'year'] as const
+const isPreset = (p: string): p is (typeof PRESETS)[number] => (PRESETS as readonly string[]).includes(p)
+
+function getPresetLabel(ta: PageT, preset: string, from?: string, to?: string) {
+  if (preset === 'custom') {
+    const f = formatShortDate(from)
+    const t = formatShortDate(to)
+    return f && t ? ta('presetLabel.customRange', { from: f, to: t }) : ta('presetLabel.customEmpty')
   }
+  return ta(`presetLabel.${isPreset(preset) ? preset : 'today'}`)
 }
 
-function barChartXLabel(preset: string) {
-  switch (preset) {
-    case 'today':
-      return 'Hoy'
-    case 'week':
-      return 'Semana'
-    case 'fortnight':
-      return 'Quincena'
-    case 'month':
-      return 'Mes'
-    case 'year':
-      return 'Año'
-    case 'custom':
-      return 'Rango'
-    default:
-      return 'Período'
-  }
+function barChartXLabel(ta: PageT, preset: string) {
+  if (preset === 'custom') return ta('barLabel.custom')
+  return ta(`barLabel.${isPreset(preset) ? preset : 'default'}`)
 }
 
 function readQueryParam(q: Record<string, string | string[] | undefined>, key: string): string {
@@ -119,6 +99,7 @@ function toToIso(value?: string): string | undefined {
 }
 
 export default function AttendanceDashboardApp() {
+  const ta = useTranslations('attendance.page')
   const router = useRouter()
   const { addNotification } = useNotificationContext()
   const [preset, setPreset] = useState('today')
@@ -273,13 +254,13 @@ export default function AttendanceDashboardApp() {
         if (json?.success && Array.isArray(json.data)) {
           setTrends(json.data)
         } else {
-          throw new Error('No se pudieron interpretar las tendencias')
+          throw new Error(ta('trendsParseError'))
         }
       } catch (e) {
         if ((e as Error).name === 'AbortError') return
         if (!cancelled) {
           setTrends([])
-          setTrendsError((e as Error).message || 'Error al cargar tendencias')
+          setTrendsError((e as Error).message || ta('trendsLoadError'))
         }
       } finally {
         if (!cancelled && !ac.signal.aborted) setTrendsLoading(false)
@@ -405,7 +386,7 @@ export default function AttendanceDashboardApp() {
       window.URL.revokeObjectURL(downloadUrl)
     } catch (err: unknown) {
       const errorMessage = mapAttendanceError(err)
-      addNotification({ type: 'error', title: 'Exportación', message: errorMessage })
+      addNotification({ type: 'error', title: ta('exportTitle'), message: errorMessage })
     }
   }
 
@@ -426,12 +407,12 @@ export default function AttendanceDashboardApp() {
       }
       addNotification({
         type: 'success',
-        title: 'Recalcular',
-        message: `Listo. Calculados: ${json?.calculated ?? 0} (elegibles: ${json?.eligible ?? 0}).`,
+        title: ta('recalcTitle'),
+        message: ta('recalcDone', { calculated: json?.calculated ?? 0, eligible: json?.eligible ?? 0 }),
       })
       setRefreshTick((n) => n + 1)
     } catch (err: unknown) {
-      addNotification({ type: 'error', title: 'Recalcular', message: mapAttendanceError(err) })
+      addNotification({ type: 'error', title: ta('recalcTitle'), message: mapAttendanceError(err) })
     } finally {
       setRecalcLoading(false)
     }
@@ -442,7 +423,7 @@ export default function AttendanceDashboardApp() {
   const handleEmployeeClick = async (id: string, name: string) => {
     // Abrir el panel de inmediato con un esqueleto; descartar respuestas de clics anteriores o tras cerrar.
     const requestId = ++drawerRequestRef.current
-    setDrawer({ open: true, loading: true, name, events: [], rawPunches: [], periodLabel: getPresetLabel(preset, from, to) })
+    setDrawer({ open: true, loading: true, name, events: [], rawPunches: [], periodLabel: getPresetLabel(ta, preset, from, to) })
     try {
       const range =
         preset === 'custom' && from && to
@@ -457,8 +438,8 @@ export default function AttendanceDashboardApp() {
         closeDrawer()
         addNotification({
           type: 'error',
-          title: 'Empleado',
-          message: typeof data?.error === 'string' ? data.error : `No se pudo cargar el detalle (${res.status})`,
+          title: ta('employeeTitle'),
+          message: typeof data?.error === 'string' ? data.error : ta('detailError', { status: res.status }),
         })
         return
       }
@@ -469,7 +450,7 @@ export default function AttendanceDashboardApp() {
         name: data.employee?.name || name,
         events: Array.isArray(data.timeline) ? data.timeline : [],
         rawPunches: Array.isArray(data.raw_punches) ? data.raw_punches : [],
-        periodLabel: getPresetLabel(preset, from, to),
+        periodLabel: getPresetLabel(ta, preset, from, to),
         employeeData: data.employee,
         stats: data.stats,
         schedule: data.schedule,
@@ -477,7 +458,7 @@ export default function AttendanceDashboardApp() {
     } catch (err: unknown) {
       if (requestId !== drawerRequestRef.current) return
       closeDrawer()
-      addNotification({ type: 'error', title: 'Empleado', message: mapAttendanceError(err) })
+      addNotification({ type: 'error', title: ta('employeeTitle'), message: mapAttendanceError(err) })
     }
   }
 
@@ -516,9 +497,9 @@ export default function AttendanceDashboardApp() {
 
           <header className="space-y-4 border-b border-white/10 pb-5">
             <div>
-              <h1 className="text-2xl font-bold text-white tracking-tight">Asistencia</h1>
+              <h1 className="text-2xl font-bold text-white tracking-tight">{ta('title')}</h1>
               <p className="mt-1 text-sm text-gray-400">
-                Quién llegó, quién faltó y quién llegó tarde en el período que elijas.
+                {ta('subtitle')}
               </p>
             </div>
             <AttendanceSectionNav />
@@ -554,23 +535,22 @@ export default function AttendanceDashboardApp() {
             >
               <p>
                 <span className="font-semibold text-white">
-                  {dailyCloseHint.anomalies} {dailyCloseHint.anomalies === 1 ? 'registro' : 'registros'} de hoy
-                  {dailyCloseHint.anomalies === 1 ? ' necesita' : ' necesitan'} revisión
+                  {ta('closeHintStrong', { count: dailyCloseHint.anomalies })}
                 </span>{' '}
-                antes del cierre del día ({dailyCloseHint.finalized} de {dailyCloseHint.withEvents} cerrados).
+                {ta('closeHintRest', { finalized: dailyCloseHint.finalized, withEvents: dailyCloseHint.withEvents })}
               </p>
               <Link
                 href="/app/attendance/daily-close"
                 className="inline-flex shrink-0 items-center justify-center rounded-lg border border-white/20 bg-white/10 px-4 py-2 font-medium text-white hover:bg-white/15"
               >
-                Revisar cierre del día
+                {ta('reviewClose')}
               </Link>
             </div>
           )}
 
           <section aria-labelledby="attendance-summary-heading" className="space-y-4">
             <h2 id="attendance-summary-heading" className="sr-only">
-              Resumen del período
+              {ta('summary')}
             </h2>
             <KpiCards
               presentes={kpis?.presentes ?? 0}
@@ -578,7 +558,7 @@ export default function AttendanceDashboardApp() {
               permisosPagados={kpis?.permisos_pagados ?? 0}
               temprano={kpis?.tempranos ?? 0}
               tarde={kpis?.tardes ?? 0}
-              presetLabel={` ${getPresetLabel(preset, from, to)}`}
+              presetLabel={` ${getPresetLabel(ta, preset, from, to)}`}
               loading={loading}
               activeFilter={kpiFilter}
               onFilterChange={setKpiFilter}
@@ -591,7 +571,7 @@ export default function AttendanceDashboardApp() {
             early={early}
             late={late}
             outsideSchedule={outsideSchedule}
-            presetLabel={getPresetLabel(preset, from, to)}
+            presetLabel={getPresetLabel(ta, preset, from, to)}
             preset={preset}
             onSelectEmployee={handleEmployeeClick}
             kpiFilter={kpiFilter}
@@ -609,7 +589,7 @@ export default function AttendanceDashboardApp() {
             >
               <span className="flex items-center gap-2 text-base font-semibold text-white">
                 <ChartBarIcon className="h-6 w-6 text-gray-300 shrink-0" aria-hidden />
-                Distribución de asistencia
+                {ta('distribution')}
               </span>
               {showDistribution ? (
                 <ChevronDownIcon className="h-5 w-5 text-gray-400 shrink-0" aria-hidden />
@@ -627,7 +607,7 @@ export default function AttendanceDashboardApp() {
               <KpiBarsChart
                 kpis={kpis}
                 loading={loading}
-                barLabel={barChartXLabel(preset)}
+                barLabel={barChartXLabel(ta, preset)}
               />
             </div>
           </Card>
@@ -636,15 +616,15 @@ export default function AttendanceDashboardApp() {
             <div className="p-6">
               <h3 className="text-lg font-semibold text-white mb-6 flex flex-wrap items-center gap-2">
                 <ArrowTrendingUpIcon className="h-6 w-6 text-gray-300 shrink-0" aria-hidden />
-                <span>Tendencias de asistencia {getPresetLabel(preset, from, to)}</span>
+                <span>{ta('trends', { preset: getPresetLabel(ta, preset, from, to) })}</span>
                 {selectedEmployeeId && (
-                  <span className="text-sm text-gray-400 font-normal">· Empleado seleccionado</span>
+                  <span className="text-sm text-gray-400 font-normal">{ta('selectedEmployee')}</span>
                 )}
                 {selectedRole && (
                   <span className="text-sm text-gray-400 font-normal">· {selectedRole}</span>
                 )}
                 {selectedDepartmentId && (
-                  <span className="text-sm text-gray-400 font-normal">· Departamento filtrado</span>
+                  <span className="text-sm text-gray-400 font-normal">{ta('filteredDepartment')}</span>
                 )}
               </h3>
               <TrendsChart
@@ -655,7 +635,7 @@ export default function AttendanceDashboardApp() {
               />
               {trends.length === 0 && !trendsLoading && !trendsError && (
                 <div className="text-center py-8">
-                  <p className="text-gray-400 mb-4 font-medium">Sin datos en este rango.</p>
+                  <p className="text-gray-400 mb-4 font-medium">{ta('noData')}</p>
                   <div className="flex flex-wrap justify-center gap-3">
                     <button
                       type="button"
@@ -663,7 +643,7 @@ export default function AttendanceDashboardApp() {
                       onClick={() => setPreset('week')}
                     >
                       <CalendarDaysIcon className="h-4 w-4" aria-hidden />
-                      Últimos 7 días
+                      {ta('last7')}
                     </button>
                     <button
                       type="button"
@@ -671,7 +651,7 @@ export default function AttendanceDashboardApp() {
                       onClick={() => setPreset('month')}
                     >
                       <CalendarDaysIcon className="h-4 w-4" aria-hidden />
-                      Este mes
+                      {ta('thisMonth')}
                     </button>
                   </div>
                 </div>

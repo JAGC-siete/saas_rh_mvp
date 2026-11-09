@@ -1,6 +1,7 @@
 import { useReducer, useCallback, useMemo, useEffect, useState, useRef } from 'react'
 import { useCompanyContext } from '../useCompanyContext'
 import { useToast } from '../toast'
+import { useTranslations } from 'next-intl'
 import { fetchUnifiedPayroll, getCurrentPeriod, mapPlanillaItemToUnifiedRow, summarizeUnifiedRows, UnifiedRow, UnifiedResumen } from '../payroll-unified'
 import { usePayrollMetrics } from './usePayrollMetrics'
 import { payrollApi, mapPayrollError } from '../payroll-api'
@@ -214,6 +215,7 @@ export const usePayrollManager = () => {
   const [state, dispatch] = useReducer(payrollManagerReducer, getInitialState())
   const { companyId, loading: companyLoading } = useCompanyContext()
   const toast = useToast()
+  const tm = useTranslations('payroll.hook')
   const [commercialPlan, setCommercialPlan] = useState<string | null>(null)
   const companyDeductionModeRef = useRef<TipoCalculo>(PAYROLL_DEDUCTION_MODE_DEFAULT)
   const [deductionModeLabel, setDeductionModeLabel] = useState(
@@ -407,10 +409,8 @@ export const usePayrollManager = () => {
         // Solo notificar si el borrador tiene cambios; un borrador sin ediciones es ruido
         if (draft.edited_lines > 0) {
           toast.success(
-            'Borrador cargado',
-            draft.edited_lines === 1
-              ? 'Se recuperó un borrador con 1 línea editada'
-              : `Se recuperó un borrador con ${draft.edited_lines} líneas editadas`,
+            tm('draftLoaded'),
+            tm('draftRecovered', { count: draft.edited_lines }),
             5000
           )
         }
@@ -448,12 +448,12 @@ export const usePayrollManager = () => {
       
       // Manejar error específico de corrida ya autorizada
       if (error.message && error.message.includes('ya autorizada')) {
-        dispatch({ type: 'SET_ERROR', payload: 'Ya existe una nómina autorizada para este período. No se puede generar un nuevo preview.' })
-        toast.error('Corrida Ya Autorizada', 'Ya existe una nómina autorizada para este período', 8000)
+        dispatch({ type: 'SET_ERROR', payload: tm('alreadyAuthorized') })
+        toast.error(tm('alreadyAuthorizedTitle'), tm('alreadyAuthorizedShort'), 8000)
       } else {
-        const errorMessage = error?.message || 'Error desconocido'
-        dispatch({ type: 'SET_ERROR', payload: `Error cargando datos: ${errorMessage}` })
-        toast.error('Error', 'No se pudieron cargar los datos del período actual', 5000)
+        const errorMessage = error?.message || tm('unknownError')
+        dispatch({ type: 'SET_ERROR', payload: tm('loadDataError', { message: errorMessage }) })
+        toast.error(tm('error'), tm('loadPeriodError'), 5000)
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -475,7 +475,7 @@ export const usePayrollManager = () => {
         const message =
           (typeof json.message === 'string' && json.message) ||
           (typeof json.error === 'string' && json.error) ||
-          `Error verificando horas de asistencia (${res.status})`
+          tm('ahcCheckError', { status: res.status })
         dispatch({ type: 'SET_AHC_PREFLIGHT', payload: null })
         dispatch({ type: 'SET_AHC_PREFLIGHT_ERROR', payload: message })
         return
@@ -495,7 +495,7 @@ export const usePayrollManager = () => {
       dispatch({ type: 'SET_AHC_PREFLIGHT', payload: null })
       dispatch({
         type: 'SET_AHC_PREFLIGHT_ERROR',
-        payload: e instanceof Error ? e.message : 'Error de red al verificar horas de asistencia',
+        payload: e instanceof Error ? e.message : tm('ahcNetworkError'),
       })
     } finally {
       dispatch({ type: 'SET_AHC_PREFLIGHT_LOADING', payload: false })
@@ -504,7 +504,7 @@ export const usePayrollManager = () => {
 
   const recalculateMissingAhc = useCallback(async () => {
     if (!companyId) {
-      throw new Error('Company ID no encontrado')
+      throw new Error(tm('noCompanyId'))
     }
     const res = await fetch('/api/payroll/recalculate-missing-ahc', {
       method: 'POST',
@@ -588,44 +588,44 @@ export const usePayrollManager = () => {
       // Mostrar mensaje apropiado según si es regeneración o no
       if (response?.frozen || response?.salary_stale) {
         toast.warning(
-          'Nómina congelada',
+          tm('frozen'),
           response.warning || response.message,
           10000
         )
       } else if (response?.warning) {
         toast.warning(
-          'Preview Regenerado',
+          tm('regenerated'),
           response.warning,
           8000
         )
       } else if (response?.noAttendanceWarning) {
         toast.warning(
-          'Sin Registros de Asistencia',
+          tm('noAttendance'),
           `${response.noAttendanceWarning.message} ${response.noAttendanceWarning.detail}`,
           10000
         )
       } else if (response?.attendanceExemptSummary?.count) {
         toast.warning(
-          'Exentos de asistencia',
+          tm('exempt'),
           response.attendanceExemptSummary.message,
           8000
         )
       } else if (response?.preservedEditedSummary?.count) {
         toast.warning(
-          'Líneas editadas conservadas',
+          tm('editedKept'),
           response.preservedEditedSummary.message,
           9000
         )
       } else if (response?.incompleteRecordsAlert?.length) {
         toast.warning(
-          'Marcas incompletas detectadas',
-          `${response.incompleteRecordsAlert.length} empleado(s) con registros sin check-out. Revise la alerta en la tabla.`,
+          tm('incompleteTitle'),
+          tm('incomplete', { count: response.incompleteRecordsAlert.length }),
           8000
         )
       } else {
         toast.success(
-          'Preview Generado',
-          `${response.empleados} empleados procesados exitosamente`,
+          tm('previewDone'),
+          tm('previewProcessed', { count: response.empleados }),
           5000
         )
       }
@@ -634,10 +634,10 @@ export const usePayrollManager = () => {
     } catch (error: any) {
       const errorMessage = mapPayrollError(error)
       setError(errorMessage)
-      toast.error('Error en Preview', errorMessage, 8000)
+      toast.error(tm('previewError'), errorMessage, 8000)
       throw error
     }
-  }, [state.filters, state.currentPeriod, companyId, setStatus, setLoading, clearError, setError, toast])
+  }, [state.filters, state.currentPeriod, companyId, setStatus, setLoading, clearError, setError, toast, tm])
 
   const editLine = useCallback(async (
     runLineId: string,
@@ -646,7 +646,7 @@ export const usePayrollManager = () => {
     reason?: string
   ) => {
     if (!state.runId) {
-      throw new Error('No hay una corrida de nómina activa')
+      throw new Error(tm('noActiveRun'))
     }
 
     setStatus('editing')
@@ -662,16 +662,16 @@ export const usePayrollManager = () => {
       })
 
       setStatus('draft')
-      toast.success('Línea Editada', `Campo ${field} actualizado a ${newValue}`, 4000)
+      toast.success(tm('lineEdited'), tm('lineEditedMsg', { field, value: String(newValue) }), 4000)
 
       return response
     } catch (error: any) {
       const errorMessage = mapPayrollError(error)
       setError(errorMessage)
-      toast.error('Error Editando', errorMessage, 6000)
+      toast.error(tm('editError'), errorMessage, 6000)
       throw error
     }
-  }, [state.runId, setStatus, setLoading, clearError, setError, toast])
+  }, [state.runId, setStatus, setLoading, clearError, setError, toast, tm])
 
   const authorizeRun = useCallback(async () => {
     console.log('🚀 DEBUG - authorizeRun INICIADO')
@@ -683,7 +683,7 @@ export const usePayrollManager = () => {
     })
 
     if (!state.runId) {
-      throw new Error('No hay una corrida de nómina activa')
+      throw new Error(tm('noActiveRun'))
     }
 
     setStatus('authorizing')
@@ -732,12 +732,12 @@ export const usePayrollManager = () => {
       // Mostrar mensaje apropiado según si es re-autorización o no
       if (response?.warning) {
         toast.warning(
-          'Nómina Re-autorizada',
+          tm('reauthorized'),
           response.warning,
           8000
         )
       } else {
-        toast.success('Nómina Autorizada', 'La nómina ha sido autorizada exitosamente', 6000)
+        toast.success(tm('authorized'), tm('authorizedMsg'), 6000)
       }
       
       console.log('🔍 DEBUG - Autorización completada exitosamente')
@@ -747,20 +747,20 @@ export const usePayrollManager = () => {
       console.error('🔍 DEBUG - Error en autorización:', error)
       const errorMessage = mapPayrollError(error)
       setError(errorMessage)
-      toast.error('Error Autorizando', errorMessage, 8000)
+      toast.error(tm('authorizeError'), errorMessage, 8000)
       throw error
     } finally {
       setLoading(false)
     }
-  }, [state.runId, state.status, state.unifiedData, state.currentPeriod, state.filters.tipo, companyId, setStatus, setLoading, clearError, setError, toast])
+  }, [state.runId, state.status, state.unifiedData, state.currentPeriod, state.filters.tipo, companyId, setStatus, setLoading, clearError, setError, toast, tm])
 
   const sendEmail = useCallback(async (employeeId?: string) => {
     if (!state.runId) {
-      throw new Error('No hay una corrida de nómina activa')
+      throw new Error(tm('noActiveRun'))
     }
 
     if (commercialPlan === 'trial') {
-      toast.info('Función de plan de pago', BULK_VOUCHER_EMAIL_TRIAL_MESSAGE, 10000)
+      toast.info(tm('paidFeature'), BULK_VOUCHER_EMAIL_TRIAL_MESSAGE, 10000)
       return
     }
 
@@ -777,28 +777,28 @@ export const usePayrollManager = () => {
       setStatus('authorized')
       
       if (response.successful > 0) {
-        toast.success('Emails Enviados', `${response.successful} emails enviados exitosamente`, 5000)
+        toast.success(tm('emailsSent'), tm('emailsSentMsg', { count: response.successful }), 5000)
       }
       
       if (response.failed > 0) {
-        toast.warning('Algunos Emails Fallaron', `${response.failed} emails no se pudieron enviar`, 8000)
+        toast.warning(tm('emailsFailed'), tm('emailsFailedMsg', { count: response.failed }), 8000)
       }
 
       return response
     } catch (error: any) {
       const errorMessage = mapPayrollError(error)
       setError(errorMessage)
-      toast.error('Error Enviando Emails', errorMessage, 8000)
+      toast.error(tm('emailsError'), errorMessage, 8000)
       throw error
     } finally {
       setLoading(false)
     }
-  }, [state.runId, commercialPlan, setStatus, setLoading, clearError, setError, toast])
+  }, [state.runId, commercialPlan, setStatus, setLoading, clearError, setError, toast, tm])
 
   const generatePDF = useCallback(
     async (groupBy: PayrollPdfGroupBy = 'none') => {
       if (!state.runId) {
-        toast.error('Error', 'No hay una corrida de nómina activa', 4000)
+        toast.error(tm('error'), tm('noActiveRun'), 4000)
         return
       }
 
@@ -861,34 +861,34 @@ export const usePayrollManager = () => {
             parsed = null
           }
           const fromJson = parsed?.message || parsed?.error
-          throw new Error(fromJson || 'El servidor no devolvió un PDF válido')
+          throw new Error(fromJson || tm('invalidPdf'))
         }
 
         if (bytes.length === 0) {
-          throw new Error('El PDF recibido está vacío')
+          throw new Error(tm('emptyPdf'))
         }
 
         const filename =
           filenameFromContentDisposition(res.headers.get('Content-Disposition')) || defaultFilename
         const blob = new Blob([buf], { type: 'application/pdf' })
         triggerDownload(blob, filename)
-        toast.success('PDF Generado', 'El PDF se ha descargado correctamente', 4000)
+        toast.success(tm('pdfDone'), tm('pdfDownloaded'), 4000)
       } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : 'No se pudo generar el PDF'
-        toast.error('Error Generando PDF', message, 6000)
+        const message = error instanceof Error ? error.message : tm('pdfFailed')
+        toast.error(tm('pdfError'), message, 6000)
       }
     },
-    [state.runId, state.currentPeriod, toast]
+    [state.runId, state.currentPeriod, toast, tm]
   )
 
   const generateVoucher = useCallback(async (runLineId: string) => {
     try {
       await payrollApi.downloadVoucher(runLineId)
-      toast.success('Voucher generado', 'El comprobante se descargó correctamente', 4000)
+      toast.success(tm('voucherDone'), tm('voucherDownloaded'), 4000)
     } catch {
-      toast.error('Error generando voucher', 'No se pudo generar el comprobante', 6000)
+      toast.error(tm('voucherError'), tm('voucherFailed'), 6000)
     }
-  }, [toast])
+  }, [toast, tm])
 
   const openVoucherPreview = useCallback(async (runLineId: string) => {
     setVoucherPreview({
@@ -903,7 +903,7 @@ export const usePayrollManager = () => {
       const { preview } = await payrollApi.fetchVoucherPreview(runLineId)
       setVoucherPreview((prev) => ({ ...prev, loading: false, data: preview }))
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'No se pudo cargar el comprobante'
+      const message = error instanceof Error ? error.message : tm('voucherLoadFailed')
       setVoucherPreview((prev) => ({ ...prev, loading: false, error: message }))
     }
   }, [])
@@ -918,17 +918,17 @@ export const usePayrollManager = () => {
     setVoucherPreview((prev) => ({ ...prev, downloading: true }))
     try {
       await payrollApi.downloadVoucher(runLineId)
-      toast.success('Voucher generado', 'El PDF se descargó correctamente', 4000)
+      toast.success(tm('voucherDone'), tm('voucherPdfDownloaded'), 4000)
     } catch {
-      toast.error('Error generando voucher', 'No se pudo descargar el PDF', 6000)
+      toast.error(tm('voucherError'), tm('voucherPdfFailed'), 6000)
     } finally {
       setVoucherPreview((prev) => ({ ...prev, downloading: false }))
     }
-  }, [voucherPreview.runLineId, toast])
+  }, [voucherPreview.runLineId, toast, tm])
 
   const openPlanillaPreview = useCallback(async () => {
     if (!state.runId) {
-      toast.error('Error', 'No hay una corrida de nómina activa', 4000)
+      toast.error(tm('error'), tm('noActiveRun'), 4000)
       return
     }
     setPlanillaPreview({
@@ -942,10 +942,10 @@ export const usePayrollManager = () => {
       const { preview } = await payrollApi.fetchPlanillaPreview(state.runId)
       setPlanillaPreview((prev) => ({ ...prev, loading: false, data: preview }))
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'No se pudo cargar la planilla'
+      const message = error instanceof Error ? error.message : tm('planillaLoadFailed')
       setPlanillaPreview((prev) => ({ ...prev, loading: false, error: message }))
     }
-  }, [state.runId, toast])
+  }, [state.runId, toast, tm])
 
   const closePlanillaPreview = useCallback(() => {
     setPlanillaPreview(EMPTY_PLANILLA_PREVIEW)
@@ -955,7 +955,7 @@ export const usePayrollManager = () => {
     async (groupBy: PayrollPdfGroupBy = 'none', includeBankSection = true) => {
       const runId = planillaPreview.data?.runId || state.runId
       if (!runId) {
-        toast.error('Error', 'No hay una corrida de nómina activa', 4000)
+        toast.error(tm('error'), tm('noActiveRun'), 4000)
         return
       }
       setPlanillaPreview((prev) => ({ ...prev, downloading: true }))
@@ -965,18 +965,18 @@ export const usePayrollManager = () => {
           includeBankSection,
           defaultFilename: planillaPreview.data?.defaultFilename,
         })
-        toast.success('PDF Generado', 'El PDF se ha descargado correctamente', 4000)
+        toast.success(tm('pdfDone'), tm('pdfDownloaded'), 4000)
       } catch (error: unknown) {
         const message =
           error instanceof Error && error.message.trim()
             ? error.message
-            : 'No se pudo generar el PDF'
-        toast.error('Error Generando PDF', message, 6000)
+            : tm('pdfFailed')
+        toast.error(tm('pdfError'), message, 6000)
       } finally {
         setPlanillaPreview((prev) => ({ ...prev, downloading: false }))
       }
     },
-    [planillaPreview.data, state.runId, toast]
+    [planillaPreview.data, state.runId, toast, tm]
   )
 
   // Auto-load data when period changes (client-side only)
@@ -1004,10 +1004,8 @@ export const usePayrollManager = () => {
           // Solo notificar si el borrador tiene cambios; un borrador sin ediciones es ruido
           if (draft.edited_lines > 0) {
             toast.success(
-              'Borrador cargado',
-              draft.edited_lines === 1
-                ? 'Se recuperó un borrador con 1 línea editada'
-                : `Se recuperó un borrador con ${draft.edited_lines} líneas editadas`,
+              tm('draftLoaded'),
+              tm('draftRecovered', { count: draft.edited_lines }),
               5000
             )
           }
@@ -1035,8 +1033,8 @@ export const usePayrollManager = () => {
         
         dispatch({ type: 'SET_LOADED_INITIAL', payload: true })
       } catch (error: any) {
-        const errorMessage = error?.message || 'Error desconocido'
-        dispatch({ type: 'SET_ERROR', payload: `Error cargando datos: ${errorMessage}` })
+        const errorMessage = error?.message || tm('unknownError')
+        dispatch({ type: 'SET_ERROR', payload: tm('loadDataError', { message: errorMessage }) })
       }
     }
 

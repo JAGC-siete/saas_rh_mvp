@@ -1,3 +1,4 @@
+import { useTranslations } from 'next-intl'
 import { ChartBarIcon } from '@heroicons/react/24/outline'
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from 'recharts'
 
@@ -14,7 +15,8 @@ interface KpiBarsChartProps {
   barLabel?: string
 }
 
-export default function KpiBarsChart({ kpis, loading = false, barLabel = 'Período' }: KpiBarsChartProps) {
+export default function KpiBarsChart({ kpis, loading = false, barLabel }: KpiBarsChartProps) {
+  const ta = useTranslations('attendance.charts')
   const chartData = [{
     name: barLabel,
     presentes: kpis.presentes || 0,
@@ -26,7 +28,7 @@ export default function KpiBarsChart({ kpis, loading = false, barLabel = 'Perío
   if (loading) {
     return (
       <div className="h-[220px] bg-gradient-to-br from-white/5 to-white/0 rounded-xl border border-white/10 backdrop-blur-sm animate-pulse flex items-center justify-center">
-        <div className="text-gray-400">Cargando datos...</div>
+        <div className="text-gray-400">{ta('loadingData')}</div>
       </div>
     )
   }
@@ -36,8 +38,8 @@ export default function KpiBarsChart({ kpis, loading = false, barLabel = 'Perío
       <div className="h-[220px] bg-gradient-to-br from-white/5 to-white/0 rounded-xl border border-white/10 backdrop-blur-sm flex items-center justify-center">
         <div className="text-center px-4">
           <ChartBarIcon className="h-12 w-12 mx-auto text-gray-600 mb-3" aria-hidden />
-          <div className="text-gray-400 mb-2 font-medium">Sin datos de asistencia</div>
-          <div className="text-sm text-gray-500">No hay registros disponibles</div>
+          <div className="text-gray-400 mb-2 font-medium">{ta('noAttendance')}</div>
+          <div className="text-sm text-gray-500">{ta('noRecords')}</div>
         </div>
       </div>
     )
@@ -67,10 +69,10 @@ export default function KpiBarsChart({ kpis, loading = false, barLabel = 'Perío
               // Use the dataKey from entry to map labels reliably and avoid mismatches.
               const numValue = typeof value === 'number' ? value : 0
               const key = entry && entry.dataKey ? String(entry.dataKey) : ''
-              const label = key === 'presentes' ? 'Presentes' : key === 'tardes' ? 'Tardes' : 'Ausentes'
+              const label = key === 'presentes' ? ta('present') : key === 'tardes' ? ta('late') : ta('absent')
               return [numValue, label]
             }}
-            labelFormatter={() => 'Distribución de asistencia'}
+            labelFormatter={() => ta('distribution')}
             contentStyle={{
               backgroundColor: '#1F2937',
               border: '1px solid #374151',
@@ -85,21 +87,21 @@ export default function KpiBarsChart({ kpis, loading = false, barLabel = 'Perío
             dataKey="presentes" 
             stackId="a" 
             fill="#10B981"
-            name="Presentes"
+            name={ta('present')}
             radius={[0, 0, 0, 0]}
           />
           <Bar 
             dataKey="tardes" 
             stackId="a" 
             fill="#F59E0B"
-            name="Tardes"
+            name={ta('late')}
             radius={[0, 0, 0, 0]}
           />
           <Bar 
             dataKey="ausentes" 
             stackId="a" 
             fill="#EF4444"
-            name="Ausentes"
+            name={ta('absent')}
             radius={[4, 4, 0, 0]}
           />
         </BarChart>

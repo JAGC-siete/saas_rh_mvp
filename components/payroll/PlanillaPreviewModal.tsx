@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { useCompanyMoney } from '../../lib/hooks/useCompanyMoney'
 import type { PlanillaPreviewData, PlanillaPreviewEmployeeRow } from '../../lib/payroll/planilla-preview'
 import type { PayrollPdfGroupBy } from '../../lib/payroll/pdf-layout'
@@ -120,6 +121,8 @@ export default function PlanillaPreviewModal({
   onClose,
   onDownload,
 }: PlanillaPreviewModalProps) {
+  const tv = useTranslations('payroll.preview')
+  const tc = useTranslations('common')
   const { format } = useCompanyMoney()
   const [pdfGroupBy, setPdfGroupBy] = useState<PayrollPdfGroupBy>('none')
   const [includeBankSection, setIncludeBankSection] = useState(true)
@@ -161,20 +164,20 @@ export default function PlanillaPreviewModal({
         <div className="relative shrink-0 border-b border-brand-500/30 bg-gradient-to-r from-brand-900 via-brand-800 to-indigo-900 px-6 py-5">
           <div className="absolute inset-x-0 bottom-0 h-1 bg-gradient-to-r from-brand-500 to-sky-400" />
           {loading ? (
-            <p className="text-white/80 text-sm">Cargando planilla…</p>
+            <p className="text-white/80 text-sm">{tv('loadingPlanilla')}</p>
           ) : data ? (
             <>
               <div className="flex flex-wrap items-center gap-2">
                 <p className="text-xs font-semibold uppercase tracking-widest text-brand-200/90">
-                  Planilla de nómina
+                  {tv('planillaKicker')}
                 </p>
                 {data.isDraftPreview ? (
                   <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-xs font-semibold text-amber-200">
-                    Vista previa — no autorizada
+                    {tv('draftBadge')}
                   </span>
                 ) : (
                   <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-xs font-semibold text-emerald-200">
-                    Autorizada
+                    {tv('authorizedBadge')}
                   </span>
                 )}
               </div>
@@ -187,14 +190,14 @@ export default function PlanillaPreviewModal({
             </>
           ) : (
             <h2 id="planilla-preview-title" className="text-lg font-semibold text-white">
-              Vista previa de planilla
+              {tv('planillaTitle')}
             </h2>
           )}
           <button
             type="button"
             onClick={onClose}
             className="absolute right-4 top-4 rounded-lg p-1.5 text-white/70 hover:bg-white/10 hover:text-white"
-            aria-label="Cerrar"
+            aria-label={tc('close')}
           >
             <Icon name="close" className="h-5 w-5" />
           </button>
@@ -216,14 +219,14 @@ export default function PlanillaPreviewModal({
           {!loading && data && (
             <>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <SummaryCard label="Empleados" value={String(data.summary.employees)} />
-                <SummaryCard label="Total bruto" value={format(data.summary.totalGross)} />
+                <SummaryCard label={tv('employees')} value={String(data.summary.employees)} />
+                <SummaryCard label={tv('totalGross')} value={format(data.summary.totalGross)} />
                 <SummaryCard
-                  label="Total deducciones"
+                  label={tv('totalDeductions')}
                   value={format(data.summary.totalDeductions)}
                 />
                 <SummaryCard
-                  label="Total neto"
+                  label={tv('totalNet')}
                   value={format(data.summary.totalNet)}
                   highlight
                 />
@@ -245,8 +248,7 @@ export default function PlanillaPreviewModal({
 
               {data.isDraftPreview && (
                 <p className="text-xs text-amber-200/80 rounded-lg border border-amber-500/25 bg-amber-500/10 px-3 py-2">
-                  El PDF descargable incluirá la marca <strong>VISTA PREVIA — NO AUTORIZADA</strong>{' '}
-                  hasta que la nómina sea autorizada.
+                  {tv.rich('draftPdfNote', { b: (chunks) => <strong>{chunks}</strong> })} {tv('docLanguage')}
                 </p>
               )}
             </>
@@ -257,7 +259,7 @@ export default function PlanillaPreviewModal({
           <div className="flex flex-col gap-2 min-w-[200px]">
             <div className="flex items-center gap-2">
               <label htmlFor="planilla-pdf-group-by" className="text-xs text-gray-300 whitespace-nowrap">
-                Agrupar PDF:
+                {tv('groupBy')}
               </label>
               <select
                 id="planilla-pdf-group-by"
@@ -266,10 +268,10 @@ export default function PlanillaPreviewModal({
                 disabled={loading || !!error || !data || downloading}
                 className="rounded-md border border-white/20 bg-white/10 px-2 py-1.5 text-xs text-white"
               >
-                <option value="none">Una sola tabla</option>
-                <option value="department">Departamento</option>
-                <option value="team">Equipo</option>
-                <option value="position">Posición</option>
+                <option value="none">{tv('groupNone')}</option>
+                <option value="department">{tv('groupDepartment')}</option>
+                <option value="team">{tv('groupTeam')}</option>
+                <option value="position">{tv('groupPosition')}</option>
               </select>
             </div>
             <label
@@ -284,15 +286,15 @@ export default function PlanillaPreviewModal({
                 disabled={loading || !!error || !data || downloading}
                 className="h-3.5 w-3.5 rounded border-white/30 bg-white/10 text-brand-500"
               />
-              Incluir datos bancarios
+              {tv('includeBank')}
             </label>
             {!includeBankSection && (
-              <p className="text-xs text-amber-200/80">El PDF no incluirá banco ni cuenta.</p>
+              <p className="text-xs text-amber-200/80">{tv('noBank')}</p>
             )}
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Button type="button" variant="outline" onClick={onClose} className="border-white/20 text-white">
-              Cerrar
+              {tc('close')}
             </Button>
             <Button
               type="button"
@@ -301,7 +303,7 @@ export default function PlanillaPreviewModal({
               className="bg-brand-600 hover:bg-brand-700"
             >
               <Icon name="download" className="h-4 w-4 mr-2" />
-              {downloading ? 'Descargando…' : 'Descargar PDF'}
+              {downloading ? tv('downloading') : tv('download')}
             </Button>
           </div>
         </div>

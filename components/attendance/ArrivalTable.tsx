@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react'
+import { useTranslations } from 'next-intl'
 import { motion, AnimatePresence, LayoutGroup } from 'framer-motion'
 import { formatTimeDisplay } from '../../lib/timezone'
 import { getSeverityFromDelta } from '../../lib/hooks/useAttendanceData'
@@ -57,6 +58,8 @@ export default function ArrivalTable({
   pageSize = 10,
   externalSeverityFilter = 'all',
 }: ArrivalTableProps) {
+  const ta = useTranslations('attendance')
+  const tc = useTranslations('common')
   const [severityFilter, setSeverityFilter] = useState<SeverityFilter>('all')
   const [page, setPage] = useState(1)
   const [expandedId, setExpandedId] = useState<string | null>(null)
@@ -131,12 +134,12 @@ export default function ArrivalTable({
   }, [filteredRows, page, pageSize])
 
   const severityFilters = [
-    { key: 'all' as SeverityFilter, label: 'Todos', count: unifiedRows.length },
-    { key: 'early' as SeverityFilter, label: 'Temprano', count: unifiedRows.filter((r) => r.tone === 'info').length },
-    { key: 'on_time' as SeverityFilter, label: 'A tiempo', count: unifiedRows.filter((r) => r.tone === 'ok').length },
-    { key: 'warn' as SeverityFilter, label: 'Tarde 6–10', count: unifiedRows.filter((r) => r.tone === 'warn').length },
-    { key: 'alert' as SeverityFilter, label: 'Tarde 11–20', count: unifiedRows.filter((r) => r.tone === 'alert').length },
-    { key: 'danger' as SeverityFilter, label: 'Tarde >20', count: unifiedRows.filter((r) => r.tone === 'danger').length },
+    { key: 'all' as SeverityFilter, label: ta('severity.all'), count: unifiedRows.length },
+    { key: 'early' as SeverityFilter, label: ta('severity.early'), count: unifiedRows.filter((r) => r.tone === 'info').length },
+    { key: 'on_time' as SeverityFilter, label: ta('severity.on_time'), count: unifiedRows.filter((r) => r.tone === 'ok').length },
+    { key: 'warn' as SeverityFilter, label: ta('severity.warn'), count: unifiedRows.filter((r) => r.tone === 'warn').length },
+    { key: 'alert' as SeverityFilter, label: ta('severity.alert'), count: unifiedRows.filter((r) => r.tone === 'alert').length },
+    { key: 'danger' as SeverityFilter, label: ta('severity.danger'), count: unifiedRows.filter((r) => r.tone === 'danger').length },
   ]
 
   return (
@@ -167,7 +170,7 @@ export default function ArrivalTable({
       </div>
 
       {filteredRows.length === 0 ? (
-        <div className="text-center py-12 text-gray-400 text-sm">No hay registros</div>
+        <div className="text-center py-12 text-gray-400 text-sm">{ta('noRecords')}</div>
       ) : (
         <LayoutGroup>
           <motion.div layout className="space-y-1.5">
@@ -245,19 +248,19 @@ export default function ArrivalTable({
                             >
                               <div className="mt-3 pt-3 border-t border-white/5 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
                                 <div className="flex justify-between gap-2">
-                                  <span className="text-gray-500">Entrada</span>
+                                  <span className="text-gray-500">{ta('checkIn')}</span>
                                   <span className="text-gray-200">{timeOrDash(row.check_in_time ?? row.check_in)}</span>
                                 </div>
                                 <div className="flex justify-between gap-2">
-                                  <span className="text-gray-500">Salida</span>
+                                  <span className="text-gray-500">{ta('checkOut')}</span>
                                   <span className="text-gray-200">{timeOrDash(row.check_out)}</span>
                                 </div>
                                 <div className="flex justify-between gap-2">
-                                  <span className="text-gray-500">Almuerzo inicio</span>
+                                  <span className="text-gray-500">{ta('lunchStart')}</span>
                                   <span className="text-gray-200">{timeOrDash(row.lunch_start)}</span>
                                 </div>
                                 <div className="flex justify-between gap-2">
-                                  <span className="text-gray-500">Almuerzo fin</span>
+                                  <span className="text-gray-500">{ta('lunchEnd')}</span>
                                   <span className="text-gray-200">{timeOrDash(row.lunch_end)}</span>
                                 </div>
                               </div>
@@ -277,7 +280,7 @@ export default function ArrivalTable({
       {filteredRows.length > pageSize && (
         <div className="flex items-center justify-between pt-2">
           <span className="text-xs text-gray-500">
-            Página {page} de {totalPages}
+            {ta('pageRange', { page, pages: totalPages })}
           </span>
           <div className="flex gap-2">
             <button
@@ -286,7 +289,7 @@ export default function ArrivalTable({
               disabled={page <= 1}
               className="px-3 py-1 rounded-lg bg-white/5 text-xs text-gray-300 hover:bg-white/10 disabled:opacity-40"
             >
-              Anterior
+              {tc('previous')}
             </button>
             <button
               type="button"
@@ -294,7 +297,7 @@ export default function ArrivalTable({
               disabled={page >= totalPages}
               className="px-3 py-1 rounded-lg bg-white/5 text-xs text-gray-300 hover:bg-white/10 disabled:opacity-40"
             >
-              Siguiente
+              {tc('next')}
             </button>
           </div>
         </div>
